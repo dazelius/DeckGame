@@ -525,25 +525,10 @@ img {
     max-height: 300px;
     object-fit: contain;
     image-rendering: pixelated;
-    animation: playerIdle 2.5s ease-in-out infinite;
+    /* 애니메이션은 sprite-animation.js에서 제어 */
     position: relative;
     z-index: 1;
-}
-
-/* 플레이어 생동감 애니메이션 - 호흡 + 약간의 흔들림 */
-@keyframes playerIdle {
-    0%, 100% { 
-        transform: translateY(0) scale(1); 
-    }
-    25% {
-        transform: translateY(-3px) scale(1.01);
-    }
-    50% { 
-        transform: translateY(-6px) scale(1.02); 
-    }
-    75% {
-        transform: translateY(-3px) scale(1.01);
-    }
+    transform-origin: center bottom; /* Squash & Stretch 기준점 */
 }
 
 /* 적 캐릭터 공통 - 하얀 외곽선 + 생동감 */
@@ -580,7 +565,7 @@ img {
     50% { transform: translateY(-8px) scaleY(1.05); }
 }
 
-/* 적 이미지 스프라이트 - 생동감 애니메이션 */
+/* 적 이미지 스프라이트 */
 .enemy-sprite-img {
     width: 180px;
     height: auto;
@@ -590,26 +575,8 @@ img {
     position: relative;
     z-index: 1;
     transition: filter 0.2s ease;
-    animation: enemyIdle 2s ease-in-out infinite;
-}
-
-/* 각 적마다 다른 애니메이션 딜레이로 자연스럽게 */
-.enemy-unit:nth-child(1) .enemy-sprite-img { animation-delay: 0s; }
-.enemy-unit:nth-child(2) .enemy-sprite-img { animation-delay: 0.3s; }
-.enemy-unit:nth-child(3) .enemy-sprite-img { animation-delay: 0.6s; }
-.enemy-unit:nth-child(4) .enemy-sprite-img { animation-delay: 0.9s; }
-
-/* 적 생동감 애니메이션 - 위협적인 흔들림 */
-@keyframes enemyIdle {
-    0%, 100% { 
-        transform: translateY(0) scale(1); 
-    }
-    30% {
-        transform: translateY(-4px) scale(1.01);
-    }
-    60% { 
-        transform: translateY(-2px) scale(1.005); 
-    }
+    /* 애니메이션은 sprite-animation.js에서 제어 */
+    transform-origin: center bottom; /* Squash & Stretch 기준점 */
 }
 
 /* ==========================================
