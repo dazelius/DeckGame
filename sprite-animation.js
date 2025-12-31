@@ -805,75 +805,194 @@ const SpriteAnimation = {
     },
     
     // ==========================================
-    // 플레이어 방어 애니메이션 - GSAP!
+    // 플레이어 방어 애니메이션 - GSAP + 히트스탑!
     // ==========================================
     playerDefend(blockAmount = 5) {
         const sprite = document.querySelector('.player-sprite-img');
         if (!sprite) return;
         
-        const intensity = Math.min(blockAmount / 10, 1) + 0.3;
+        this.stopAnimation('player-idle');
         
-        gsap.timeline()
-            .to(sprite, {
-                scaleX: 1.05 * intensity,
-                scaleY: 0.95,
-                x: -3 * intensity,
-                filter: `
-                    drop-shadow(0 0 10px rgba(59, 130, 246, 0.8))
-                    brightness(1.2)
-                `,
-                duration: 0.08
-            })
-            .to(sprite, {
-                rotation: 2 * intensity,
-                duration: 0.03
-            })
-            .to(sprite, {
-                rotation: -1 * intensity,
-                duration: 0.03
-            })
-            .to(sprite, {
-                x: 0,
-                rotation: 0,
-                scaleX: 1,
-                scaleY: 1,
-                filter: '',
-                duration: 0.15,
-                ease: "elastic.out(1, 0.6)"
-            });
+        // 방어량에 따른 강도 (5~50 기준)
+        let intensity, freezeTime;
+        if (blockAmount >= 20) {
+            intensity = 1.5; freezeTime = 0.08;
+        } else if (blockAmount >= 12) {
+            intensity = 1.2; freezeTime = 0.06;
+        } else if (blockAmount >= 6) {
+            intensity = 1.0; freezeTime = 0.04;
+        } else {
+            intensity = 0.6; freezeTime = 0.02;
+        }
+        
+        // PixiJS 쉴드 이펙트!
+        const playerEl = document.getElementById('player');
+        if (playerEl) {
+            const rect = playerEl.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            // PixiJS 파직 이펙트!
+            if (typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized) {
+                PixiRenderer.createShieldImpact(centerX, centerY, blockAmount, intensity);
+            }
+        }
+        
+        const tl = gsap.timeline({
+            onComplete: () => {
+                sprite.style.filter = '';
+                this.startPlayerIdle();
+            }
+        });
+        
+        // ⏸️ 히트스탑! 파란색 플래시 + 정지
+        tl.set(sprite, {
+            scaleX: 1 + (0.1 * intensity),
+            scaleY: 1 - (0.05 * intensity),
+            x: -5 * intensity,
+            filter: `
+                drop-shadow(2px 0 0 rgba(100, 180, 255, 1))
+                drop-shadow(-2px 0 0 rgba(100, 180, 255, 1))
+                drop-shadow(0 2px 0 rgba(100, 180, 255, 1))
+                drop-shadow(0 -2px 0 rgba(100, 180, 255, 1))
+                brightness(1.8) saturate(1.5)
+            `
+        })
+        .to(sprite, { duration: freezeTime }); // 프리즈 듀레이션!
+        
+        // 🌍 화면 흔들림 (약하게)
+        this.screenShake(intensity * 2, freezeTime + 0.05);
+        
+        // 방어 자세 (방패를 받아치는 느낌)
+        tl.to(sprite, {
+            x: 5 * intensity,
+            rotation: -3 * intensity,
+            scaleX: 0.92,
+            scaleY: 1.08,
+            filter: `
+                drop-shadow(1px 0 0 rgba(59, 130, 246, 1))
+                drop-shadow(-1px 0 0 rgba(59, 130, 246, 1))
+                drop-shadow(0 1px 0 rgba(59, 130, 246, 1))
+                drop-shadow(0 -1px 0 rgba(59, 130, 246, 1))
+                drop-shadow(0 0 ${10 + (intensity * 5)}px rgba(59, 130, 246, 0.8))
+                brightness(1.3)
+            `,
+            duration: 0.08,
+            ease: "power2.out"
+        })
+        // 파닥파닥 (작게)
+        .to(sprite, {
+            rotation: 2 * intensity,
+            duration: 0.04,
+            ease: "power1.inOut"
+        })
+        .to(sprite, {
+            rotation: -1.5 * intensity,
+            duration: 0.03,
+            ease: "power1.inOut"
+        })
+        .to(sprite, {
+            rotation: 0.8 * intensity,
+            duration: 0.02,
+            ease: "power1.inOut"
+        })
+        // 복귀
+        .to(sprite, {
+            x: 0,
+            rotation: 0,
+            scaleX: 1,
+            scaleY: 1,
+            filter: '',
+            duration: 0.25,
+            ease: "elastic.out(1, 0.5)"
+        });
     },
     
     // ==========================================
-    // 적 방어 애니메이션 - GSAP!
+    // 적 방어 애니메이션 - GSAP + 히트스탑!
     // ==========================================
     enemyDefend(enemyElement, blockAmount = 5) {
         const sprite = enemyElement?.querySelector('.enemy-sprite-img');
         if (!sprite) return;
         
-        const intensity = Math.min(blockAmount / 10, 1) + 0.3;
+        // 방어량에 따른 강도
+        let intensity, freezeTime;
+        if (blockAmount >= 20) {
+            intensity = 1.5; freezeTime = 0.08;
+        } else if (blockAmount >= 12) {
+            intensity = 1.2; freezeTime = 0.06;
+        } else if (blockAmount >= 6) {
+            intensity = 1.0; freezeTime = 0.04;
+        } else {
+            intensity = 0.6; freezeTime = 0.02;
+        }
         
-        gsap.timeline()
-            .to(sprite, {
-                scaleX: 1.08 * intensity,
-                scaleY: 0.92,
-                x: 5 * intensity,
-                filter: `
-                    drop-shadow(0 0 12px rgba(100, 150, 255, 0.8))
-                    brightness(1.3)
-                `,
-                duration: 0.08
-            })
-            .to(sprite, { rotation: -3 * intensity, duration: 0.03 })
-            .to(sprite, { rotation: 2 * intensity, duration: 0.03 })
-            .to(sprite, {
-                x: 0,
-                rotation: 0,
-                scaleX: 1,
-                scaleY: 1,
-                filter: '',
-                duration: 0.15,
-                ease: "elastic.out(1, 0.5)"
-            });
+        // PixiJS 쉴드 이펙트!
+        if (enemyElement) {
+            const rect = enemyElement.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            if (typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized) {
+                PixiRenderer.createShieldImpact(centerX, centerY, blockAmount, intensity);
+            }
+        }
+        
+        const tl = gsap.timeline({
+            onComplete: () => {
+                sprite.style.filter = '';
+            }
+        });
+        
+        // ⏸️ 히트스탑! 파란색 플래시 + 정지
+        tl.set(sprite, {
+            scaleX: 1 + (0.12 * intensity),
+            scaleY: 1 - (0.08 * intensity),
+            x: 5 * intensity,
+            filter: `
+                drop-shadow(2px 0 0 rgba(100, 180, 255, 1))
+                drop-shadow(-2px 0 0 rgba(100, 180, 255, 1))
+                drop-shadow(0 2px 0 rgba(100, 180, 255, 1))
+                drop-shadow(0 -2px 0 rgba(100, 180, 255, 1))
+                brightness(1.8) saturate(1.5)
+            `
+        })
+        .to(sprite, { duration: freezeTime }); // 프리즈 듀레이션!
+        
+        // 🌍 화면 흔들림 (약하게)
+        this.screenShake(intensity * 1.5, freezeTime + 0.03);
+        
+        // 방어 자세 (방패를 받아치는 느낌)
+        tl.to(sprite, {
+            x: -5 * intensity,
+            rotation: 3 * intensity,
+            scaleX: 0.92,
+            scaleY: 1.08,
+            filter: `
+                drop-shadow(1px 0 0 rgba(100, 150, 255, 1))
+                drop-shadow(-1px 0 0 rgba(100, 150, 255, 1))
+                drop-shadow(0 1px 0 rgba(100, 150, 255, 1))
+                drop-shadow(0 -1px 0 rgba(100, 150, 255, 1))
+                drop-shadow(0 0 ${12 + (intensity * 6)}px rgba(100, 150, 255, 0.8))
+                brightness(1.3)
+            `,
+            duration: 0.08,
+            ease: "power2.out"
+        })
+        // 파닥파닥
+        .to(sprite, { rotation: -2 * intensity, duration: 0.04 })
+        .to(sprite, { rotation: 1.5 * intensity, duration: 0.03 })
+        .to(sprite, { rotation: -0.8 * intensity, duration: 0.02 })
+        // 복귀
+        .to(sprite, {
+            x: 0,
+            rotation: 0,
+            scaleX: 1,
+            scaleY: 1,
+            filter: '',
+            duration: 0.2,
+            ease: "elastic.out(1, 0.5)"
+        });
     },
     
     // ==========================================
