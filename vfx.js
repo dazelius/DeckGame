@@ -653,59 +653,8 @@ const VFX = {
             }
         }
         
-        // 기존 캔버스 육각형도 유지 (폴백)
-        this.animations.push({
-            x, y,
-            size,
-            progress: 0,
-            duration,
-            color,
-            alive: true,
-            
-            update() {
-                this.progress += 16 / this.duration;
-                if (this.progress >= 1) this.alive = false;
-            },
-            
-            draw(ctx) {
-                const scale = this.progress < 0.2 ? this.progress / 0.2 : 1;
-                const alpha = this.progress > 0.6 ? 1 - (this.progress - 0.6) / 0.4 : 1;
-                
-                ctx.save();
-                ctx.globalAlpha = alpha * 0.8;
-                ctx.translate(this.x, this.y);
-                ctx.scale(scale, scale);
-                
-                // 육각형 그리기
-                ctx.strokeStyle = this.color;
-                ctx.lineWidth = 4;
-                ctx.shadowColor = this.color;
-                ctx.shadowBlur = 20;
-                
-                ctx.beginPath();
-                for (let i = 0; i < 6; i++) {
-                    const angle = (Math.PI / 3) * i - Math.PI / 2;
-                    const px = Math.cos(angle) * this.size;
-                    const py = Math.sin(angle) * this.size;
-                    if (i === 0) ctx.moveTo(px, py);
-                    else ctx.lineTo(px, py);
-                }
-                ctx.closePath();
-                ctx.stroke();
-                
-                // 내부 글로우
-                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size);
-                gradient.addColorStop(0, this.color + '40');
-                gradient.addColorStop(1, 'transparent');
-                ctx.fillStyle = gradient;
-                ctx.fill();
-                
-                ctx.restore();
-            }
-        });
-        
-        // 파티클
-        this.sparks(x, y, { color, count: 10, speed: 6, size: 4 });
+        // 🛡️ 작은 파티클만 (큰 글로우 제거!)
+        this.sparks(x, y, { color, count: 6, speed: 4, size: 3 });
     },
     
     // ==========================================

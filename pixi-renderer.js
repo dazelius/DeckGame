@@ -1046,9 +1046,9 @@ const PixiRenderer = {
     },
     
     // ==========================================
-    // 🛡️✨ 쉴드 전개 이펙트! (방어 카드 사용 시)
+    // 🛡️ 쉴드 전개 이펙트 (간결하게!)
     // ==========================================
-    createShieldDeploy(x, y, size = 80, color = '#60a5fa', intensity = 1) {
+    createShieldDeploy(x, y, size = 60, color = '#60a5fa', intensity = 1) {
         if (!this.initialized) return;
         
         const container = new PIXI.Container();
@@ -1056,32 +1056,30 @@ const PixiRenderer = {
         container.y = y;
         this.effectsContainer.addChild(container);
         
-        // 🔵 메인 육각형 쉴드 (확장 애니메이션)
+        // 🔵 작은 육각형 쉴드 (빠르게 사라짐)
         const shield = new PIXI.Graphics();
-        const hexRadius = size * 0.8;
+        const hexRadius = size * 0.5;  // 더 작게!
         
         // 육각형 그리기
         shield.poly(this.getHexPoints(0, 0, hexRadius));
-        shield.fill({ color: color, alpha: 0.3 });
-        shield.stroke({ width: 4, color: '#ffffff', alpha: 0.9 });
+        shield.fill({ color: color, alpha: 0.15 });  // 더 투명하게!
+        shield.stroke({ width: 2, color: color, alpha: 0.6 });  // 선도 약하게
         shield.scale.set(0);
         container.addChild(shield);
         
-        // 쉴드 확장 애니메이션
+        // 쉴드 확장 애니메이션 (빠르게!)
         let shieldPhase = 0;
         const animateShield = () => {
-            shieldPhase += 0.08;
+            shieldPhase += 0.12;  // 더 빠르게!
             
-            if (shieldPhase < 1) {
+            if (shieldPhase < 0.5) {
                 // 확장 단계
-                const scale = Math.sin(shieldPhase * Math.PI * 0.5) * 1.2;
+                const scale = shieldPhase * 2;
                 shield.scale.set(scale);
-                shield.alpha = 0.8;
-            } else if (shieldPhase < 2) {
-                // 유지 + 펄스
-                const pulse = 1 + Math.sin((shieldPhase - 1) * Math.PI * 4) * 0.1;
-                shield.scale.set(pulse);
-                shield.alpha = 0.9 - (shieldPhase - 1) * 0.4;
+                shield.alpha = 0.5;
+            } else if (shieldPhase < 1) {
+                // 사라짐
+                shield.alpha = 1 - shieldPhase;
             } else {
                 // 종료
                 container.removeChild(shield);
@@ -1093,69 +1091,56 @@ const PixiRenderer = {
         };
         animateShield();
         
-        // ⚡ 전기 스파크 (원형으로 퍼짐)
-        const sparkCount = 8 + Math.floor(intensity * 4);
+        // ⚡ 작은 스파크 몇 개만
+        const sparkCount = 4;
         for (let i = 0; i < sparkCount; i++) {
             const spark = new PIXI.Graphics();
-            const angle = (Math.PI * 2 / sparkCount) * i;
-            const length = 15 + Math.random() * 25;
+            const angle = (Math.PI * 2 / sparkCount) * i + Math.PI / 4;
+            const length = 10 + Math.random() * 15;
             
-            // 번개 모양
             spark.moveTo(0, 0);
-            const segments = 2 + Math.floor(Math.random() * 2);
-            let px = 0, py = 0;
-            for (let j = 1; j <= segments; j++) {
-                const segLen = length / segments;
-                const offsetAngle = angle + (Math.random() - 0.5) * 0.4;
-                px += Math.cos(offsetAngle) * segLen;
-                py += Math.sin(offsetAngle) * segLen;
-                spark.lineTo(px, py);
-            }
-            
-            spark.stroke({ width: 3, color: color, alpha: 0.7, cap: 'round' });
-            spark.stroke({ width: 1.5, color: '#ffffff', alpha: 1, cap: 'round' });
+            spark.lineTo(Math.cos(angle) * length, Math.sin(angle) * length);
+            spark.stroke({ width: 2, color: color, alpha: 0.5, cap: 'round' });
             container.addChild(spark);
             
             // 스파크 애니메이션
             let sparkLife = 0;
             const animateSpark = () => {
                 sparkLife++;
-                spark.x = Math.cos(angle) * sparkLife * 3;
-                spark.y = Math.sin(angle) * sparkLife * 3;
-                spark.alpha = 1 - sparkLife / 20;
-                spark.scale.set(1 + sparkLife * 0.05);
+                spark.x = Math.cos(angle) * sparkLife * 2;
+                spark.y = Math.sin(angle) * sparkLife * 2;
+                spark.alpha = 1 - sparkLife / 15;
                 
-                if (sparkLife >= 20) {
+                if (sparkLife >= 15) {
                     container.removeChild(spark);
                     spark.destroy();
                 } else {
                     requestAnimationFrame(animateSpark);
                 }
             };
-            setTimeout(animateSpark, i * 20);
+            setTimeout(animateSpark, i * 30);
         }
         
-        // 💎 유리 파편 (안에서 바깥으로)
-        const shardCount = 10 + Math.floor(intensity * 6);
+        // 💎 작은 파편 몇 개만
+        const shardCount = 5;
         for (let i = 0; i < shardCount; i++) {
             const shard = new PIXI.Graphics();
-            const shardSize = 3 + Math.random() * 4;
+            const shardSize = 2 + Math.random() * 2;
             const angle = Math.random() * Math.PI * 2;
             
-            // 다이아몬드 모양
             shard.moveTo(0, -shardSize);
-            shard.lineTo(shardSize * 0.6, 0);
+            shard.lineTo(shardSize * 0.5, 0);
             shard.lineTo(0, shardSize);
-            shard.lineTo(-shardSize * 0.6, 0);
+            shard.lineTo(-shardSize * 0.5, 0);
             shard.closePath();
-            shard.fill({ color: '#bfdbfe', alpha: 0.9 });
+            shard.fill({ color: '#93c5fd', alpha: 0.6 });
             
-            const speed = 2 + Math.random() * 4 * intensity;
+            const speed = 1 + Math.random() * 2;
             shard.vx = Math.cos(angle) * speed;
             shard.vy = Math.sin(angle) * speed;
             shard.rotation = Math.random() * Math.PI * 2;
-            shard.rotationSpeed = (Math.random() - 0.5) * 0.2;
-            shard.life = 25 + Math.random() * 10;
+            shard.rotationSpeed = (Math.random() - 0.5) * 0.1;
+            shard.life = 15;
             shard.maxLife = shard.life;
             
             container.addChild(shard);
