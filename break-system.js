@@ -361,6 +361,21 @@ const BreakSystem = {
                         PixiRenderer.stopPersistentStunLoop(enemyEl);
                     }
                     
+                    // 스프라이트 스타일 초기화 (GSAP 적용된 것 리셋)
+                    const sprite = enemyEl.querySelector('.enemy-sprite-img');
+                    if (sprite) {
+                        // GSAP 킬
+                        if (typeof gsap !== 'undefined') {
+                            gsap.killTweensOf(sprite);
+                            gsap.killTweensOf(enemyEl);
+                        }
+                        // 스타일 초기화
+                        sprite.style.filter = '';
+                        sprite.style.transform = '';
+                        sprite.style.opacity = '';
+                        enemyEl.style.transform = '';
+                    }
+                    
                     // 인텐트 다시 표시
                     const intentEl = enemyEl.querySelector('.enemy-intent-display');
                     if (intentEl) {
