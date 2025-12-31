@@ -257,18 +257,9 @@ img {
     display: none;
 }
 
+/* 바닥 그라데이션 비활성화 - UI 가림 문제 */
 .floor {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 45%;
-    background: linear-gradient(180deg, 
-        transparent 0%,
-        rgba(30, 25, 35, 0.3) 20%,
-        rgba(40, 35, 50, 0.4) 100%
-    );
-    z-index: 0;
+    display: none;
 }
 
 .floor::before {
