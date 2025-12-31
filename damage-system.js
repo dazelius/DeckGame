@@ -253,9 +253,15 @@ function dealDamage(target, amount, card = null) {
                 SpriteAnimation.playerHit(animDamage);
             } else if (isEnemy) {
                 console.log('[DealDamage] ▶️ enemyHit 호출!', { targetEl, damage: animDamage });
+                console.log('[DealDamage] SpriteAnimation 객체:', SpriteAnimation);
+                console.log('[DealDamage] enemyHit 함수:', typeof SpriteAnimation?.enemyHit);
                 
                 // 🔥 항상 피격 애니메이션 호출!
-                SpriteAnimation.enemyHit(targetEl, animDamage);
+                try {
+                    SpriteAnimation.enemyHit(targetEl, animDamage);
+                } catch (e) {
+                    console.error('[DealDamage] ❌ enemyHit 에러:', e);
+                }
                 
                 // 연타 감지 (콤보 트래킹용)
                 const combo = ComboTracker.registerHit(target, targetEl, result.actualDamage);
