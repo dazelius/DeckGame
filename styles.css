@@ -4398,6 +4398,7 @@ body .card-drag-ghost.can-drop {
 .enemy-unit .enemy-info {
     margin-top: 5px;
     text-align: center;
+    position: relative;  /* 🔥 자식 absolute 기준점 */
 }
 
 /* 적 스탯 바 (쉴드 + HP) 레이아웃 */
@@ -5102,12 +5103,17 @@ body .card-drag-ghost.can-drop {
 
 /* 상태이상 표시 - HP바 아래에 표시 (이름 대신) */
 .enemy-status-display {
-    margin-top: 5px;
+    /* 🔥 absolute로 변경하여 스프라이트 위치에 영향 안 주도록! */
+    position: absolute;
+    bottom: -30px;  /* HP바 아래에 표시 */
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
     justify-content: center;
     z-index: 500;
+    white-space: nowrap;
 }
 
 /* ==========================================
