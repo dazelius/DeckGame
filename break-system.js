@@ -380,9 +380,17 @@ const BreakSystem = {
         }
         
         if (enemy.isBroken) {
-            // 브레이크 상태 - 즉시 그레이스케일
+            // 브레이크 상태 - 인텐트 숨기고 그레이스케일
             intentEl.classList.add('is-broken');
             enemyEl.classList.add('enemy-broken');
+            
+            // 🔥 인텐트 내용 비우기 (STUNNED 표시)
+            intentEl.innerHTML = `
+                <div class="intent-stunned">
+                    <span class="stunned-icon">💫</span>
+                    <span class="stunned-text">STUNNED</span>
+                </div>
+            `;
         } else {
             // 위험 인텐트 표시 (인텐트 내부에 모두 통합)
             intentEl.classList.add('danger-intent');
@@ -942,8 +950,51 @@ const BreakSystem = {
             
             /* BREAK 상태 인텐트 */
             .enemy-intent-display.is-broken {
-                opacity: 0.4;
-                filter: grayscale(0.5);
+                opacity: 1;
+                filter: none;
+            }
+            
+            /* 스턴 상태 인텐트 표시 */
+            .intent-stunned {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                padding: 4px 12px;
+                background: linear-gradient(180deg, rgba(50, 50, 60, 0.95) 0%, rgba(30, 30, 40, 0.98) 100%);
+                border: 2px solid #fbbf24;
+                border-radius: 6px;
+                animation: stunnedPulse 1s ease-in-out infinite;
+            }
+            
+            .stunned-icon {
+                font-size: 1.1rem;
+                animation: stunnedSpin 1.5s linear infinite;
+            }
+            
+            .stunned-text {
+                font-family: 'Cinzel', serif;
+                font-size: 0.85rem;
+                font-weight: bold;
+                color: #fbbf24;
+                text-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+                letter-spacing: 2px;
+            }
+            
+            @keyframes stunnedPulse {
+                0%, 100% {
+                    box-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
+                    border-color: #fbbf24;
+                }
+                50% {
+                    box-shadow: 0 0 20px rgba(251, 191, 36, 0.6);
+                    border-color: #fef3c7;
+                }
+            }
+            
+            @keyframes stunnedSpin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
             }
             
             /* 인텐트 깨지는 애니메이션 */
