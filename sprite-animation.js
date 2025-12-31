@@ -490,11 +490,10 @@ const SpriteAnimation = {
     enemyHit(enemyElement, damage = 0) {
         console.log('[SpriteAnimation] 🎯 enemyHit 호출됨!', { enemyElement, damage });
         
-        const sprite = enemyElement?.querySelector('.enemy-sprite-img');
-        console.log('[SpriteAnimation] 🔍 sprite 찾기:', sprite);
-        
-        if (!sprite) {
-            console.warn('[SpriteAnimation] ⚠️ .enemy-sprite-img를 찾지 못함!');
+        // 🔥 .enemy-unit 자체를 흔들어야 함! (sprite-img는 CSS가 막음)
+        const target = enemyElement;
+        if (!target) {
+            console.warn('[SpriteAnimation] ⚠️ enemyElement가 없음!');
             return;
         }
         
@@ -503,6 +502,8 @@ const SpriteAnimation = {
             console.error('[SpriteAnimation] ❌ GSAP이 로드되지 않음!');
             return;
         }
+        
+        console.log('[SpriteAnimation] ✅ GSAP 애니메이션 시작!');
         
         // 🔥 데미지에 따른 강도 (더 과장되게!)
         let intensity, freezeTime, hitType;
@@ -552,109 +553,72 @@ const SpriteAnimation = {
         const tl = gsap.timeline();
         
         // ⏸️ 히트스탑! 흰색 번쩍 + 정지 (더 크게!)
-        tl.set(sprite, { 
-            scale: 1.25,
-            x: 15,
-            filter: `
-                drop-shadow(4px 0 0 white)
-                drop-shadow(-4px 0 0 white)
-                drop-shadow(0 4px 0 white)
-                drop-shadow(0 -4px 0 white)
-                brightness(3) saturate(0)
-            `
+        tl.set(target, { 
+            scale: 1.15,
+            x: 15
         })
         // 프리즈 유지!
-        .to(sprite, { duration: freezeTime });
+        .to(target, { duration: freezeTime });
         
         // 💢 빨간 깜박 + 극적인 파닥파닥! (과장되게!)
         if (hitType === 'critical') {
             // 🔥 크리티컬: 미친듯이 흔들림!
-            tl.to(sprite, {
+            tl.to(target, {
                 x: 80,
                 rotation: 25,
-                scaleX: 1.5,
-                scaleY: 0.6,
-                filter: `
-                    drop-shadow(4px 0 0 rgba(255, 255, 0, 1))
-                    drop-shadow(-4px 0 0 rgba(255, 255, 0, 1))
-                    drop-shadow(0 4px 0 rgba(255, 255, 0, 1))
-                    drop-shadow(0 -4px 0 rgba(255, 255, 0, 1))
-                    drop-shadow(0 0 35px rgba(255, 200, 0, 1))
-                    brightness(2.5)
-                `,
+                scaleX: 1.3,
+                scaleY: 0.7,
                 duration: 0.07,
                 ease: "power4.out"
             })
-            .to(sprite, {
+            .to(target, {
                 x: -70,
                 rotation: -20,
                 scaleX: 0.8,
-                scaleY: 1.3,
-                filter: `
-                    drop-shadow(3px 0 0 rgba(255, 50, 50, 1))
-                    drop-shadow(-3px 0 0 rgba(255, 50, 50, 1))
-                    drop-shadow(0 0 25px rgba(255, 0, 0, 1))
-                    brightness(1.8)
-                `,
+                scaleY: 1.2,
                 duration: 0.06
             })
-            .to(sprite, { x: 55, rotation: 15, scaleX: 1.2, scaleY: 0.85, duration: 0.05 })
-            .to(sprite, { x: -40, rotation: -10, filter: 'brightness(1.5)', duration: 0.05 })
-            .to(sprite, { x: 30, rotation: 8, duration: 0.04 })
-            .to(sprite, { x: -20, rotation: -5, duration: 0.04 })
-            .to(sprite, { x: 12, rotation: 3, duration: 0.03 })
-            .to(sprite, { x: -6, rotation: -2, duration: 0.03 });
+            .to(target, { x: 55, rotation: 15, scaleX: 1.15, scaleY: 0.9, duration: 0.05 })
+            .to(target, { x: -40, rotation: -10, duration: 0.05 })
+            .to(target, { x: 30, rotation: 8, duration: 0.04 })
+            .to(target, { x: -20, rotation: -5, duration: 0.04 })
+            .to(target, { x: 12, rotation: 3, duration: 0.03 })
+            .to(target, { x: -6, rotation: -2, duration: 0.03 });
         } else {
             // 일반 히트도 과장되게!
-            tl.to(sprite, {
+            tl.to(target, {
                 x: 50 * intensity / 2,
                 rotation: 12 * intensity / 2,
-                scaleX: 1 + 0.25 * intensity / 3,
-                scaleY: 1 - 0.15 * intensity / 3,
-                filter: `
-                    drop-shadow(3px 0 0 rgba(255, 50, 50, 1))
-                    drop-shadow(-3px 0 0 rgba(255, 50, 50, 1))
-                    drop-shadow(0 3px 0 rgba(255, 50, 50, 1))
-                    drop-shadow(0 -3px 0 rgba(255, 50, 50, 1))
-                    drop-shadow(0 0 20px rgba(255, 0, 0, 0.9))
-                    brightness(1.8)
-                `,
+                scaleX: 1 + 0.15 * intensity / 3,
+                scaleY: 1 - 0.1 * intensity / 3,
                 duration: 0.06,
                 ease: "power3.out"
             })
-            .to(sprite, {
+            .to(target, {
                 x: -40 * intensity / 2,
                 rotation: -10 * intensity / 2,
-                scaleX: 0.9,
-                scaleY: 1.15,
-                filter: 'brightness(1.2)',
+                scaleX: 0.95,
+                scaleY: 1.08,
                 duration: 0.05
             })
-            .to(sprite, {
+            .to(target, {
                 x: 30 * intensity / 2,
                 rotation: 8 * intensity / 2,
-                scaleX: 1.1,
-                scaleY: 0.92,
-                filter: `
-                    drop-shadow(2px 0 0 rgba(255, 50, 50, 1))
-                    drop-shadow(-2px 0 0 rgba(255, 50, 50, 1))
-                    drop-shadow(0 0 15px rgba(255, 0, 0, 0.7))
-                    brightness(1.5)
-                `,
+                scaleX: 1.05,
+                scaleY: 0.96,
                 duration: 0.05
             })
-            .to(sprite, {
+            .to(target, {
                 x: -20 * intensity / 2,
                 rotation: -6 * intensity / 2,
-                filter: 'brightness(1.1)',
                 duration: 0.04
             })
-            .to(sprite, {
+            .to(target, {
                 x: 12 * intensity / 2,
                 rotation: 4 * intensity / 2,
                 duration: 0.04
             })
-            .to(sprite, {
+            .to(target, {
                 x: -8 * intensity / 2,
                 rotation: -2 * intensity / 2,
                 duration: 0.03
@@ -662,14 +626,13 @@ const SpriteAnimation = {
         }
         
         // 🔄 복구 (탄성 있게!)
-        tl.to(sprite, {
+        tl.to(target, {
             x: 0,
             y: 0,
             rotation: 0,
             scale: 1,
             scaleX: 1,
             scaleY: 1,
-            filter: '',
             duration: hitType === 'critical' ? 0.25 : 0.15,
             ease: "elastic.out(1, 0.5)"
         });
@@ -1464,23 +1427,16 @@ window.testEnemyHit = function() {
     const enemyEl = document.querySelector('.enemy-unit');
     console.log('[TEST] enemyEl:', enemyEl);
     
-    if (enemyEl) {
-        const sprite = enemyEl.querySelector('.enemy-sprite-img');
-        console.log('[TEST] sprite:', sprite);
-        
-        if (sprite && typeof gsap !== 'undefined') {
-            console.log('[TEST] ✅ GSAP으로 직접 흔들기!');
-            gsap.timeline()
-                .to(sprite, { x: 50, rotation: 15, duration: 0.1 })
-                .to(sprite, { x: -40, rotation: -10, duration: 0.1 })
-                .to(sprite, { x: 30, rotation: 8, duration: 0.08 })
-                .to(sprite, { x: -20, rotation: -5, duration: 0.08 })
-                .to(sprite, { x: 0, rotation: 0, duration: 0.15 });
-        } else {
-            console.error('[TEST] ❌ sprite 또는 gsap 없음!');
-        }
+    if (enemyEl && typeof gsap !== 'undefined') {
+        console.log('[TEST] ✅ GSAP으로 .enemy-unit 흔들기!');
+        gsap.timeline()
+            .to(enemyEl, { x: 50, rotation: 15, duration: 0.1 })
+            .to(enemyEl, { x: -40, rotation: -10, duration: 0.1 })
+            .to(enemyEl, { x: 30, rotation: 8, duration: 0.08 })
+            .to(enemyEl, { x: -20, rotation: -5, duration: 0.08 })
+            .to(enemyEl, { x: 0, rotation: 0, duration: 0.15, ease: "elastic.out(1, 0.5)" });
     } else {
-        console.error('[TEST] ❌ .enemy-unit 없음!');
+        console.error('[TEST] ❌ enemyEl 또는 gsap 없음!');
     }
 };
 
