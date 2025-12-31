@@ -1049,11 +1049,21 @@ function updateEnemiesUI() {
         // 의도 업데이트
         const intentDisplay = enemyEl.querySelector('.enemy-intent-display');
         if (intentDisplay) {
-            // 도플갱어는 카드 리스트로 표시
-            if (enemy.isDoppelganger && enemy.plannedCards && enemy.plannedCards.length > 0) {
-                intentDisplay.innerHTML = getDoppelgangerIntentDisplay(enemy.plannedCards);
+            // 🔥 브레이크 상태면 인텐트 숨기기!
+            if (enemy.isBroken) {
+                intentDisplay.innerHTML = '';
+                intentDisplay.style.display = 'none';
+                intentDisplay.classList.add('is-broken');
             } else {
-                intentDisplay.innerHTML = enemy.intent ? getIntentIcon(enemy.intent, enemy.intentValue, enemy.intentHits || 1, enemy.intentBleed || 0) : '';
+                intentDisplay.style.display = '';
+                intentDisplay.classList.remove('is-broken');
+                
+                // 도플갱어는 카드 리스트로 표시
+                if (enemy.isDoppelganger && enemy.plannedCards && enemy.plannedCards.length > 0) {
+                    intentDisplay.innerHTML = getDoppelgangerIntentDisplay(enemy.plannedCards);
+                } else {
+                    intentDisplay.innerHTML = enemy.intent ? getIntentIcon(enemy.intent, enemy.intentValue, enemy.intentHits || 1, enemy.intentBleed || 0) : '';
+                }
             }
             
             // 인텐트 숨김 상태 처리

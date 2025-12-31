@@ -554,10 +554,22 @@ const BreakSystem = {
             left: ${centerX}px;
             top: ${textY}px;
             transform: translate(-50%, -50%) scale(0);
-            z-index: 2000;
+            opacity: 0;
+            z-index: 9999;
             pointer-events: none;
+            font-family: 'Cinzel', serif;
+            font-size: 4rem;
+            font-weight: 900;
+            color: #fbbf24;
+            text-shadow: 
+                0 0 20px rgba(251, 191, 36, 1),
+                0 0 40px rgba(251, 191, 36, 0.8),
+                3px 3px 0 #000;
+            letter-spacing: 8px;
         `;
         document.body.appendChild(breakText);
+        
+        console.log('[BreakSystem] 🔥 BREAK 텍스트 생성됨!', { centerX, textY });
         
         // GSAP으로 BREAK 텍스트 애니메이션
         if (typeof gsap !== 'undefined') {
@@ -566,13 +578,13 @@ const BreakSystem = {
                     scale: 1.5,
                     rotation: -5,
                     opacity: 1,
-                    duration: 0.1,
+                    duration: 0.15,
                     ease: "back.out(3)"
                 })
                 .to(breakText, {
                     scale: 1.2,
                     rotation: 3,
-                    duration: 0.08
+                    duration: 0.1
                 })
                 .to(breakText, {
                     scale: 1,
@@ -584,8 +596,13 @@ const BreakSystem = {
                     opacity: 0,
                     duration: 0.5,
                     delay: 0.5,
-                    ease: "power2.in"
+                    ease: "power2.in",
+                    onComplete: () => breakText.remove()
                 });
+        } else {
+            // GSAP 없을 때 CSS 애니메이션 폴백
+            breakText.style.animation = 'breakEffectAnim 1.5s ease-out forwards';
+            setTimeout(() => breakText.remove(), 1500);
         }
         
         // 파편 효과 (캐릭터 위치)
