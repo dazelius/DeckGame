@@ -1293,7 +1293,10 @@ img {
     position: relative;
     z-index: 500; /* 배경 위에 표시되도록 z-index 대폭 상승 */
     height: 260px;
-    background: transparent;
+    background: none !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
     display: flex;
     align-items: center;
     padding: 0 20px;
