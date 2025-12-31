@@ -1064,6 +1064,30 @@ function updateEnemiesUI() {
             }
         }
         
+        // 🎭 인텐트에 따른 스프라이트 애니메이션 클래스 토글
+        // 기존 인텐트 클래스 제거
+        enemyEl.classList.remove('intent-taunt', 'intent-attack-strong', 'intent-defend', 'intent-execute', 'intent-buff');
+        
+        // 현재 인텐트에 맞는 클래스 추가
+        if (enemy.intent) {
+            if (enemy.intent === 'taunt') {
+                // 도발: 팔짝팔짝 뛰기
+                enemyEl.classList.add('intent-taunt');
+            } else if (enemy.intent === 'attack' && enemy.intentValue >= 10) {
+                // 강한 공격: 위협적 흔들림
+                enemyEl.classList.add('intent-attack-strong');
+            } else if (enemy.intent === 'defend' || enemy.intent === 'block') {
+                // 방어: 웅크리기
+                enemyEl.classList.add('intent-defend');
+            } else if (enemy.intent === 'prepare' || enemy.intent === 'execute') {
+                // 처형 준비: 으스스한 진동
+                enemyEl.classList.add('intent-execute');
+            } else if (enemy.intent === 'buff' || enemy.intent === 'heal') {
+                // 버프/힐: 반짝반짝
+                enemyEl.classList.add('intent-buff');
+            }
+        }
+        
         // 상태이상 표시 (규격화: 아이콘 + 이름 + 수치)
         let statusDisplay = enemyEl.querySelector('.enemy-status-display');
         const statuses = [];
