@@ -482,53 +482,111 @@ const SpriteAnimation = {
     },
     
     // ==========================================
-    // 적 피격 애니메이션 - GSAP! 히트스탑 포함!
+    // 적 피격 애니메이션 - GSAP + PixiJS 히트 이펙트!
     // ==========================================
     enemyHit(enemyElement, damage = 0) {
         const sprite = enemyElement?.querySelector('.enemy-sprite-img');
         if (!sprite) return;
         
         // 데미지에 따른 강도
-        let intensity, freezeTime;
+        let intensity, freezeTime, hitType;
         if (damage >= 25) {
             intensity = 3.5;
             freezeTime = 0.12;
+            hitType = 'critical';
             console.log('[Enemy Hit] 💀 치명적!', damage);
         } else if (damage >= 15) {
             intensity = 2.5;
             freezeTime = 0.08;
+            hitType = 'heavy';
             console.log('[Enemy Hit] 😱 강함!', damage);
         } else if (damage >= 8) {
             intensity = 1.6;
             freezeTime = 0.05;
+            hitType = 'medium';
             console.log('[Enemy Hit] 😣 중간', damage);
         } else {
             intensity = 0.9;
             freezeTime = 0.03;
+            hitType = 'light';
             console.log('[Enemy Hit] 😐 약함', damage);
         }
         
-        // 화면 흔들림
+        // 🎆 PixiJS 히트 이펙트!
+        if (enemyElement && typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized) {
+            const rect = enemyElement.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2 - 20;
+            
+            if (hitType === 'critical') {
+                PixiRenderer.createCriticalHit(centerX, centerY, damage);
+                PixiRenderer.hitFlash('#ff0000', 150);
+            } else {
+                PixiRenderer.createHitImpact(centerX, centerY, damage, '#ff4444');
+                if (hitType === 'heavy') {
+                    PixiRenderer.hitFlash('#ff0000', 80);
+                }
+            }
+        }
+        
+        // 🌍 화면 흔들림
         this.screenShake(intensity * 4, freezeTime + 0.1);
         
         // GSAP 타임라인
-        gsap.timeline()
-            // ⏸️ 히트스탑! 흰색 번쩍 + 정지
-            .set(sprite, { 
-                scale: 1.15,
-                x: 10,
+        const tl = gsap.timeline();
+        
+        // ⏸️ 히트스탑! 흰색 번쩍 + 정지
+        tl.set(sprite, { 
+            scale: 1.15,
+            x: 10,
+            filter: `
+                drop-shadow(3px 0 0 white)
+                drop-shadow(-3px 0 0 white)
+                drop-shadow(0 3px 0 white)
+                drop-shadow(0 -3px 0 white)
+                brightness(2.5) saturate(0)
+            `
+        })
+        // 프리즈 유지!
+        .to(sprite, { duration: freezeTime });
+        
+        // 💢 빨간 깜박 + 극적인 파닥파닥!
+        if (hitType === 'critical') {
+            // 크리티컬: 더 극적인 반응
+            tl.to(sprite, {
+                x: 50 * intensity,
+                rotation: 15,
+                scaleX: 1.3,
+                scaleY: 0.7,
                 filter: `
-                    drop-shadow(3px 0 0 white)
-                    drop-shadow(-3px 0 0 white)
-                    drop-shadow(0 3px 0 white)
-                    drop-shadow(0 -3px 0 white)
-                    brightness(2.5) saturate(0)
-                `
+                    drop-shadow(3px 0 0 rgba(255, 255, 0, 1))
+                    drop-shadow(-3px 0 0 rgba(255, 255, 0, 1))
+                    drop-shadow(0 3px 0 rgba(255, 255, 0, 1))
+                    drop-shadow(0 -3px 0 rgba(255, 255, 0, 1))
+                    drop-shadow(0 0 25px rgba(255, 200, 0, 0.9))
+                    brightness(2)
+                `,
+                duration: 0.06,
+                ease: "power4.out"
             })
-            // 프리즈 유지
-            .to(sprite, { duration: freezeTime })
-            // 빨간 깜박 + 파닥파닥!
             .to(sprite, {
+                x: -40,
+                rotation: -12,
+                filter: `
+                    drop-shadow(2px 0 0 rgba(255, 50, 50, 1))
+                    drop-shadow(-2px 0 0 rgba(255, 50, 50, 1))
+                    drop-shadow(0 0 20px rgba(255, 0, 0, 0.9))
+                    brightness(1.5)
+                `,
+                duration: 0.05
+            })
+            .to(sprite, { x: 30, rotation: 8, duration: 0.04 })
+            .to(sprite, { x: -20, rotation: -5, filter: 'brightness(1.2)', duration: 0.04 })
+            .to(sprite, { x: 12, rotation: 3, duration: 0.03 })
+            .to(sprite, { x: -6, rotation: -2, duration: 0.03 });
+        } else {
+            // 일반 히트
+            tl.to(sprite, {
                 x: 30 * intensity,
                 rotation: 8 * intensity,
                 scaleX: 1 + 0.15 * intensity,
@@ -571,23 +629,27 @@ const SpriteAnimation = {
                 x: 5 * intensity,
                 rotation: 2 * intensity,
                 duration: 0.03
-            })
-            // 복구
-            .to(sprite, {
-                x: 0,
-                y: 0,
-                rotation: 0,
-                scale: 1,
-                scaleX: 1,
-                scaleY: 1,
-                filter: '',
-                duration: 0.15,
-                ease: "elastic.out(1, 0.5)"
             });
+        }
+        
+        // 🔄 복구 (탄성 있게!)
+        tl.to(sprite, {
+            x: 0,
+            y: 0,
+            rotation: 0,
+            scale: 1,
+            scaleX: 1,
+            scaleY: 1,
+            filter: '',
+            duration: hitType === 'critical' ? 0.25 : 0.15,
+            ease: "elastic.out(1, 0.5)"
+        });
+        
+        return tl;
     },
     
     // ==========================================
-    // 🔥 적 연타 피격 (콤보) - GSAP!
+    // 🔥 적 연타 피격 (콤보) - GSAP + PixiJS!
     // ==========================================
     enemyComboHit(enemyElement, hitCount = 3, damagePerHit = 5) {
         const sprite = enemyElement?.querySelector('.enemy-sprite-img');
@@ -595,15 +657,40 @@ const SpriteAnimation = {
         
         const tl = gsap.timeline();
         const baseIntensity = Math.min(damagePerHit / 8, 1.5) + 0.5;
+        const totalDamage = hitCount * damagePerHit;
         
-        // 화면 흔들림 (전체)
+        // 🌍 화면 흔들림 (전체)
         this.screenShake(baseIntensity * hitCount, 0.1 * hitCount);
+        
+        // 🎆 PixiJS 히트 이펙트 (각 히트마다!)
+        if (enemyElement && typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized) {
+            const rect = enemyElement.getBoundingClientRect();
+            const baseX = rect.left + rect.width / 2;
+            const baseY = rect.top + rect.height / 2 - 20;
+            
+            // 히트마다 약간 다른 위치에 이펙트
+            for (let i = 0; i < hitCount; i++) {
+                setTimeout(() => {
+                    const offsetX = (Math.random() - 0.5) * 30;
+                    const offsetY = (Math.random() - 0.5) * 20;
+                    PixiRenderer.createHitImpact(baseX + offsetX, baseY + offsetY, damagePerHit, '#ff6644');
+                }, i * 80);
+            }
+            
+            // 마지막에 큰 이펙트
+            setTimeout(() => {
+                if (totalDamage >= 20) {
+                    PixiRenderer.hitFlash('#ff4400', 100);
+                }
+            }, hitCount * 80);
+        }
         
         for (let i = 0; i < hitCount; i++) {
             const intensity = baseIntensity + (i * 0.2); // 점점 강해짐
             const direction = (i % 2 === 0) ? 1 : -1;
+            const isLast = i === hitCount - 1;
             
-            // 히트스탑 + 흰색 플래시
+            // 💥 히트스탑 + 흰색 플래시
             tl.set(sprite, {
                 scale: 1.1 + (i * 0.03),
                 x: direction * 8,
@@ -612,24 +699,25 @@ const SpriteAnimation = {
                     drop-shadow(-2px 0 0 white)
                     drop-shadow(0 2px 0 white)
                     drop-shadow(0 -2px 0 white)
-                    brightness(2) saturate(0)
+                    brightness(2.2) saturate(0)
                 `
             })
             // 프리즈
             .to(sprite, { duration: 0.04 + (i * 0.01) })
-            // 반동 + 빨간 플래시
+            // 반동 + 빨간/주황 플래시
             .to(sprite, {
                 x: direction * 25 * intensity,
                 rotation: direction * 6 * intensity,
-                scaleX: 1.15,
-                scaleY: 0.9,
+                scaleX: 1.18,
+                scaleY: 0.88,
                 filter: `
-                    drop-shadow(2px 0 0 rgba(255, 50, 50, 1))
-                    drop-shadow(-2px 0 0 rgba(255, 50, 50, 1))
-                    drop-shadow(0 0 ${12 + i * 3}px rgba(255, 0, 0, 0.9))
-                    brightness(${1.4 + i * 0.1})
+                    drop-shadow(2px 0 0 rgba(255, ${100 - i * 15}, 50, 1))
+                    drop-shadow(-2px 0 0 rgba(255, ${100 - i * 15}, 50, 1))
+                    drop-shadow(0 0 ${12 + i * 4}px rgba(255, ${50 - i * 10}, 0, 0.9))
+                    brightness(${1.5 + i * 0.1})
                 `,
-                duration: 0.04
+                duration: 0.04,
+                ease: "power3.out"
             })
             // 흔들림
             .to(sprite, {
@@ -644,9 +732,26 @@ const SpriteAnimation = {
                 filter: 'brightness(1)',
                 duration: 0.03
             });
+            
+            // 마지막 히트에 추가 반동
+            if (isLast) {
+                tl.to(sprite, {
+                    x: direction * 35,
+                    rotation: direction * 10,
+                    scaleX: 1.25,
+                    scaleY: 0.8,
+                    filter: `
+                        drop-shadow(3px 0 0 rgba(255, 50, 50, 1))
+                        drop-shadow(-3px 0 0 rgba(255, 50, 50, 1))
+                        drop-shadow(0 0 20px rgba(255, 0, 0, 0.9))
+                        brightness(1.8)
+                    `,
+                    duration: 0.05
+                });
+            }
         }
         
-        // 마지막 복구 (더 강한 탄성)
+        // 🔄 마지막 복구 (더 강한 탄성)
         tl.to(sprite, {
             x: 0,
             y: 0,
@@ -655,7 +760,7 @@ const SpriteAnimation = {
             scaleX: 1,
             scaleY: 1,
             filter: '',
-            duration: 0.25,
+            duration: 0.3,
             ease: "elastic.out(1.2, 0.4)"
         });
         
@@ -663,50 +768,107 @@ const SpriteAnimation = {
     },
     
     // ==========================================
-    // ⚡ 적 초고속 연타 피격 - GSAP!
+    // ⚡ 적 초고속 연타 피격 - GSAP + PixiJS!
     // ==========================================
     enemyRapidHit(enemyElement, hitCount = 5, damagePerHit = 3) {
         const sprite = enemyElement?.querySelector('.enemy-sprite-img');
         if (!sprite) return;
         
         const tl = gsap.timeline();
+        const totalDamage = hitCount * damagePerHit;
         
-        this.screenShake(10, 0.15);
+        // 🌍 화면 흔들림 (격렬하게!)
+        this.screenShake(12, 0.2);
+        
+        // 🎆 PixiJS 연속 히트 이펙트!
+        if (enemyElement && typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized) {
+            const rect = enemyElement.getBoundingClientRect();
+            const baseX = rect.left + rect.width / 2;
+            const baseY = rect.top + rect.height / 2 - 20;
+            
+            // 빠른 연속 이펙트
+            for (let i = 0; i < hitCount; i++) {
+                setTimeout(() => {
+                    const offsetX = (Math.random() - 0.5) * 50;
+                    const offsetY = (Math.random() - 0.5) * 30;
+                    PixiRenderer.createHitImpact(baseX + offsetX, baseY + offsetY, damagePerHit, '#ffaa00');
+                }, i * 40);
+            }
+            
+            // 마무리 큰 이펙트
+            setTimeout(() => {
+                PixiRenderer.createCriticalHit(baseX, baseY, totalDamage);
+                PixiRenderer.hitFlash('#ffcc00', 120);
+            }, hitCount * 40 + 50);
+        }
+        
+        // ⚡ 잔상 효과 추가
+        tl.set(sprite, {
+            filter: 'blur(3px) brightness(0.8)'
+        });
         
         // 초고속 연타!
         for (let i = 0; i < hitCount; i++) {
-            const offsetX = (Math.random() - 0.5) * 40;
-            const offsetY = (Math.random() - 0.5) * 20;
-            const rot = (Math.random() - 0.5) * 15;
+            const offsetX = (Math.random() - 0.5) * 50;
+            const offsetY = (Math.random() - 0.5) * 25;
+            const rot = (Math.random() - 0.5) * 18;
+            const isEven = i % 2 === 0;
             
             tl.to(sprite, {
                 x: offsetX,
                 y: offsetY,
                 rotation: rot,
+                scaleX: isEven ? 1.12 : 0.92,
+                scaleY: isEven ? 0.92 : 1.12,
                 filter: `
-                    drop-shadow(0 0 15px rgba(255, 255, 255, 0.9))
-                    brightness(2)
+                    drop-shadow(0 0 18px rgba(255, ${200 - i * 20}, 0, 0.9))
+                    brightness(2.2)
+                    blur(0px)
                 `,
-                duration: 0.02
+                duration: 0.025,
+                ease: "power4.out"
             })
             .to(sprite, {
                 filter: `
-                    drop-shadow(0 0 10px rgba(255, 0, 0, 0.8))
-                    brightness(1.2)
+                    drop-shadow(0 0 12px rgba(255, 100, 0, 0.7))
+                    brightness(1.3)
                 `,
                 duration: 0.02
             });
         }
         
-        // 마무리 충격
+        // 💥 마무리 충격 (더 극적으로!)
         tl.to(sprite, {
-            x: 30,
-            scaleX: 1.2,
-            scaleY: 0.85,
-            filter: 'brightness(2) saturate(0)',
-            duration: 0.05
+            x: 40,
+            y: -10,
+            rotation: 12,
+            scaleX: 1.3,
+            scaleY: 0.75,
+            filter: `
+                drop-shadow(3px 0 0 white)
+                drop-shadow(-3px 0 0 white)
+                drop-shadow(0 3px 0 white)
+                drop-shadow(0 -3px 0 white)
+                brightness(2.5) saturate(0)
+            `,
+            duration: 0.05,
+            ease: "power4.out"
         })
-        .to(sprite, { duration: 0.08 }) // 잠깐 멈춤
+        .to(sprite, { duration: 0.1 }) // 긴 프리즈!
+        // 🔄 복구 (크게 튕겨나옴)
+        .to(sprite, {
+            x: -30,
+            rotation: -8,
+            scaleX: 0.9,
+            scaleY: 1.1,
+            filter: 'brightness(1.2)',
+            duration: 0.08
+        })
+        .to(sprite, {
+            x: 15,
+            rotation: 4,
+            duration: 0.06
+        })
         .to(sprite, {
             x: 0,
             y: 0,
@@ -714,15 +876,15 @@ const SpriteAnimation = {
             scaleX: 1,
             scaleY: 1,
             filter: '',
-            duration: 0.3,
-            ease: "elastic.out(1, 0.4)"
+            duration: 0.35,
+            ease: "elastic.out(1.2, 0.35)"
         });
         
         return tl;
     },
     
     // ==========================================
-    // 플레이어 피격 애니메이션 - GSAP! (약하게)
+    // 플레이어 피격 애니메이션 - GSAP + PixiJS!
     // ==========================================
     playerHit(damage = 0) {
         const sprite = document.querySelector('.player-sprite-img');
@@ -731,40 +893,93 @@ const SpriteAnimation = {
         this.stopAnimation('player-idle');
         
         // 플레이어는 약하게
-        let intensity, freezeTime;
+        let intensity, freezeTime, hitType;
         if (damage >= 20) {
             intensity = 1.5;
             freezeTime = 0.06;
+            hitType = 'heavy';
         } else if (damage >= 12) {
             intensity = 1.2;
             freezeTime = 0.04;
+            hitType = 'medium';
         } else if (damage >= 6) {
             intensity = 0.8;
             freezeTime = 0.03;
+            hitType = 'light';
         } else {
             intensity = 0.5;
             freezeTime = 0.02;
+            hitType = 'weak';
         }
         
-        // 화면 흔들림 (약하게)
-        this.screenShake(intensity * 2, freezeTime + 0.05);
+        // 🎆 PixiJS 히트 이펙트!
+        const playerEl = document.getElementById('player');
+        if (playerEl && typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized) {
+            const rect = playerEl.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2 - 20;
+            
+            if (hitType === 'heavy') {
+                PixiRenderer.createHitImpact(centerX, centerY, damage, '#ff6666');
+                PixiRenderer.hitFlash('#ff0000', 100);
+            } else if (hitType === 'medium') {
+                PixiRenderer.createHitImpact(centerX, centerY, damage, '#ff8888');
+            }
+        }
         
-        gsap.timeline()
-            // 히트스탑
-            .set(sprite, {
-                scale: 1.05,
-                x: -5,
+        // 🌍 화면 흔들림 (플레이어는 약하게)
+        this.screenShake(intensity * 2.5, freezeTime + 0.05);
+        
+        const tl = gsap.timeline({
+            onComplete: () => {
+                sprite.style.filter = '';
+                this.startPlayerIdle();
+            }
+        });
+        
+        // ⏸️ 히트스탑
+        tl.set(sprite, {
+            scale: 1.05,
+            x: -5,
+            filter: `
+                drop-shadow(2px 0 0 white)
+                drop-shadow(-2px 0 0 white)
+                drop-shadow(0 2px 0 white)
+                drop-shadow(0 -2px 0 white)
+                brightness(1.8) saturate(0)
+            `
+        })
+        .to(sprite, { duration: freezeTime });
+        
+        // 💢 파닥파닥 (히트 타입별)
+        if (hitType === 'heavy') {
+            // 강한 피격: 더 극적인 반응
+            tl.to(sprite, {
+                x: -25 * intensity,
+                rotation: -8,
+                scaleX: 1.1,
+                scaleY: 0.9,
                 filter: `
-                    drop-shadow(2px 0 0 white)
-                    drop-shadow(-2px 0 0 white)
-                    drop-shadow(0 2px 0 white)
-                    drop-shadow(0 -2px 0 white)
-                    brightness(1.8) saturate(0)
-                `
+                    drop-shadow(2px 0 0 rgba(255, 50, 50, 1))
+                    drop-shadow(-2px 0 0 rgba(255, 50, 50, 1))
+                    drop-shadow(0 0 15px rgba(255, 0, 0, 0.8))
+                    brightness(1.5)
+                `,
+                duration: 0.05,
+                ease: "power3.out"
             })
-            .to(sprite, { duration: freezeTime })
-            // 파닥파닥 (약하게)
             .to(sprite, {
+                x: 18 * intensity,
+                rotation: 5,
+                filter: 'brightness(1.2)',
+                duration: 0.05
+            })
+            .to(sprite, { x: -12 * intensity, rotation: -3, duration: 0.04 })
+            .to(sprite, { x: 6 * intensity, rotation: 2, filter: 'brightness(1)', duration: 0.04 })
+            .to(sprite, { x: -3 * intensity, rotation: -1, duration: 0.03 });
+        } else {
+            // 일반 피격
+            tl.to(sprite, {
                 x: -15 * intensity,
                 rotation: -4 * intensity,
                 filter: `
@@ -790,13 +1005,15 @@ const SpriteAnimation = {
                 x: 3 * intensity,
                 rotation: 1 * intensity,
                 duration: 0.03
-            })
-            // 복구
-            .to(sprite, {
-                x: 0,
-                y: 0,
-                rotation: 0,
-                scale: 1,
+            });
+        }
+        
+        // 🔄 복구
+        tl.to(sprite, {
+            x: 0,
+            y: 0,
+            rotation: 0,
+            scale: 1,
                 filter: '',
                 duration: 0.2,
                 ease: "elastic.out(1, 0.5)"
