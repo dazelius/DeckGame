@@ -380,10 +380,20 @@ const BreakSystem = {
                     const intentEl = enemyEl.querySelector('.enemy-intent-display');
                     if (intentEl) {
                         intentEl.style.display = '';
+                        intentEl.style.visibility = '';
+                        intentEl.style.opacity = '';
                         intentEl.classList.remove('is-broken');
+                        intentEl.innerHTML = ''; // 나중에 updateEnemiesUI가 채워줌
+                        console.log(`[BreakSystem.onTurnEnd] ${enemy.name} 인텐트 복구 완료`);
                     }
                     enemyEl.classList.remove('enemy-broken');
                 }
+            }
+            
+            // 새로운 인텐트 결정
+            if (typeof decideEnemyIntentForEnemy === 'function') {
+                decideEnemyIntentForEnemy(enemy);
+                console.log(`[BreakSystem.onTurnEnd] ${enemy.name} 새 인텐트: ${enemy.intent}`);
             }
         }
     },

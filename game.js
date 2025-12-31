@@ -3197,6 +3197,17 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
         // 🔥 브레이크 해제 후 새로운 인텐트 설정!
         if (typeof decideEnemyIntentForEnemy === 'function') {
             decideEnemyIntentForEnemy(enemy);
+            console.log(`[BreakRecover] ${enemy.name} 인텐트 재설정: ${enemy.intent}, 값: ${enemy.intentValue}`);
+        }
+        
+        // 인텐트 표시 강제 복구
+        if (enemyEl) {
+            const intentEl = enemyEl.querySelector('.enemy-intent-display');
+            if (intentEl) {
+                intentEl.style.display = '';
+                intentEl.classList.remove('is-broken');
+                console.log(`[BreakRecover] ${enemy.name} 인텐트 UI 복구 완료`);
+            }
         }
         
         // 브레이크 해제 연출
