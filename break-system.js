@@ -398,7 +398,13 @@ const BreakSystem = {
             // 새로운 인텐트 결정
             if (typeof decideEnemyIntentForEnemy === 'function') {
                 decideEnemyIntentForEnemy(enemy);
-                console.log(`[BreakSystem.onTurnEnd] ${enemy.name} 새 인텐트: ${enemy.intent}`);
+                console.log(`[BreakSystem.onTurnEnd] ${enemy.name} 새 인텐트: ${enemy.intent}, 값: ${enemy.intentValue}`);
+            }
+            
+            // 🔥 UI 업데이트 (인텐트 표시!)
+            if (typeof updateEnemiesUI === 'function') {
+                updateEnemiesUI();
+                console.log(`[BreakSystem.onTurnEnd] updateEnemiesUI 호출 완료`);
             }
         }
     },
