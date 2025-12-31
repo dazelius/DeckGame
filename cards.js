@@ -118,8 +118,9 @@ const TriforceSystem = {
     }
 };
 
-// 카드 데이터베이스
-const cardDatabase = {
+// 카드 데이터베이스 (card-database.js에서 이미 선언됨 - 여기서는 확장만!)
+// const cardDatabase = {  // ❌ 중복 선언 제거!
+Object.assign(cardDatabase, {
     // ==========================================
     // 기본 카드
     // ==========================================
@@ -2394,7 +2395,7 @@ const cardDatabase = {
             }, 800);
         }
     }
-};
+});  // Object.assign 끝!
 
 // ==========================================
 // 에너지 볼트 시스템
