@@ -426,9 +426,15 @@ const BreakSystem = {
         intentEl.classList.remove('danger-intent', 'is-broken');
         enemyEl.classList.remove('enemy-broken');
         
-        // 브레이크 가능 인텐트가 없으면 표시 안함
-        if (!this.hasBreakableIntent(enemy) && !enemy.isBroken) {
-            return;
+        // 🔥 브레이크 해제된 상태면 인텐트 표시 복구만 하고 리턴
+        if (!enemy.isBroken) {
+            intentEl.style.display = '';
+            intentEl.style.visibility = '';
+            
+            // 브레이크 가능 인텐트가 없으면 여기서 끝
+            if (!this.hasBreakableIntent(enemy)) {
+                return;
+            }
         }
         
         if (enemy.isBroken) {

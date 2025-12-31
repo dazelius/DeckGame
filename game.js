@@ -3236,13 +3236,22 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
             `;
             enemyEl.appendChild(recoverEffect);
             setTimeout(() => recoverEffect.remove(), 1000);
-            
-            // 브레이크 UI 업데이트
-            BreakSystem.updateBreakUI(enemy);
         }
         
-        // UI 업데이트 (새 인텐트 표시)
+        // 🔥 UI 업데이트 (새 인텐트 표시) - 먼저 호출!
         updateEnemiesUI();
+        
+        // 🔥 인텐트 innerHTML 직접 채우기 (updateEnemiesUI가 안 채웠을 경우 대비)
+        if (enemyEl && enemy.intent) {
+            const intentEl = enemyEl.querySelector('.enemy-intent-display');
+            if (intentEl && (!intentEl.innerHTML || intentEl.innerHTML.trim() === '')) {
+                intentEl.innerHTML = typeof getIntentIcon === 'function' 
+                    ? getIntentIcon(enemy.intent, enemy.intentValue, enemy.intentHits || 1, enemy.intentBleed || 0)
+                    : `${enemy.intent} ${enemy.intentValue || ''}`;
+                intentEl.style.display = '';
+                console.log(`[BreakRecover] 🔧 인텐트 직접 채움: ${enemy.intent}`);
+            }
+        }
         
         if (onComplete) setTimeout(onComplete, 500);
         return;
