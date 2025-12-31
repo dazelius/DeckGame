@@ -967,7 +967,7 @@ const PixiRenderer = {
     },
     
     // ==========================================
-    // 💫 스턴 상태 유지 이펙트 (머리 위 별 회전)
+    // 💫 스턴 상태 유지 이펙트 (머리 위 별 회전) - 3D 원근법 적용!
     // ==========================================
     createStunLoop(x, y, duration = 2000) {
         if (!this.initialized) return;
@@ -977,41 +977,69 @@ const PixiRenderer = {
         container.y = y;
         this.effectsContainer.addChild(container);
         
-        // 5개의 별이 원형으로 회전
+        // 5개의 별이 3D 원형 궤도로 회전
         const stars = [];
         const starCount = 5;
-        const radius = 35;
+        const radiusX = 45; // 타원 가로 반경
+        const radiusY = 15; // 타원 세로 반경 (3D 기울기 효과)
         
         for (let i = 0; i < starCount; i++) {
             const star = new PIXI.Graphics();
-            star.star(0, 0, 5, 10, 5);
-            star.fill({ color: '#fef3c7', alpha: 1 });
-            star.stroke({ width: 1.5, color: '#f59e0b', alpha: 1 });
+            // 더 예쁜 별 모양
+            star.star(0, 0, 4, 10, 5);
+            star.fill({ color: '#fff9c4', alpha: 1 });
+            star.stroke({ width: 2, color: '#ffc107', alpha: 1 });
             
-            const angle = (Math.PI * 2 / starCount) * i;
-            star.x = Math.cos(angle) * radius;
-            star.y = Math.sin(angle) * radius;
-            
+            const baseAngle = (Math.PI * 2 / starCount) * i;
             container.addChild(star);
-            stars.push({ star, baseAngle: angle });
+            stars.push({ star, baseAngle, zIndex: 0 });
         }
         
         let time = 0;
         const totalFrames = duration / (1000 / 60);
+        const rotationSpeed = 0.05; // 회전 속도
         
         const animate = () => {
             time++;
             const progress = time / totalFrames;
-            const rotation = progress * Math.PI * 4;
             
-            // 전체 컨테이너 회전
-            container.rotation = rotation;
-            
-            // 각 별 반짝임
+            // 각 별 위치와 크기 업데이트 (3D 원근법!)
             stars.forEach((data, i) => {
-                const twinkle = Math.sin(time * 0.3 + i) * 0.3 + 0.7;
-                data.star.alpha = twinkle;
-                data.star.scale.set(0.8 + twinkle * 0.4);
+                const angle = data.baseAngle + time * rotationSpeed;
+                
+                // 3D 타원 궤도: X는 cos, Y는 sin * 기울기
+                const posX = Math.cos(angle) * radiusX;
+                const posY = Math.sin(angle) * radiusY;
+                
+                // Z축 위치 (앞/뒤 판단)
+                const zPos = Math.sin(angle); // -1 (뒤) ~ 1 (앞)
+                
+                // 원근법 스케일: 앞에 있으면 크게, 뒤에 있으면 작게
+                const perspectiveScale = 0.6 + (zPos + 1) * 0.4; // 0.6 ~ 1.4
+                
+                // 원근법 밝기: 앞에 있으면 밝게, 뒤에 있으면 어둡게
+                const brightness = 0.5 + (zPos + 1) * 0.25; // 0.5 ~ 1.0
+                
+                data.star.x = posX;
+                data.star.y = posY;
+                data.star.scale.set(perspectiveScale);
+                data.star.alpha = brightness;
+                
+                // Z-index (정렬용)
+                data.zIndex = zPos;
+                
+                // 반짝임 효과
+                const twinkle = Math.sin(time * 0.2 + i * 1.5) * 0.15 + 1;
+                data.star.scale.set(perspectiveScale * twinkle);
+                
+                // 별 회전 (자체 스핀)
+                data.star.rotation = time * 0.1 + i;
+            });
+            
+            // Z-index 순으로 정렬 (뒤에 있는 별이 먼저 그려지도록)
+            stars.sort((a, b) => a.zIndex - b.zIndex);
+            stars.forEach((data, i) => {
+                container.setChildIndex(data.star, i);
             });
             
             // 페이드 아웃 (마지막 20%)
@@ -1028,6 +1056,114 @@ const PixiRenderer = {
         animate();
         
         return container;
+    },
+    
+    // ==========================================
+    // 💫 지속적인 스턴 별 (브레이크 상태 유지 중)
+    // ==========================================
+    stunLoopInstances: new Map(), // enemyIndex -> container
+    
+    startPersistentStunLoop(enemyEl) {
+        if (!this.initialized || !enemyEl) return;
+        
+        const enemyIndex = enemyEl.dataset.index;
+        
+        // 이미 있으면 제거
+        this.stopPersistentStunLoop(enemyEl);
+        
+        const rect = enemyEl.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top - 10;
+        
+        const container = new PIXI.Container();
+        container.x = x;
+        container.y = y;
+        this.effectsContainer.addChild(container);
+        
+        // 4개의 별이 3D 원형 궤도로 회전
+        const stars = [];
+        const starCount = 4;
+        const radiusX = 40;
+        const radiusY = 12;
+        
+        for (let i = 0; i < starCount; i++) {
+            const star = new PIXI.Graphics();
+            star.star(0, 0, 5, 12, 5);
+            star.fill({ color: '#fff9c4', alpha: 1 });
+            star.stroke({ width: 2, color: '#ffc107', alpha: 1 });
+            
+            const baseAngle = (Math.PI * 2 / starCount) * i;
+            container.addChild(star);
+            stars.push({ star, baseAngle, zIndex: 0 });
+        }
+        
+        let time = 0;
+        let animationId = null;
+        const rotationSpeed = 0.06;
+        
+        const updatePosition = () => {
+            // 적 위치 추적 (스크롤/이동 대응)
+            const newRect = enemyEl.getBoundingClientRect();
+            container.x = newRect.left + newRect.width / 2;
+            container.y = newRect.top - 10;
+        };
+        
+        const animate = () => {
+            time++;
+            
+            updatePosition();
+            
+            stars.forEach((data, i) => {
+                const angle = data.baseAngle + time * rotationSpeed;
+                
+                const posX = Math.cos(angle) * radiusX;
+                const posY = Math.sin(angle) * radiusY;
+                const zPos = Math.sin(angle);
+                
+                const perspectiveScale = 0.5 + (zPos + 1) * 0.5;
+                const brightness = 0.4 + (zPos + 1) * 0.3;
+                
+                data.star.x = posX;
+                data.star.y = posY;
+                data.star.alpha = brightness;
+                data.zIndex = zPos;
+                
+                const twinkle = Math.sin(time * 0.15 + i * 2) * 0.2 + 1;
+                data.star.scale.set(perspectiveScale * twinkle);
+                data.star.rotation = time * 0.08 + i;
+            });
+            
+            stars.sort((a, b) => a.zIndex - b.zIndex);
+            stars.forEach((data, i) => {
+                container.setChildIndex(data.star, i);
+            });
+            
+            animationId = requestAnimationFrame(animate);
+        };
+        
+        animate();
+        
+        // 인스턴스 저장
+        this.stunLoopInstances.set(enemyIndex, {
+            container,
+            animationId,
+            stop: () => {
+                if (animationId) cancelAnimationFrame(animationId);
+                container.destroy({ children: true });
+            }
+        });
+    },
+    
+    stopPersistentStunLoop(enemyEl) {
+        if (!enemyEl) return;
+        
+        const enemyIndex = enemyEl.dataset.index;
+        const instance = this.stunLoopInstances.get(enemyIndex);
+        
+        if (instance) {
+            instance.stop();
+            this.stunLoopInstances.delete(enemyIndex);
+        }
     },
     
     // ==========================================

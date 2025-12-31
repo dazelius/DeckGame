@@ -63,6 +63,17 @@ const BreakSystem = {
         // 이전 브레이크 상태 초기화
         enemy.currentBreakRecipe = null;
         enemy.breakProgress = [];
+        
+        // 브레이크 상태였으면 별 이펙트 중지
+        if (enemy.isBroken) {
+            const enemyIndex = gameState.enemies?.indexOf(enemy);
+            if (enemyIndex !== -1) {
+                const enemyEl = document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`);
+                if (enemyEl && typeof PixiRenderer !== 'undefined') {
+                    PixiRenderer.stopPersistentStunLoop(enemyEl);
+                }
+            }
+        }
         enemy.isBroken = false;
         
         // 위협 상태 해제
@@ -289,12 +300,17 @@ const BreakSystem = {
         
         console.log(`[BreakSystem] ${enemy.name} BREAK!!!`);
         
-        // 즉시 그레이스케일 적용
+        // 즉시 그레이스케일 적용 + 지속 별 이펙트 시작!
         const enemyIndex = gameState.enemies?.indexOf(enemy);
         if (enemyIndex !== -1) {
             const enemyEl = document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`);
             if (enemyEl) {
                 enemyEl.classList.add('enemy-broken');
+                
+                // 🌟 지속적인 3D 별 이펙트 시작!
+                if (typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized) {
+                    PixiRenderer.startPersistentStunLoop(enemyEl);
+                }
             }
         }
         
@@ -329,6 +345,15 @@ const BreakSystem = {
             enemy.currentBreakRecipe = null;
             enemy.breakProgress = [];
             console.log(`[BreakSystem] ${enemy.name} 브레이크 해제`);
+            
+            // 🌟 지속 별 이펙트 중지!
+            const enemyIndex = gameState.enemies?.indexOf(enemy);
+            if (enemyIndex !== -1) {
+                const enemyEl = document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`);
+                if (enemyEl && typeof PixiRenderer !== 'undefined') {
+                    PixiRenderer.stopPersistentStunLoop(enemyEl);
+                }
+            }
         }
     },
     
@@ -977,41 +1002,6 @@ const BreakSystem = {
                 }
                 75% { 
                     transform: translateX(3px) rotate(1deg); 
-                }
-            }
-            
-            /* 스턴 별 표시 (CSS) */
-            .enemy-unit.enemy-broken::before {
-                content: '⭐ ⭐ ⭐';
-                position: absolute;
-                top: -25px;
-                left: 50%;
-                transform: translateX(-50%);
-                font-size: 0.9rem;
-                letter-spacing: 3px;
-                animation: stunStarsRotate 1.5s linear infinite;
-                z-index: 100;
-                filter: drop-shadow(0 0 5px rgba(255, 200, 50, 0.8));
-            }
-            
-            @keyframes stunStarsRotate {
-                0% { 
-                    transform: translateX(-50%) rotateY(0deg);
-                    opacity: 1;
-                }
-                25% {
-                    opacity: 0.7;
-                }
-                50% { 
-                    transform: translateX(-50%) rotateY(180deg);
-                    opacity: 1;
-                }
-                75% {
-                    opacity: 0.7;
-                }
-                100% { 
-                    transform: translateX(-50%) rotateY(360deg);
-                    opacity: 1;
                 }
             }
             
