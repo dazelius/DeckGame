@@ -823,6 +823,226 @@ const PixiRenderer = {
     clear() {
         this.particleContainer.removeChildren();
         this.effectsContainer.removeChildren();
+    },
+    
+    // ==========================================
+    // 🛡️⚡ 파직 쉴드 이펙트! (방어 시)
+    // ==========================================
+    createShieldImpact(x, y, blockAmount = 5, intensity = 1) {
+        if (!this.initialized) return;
+        
+        const container = new PIXI.Container();
+        container.x = x;
+        container.y = y;
+        this.effectsContainer.addChild(container);
+        
+        // 🔵 육각형 쉴드 (확장되며 페이드)
+        const shield = new PIXI.Graphics();
+        const hexRadius = 50 + (intensity * 20);
+        
+        // 육각형 그리기
+        shield.poly(this.getHexPoints(0, 0, hexRadius * 0.3));
+        shield.fill({ color: '#60a5fa', alpha: 0.4 });
+        shield.stroke({ width: 3, color: '#93c5fd', alpha: 0.9 });
+        container.addChild(shield);
+        
+        // 육각형 확장 애니메이션
+        let shieldLife = 30;
+        const animateShield = () => {
+            shieldLife--;
+            const progress = 1 - (shieldLife / 30);
+            const scale = 0.5 + progress * 1.5;
+            shield.scale.set(scale);
+            shield.alpha = 1 - progress;
+            
+            if (shieldLife <= 0) {
+                container.removeChild(shield);
+                shield.destroy();
+            } else {
+                requestAnimationFrame(animateShield);
+            }
+        };
+        animateShield();
+        
+        // ⚡ 전기 스파크 (6~12개)
+        const sparkCount = 6 + Math.floor(intensity * 6);
+        for (let i = 0; i < sparkCount; i++) {
+            const spark = new PIXI.Graphics();
+            const angle = (Math.PI * 2 / sparkCount) * i + Math.random() * 0.5;
+            const length = 20 + Math.random() * 40 * intensity;
+            
+            // 번개 모양 (지그재그)
+            const segments = 3 + Math.floor(Math.random() * 3);
+            spark.moveTo(0, 0);
+            
+            let px = 0, py = 0;
+            for (let j = 1; j <= segments; j++) {
+                const segLen = length / segments;
+                const offsetAngle = angle + (Math.random() - 0.5) * 0.5;
+                px += Math.cos(offsetAngle) * segLen;
+                py += Math.sin(offsetAngle) * segLen;
+                spark.lineTo(px, py);
+            }
+            
+            // 글로우 효과
+            spark.stroke({ 
+                width: 4, 
+                color: '#3b82f6', 
+                alpha: 0.5,
+                cap: 'round',
+                join: 'round'
+            });
+            spark.stroke({ 
+                width: 2, 
+                color: '#93c5fd', 
+                alpha: 0.9,
+                cap: 'round',
+                join: 'round'
+            });
+            spark.stroke({ 
+                width: 1, 
+                color: '#ffffff', 
+                alpha: 1,
+                cap: 'round',
+                join: 'round'
+            });
+            
+            spark.rotation = Math.random() * Math.PI * 2;
+            container.addChild(spark);
+            
+            // 스파크 애니메이션
+            let sparkLife = 15 + Math.random() * 10;
+            const maxSparkLife = sparkLife;
+            const animateSpark = () => {
+                sparkLife--;
+                spark.alpha = sparkLife / maxSparkLife;
+                spark.scale.set(1 + (1 - sparkLife / maxSparkLife) * 0.3);
+                
+                if (sparkLife <= 0) {
+                    container.removeChild(spark);
+                    spark.destroy();
+                } else {
+                    requestAnimationFrame(animateSpark);
+                }
+            };
+            
+            // 약간의 딜레이로 파직파직
+            setTimeout(animateSpark, i * 20);
+        }
+        
+        // 💎 유리 파편 (파직 느낌)
+        const shardCount = 8 + Math.floor(intensity * 8);
+        for (let i = 0; i < shardCount; i++) {
+            const shard = new PIXI.Graphics();
+            const size = 3 + Math.random() * 5;
+            const angle = (Math.PI * 2 / shardCount) * i + Math.random() * 0.3;
+            
+            // 다이아몬드 모양
+            shard.moveTo(0, -size);
+            shard.lineTo(size * 0.6, 0);
+            shard.lineTo(0, size);
+            shard.lineTo(-size * 0.6, 0);
+            shard.closePath();
+            shard.fill({ color: '#bfdbfe', alpha: 0.9 });
+            shard.stroke({ width: 1, color: '#60a5fa', alpha: 0.8 });
+            
+            // 작은 글로우
+            const glow = new PIXI.Graphics();
+            glow.circle(0, 0, size * 1.5);
+            glow.fill({ color: '#60a5fa', alpha: 0.3 });
+            shard.addChild(glow);
+            
+            const speed = 3 + Math.random() * 5 * intensity;
+            shard.vx = Math.cos(angle) * speed;
+            shard.vy = Math.sin(angle) * speed - 2;
+            shard.rotation = Math.random() * Math.PI * 2;
+            shard.rotationSpeed = (Math.random() - 0.5) * 0.3;
+            shard.life = 30 + Math.random() * 15;
+            shard.maxLife = shard.life;
+            
+            container.addChild(shard);
+            
+            const animateShard = () => {
+                shard.life--;
+                shard.x += shard.vx;
+                shard.y += shard.vy;
+                shard.vy += 0.15; // 중력
+                shard.vx *= 0.98;
+                shard.rotation += shard.rotationSpeed;
+                shard.alpha = shard.life / shard.maxLife;
+                
+                if (shard.life <= 0) {
+                    container.removeChild(shard);
+                    shard.destroy();
+                } else {
+                    requestAnimationFrame(animateShard);
+                }
+            };
+            
+            setTimeout(animateShard, 50 + Math.random() * 50);
+        }
+        
+        // 🌟 중심 플래시
+        const flash = new PIXI.Graphics();
+        flash.circle(0, 0, 30 * intensity);
+        flash.fill({ color: '#ffffff', alpha: 0.8 });
+        container.addChild(flash);
+        
+        let flashLife = 10;
+        const animateFlash = () => {
+            flashLife--;
+            flash.alpha = flashLife / 10;
+            flash.scale.set(1 + (1 - flashLife / 10) * 2);
+            
+            if (flashLife <= 0) {
+                container.removeChild(flash);
+                flash.destroy();
+            } else {
+                requestAnimationFrame(animateFlash);
+            }
+        };
+        animateFlash();
+        
+        // 🔊 링 확장 (충격파)
+        const ring = new PIXI.Graphics();
+        ring.circle(0, 0, 20);
+        ring.stroke({ width: 4, color: '#60a5fa', alpha: 0.8 });
+        container.addChild(ring);
+        
+        let ringLife = 25;
+        const animateRing = () => {
+            ringLife--;
+            const progress = 1 - (ringLife / 25);
+            ring.scale.set(1 + progress * 3);
+            ring.alpha = 1 - progress;
+            
+            if (ringLife <= 0) {
+                container.removeChild(ring);
+                ring.destroy();
+            } else {
+                requestAnimationFrame(animateRing);
+            }
+        };
+        animateRing();
+        
+        // 컨테이너 정리 (2초 후)
+        setTimeout(() => {
+            this.effectsContainer.removeChild(container);
+            container.destroy({ children: true });
+        }, 2000);
+    },
+    
+    // 육각형 포인트 생성
+    getHexPoints(cx, cy, radius) {
+        const points = [];
+        for (let i = 0; i < 6; i++) {
+            const angle = (Math.PI / 3) * i - Math.PI / 6;
+            points.push(
+                cx + radius * Math.cos(angle),
+                cy + radius * Math.sin(angle)
+            );
+        }
+        return points;
     }
 };
 
