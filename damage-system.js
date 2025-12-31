@@ -2,6 +2,94 @@
 // Shadow Deck - 데미지 시스템
 // ==========================================
 
+// ==========================================
+// 🔥 연타 공격 감지 시스템
+// ==========================================
+const ComboTracker = {
+    lastHitTime: 0,
+    hitCount: 0,
+    lastTarget: null,
+    comboTimeout: null,
+    COMBO_WINDOW: 350, // 350ms 내에 연속 공격하면 콤보로 인식
+    isComboAnimating: false,
+    pendingPlayerCombo: null,
+    
+    // 공격 등록
+    registerHit(target, targetEl, damage) {
+        const now = performance.now();
+        const timeSinceLastHit = now - this.lastHitTime;
+        
+        // 같은 타겟에게 짧은 시간 내 연속 공격
+        if (target === this.lastTarget && timeSinceLastHit < this.COMBO_WINDOW) {
+            this.hitCount++;
+            console.log(`[Combo] 🔥 ${this.hitCount}연타!`);
+        } else {
+            // 새로운 콤보 시작
+            this.hitCount = 1;
+            this.lastTarget = target;
+            this.isComboAnimating = false;
+        }
+        
+        this.lastHitTime = now;
+        
+        // 기존 타임아웃 취소
+        if (this.comboTimeout) {
+            clearTimeout(this.comboTimeout);
+        }
+        
+        // 콤보 종료 타이머 (연타가 끝나면 애니메이션 마무리)
+        this.comboTimeout = setTimeout(() => {
+            if (this.hitCount > 1) {
+                console.log(`[Combo] ⚔️ ${this.hitCount}연타 종료!`);
+            }
+            this.hitCount = 0;
+            this.lastTarget = null;
+            this.isComboAnimating = false;
+        }, this.COMBO_WINDOW + 100);
+        
+        return {
+            isCombo: this.hitCount > 1,
+            hitIndex: this.hitCount - 1,
+            totalHits: this.hitCount
+        };
+    },
+    
+    // 콤보 애니메이션 선택
+    getComboAnimation(hitCount) {
+        if (hitCount >= 5) return 'rapid';      // 5연타 이상: 초고속
+        if (hitCount >= 2) return 'combo';      // 2~4연타: 일반 콤보
+        return 'single';                         // 단일
+    },
+    
+    // 플레이어 공격 애니메이션 트리거 (첫 히트에서만)
+    triggerPlayerAttack(targetEl, hitIndex, totalExpectedHits) {
+        if (typeof SpriteAnimation === 'undefined') return;
+        
+        // 첫 번째 히트에서만 플레이어 애니메이션 시작
+        if (hitIndex === 0) {
+            if (totalExpectedHits >= 5) {
+                // 5연타 이상: 초고속 연타
+                console.log('[Combo] ⚡ 플레이어 초고속 연타!');
+                SpriteAnimation.playerRapidAttack(totalExpectedHits);
+            } else if (totalExpectedHits >= 3) {
+                // 3~4연타: 콤보 공격
+                console.log('[Combo] 🔥 플레이어 콤보 공격!');
+                SpriteAnimation.playerComboAttack(totalExpectedHits);
+            } else if (totalExpectedHits === 2) {
+                // 2연타: 빠른 이중 공격
+                console.log('[Combo] ⚔️ 플레이어 이중 공격!');
+                SpriteAnimation.playerComboAttack(2);
+            } else {
+                // 단일 공격
+                SpriteAnimation.playerAttack(targetEl);
+            }
+        }
+    }
+};
+
+// 전역 등록
+window.ComboTracker = ComboTracker;
+
 // 데미지 처리 (유물 보너스 포함)
 function dealDamage(target, amount, card = null) {
     // 적인지 확인 (다중 적 지원)
@@ -122,12 +210,34 @@ function dealDamage(target, amount, card = null) {
         const isCriticalHit = gameState.currentCritical?.isCritical || false;
         showDamagePopup(targetEl, result.actualDamage, isCriticalHit ? 'critical' : 'damage');
         
-        // 🎭 스프라이트 피격 애니메이션 (파닥파닥!)
+        // 🎭 스프라이트 피격 애니메이션 (콤보 감지!)
         if (typeof SpriteAnimation !== 'undefined') {
             if (isPlayer) {
                 SpriteAnimation.playerHit(result.actualDamage);
             } else if (isEnemy) {
-                SpriteAnimation.enemyHit(targetEl, result.actualDamage);
+                // 연타 감지!
+                const combo = ComboTracker.registerHit(target, targetEl, result.actualDamage);
+                
+                // 카드에 hitCount가 있으면 예상 연타 수 사용
+                const expectedHits = activeCard?.hitCount 
+                    ? (typeof activeCard.hitCount === 'function' ? activeCard.hitCount(gameState) : activeCard.hitCount)
+                    : 0;
+                
+                // 첫 히트에서 플레이어 공격 애니메이션 트리거
+                if (combo.hitIndex === 0 && expectedHits > 1) {
+                    ComboTracker.triggerPlayerAttack(targetEl, 0, expectedHits);
+                    ComboTracker.isComboAnimating = true;
+                }
+                
+                if (combo.isCombo || expectedHits > 1) {
+                    // 연타 공격: 콤보 피격 (각 히트마다)
+                    if (!ComboTracker.isComboAnimating || combo.hitIndex > 0) {
+                        SpriteAnimation.enemyComboHit(targetEl, 1, result.actualDamage);
+                    }
+                } else {
+                    // 단일 공격: 기존 피격 애니메이션
+                    SpriteAnimation.enemyHit(targetEl, result.actualDamage);
+                }
             }
         }
         
