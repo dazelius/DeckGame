@@ -3285,39 +3285,27 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
             `;
             enemyEl.appendChild(recoverEffect);
             setTimeout(() => recoverEffect.remove(), 1000);
-        }
-        
-        // 🔥 1단계: 새로운 인텐트 결정
-        if (typeof decideEnemyIntentForEnemy === 'function') {
-            decideEnemyIntentForEnemy(enemy);
-            // 🔒 플래그 설정: 다음 decideEnemyIntent() 호출 시 이 적은 건너뛰기
-            enemy.intentLockedUntilNextTurn = true;
-            console.log(`[BreakRecover] ${enemy.name} 인텐트 재설정: ${enemy.intent}, 값: ${enemy.intentValue} (잠금됨)`);
-        }
-        
-        // 🔥 2단계: UI 업데이트
-        updateEnemiesUI();
-        
-        // 🔥 3단계: 인텐트 표시 강제 (최종 보장!)
-        setTimeout(() => {
-            if (enemyEl) {
-                const intentEl = enemyEl.querySelector('.enemy-intent-display');
-                if (intentEl) {
-                    intentEl.style.display = '';
-                    intentEl.style.visibility = 'visible';
-                    intentEl.style.opacity = '1';
-                    intentEl.classList.remove('is-broken');
-                    
-                    // innerHTML이 비어있으면 직접 채우기
-                    if (!intentEl.innerHTML || intentEl.innerHTML.trim() === '') {
-                        intentEl.innerHTML = typeof getIntentIcon === 'function' 
-                            ? getIntentIcon(enemy.intent, enemy.intentValue, enemy.intentHits || 1, enemy.intentBleed || 0)
-                            : `${enemy.intent} ${enemy.intentValue || ''}`;
-                        console.log(`[BreakRecover] 🔧 인텐트 직접 채움: ${enemy.intent}`);
-                    }
-                }
+            
+            // 🔥 인텐트 표시 복구 (비워두기 - 다음 턴에 결정됨)
+            const intentEl = enemyEl.querySelector('.enemy-intent-display');
+            if (intentEl) {
+                intentEl.style.display = '';
+                intentEl.style.visibility = 'visible';
+                intentEl.style.opacity = '1';
+                intentEl.classList.remove('is-broken');
+                // 인텐트는 비워두고 "?" 표시 (다음 플레이어 턴 시작 시 결정됨)
+                intentEl.innerHTML = '<span class="intent-unknown">❓</span>';
             }
-        }, 100); // 모든 애니메이션 후 100ms 딜레이
+        }
+        
+        // ⚠️ 인텐트는 결정하지 않음! 
+        // 다음 플레이어 턴 시작 시 decideEnemyIntent()에서 자연스럽게 결정됨
+        enemy.intent = null;
+        enemy.intentValue = 0;
+        console.log(`[BreakRecover] ${enemy.name} 회복 완료 - 인텐트는 다음 턴에 결정됨`);
+        
+        // UI 업데이트
+        updateEnemiesUI();
         
         if (onComplete) setTimeout(onComplete, 500);
         return;

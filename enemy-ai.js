@@ -17,13 +17,6 @@ function decideEnemyIntent() {
 
 // 개별 적의 의도 결정
 function decideEnemyIntentForEnemy(enemy) {
-    // 🔥 브레이크 회복 직후에는 이미 인텐트가 결정되어 있으면 건너뛰기
-    if (enemy.intentLockedUntilNextTurn) {
-        console.log(`[EnemyAI] ${enemy.name} 인텐트 잠금 상태 - 건너뛰기 (현재: ${enemy.intent})`);
-        delete enemy.intentLockedUntilNextTurn; // 플래그 제거 (다음 턴부터는 정상 결정)
-        return;
-    }
-    
     let intent;
     
     // 턴 카운트 증가
