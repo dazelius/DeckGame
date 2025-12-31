@@ -460,11 +460,10 @@ function createTesterButton() {
     console.log('[Tester] 테스터 버튼 생성됨');
 }
 
-// 페이지 로드 시 테스터 버튼 생성
-document.addEventListener('DOMContentLoaded', () => {
-    // 약간의 딜레이 후 버튼 생성 (다른 요소들이 로드된 후)
-    setTimeout(createTesterButton, 1000);
-});
+// 테스터 버튼 비활성화 (배포용)
+// document.addEventListener('DOMContentLoaded', () => {
+//     setTimeout(createTesterButton, 1000);
+// });
 
 // 로드 완료 로그
 console.log('[Starter Deck] Loaded');
