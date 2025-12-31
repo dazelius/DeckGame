@@ -202,10 +202,12 @@ img {
 
 .bg-vignette {
     position: absolute;
-    inset: 0;
-    /* 하단 카드 영역을 가리지 않도록 상단/좌우에만 비네팅 적용 */
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60%; /* 상단 60%에만 비네팅 적용 */
     background: 
-        radial-gradient(ellipse 150% 100% at 50% 0%, transparent 50%, rgba(0, 0, 0, 0.4) 100%);
+        radial-gradient(ellipse 150% 150% at 50% 0%, transparent 40%, rgba(0, 0, 0, 0.5) 100%);
     z-index: 1;
     pointer-events: none;
 }
