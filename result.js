@@ -420,6 +420,10 @@ function getRandomRelicReward(minRarity = 'common') {
 }
 
 function gameOver() {
+    // 🛡️ 인텐트 안전 체크 중지
+    if (typeof stopIntentSafetyCheck === 'function') {
+        stopIntentSafetyCheck();
+    }
     ResultSystem.gameOver();
 }
 

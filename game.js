@@ -3,6 +3,67 @@
 // ==========================================
 
 // ==========================================
+// 🛡️ 인텐트 안전 체크 시스템
+// ==========================================
+let intentSafetyCheckInterval = null;
+
+function startIntentSafetyCheck() {
+    // 이미 실행 중이면 중복 방지
+    if (intentSafetyCheckInterval) return;
+    
+    console.log('[IntentSafety] 🛡️ 안전 체크 시스템 시작');
+    
+    intentSafetyCheckInterval = setInterval(() => {
+        if (!gameState || !gameState.enemies) return;
+        if (gameState.intentsHidden) return; // 인텐트가 숨김 상태면 체크 안함
+        
+        gameState.enemies.forEach((enemy, index) => {
+            if (enemy.hp <= 0 || enemy.isBroken) return; // 죽은 적이나 브레이크 상태는 건너뛰기
+            
+            const enemyEl = document.querySelector(`.enemy-unit[data-index="${index}"]`);
+            if (!enemyEl) return;
+            
+            const intentEl = enemyEl.querySelector('.enemy-intent-display');
+            if (!intentEl) return;
+            
+            // 인텐트가 비어있거나 숨겨져 있으면 강제 복구
+            const isHidden = intentEl.style.display === 'none' || 
+                             intentEl.style.visibility === 'hidden' ||
+                             intentEl.style.opacity === '0';
+            const isEmpty = !intentEl.innerHTML || intentEl.innerHTML.trim() === '';
+            
+            if ((isHidden || isEmpty) && enemy.intent) {
+                console.log(`[IntentSafety] ⚠️ ${enemy.name} 인텐트 복구! (${enemy.intent} ${enemy.intentValue})`);
+                
+                // 스타일 복구
+                intentEl.style.display = '';
+                intentEl.style.visibility = 'visible';
+                intentEl.style.opacity = '1';
+                intentEl.classList.remove('is-broken', 'intent-hidden');
+                
+                // 내용 채우기
+                if (isEmpty && typeof getIntentIcon === 'function') {
+                    intentEl.innerHTML = getIntentIcon(
+                        enemy.intent, 
+                        enemy.intentValue, 
+                        enemy.intentHits || 1, 
+                        enemy.intentBleed || 0
+                    );
+                }
+            }
+        });
+    }, 500); // 500ms마다 체크
+}
+
+function stopIntentSafetyCheck() {
+    if (intentSafetyCheckInterval) {
+        clearInterval(intentSafetyCheckInterval);
+        intentSafetyCheckInterval = null;
+        console.log('[IntentSafety] 🛑 안전 체크 시스템 중지');
+    }
+}
+
+// ==========================================
 // 플레이어 초기화
 // ==========================================
 function initializePlayer() {
@@ -197,6 +258,9 @@ function loadPlayerDeck() {
 // 전투 시작
 // ==========================================
 function startBattle() {
+    // 🛡️ 인텐트 안전 체크 시스템 시작
+    startIntentSafetyCheck();
+    
     // 🎵 전투 BGM 시작
     if (typeof BGMSystem !== 'undefined') {
         BGMSystem.play('battle');
@@ -4223,6 +4287,9 @@ function victory() {
     console.log('=== victory() 호출 ===');
     console.log(`gameState.enemy.name: ${gameState.enemy?.name}`);
     console.log(`gameState.currentBattleType: ${gameState.currentBattleType}`);
+    
+    // 🛡️ 인텐트 안전 체크 중지
+    stopIntentSafetyCheck();
     
     // ⚡ 에너지 볼트 정리
     if (typeof EnergyBoltSystem !== 'undefined') {
