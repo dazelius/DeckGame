@@ -243,8 +243,6 @@ const TitleSystem = {
                     <img src="logo.png" alt="Project DDoo" class="ds-logo-img">
                 </div>
                 
-                <div class="ds-subtitle">TEST VERSION</div>
-                
                 <!-- 메뉴 버튼 -->
                 <div class="ds-menu">
                     <button class="ds-menu-btn" id="title-start-btn">
@@ -256,11 +254,6 @@ const TitleSystem = {
                         <span class="ds-btn-line"></span>
                         <span class="ds-btn-text">이어하기</span>
                         <span class="ds-btn-sub"></span>
-                        <span class="ds-btn-line"></span>
-                    </button>
-                    <button class="ds-menu-btn secondary" id="title-test-btn">
-                        <span class="ds-btn-line"></span>
-                        <span class="ds-btn-text">전투 테스트</span>
                         <span class="ds-btn-line"></span>
                     </button>
                 </div>
@@ -282,11 +275,6 @@ const TitleSystem = {
         // 이어하기 버튼
         document.getElementById('title-continue-btn').addEventListener('click', () => {
             this.continueGame();
-        });
-        
-        // 전투 테스트 버튼
-        document.getElementById('title-test-btn').addEventListener('click', () => {
-            this.startBattleTest();
         });
         
         // 데이터 초기화 버튼
