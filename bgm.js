@@ -509,7 +509,7 @@ const BGMSystem = {
                 bottom: 20px;
                 left: 20px;
                 z-index: 9999;
-                display: flex;
+                display: none; /* 임시 숨김 - 설정 메뉴로 이동 예정 */
                 align-items: center;
                 gap: 10px;
                 background: rgba(20, 20, 30, 0.9);
