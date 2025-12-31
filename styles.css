@@ -184,13 +184,15 @@ img {
     display: none;
 }
 
-/* 3-레이어 배경 시스템 */
+/* 3-레이어 배경 시스템 - 하단 그림자 문제로 비활성화 */
 .battle-background {
     position: absolute;
     inset: 0;
     pointer-events: none;
     z-index: 0;
     overflow: hidden;
+    /* 하단 영역만 잘라내기 */
+    height: calc(100% - 260px); /* bottom-area 높이만큼 제외 */
 }
 
 /* 공통 배경 레이어 스타일 */
