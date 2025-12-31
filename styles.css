@@ -1642,7 +1642,7 @@ img {
         0 0 20px rgba(180, 100, 100, 0.2);
 }
 
-/* 손패 영역 */
+/* 손패 영역 - 클릭 통과 (양쪽 UI 접근 가능) */
 .hand-area {
     flex: 1;
     display: flex;
@@ -1652,6 +1652,7 @@ img {
     height: 100%;
     position: relative;
     z-index: 70;
+    pointer-events: none; /* 클릭 통과! */
 }
 
 .hand {
@@ -1663,6 +1664,12 @@ img {
     margin-bottom: 10px;
     position: relative;
     z-index: 70;
+    pointer-events: none; /* 클릭 통과! */
+}
+
+/* 카드만 클릭 가능 */
+.hand .card {
+    pointer-events: auto;
 }
 
 /* ==========================================
