@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎴 카드 디자인 테스트</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="card-styles.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #0a0a0f;
+            background-image: 
+                radial-gradient(ellipse at top, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom, rgba(168, 85, 247, 0.1) 0%, transparent 50%);
+            min-height: 100vh;
+            padding: 40px;
+            font-family: 'Cinzel', serif;
+            color: #e5e5e5;
+        }
+        
+        h1 {
+            text-align: center;
+            font-size: 3rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b, #fbbf24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: none;
+            filter: drop-shadow(0 0 30px rgba(251, 191, 36, 0.5));
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #6b7280;
+            margin-bottom: 40px;
+            font-size: 1rem;
+        }
+        
+        h2 {
+            font-size: 1.8rem;
+            margin: 60px 0 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        h2 span {
+            font-size: 2rem;
+        }
+        
+        .section {
+            margin-bottom: 80px;
+        }
+        
+        .card-row {
+            display: flex;
+            gap: 50px;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 40px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .card-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .card-label {
+            font-size: 1rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            padding: 8px 20px;
+            border-radius: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .card-label.basic { color: #6b7280; }
+        .card-label.common { color: #9ca3af; }
+        .card-label.uncommon { color: #22c55e; border-color: rgba(34, 197, 94, 0.3); }
+        .card-label.rare { color: #3b82f6; border-color: rgba(59, 130, 246, 0.3); }
+        .card-label.special { color: #a855f7; border-color: rgba(168, 85, 247, 0.3); }
+        .card-label.legendary { color: #fbbf24; border-color: rgba(251, 191, 36, 0.3); }
+        
+        /* 컨트롤 패널 */
+        .controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            z-index: 1000;
+            min-width: 200px;
+        }
+        
+        .controls h3 {
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+            color: #fbbf24;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .controls label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #d1d5db;
+        }
+        
+        .controls input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #fbbf24;
+        }
+        
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin-top: 20px;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: 'Cinzel', serif;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(251, 191, 36, 0.6);
+        }
+        
+        /* 비교 테이블 */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 30px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .comparison-table th,
+        .comparison-table td {
+            padding: 15px 20px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .comparison-table th {
+            background: rgba(0, 0, 0, 0.5);
+            color: #fbbf24;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .comparison-table td {
+            font-size: 0.85rem;
+            color: #d1d5db;
+        }
+        
+        .comparison-table tr:hover td {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .color-dot {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .color-dot.basic { background: #6b7280; }
+        .color-dot.common { background: #9ca3af; }
+        .color-dot.uncommon { background: #22c55e; box-shadow: 0 0 10px #22c55e; }
+        .color-dot.rare { background: #3b82f6; box-shadow: 0 0 10px #3b82f6; }
+        .color-dot.special { background: #a855f7; box-shadow: 0 0 10px #a855f7; }
+        .color-dot.legendary { background: #fbbf24; box-shadow: 0 0 15px #fbbf24; }
+    </style>
+</head>
+<body>
+    <h1>🎴 CARD DESIGN TEST</h1>
+    <p class="subtitle">Shadow Deck 카드 희귀도 디자인 시스템</p>
+    
+    <!-- 컨트롤 패널 -->
+    <div class="controls">
+        <h3>⚙️ 설정</h3>
+        <label>
+            <input type="checkbox" id="toggleAnimation" checked>
+            애니메이션
+        </label>
+        <label>
+            <input type="checkbox" id="toggleGlow" checked>
+            글로우 효과
+        </label>
+        <label>
+            <input type="checkbox" id="darkMode" checked>
+            다크 배경
+        </label>
+        <button class="btn" onclick="location.reload()">🔄 새로고침</button>
+    </div>
+    
+    <!-- 희귀도별 비교 -->
+    <div class="section">
+        <h2><span>📊</span> 희귀도별 비교</h2>
+        <div class="card-row">
+            <div class="card-wrapper">
+                <div class="card-label basic">Basic</div>
+                <div class="card basic attack">
+                    <div class="card-header">
+                        <div class="card-cost">1</div>
+                        <div class="card-type">공격</div>
+                    </div>
+                    <div class="card-icon">⚔️</div>
+                    <div class="card-name">타격</div>
+                    <div class="card-desc">적에게 <span class="damage-val">6</span> 피해.</div>
+                </div>
+            </div>
+            
+            <div class="card-wrapper">
+                <div class="card-label common">Common</div>
+                <div class="card common skill">
+                    <div class="card-header">
+                        <div class="card-cost">1</div>
+                        <div class="card-type">스킬</div>
+                    </div>
+                    <div class="card-icon">🛡️</div>
+                    <div class="card-name">수비</div>
+                    <div class="card-desc"><span class="block-val">5</span> 방어도 획득.</div>
+                </div>
+            </div>
+            
+            <div class="card-wrapper">
+                <div class="card-label uncommon">Uncommon</div>
+                <div class="card uncommon attack">
+                    <div class="card-header">
+                        <div class="card-cost">1</div>
+                        <div class="card-type">공격</div>
+                    </div>
+                    <div class="card-icon">🎲</div>
+                    <div class="card-name">럭키 스트라이크</div>
+                    <div class="card-desc">적에게 <span class="damage-val">3~9</span> 랜덤 피해.</div>
+                </div>
+            </div>
+            
+            <div class="card-wrapper">
+                <div class="card-label rare">Rare</div>
+                <div class="card rare skill">
+                    <div class="card-header">
+                        <div class="card-cost">1</div>
+                        <div class="card-type">스킬</div>
+                    </div>
+                    <div class="card-icon">🃏</div>
+                    <div class="card-name">와일드 조커</div>
+                    <div class="card-desc">손패를 <span class="damage-val">랜덤</span>으로 교체!<br><span class="exhaust-text">소멸</span></div>
+                </div>
+            </div>
+            
+            <div class="card-wrapper">
+                <div class="card-label special">Epic</div>
+                <div class="card special attack">
+                    <div class="card-header">
+                        <div class="card-cost">0</div>
+                        <div class="card-type">공격</div>
+                    </div>
+                    <div class="card-icon">🟡</div>
+                    <div class="card-name">골드 카드</div>
+                    <div class="card-desc"><span class="damage-val">4~10</span> 피해 + 약화<br><span class="exhaust-text">휘발</span></div>
+                </div>
+            </div>
+            
+            <div class="card-wrapper">
+                <div class="card-label legendary">Legendary</div>
+                <div class="card legendary power">
+                    <div class="card-header">
+                        <div class="card-cost">3</div>
+                        <div class="card-type">파워</div>
+                    </div>
+                    <div class="card-icon">👑</div>
+                    <div class="card-name">전설의 힘</div>
+                    <div class="card-desc">모든 피해 <span class="damage-val">+100%</span><br>이번 전투 동안.</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 비교 테이블 -->
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>희귀도</th>
+                    <th>테두리</th>
+                    <th>글로우</th>
+                    <th>애니메이션</th>
+                    <th>배지</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><span class="color-dot basic"></span>Basic</td>
+                    <td>회색 3px</td>
+                    <td>없음</td>
+                    <td>없음</td>
+                    <td>없음</td>
+                </tr>
+                <tr>
+                    <td><span class="color-dot common"></span>Common</td>
+                    <td>흰색 3px</td>
+                    <td>없음</td>
+                    <td>없음</td>
+                    <td>없음</td>
+                </tr>
+                <tr>
+                    <td><span class="color-dot uncommon"></span>Uncommon</td>
+                    <td>초록 4px</td>
+                    <td>20~40px</td>
+                    <td>Pulse 3s</td>
+                    <td>◆ UNCOMMON</td>
+                </tr>
+                <tr>
+                    <td><span class="color-dot rare"></span>Rare</td>
+                    <td>파랑 4px</td>
+                    <td>30~60px + 회전</td>
+                    <td>Pulse 2.5s + Rotate 4s</td>
+                    <td>★ RARE</td>
+                </tr>
+                <tr>
+                    <td><span class="color-dot special"></span>Epic</td>
+                    <td>보라 5px</td>
+                    <td>40~80px + 회전</td>
+                    <td>Pulse 2s + Rotate 3s</td>
+                    <td>✦ EPIC</td>
+                </tr>
+                <tr>
+                    <td><span class="color-dot legendary"></span>Legendary</td>
+                    <td>금색 6px</td>
+                    <td>50~150px + 회전</td>
+                    <td>Pulse 1.5s + Rotate 2s</td>
+                    <td>♦ LEGENDARY</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- 카드 타입별 -->
+    <div class="section">
+        <h2><span>🎯</span> 카드 타입별 (아이콘 배경색)</h2>
+        <div class="card-row">
+            <div class="card-wrapper">
+                <div class="card-label" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.5);">🔴 Attack</div>
+                <div class="card uncommon attack">
+                    <div class="card-header">
+                        <div class="card-cost">2</div>
+                        <div class="card-type">공격</div>
+                    </div>
+                    <div class="card-icon">💥</div>
+                    <div class="card-name">강타</div>
+                    <div class="card-desc"><span class="damage-val">12</span> 피해<br>취약 2 부여</div>
+                </div>
+            </div>
+            
+            <div class="card-wrapper">
+                <div class="card-label" style="color: #3b82f6; border-color: rgba(59, 130, 246, 0.5);">🔵 Skill</div>
+                <div class="card uncommon skill">
+                    <div class="card-header">
+                        <div class="card-cost">1</div>
+                        <div class="card-type">스킬</div>
+                    </div>
+                    <div class="card-icon">🛡️</div>
+                    <div class="card-name">철벽 수비</div>
+                    <div class="card-desc"><span class="block-val">12</span> 방어도<br>다음 턴 유지</div>
+                </div>
+            </div>
+            
+            <div class="card-wrapper">
+                <div class="card-label" style="color: #a855f7; border-color: rgba(168, 85, 247, 0.5);">🟣 Power</div>
+                <div class="card uncommon power">
+                    <div class="card-header">
+                        <div class="card-cost">2</div>
+                        <div class="card-type">파워</div>
+                    </div>
+                    <div class="card-icon">⚡</div>
+                    <div class="card-name">힘의 축적</div>
+                    <div class="card-desc">턴마다 힘 <span class="damage-val">+1</span><br>이번 전투 동안</div>
+                </div>
+            </div>
+            
+            <div class="card-wrapper">
+                <div class="card-label" style="color: #6b7280;">⚪ Status</div>
+                <div class="card common status">
+                    <div class="card-header">
+                        <div class="card-cost">-</div>
+                        <div class="card-type">상태</div>
+                    </div>
+                    <div class="card-icon">🕸️</div>
+                    <div class="card-name">거미줄</div>
+                    <div class="card-desc">사용 불가<br><span class="exhaust-text">휘발</span></div>
+                </div>
+            </div>
+            
+            <div class="card-wrapper">
+                <div class="card-label" style="color: #4b5563;">⚫ Curse</div>
+                <div class="card common curse">
+                    <div class="card-header">
+                        <div class="card-cost">-</div>
+                        <div class="card-type">저주</div>
+                    </div>
+                    <div class="card-icon">💀</div>
+                    <div class="card-name">후회</div>
+                    <div class="card-desc">사용 불가<br>턴 종료 시 피해</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 타입 비교 테이블 -->
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>타입</th>
+                    <th>색상</th>
+                    <th>상단 테두리</th>
+                    <th>아이콘 배경</th>
+                    <th>용도</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><span style="color:#ef4444">🔴 Attack</span></td>
+                    <td>빨간색 #ef4444</td>
+                    <td>5px solid</td>
+                    <td>빨간 글로우</td>
+                    <td>적에게 피해</td>
+                </tr>
+                <tr>
+                    <td><span style="color:#3b82f6">🔵 Skill</span></td>
+                    <td>파란색 #3b82f6</td>
+                    <td>5px solid</td>
+                    <td>파란 글로우</td>
+                    <td>방어/유틸</td>
+                </tr>
+                <tr>
+                    <td><span style="color:#a855f7">🟣 Power</span></td>
+                    <td>보라색 #a855f7</td>
+                    <td>5px solid</td>
+                    <td>보라 글로우</td>
+                    <td>영구 버프</td>
+                </tr>
+                <tr>
+                    <td><span style="color:#6b7280">⚪ Status</span></td>
+                    <td>회색 #6b7280</td>
+                    <td>5px solid</td>
+                    <td>약한 회색</td>
+                    <td>상태이상</td>
+                </tr>
+                <tr>
+                    <td><span style="color:#4b5563">⚫ Curse</span></td>
+                    <td>검은색 #1f2937</td>
+                    <td>5px solid</td>
+                    <td>어두운 배경</td>
+                    <td>저주</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- 겜블러 카드 -->
+    <div class="section">
+        <h2><span>🎰</span> 겜블러 전용 카드</h2>
+        <div class="card-row">
+            <div class="card-wrapper">
+                <div class="card-label common">운명의 카드</div>
+                <div class="card common skill">
+                    <div class="card-header">
+                        <div class="card-cost">1</div>
+                        <div class="card-type">스킬</div>
+                    </div>
+                    <div class="card-icon">🃏</div>
+                    <div class="card-name">운명의 카드</div>
+                    <div class="card-desc">랜덤 카드 드로우<br><span style="color:#60a5fa">🔵</span> <span style="color:#f87171">🔴</span> <span style="color:#fbbf24">🟡</span></div>
+                </div>
+            </div>
+            
+            <div class="card-wrapper">
+                <div class="card-label special">블루 카드</div>
+                <div class="card special skill">
+                    <div class="card-header">
+                        <div class="card-cost">0</div>
+                        <div class="card-type">스킬</div>
+                    </div>
+                    <div class="card-icon">🔵</div>
+                    <div class="card-name">블루 카드</div>
+                    <div class="card-desc">카드 1장 드로우<br><span class="exhaust-text">휘발</span></div>
+                </div>
+            </div>
+            
+            <div class="card-wrapper">
+                <div class="card-label special">레드 카드</div>
+                <div class="card special attack">
+                    <div class="card-header">
+                        <div class="card-cost">0</div>
+                        <div class="card-type">공격</div>
+                    </div>
+                    <div class="card-icon">🔴</div>
+                    <div class="card-name">레드 카드</div>
+                    <div class="card-desc">전체 <span class="damage-val">2~5</span> 피해<br><span class="exhaust-text">휘발</span></div>
+                </div>
+            </div>
+            
+            <div class="card-wrapper">
+                <div class="card-label special">골드 카드</div>
+                <div class="card special attack">
+                    <div class="card-header">
+                        <div class="card-cost">0</div>
+                        <div class="card-type">공격</div>
+                    </div>
+                    <div class="card-icon">🟡</div>
+                    <div class="card-name">골드 카드</div>
+                    <div class="card-desc"><span class="damage-val">4~10</span> + 약화<br><span class="exhaust-text">휘발</span></div>
+                </div>
+            </div>
+            
+            <div class="card-wrapper">
+                <div class="card-label rare">와일드 조커</div>
+                <div class="card rare skill">
+                    <div class="card-header">
+                        <div class="card-cost">1</div>
+                        <div class="card-type">스킬</div>
+                    </div>
+                    <div class="card-icon">🃏</div>
+                    <div class="card-name">와일드 조커</div>
+                    <div class="card-desc">손패 → 랜덤!<br><span class="exhaust-text">소멸</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 시너지 카드 -->
+    <div class="section">
+        <h2><span>🔗</span> 시너지 카드 (범용)</h2>
+        <div class="card-row">
+            <div class="card-wrapper">
+                <div class="card-label rare">카드폴</div>
+                <div class="card rare attack">
+                    <div class="card-header">
+                        <div class="card-cost">1</div>
+                        <div class="card-type">공격</div>
+                    </div>
+                    <div class="card-icon">🎴</div>
+                    <div class="card-name">카드폴</div>
+                    <div class="card-desc">손패를 모두 버립니다.<br>버린 카드당 <span class="damage-val">2~4</span> 전체 피해</div>
+                </div>
+            </div>
+            
+            <div class="card-wrapper">
+                <div class="card-label uncommon">콤보 피니셔</div>
+                <div class="card uncommon attack">
+                    <div class="card-header">
+                        <div class="card-cost">2</div>
+                        <div class="card-type">공격</div>
+                    </div>
+                    <div class="card-icon">💫</div>
+                    <div class="card-name">콤보 피니셔</div>
+                    <div class="card-desc">이번 턴 사용한<br>카드 수 x<span class="damage-val">3</span> 피해</div>
+                </div>
+            </div>
+            
+            <div class="card-wrapper">
+                <div class="card-label uncommon">라스트 스탠드</div>
+                <div class="card uncommon attack">
+                    <div class="card-header">
+                        <div class="card-cost">0</div>
+                        <div class="card-type">공격</div>
+                    </div>
+                    <div class="card-icon">⚡</div>
+                    <div class="card-name">라스트 스탠드</div>
+                    <div class="card-desc">HP 10% 이하 전용<br><span class="damage-val">20</span> 피해 + 10 회복</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 애니메이션 토글
+        document.getElementById('toggleAnimation').addEventListener('change', function() {
+            const cards = document.querySelectorAll('.card');
+            cards.forEach(card => {
+                if (this.checked) {
+                    card.style.animation = '';
+                } else {
+                    card.style.animation = 'none';
+                }
+            });
+        });
+        
+        // 글로우 토글
+        document.getElementById('toggleGlow').addEventListener('change', function() {
+            const cards = document.querySelectorAll('.card');
+            cards.forEach(card => {
+                if (!this.checked) {
+                    card.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.5)';
+                } else {
+                    card.style.boxShadow = '';
+                }
+            });
+        });
+        
+        // 다크 모드 토글
+        document.getElementById('darkMode').addEventListener('change', function() {
+            if (this.checked) {
+                document.body.style.background = '#0a0a0f';
+            } else {
+                document.body.style.background = '#2a2a3a';
+            }
+        });
+        
+        console.log('🎴 카드 디자인 테스트 v2.0 로드됨');
+    </script>
+</body>
+</html>
