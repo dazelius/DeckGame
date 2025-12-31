@@ -1147,10 +1147,10 @@ function updateEnemiesUI() {
             if (enemy.intent === 'taunt') {
                 // 도발: 팔짝팔짝 뛰기
                 enemyEl.classList.add('intent-taunt');
-            } else if (enemy.intent === 'attack' && enemy.intentValue >= 8) {
-                // 강한 공격 (8 이상): 힘을 모으는 애니메이션
+            } else if (typeof BreakSystem !== 'undefined' && BreakSystem.hasBreakableIntent(enemy)) {
+                // 브레이크 가능 인텐트: 힘을 모으는 애니메이션
                 enemyEl.classList.add('intent-attack-strong');
-                console.log(`[Intent] ${enemy.name} 강한 공격 준비! (${enemy.intentValue} 데미지)`);
+                console.log(`[Intent] ${enemy.name} 강한 공격 준비! (브레이크 가능)`);
             } else if (enemy.intent === 'defend' || enemy.intent === 'block') {
                 // 방어: 웅크리기
                 enemyEl.classList.add('intent-defend');
