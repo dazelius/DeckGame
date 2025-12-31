@@ -770,9 +770,15 @@ const BreakSystem = {
                 }
             }
             
-            /* 브레이크된 몬스터 - 즉시 그레이스케일 */
+            /* 브레이크된 몬스터 - 그레이스케일 + 하얀 외곽선 유지! */
             .enemy-unit.enemy-broken .enemy-sprite-img {
-                filter: grayscale(0.7) brightness(0.6) !important;
+                filter: 
+                    drop-shadow(1px 0 0 rgba(255, 255, 255, 0.85))
+                    drop-shadow(-1px 0 0 rgba(255, 255, 255, 0.85))
+                    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.85))
+                    drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.85))
+                    drop-shadow(0 0 8px rgba(150, 150, 150, 0.5))
+                    grayscale(0.7) brightness(0.6) !important;
                 animation: brokenShake 0.1s ease-in-out infinite;
             }
             
@@ -861,9 +867,14 @@ const BreakSystem = {
                 }
             }
             
-            /* 위협 상태 몬스터 (미니멀) */
+            /* 위협 상태 몬스터 - 하얀 외곽선 + 붉은 글로우 */
             .enemy-unit.threat-active .enemy-sprite-img {
-                filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.3));
+                filter: 
+                    drop-shadow(1px 0 0 rgba(255, 255, 255, 0.85))
+                    drop-shadow(-1px 0 0 rgba(255, 255, 255, 0.85))
+                    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.85))
+                    drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.85))
+                    drop-shadow(0 0 12px rgba(239, 68, 68, 0.5));
             }
             
             /* 화면 위협 경고 (비활성) */
