@@ -205,17 +205,49 @@ function dealDamage(target, amount, card = null) {
     const result = ShieldSystem.applyDamage(target, totalDamage);
     
     // HP 데미지 팝업 (방어도 팝업은 ShieldSystem에서 처리)
-    if (result.actualDamage > 0 && targetEl) {
+    console.log('[DealDamage] 데미지 결과:', { 
+        actualDamage: result.actualDamage, 
+        blockedDamage: result.blockedDamage,
+        targetEl: !!targetEl, 
+        isEnemy, 
+        isPlayer,
+        SpriteAnimationDefined: typeof SpriteAnimation !== 'undefined'
+    });
+    
+    // 🔥 데미지가 있거나 방어도로 막았을 때 모두 피격 반응!
+    const totalDamageReceived = (result.actualDamage || 0) + (result.blockedDamage || 0);
+    
+    if (totalDamageReceived > 0 && targetEl) {
         // 크리티컬인지 확인
         const isCriticalHit = gameState.currentCritical?.isCritical || false;
-        showDamagePopup(targetEl, result.actualDamage, isCriticalHit ? 'critical' : 'damage');
         
-        // 🎭 스프라이트 피격 애니메이션 (콤보 감지!)
+        // HP 데미지가 있을 때만 팝업 표시
+        if (result.actualDamage > 0) {
+            showDamagePopup(targetEl, result.actualDamage, isCriticalHit ? 'critical' : 'damage');
+        }
+        
+        // 🎭 스프라이트 피격 애니메이션 (방어로 막혀도 반응!)
+        console.log('[DealDamage] 🎭 애니메이션 체크:', { 
+            SpriteAnimation: typeof SpriteAnimation, 
+            isPlayer, 
+            isEnemy,
+            totalDamageReceived 
+        });
+        
         if (typeof SpriteAnimation !== 'undefined') {
+            // 방어로 막힌 경우 약한 피격, HP 데미지는 강한 피격
+            const animDamage = result.actualDamage > 0 ? result.actualDamage : Math.ceil(result.blockedDamage / 2);
+            
             if (isPlayer) {
-                SpriteAnimation.playerHit(result.actualDamage);
+                console.log('[DealDamage] ▶️ playerHit 호출!', animDamage);
+                SpriteAnimation.playerHit(animDamage);
             } else if (isEnemy) {
-                // 연타 감지!
+                console.log('[DealDamage] ▶️ enemyHit 호출!', { targetEl, damage: animDamage });
+                
+                // 🔥 항상 피격 애니메이션 호출!
+                SpriteAnimation.enemyHit(targetEl, animDamage);
+                
+                // 연타 감지 (콤보 트래킹용)
                 const combo = ComboTracker.registerHit(target, targetEl, result.actualDamage);
                 
                 // 카드에 hitCount가 있으면 예상 연타 수 사용
@@ -226,17 +258,6 @@ function dealDamage(target, amount, card = null) {
                 // 첫 히트에서 플레이어 공격 애니메이션 트리거
                 if (combo.hitIndex === 0 && expectedHits > 1) {
                     ComboTracker.triggerPlayerAttack(targetEl, 0, expectedHits);
-                    ComboTracker.isComboAnimating = true;
-                }
-                
-                if (combo.isCombo || expectedHits > 1) {
-                    // 연타 공격: 콤보 피격 (각 히트마다)
-                    if (!ComboTracker.isComboAnimating || combo.hitIndex > 0) {
-                        SpriteAnimation.enemyComboHit(targetEl, 1, result.actualDamage);
-                    }
-                } else {
-                    // 단일 공격: 기존 피격 애니메이션
-                    SpriteAnimation.enemyHit(targetEl, result.actualDamage);
                 }
             }
         }
