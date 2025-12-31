@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>게임 엔진 데모 - PixiJS + GSAP</title>
+    
+    <!-- PixiJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+    <!-- GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <!-- Howler.js (사운드) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #0a0a0f;
+            min-height: 100vh;
+            font-family: 'Cinzel', serif;
+            color: #e5e5e5;
+            overflow-x: hidden;
+        }
+        
+        .header {
+            padding: 20px;
+            text-align: center;
+            background: linear-gradient(180deg, rgba(20, 20, 30, 0.9) 0%, transparent 100%);
+        }
+        
+        h1 {
+            font-size: 2rem;
+            color: #fbbf24;
+            text-shadow: 0 0 20px rgba(251, 191, 36, 0.5);
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .demo-container {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .demo-section {
+            background: linear-gradient(145deg, rgba(30, 30, 40, 0.8), rgba(15, 15, 25, 0.9));
+            border: 1px solid rgba(251, 191, 36, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            min-width: 350px;
+            max-width: 500px;
+        }
+        
+        .demo-section h2 {
+            color: #fbbf24;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(251, 191, 36, 0.3);
+        }
+        
+        .demo-area {
+            background: #0f0f15;
+            border-radius: 8px;
+            height: 250px;
+            margin-bottom: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .demo-area canvas {
+            display: block;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .demo-btn {
+            background: linear-gradient(180deg, #3a3530 0%, #2a2520 100%);
+            border: 1px solid rgba(251, 191, 36, 0.4);
+            color: #fbbf24;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Cinzel', serif;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        
+        .demo-btn:hover {
+            background: linear-gradient(180deg, #4a4540 0%, #3a3530 100%);
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .demo-btn:active {
+            transform: translateY(0);
+        }
+        
+        .demo-btn.red {
+            border-color: rgba(239, 68, 68, 0.5);
+            color: #ef4444;
+        }
+        
+        .demo-btn.blue {
+            border-color: rgba(59, 130, 246, 0.5);
+            color: #3b82f6;
+        }
+        
+        .demo-btn.green {
+            border-color: rgba(34, 197, 94, 0.5);
+            color: #22c55e;
+        }
+        
+        /* CSS 비교용 스프라이트 */
+        .css-demo-area {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 40px;
+        }
+        
+        .css-sprite {
+            width: 80px;
+            height: 100px;
+            background: linear-gradient(180deg, #4a90d9, #2563eb);
+            border-radius: 8px;
+            position: relative;
+            filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.5));
+        }
+        
+        .css-sprite::before {
+            content: '🗡️';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+        }
+        
+        .css-sprite.idle {
+            animation: cssIdle 2s ease-in-out infinite;
+        }
+        
+        @keyframes cssIdle {
+            0%, 100% { transform: translateY(0) scaleY(1); }
+            50% { transform: translateY(-5px) scaleY(1.02); }
+        }
+        
+        .css-sprite.hit {
+            animation: cssHit 0.4s ease-out;
+        }
+        
+        @keyframes cssHit {
+            0% { transform: translateX(0); filter: brightness(1); }
+            10% { transform: translateX(-20px) scaleX(1.2); filter: brightness(2); }
+            30% { transform: translateX(15px); }
+            50% { transform: translateX(-10px); }
+            70% { transform: translateX(5px); }
+            100% { transform: translateX(0); filter: brightness(1); }
+        }
+        
+        .comparison-label {
+            text-align: center;
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 10px;
+        }
+        
+        .info-box {
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .info-box h3 {
+            color: #fbbf24;
+            font-size: 1rem;
+            margin-bottom: 10px;
+        }
+        
+        .info-box ul {
+            list-style: none;
+            font-size: 0.85rem;
+            line-height: 1.8;
+        }
+        
+        .info-box li::before {
+            content: '✓ ';
+            color: #22c55e;
+        }
+        
+        .performance-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 8px 0;
+        }
+        
+        .performance-label {
+            width: 80px;
+            font-size: 0.8rem;
+        }
+        
+        .performance-track {
+            flex: 1;
+            height: 8px;
+            background: #1a1a25;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .performance-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        
+        .performance-fill.css { background: #3b82f6; }
+        .performance-fill.gsap { background: #22c55e; }
+        .performance-fill.pixi { background: #fbbf24; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎮 게임 엔진 데모</h1>
+        <p class="subtitle">PixiJS + GSAP vs 현재 CSS 애니메이션 비교</p>
+    </div>
+    
+    <div class="demo-container">
+        <!-- PixiJS 파티클 데모 -->
+        <div class="demo-section">
+            <h2>✨ PixiJS - 파티클 이펙트</h2>
+            <div class="demo-area" id="pixi-particle-demo"></div>
+            <div class="controls">
+                <button class="demo-btn" onclick="pixiDemo.burst()">💥 폭발</button>
+                <button class="demo-btn red" onclick="pixiDemo.fire()">🔥 화염</button>
+                <button class="demo-btn blue" onclick="pixiDemo.ice()">❄️ 얼음</button>
+                <button class="demo-btn green" onclick="pixiDemo.heal()">💚 힐</button>
+                <button class="demo-btn" onclick="pixiDemo.slash()">⚔️ 슬래시</button>
+            </div>
+        </div>
+        
+        <!-- GSAP 트윈 데모 -->
+        <div class="demo-section">
+            <h2>🎬 GSAP - 트윈 애니메이션</h2>
+            <div class="demo-area" id="gsap-demo"></div>
+            <div class="controls">
+                <button class="demo-btn" onclick="gsapDemo.hitStop()">⏸️ 히트스탑</button>
+                <button class="demo-btn red" onclick="gsapDemo.shake()">📳 흔들림</button>
+                <button class="demo-btn blue" onclick="gsapDemo.elastic()">🔄 탄성</button>
+                <button class="demo-btn green" onclick="gsapDemo.bounce()">⬆️ 바운스</button>
+                <button class="demo-btn" onclick="gsapDemo.combo()">🎯 콤보</button>
+            </div>
+        </div>
+        
+        <!-- CSS vs GSAP 비교 -->
+        <div class="demo-section">
+            <h2>📊 CSS vs GSAP 비교</h2>
+            <div class="demo-area css-demo-area">
+                <div>
+                    <div class="css-sprite idle" id="css-sprite"></div>
+                    <p class="comparison-label">현재 (CSS)</p>
+                </div>
+                <div>
+                    <div class="css-sprite" id="gsap-sprite"></div>
+                    <p class="comparison-label">GSAP</p>
+                </div>
+            </div>
+            <div class="controls">
+                <button class="demo-btn" onclick="compareDemo.idle()">🧘 Idle</button>
+                <button class="demo-btn red" onclick="compareDemo.hit()">💥 피격</button>
+                <button class="demo-btn blue" onclick="compareDemo.attack()">⚔️ 공격</button>
+            </div>
+        </div>
+        
+        <!-- PixiJS 스프라이트 데모 -->
+        <div class="demo-section">
+            <h2>🖼️ PixiJS - 스프라이트 시트</h2>
+            <div class="demo-area" id="pixi-sprite-demo"></div>
+            <div class="controls">
+                <button class="demo-btn" onclick="spriteDemo.idle()">🧘 대기</button>
+                <button class="demo-btn red" onclick="spriteDemo.attack()">⚔️ 공격</button>
+                <button class="demo-btn blue" onclick="spriteDemo.defend()">🛡️ 방어</button>
+                <button class="demo-btn green" onclick="spriteDemo.death()">💀 사망</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 정보 박스 -->
+    <div class="demo-container">
+        <div class="demo-section" style="max-width: 100%; width: 100%;">
+            <h2>📈 성능 & 기능 비교</h2>
+            
+            <div style="display: flex; gap: 40px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 300px;">
+                    <h3 style="color: #888; margin-bottom: 15px;">파티클 성능 (1000개 기준)</h3>
+                    <div class="performance-bar">
+                        <span class="performance-label">CSS</span>
+                        <div class="performance-track">
+                            <div class="performance-fill css" style="width: 30%;"></div>
+                        </div>
+                        <span style="font-size: 0.8rem;">~30 FPS</span>
+                    </div>
+                    <div class="performance-bar">
+                        <span class="performance-label">GSAP</span>
+                        <div class="performance-track">
+                            <div class="performance-fill gsap" style="width: 50%;"></div>
+                        </div>
+                        <span style="font-size: 0.8rem;">~45 FPS</span>
+                    </div>
+                    <div class="performance-bar">
+                        <span class="performance-label">PixiJS</span>
+                        <div class="performance-track">
+                            <div class="performance-fill pixi" style="width: 95%;"></div>
+                        </div>
+                        <span style="font-size: 0.8rem;">~60 FPS</span>
+                    </div>
+                </div>
+                
+                <div class="info-box" style="flex: 1; min-width: 300px;">
+                    <h3>🚀 GSAP 장점</h3>
+                    <ul>
+                        <li>정확한 타이밍 제어 (히트스탑 완벽)</li>
+                        <li>40+ 이징 함수 (elastic, bounce, back...)</li>
+                        <li>타임라인으로 시퀀스 애니메이션</li>
+                        <li>기존 DOM 요소에 바로 적용 가능</li>
+                        <li>가볍다 (약 60KB)</li>
+                    </ul>
+                </div>
+                
+                <div class="info-box" style="flex: 1; min-width: 300px;">
+                    <h3>🎨 PixiJS 장점</h3>
+                    <ul>
+                        <li>WebGL 기반 초고속 렌더링</li>
+                        <li>수천개 파티클도 60FPS 유지</li>
+                        <li>스프라이트 시트 애니메이션</li>
+                        <li>필터, 블렌드 모드, 마스크</li>
+                        <li>이펙트 레이어 분리 가능</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // PixiJS 파티클 데모
+        // ==========================================
+        const pixiDemo = {
+            app: null,
+            particles: [],
+            
+            init() {
+                const container = document.getElementById('pixi-particle-demo');
+                this.app = new PIXI.Application({
+                    width: container.offsetWidth,
+                    height: 250,
+                    backgroundColor: 0x0f0f15,
+                    antialias: true
+                });
+                container.appendChild(this.app.view);
+                
+                // 파티클 업데이트 루프
+                this.app.ticker.add(() => this.updateParticles());
+            },
+            
+            createParticle(x, y, options = {}) {
+                const particle = new PIXI.Graphics();
+                const size = options.size || Math.random() * 8 + 2;
+                const color = options.color || 0xfbbf24;
+                
+                particle.beginFill(color);
+                particle.drawCircle(0, 0, size);
+                particle.endFill();
+                
+                particle.x = x;
+                particle.y = y;
+                particle.vx = options.vx || (Math.random() - 0.5) * 10;
+                particle.vy = options.vy || (Math.random() - 0.5) * 10;
+                particle.life = options.life || 1;
+                particle.decay = options.decay || 0.02;
+                particle.gravity = options.gravity || 0;
+                
+                this.app.stage.addChild(particle);
+                this.particles.push(particle);
+                
+                return particle;
+            },
+            
+            updateParticles() {
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += p.gravity;
+                    p.life -= p.decay;
+                    p.alpha = p.life;
+                    p.scale.set(p.life);
+                    
+                    if (p.life <= 0) {
+                        this.app.stage.removeChild(p);
+                        this.particles.splice(i, 1);
+                    }
+                }
+            },
+            
+            burst() {
+                const cx = this.app.screen.width / 2;
+                const cy = this.app.screen.height / 2;
+                
+                for (let i = 0; i < 50; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 8 + 4;
+                    this.createParticle(cx, cy, {
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        color: [0xfbbf24, 0xef4444, 0xf97316][Math.floor(Math.random() * 3)],
+                        size: Math.random() * 6 + 2,
+                        decay: 0.015,
+                        gravity: 0.1
+                    });
+                }
+                
+                // 화면 플래시
+                const flash = new PIXI.Graphics();
+                flash.beginFill(0xffffff, 0.3);
+                flash.drawRect(0, 0, this.app.screen.width, this.app.screen.height);
+                flash.endFill();
+                this.app.stage.addChild(flash);
+                gsap.to(flash, { alpha: 0, duration: 0.2, onComplete: () => this.app.stage.removeChild(flash) });
+            },
+            
+            fire() {
+                const cx = this.app.screen.width / 2;
+                const cy = this.app.screen.height - 50;
+                
+                for (let i = 0; i < 30; i++) {
+                    setTimeout(() => {
+                        this.createParticle(cx + (Math.random() - 0.5) * 60, cy, {
+                            vx: (Math.random() - 0.5) * 3,
+                            vy: -Math.random() * 6 - 3,
+                            color: [0xef4444, 0xf97316, 0xfbbf24][Math.floor(Math.random() * 3)],
+                            size: Math.random() * 10 + 4,
+                            decay: 0.02
+                        });
+                    }, i * 20);
+                }
+            },
+            
+            ice() {
+                const cx = this.app.screen.width / 2;
+                const cy = this.app.screen.height / 2;
+                
+                for (let i = 0; i < 40; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 3 + 1;
+                    this.createParticle(cx, cy, {
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed - 2,
+                        color: [0x60a5fa, 0x93c5fd, 0xbfdbfe, 0xffffff][Math.floor(Math.random() * 4)],
+                        size: Math.random() * 4 + 2,
+                        decay: 0.01,
+                        gravity: 0.05
+                    });
+                }
+            },
+            
+            heal() {
+                const cx = this.app.screen.width / 2;
+                const cy = this.app.screen.height / 2;
+                
+                for (let i = 0; i < 25; i++) {
+                    setTimeout(() => {
+                        this.createParticle(
+                            cx + (Math.random() - 0.5) * 100,
+                            cy + 50,
+                            {
+                                vx: 0,
+                                vy: -Math.random() * 3 - 2,
+                                color: [0x22c55e, 0x4ade80, 0x86efac][Math.floor(Math.random() * 3)],
+                                size: Math.random() * 6 + 3,
+                                decay: 0.008
+                            }
+                        );
+                    }, i * 40);
+                }
+            },
+            
+            slash() {
+                const cx = this.app.screen.width / 2;
+                const cy = this.app.screen.height / 2;
+                
+                // 슬래시 라인
+                const slash = new PIXI.Graphics();
+                slash.lineStyle(4, 0xffffff, 1);
+                slash.moveTo(-60, 40);
+                slash.lineTo(60, -40);
+                slash.x = cx;
+                slash.y = cy;
+                slash.alpha = 0;
+                this.app.stage.addChild(slash);
+                
+                gsap.timeline()
+                    .to(slash, { alpha: 1, duration: 0.05 })
+                    .to(slash.scale, { x: 1.5, y: 1.5, duration: 0.1 }, 0)
+                    .to(slash, { alpha: 0, duration: 0.2 })
+                    .add(() => this.app.stage.removeChild(slash));
+                
+                // 슬래시 파티클
+                for (let i = 0; i < 15; i++) {
+                    const t = i / 15;
+                    const px = cx - 60 + t * 120;
+                    const py = cy + 40 - t * 80;
+                    this.createParticle(px, py, {
+                        vx: (Math.random() - 0.5) * 5,
+                        vy: (Math.random() - 0.5) * 5,
+                        color: 0xffffff,
+                        size: Math.random() * 3 + 1,
+                        decay: 0.03
+                    });
+                }
+            }
+        };
+        
+        // ==========================================
+        // GSAP 트윈 데모
+        // ==========================================
+        const gsapDemo = {
+            sprite: null,
+            
+            init() {
+                const container = document.getElementById('gsap-demo');
+                container.innerHTML = `
+                    <div id="gsap-sprite-container" style="
+                        width: 100%; height: 100%;
+                        display: flex; align-items: center; justify-content: center;
+                    ">
+                        <div id="gsap-demo-sprite" style="
+                            width: 80px; height: 100px;
+                            background: linear-gradient(180deg, #fbbf24, #f59e0b);
+                            border-radius: 8px;
+                            display: flex; align-items: center; justify-content: center;
+                            font-size: 2.5rem;
+                            box-shadow: 0 0 20px rgba(251, 191, 36, 0.5);
+                        ">⚔️</div>
+                    </div>
+                `;
+                this.sprite = document.getElementById('gsap-demo-sprite');
+            },
+            
+            hitStop() {
+                gsap.timeline()
+                    // 프리즈!
+                    .to(this.sprite, { 
+                        scale: 1.3, 
+                        filter: 'brightness(2) saturate(0)',
+                        duration: 0 
+                    })
+                    // 잠시 멈춤
+                    .to(this.sprite, { duration: 0.1 })
+                    // 반동
+                    .to(this.sprite, { 
+                        scale: 1,
+                        filter: 'brightness(1) saturate(1)',
+                        x: -30,
+                        duration: 0.1,
+                        ease: "power2.out"
+                    })
+                    // 돌아오기
+                    .to(this.sprite, {
+                        x: 0,
+                        duration: 0.4,
+                        ease: "elastic.out(1, 0.5)"
+                    });
+            },
+            
+            shake() {
+                gsap.timeline()
+                    .to(this.sprite, { x: -15, rotation: -5, duration: 0.05 })
+                    .to(this.sprite, { x: 15, rotation: 5, duration: 0.05 })
+                    .to(this.sprite, { x: -10, rotation: -3, duration: 0.05 })
+                    .to(this.sprite, { x: 10, rotation: 3, duration: 0.05 })
+                    .to(this.sprite, { x: -5, rotation: -1, duration: 0.05 })
+                    .to(this.sprite, { x: 0, rotation: 0, duration: 0.1 });
+            },
+            
+            elastic() {
+                gsap.to(this.sprite, {
+                    scaleX: 1.4,
+                    scaleY: 0.7,
+                    duration: 0.15,
+                    yoyo: true,
+                    repeat: 1,
+                    ease: "power2.out",
+                    onComplete: () => {
+                        gsap.to(this.sprite, {
+                            scaleX: 1,
+                            scaleY: 1,
+                            duration: 0.5,
+                            ease: "elastic.out(1, 0.3)"
+                        });
+                    }
+                });
+            },
+            
+            bounce() {
+                gsap.timeline()
+                    .to(this.sprite, { 
+                        y: -80, 
+                        scaleY: 1.2,
+                        scaleX: 0.9,
+                        duration: 0.3, 
+                        ease: "power2.out" 
+                    })
+                    .to(this.sprite, { 
+                        y: 0, 
+                        scaleY: 0.8,
+                        scaleX: 1.2,
+                        duration: 0.2, 
+                        ease: "power2.in" 
+                    })
+                    .to(this.sprite, {
+                        scaleX: 1,
+                        scaleY: 1,
+                        duration: 0.3,
+                        ease: "elastic.out(1, 0.4)"
+                    });
+            },
+            
+            combo() {
+                const tl = gsap.timeline();
+                
+                // 준비 자세
+                tl.to(this.sprite, { x: -50, scaleX: 0.9, duration: 0.2, ease: "back.in(2)" })
+                // 돌진!
+                .to(this.sprite, { x: 80, scaleX: 1.3, duration: 0.1, ease: "power4.out" })
+                // 첫 번째 히트
+                .to(this.sprite, { 
+                    filter: 'brightness(2)', 
+                    boxShadow: '0 0 40px rgba(255,255,255,0.8)',
+                    duration: 0.05 
+                })
+                .to(this.sprite, { 
+                    filter: 'brightness(1)',
+                    boxShadow: '0 0 20px rgba(251,191,36,0.5)',
+                    duration: 0.1 
+                })
+                // 두 번째 히트
+                .to(this.sprite, { x: 60, rotation: 15, duration: 0.08 })
+                .to(this.sprite, { filter: 'brightness(1.5)', duration: 0.05 })
+                .to(this.sprite, { filter: 'brightness(1)', duration: 0.1 })
+                // 세 번째 히트
+                .to(this.sprite, { x: 100, rotation: -10, scaleX: 1.4, duration: 0.08 })
+                .to(this.sprite, { filter: 'brightness(2)', duration: 0.05 })
+                .to(this.sprite, { filter: 'brightness(1)', duration: 0.1 })
+                // 복귀
+                .to(this.sprite, { 
+                    x: 0, 
+                    rotation: 0, 
+                    scaleX: 1,
+                    duration: 0.4, 
+                    ease: "back.out(1.5)" 
+                });
+            }
+        };
+        
+        // ==========================================
+        // CSS vs GSAP 비교 데모
+        // ==========================================
+        const compareDemo = {
+            cssSprite: null,
+            gsapSprite: null,
+            
+            init() {
+                this.cssSprite = document.getElementById('css-sprite');
+                this.gsapSprite = document.getElementById('gsap-sprite');
+                this.gsapIdle();
+            },
+            
+            gsapIdle() {
+                gsap.to(this.gsapSprite, {
+                    y: -5,
+                    scaleY: 1.02,
+                    duration: 1,
+                    ease: "sine.inOut",
+                    yoyo: true,
+                    repeat: -1
+                });
+            },
+            
+            idle() {
+                // CSS는 클래스로
+                this.cssSprite.className = 'css-sprite idle';
+                
+                // GSAP은 더 부드럽게
+                gsap.killTweensOf(this.gsapSprite);
+                gsap.set(this.gsapSprite, { clearProps: "all" });
+                this.gsapIdle();
+            },
+            
+            hit() {
+                // CSS
+                this.cssSprite.className = 'css-sprite hit';
+                setTimeout(() => this.cssSprite.className = 'css-sprite idle', 400);
+                
+                // GSAP - 더 정교한 히트!
+                gsap.killTweensOf(this.gsapSprite);
+                gsap.timeline()
+                    .set(this.gsapSprite, { filter: 'brightness(2) saturate(0)' })
+                    .to(this.gsapSprite, { duration: 0.08 }) // 히트스탑!
+                    .to(this.gsapSprite, { 
+                        x: -25, 
+                        scaleX: 1.3,
+                        filter: 'brightness(1.5) saturate(1.5) drop-shadow(0 0 10px red)',
+                        duration: 0.1 
+                    })
+                    .to(this.gsapSprite, { x: 20, rotation: 8, duration: 0.06 })
+                    .to(this.gsapSprite, { x: -15, rotation: -6, duration: 0.06 })
+                    .to(this.gsapSprite, { x: 10, rotation: 4, duration: 0.06 })
+                    .to(this.gsapSprite, { x: -5, rotation: -2, duration: 0.06 })
+                    .to(this.gsapSprite, { 
+                        x: 0, 
+                        rotation: 0,
+                        scaleX: 1,
+                        filter: 'drop-shadow(0 0 10px rgba(59, 130, 246, 0.5))',
+                        duration: 0.2,
+                        ease: "elastic.out(1, 0.5)"
+                    })
+                    .add(() => this.gsapIdle());
+            },
+            
+            attack() {
+                // CSS - 간단한 이동
+                this.cssSprite.className = 'css-sprite';
+                this.cssSprite.style.transform = 'translateX(50px)';
+                setTimeout(() => {
+                    this.cssSprite.style.transform = '';
+                    this.cssSprite.className = 'css-sprite idle';
+                }, 300);
+                
+                // GSAP - 공격 모션
+                gsap.killTweensOf(this.gsapSprite);
+                gsap.timeline()
+                    // 준비
+                    .to(this.gsapSprite, { x: -20, scaleX: 0.9, duration: 0.15, ease: "back.in(3)" })
+                    // 돌진
+                    .to(this.gsapSprite, { x: 60, scaleX: 1.2, duration: 0.08, ease: "power4.out" })
+                    // 히트
+                    .to(this.gsapSprite, { 
+                        filter: 'brightness(2) drop-shadow(0 0 20px white)',
+                        duration: 0.05 
+                    })
+                    .to(this.gsapSprite, { 
+                        filter: 'drop-shadow(0 0 10px rgba(59, 130, 246, 0.5))',
+                        duration: 0.15 
+                    })
+                    // 복귀
+                    .to(this.gsapSprite, { 
+                        x: 0, 
+                        scaleX: 1,
+                        duration: 0.3, 
+                        ease: "back.out(2)" 
+                    })
+                    .add(() => this.gsapIdle());
+            }
+        };
+        
+        // ==========================================
+        // PixiJS 스프라이트 데모
+        // ==========================================
+        const spriteDemo = {
+            app: null,
+            sprite: null,
+            
+            init() {
+                const container = document.getElementById('pixi-sprite-demo');
+                this.app = new PIXI.Application({
+                    width: container.offsetWidth,
+                    height: 250,
+                    backgroundColor: 0x0f0f15,
+                    antialias: true
+                });
+                container.appendChild(this.app.view);
+                
+                // 간단한 스프라이트 (실제로는 이미지 사용)
+                this.sprite = new PIXI.Graphics();
+                this.sprite.beginFill(0x22c55e);
+                this.sprite.drawRoundedRect(-40, -50, 80, 100, 8);
+                this.sprite.endFill();
+                
+                // 얼굴
+                this.sprite.beginFill(0xffffff);
+                this.sprite.drawCircle(-15, -15, 8);
+                this.sprite.drawCircle(15, -15, 8);
+                this.sprite.endFill();
+                
+                this.sprite.beginFill(0x000000);
+                this.sprite.drawCircle(-15, -15, 4);
+                this.sprite.drawCircle(15, -15, 4);
+                this.sprite.endFill();
+                
+                this.sprite.x = this.app.screen.width / 2;
+                this.sprite.y = this.app.screen.height / 2 + 20;
+                this.sprite.pivot.set(0, 25);
+                
+                this.app.stage.addChild(this.sprite);
+                this.idle();
+            },
+            
+            idle() {
+                gsap.killTweensOf(this.sprite);
+                gsap.killTweensOf(this.sprite.scale);
+                gsap.set(this.sprite, { alpha: 1, rotation: 0 });
+                gsap.set(this.sprite.scale, { x: 1, y: 1 });
+                
+                gsap.to(this.sprite, {
+                    y: this.app.screen.height / 2 + 15,
+                    duration: 1.5,
+                    ease: "sine.inOut",
+                    yoyo: true,
+                    repeat: -1
+                });
+                
+                gsap.to(this.sprite.scale, {
+                    y: 1.03,
+                    duration: 1.5,
+                    ease: "sine.inOut",
+                    yoyo: true,
+                    repeat: -1
+                });
+            },
+            
+            attack() {
+                gsap.killTweensOf(this.sprite);
+                gsap.killTweensOf(this.sprite.scale);
+                
+                const originalX = this.app.screen.width / 2;
+                const originalY = this.app.screen.height / 2 + 20;
+                
+                gsap.timeline()
+                    .to(this.sprite, { x: originalX - 30, duration: 0.15, ease: "back.in(3)" })
+                    .to(this.sprite.scale, { x: 0.9, duration: 0.15 }, "<")
+                    .to(this.sprite, { x: originalX + 80, duration: 0.1, ease: "power4.out" })
+                    .to(this.sprite.scale, { x: 1.3, y: 0.9, duration: 0.1 }, "<")
+                    .to(this.sprite, { x: originalX, duration: 0.3, ease: "back.out(2)" })
+                    .to(this.sprite.scale, { x: 1, y: 1, duration: 0.3, ease: "elastic.out(1, 0.5)" }, "<")
+                    .add(() => this.idle());
+            },
+            
+            defend() {
+                gsap.killTweensOf(this.sprite);
+                gsap.killTweensOf(this.sprite.scale);
+                
+                gsap.timeline()
+                    .to(this.sprite.scale, { x: 1.1, y: 0.9, duration: 0.1 })
+                    .to(this.sprite, { rotation: -0.1, duration: 0.1 }, "<")
+                    .to(this.sprite.scale, { x: 0.95, y: 1.05, duration: 0.15 })
+                    .to(this.sprite, { rotation: 0.05, duration: 0.05 })
+                    .to(this.sprite, { rotation: -0.03, duration: 0.05 })
+                    .to(this.sprite, { rotation: 0, duration: 0.1 })
+                    .to(this.sprite.scale, { x: 1, y: 1, duration: 0.2, ease: "elastic.out(1, 0.5)" })
+                    .add(() => this.idle());
+            },
+            
+            death() {
+                gsap.killTweensOf(this.sprite);
+                gsap.killTweensOf(this.sprite.scale);
+                
+                gsap.timeline()
+                    .to(this.sprite, { 
+                        y: this.app.screen.height / 2 + 50,
+                        rotation: -0.3,
+                        duration: 0.3,
+                        ease: "power2.in"
+                    })
+                    .to(this.sprite.scale, { x: 1.2, y: 0.7, duration: 0.3 }, "<")
+                    .to(this.sprite, { alpha: 0, duration: 0.5 })
+                    .to(this.sprite.scale, { x: 0, y: 0, duration: 0.5 }, "<")
+                    .add(() => {
+                        gsap.set(this.sprite, { 
+                            y: this.app.screen.height / 2 + 20,
+                            rotation: 0,
+                            alpha: 1
+                        });
+                        gsap.set(this.sprite.scale, { x: 1, y: 1 });
+                        this.idle();
+                    }, "+=0.5");
+            }
+        };
+        
+        // 초기화
+        window.addEventListener('load', () => {
+            pixiDemo.init();
+            gsapDemo.init();
+            compareDemo.init();
+            spriteDemo.init();
+        });
+    </script>
+</body>
+</html>
