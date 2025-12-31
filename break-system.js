@@ -298,7 +298,12 @@ const BreakSystem = {
     triggerBreak(enemy) {
         enemy.isBroken = true;
         
-        console.log(`[BreakSystem] ${enemy.name} BREAK!!!`);
+        // 🔥 취약 부여 (1턴 + 레시피 길이에 따른 보너스)
+        const recipeLength = enemy.currentBreakRecipe?.length || 2;
+        const vulnerableTurns = Math.max(1, recipeLength - 1); // 2칸 레시피 = 1턴, 3칸 = 2턴
+        enemy.vulnerable = (enemy.vulnerable || 0) + vulnerableTurns;
+        
+        console.log(`[BreakSystem] ${enemy.name} BREAK!!! +취약 ${vulnerableTurns}턴 (총 ${enemy.vulnerable}턴)`);
         
         const enemyIndex = gameState.enemies?.indexOf(enemy);
         const enemyEl = enemyIndex !== -1 ? document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`) : null;
@@ -581,10 +586,34 @@ const BreakSystem = {
         `;
         document.body.appendChild(breakText);
         
+        // 💔 취약 텍스트 (BREAK 아래에 표시)
+        const vulnerableText = document.createElement('div');
+        vulnerableText.className = 'break-vulnerable-text';
+        const vulnTurns = Math.max(1, (enemy.currentBreakRecipe?.length || 2) - 1);
+        vulnerableText.textContent = `💔 취약 +${vulnTurns}`;
+        vulnerableText.style.cssText = `
+            position: fixed;
+            left: ${centerX}px;
+            top: ${textY + 50}px;
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 0;
+            z-index: 9998;
+            pointer-events: none;
+            font-family: 'Cinzel', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #ef4444;
+            text-shadow: 
+                0 0 10px rgba(239, 68, 68, 0.8),
+                2px 2px 0 #000;
+        `;
+        document.body.appendChild(vulnerableText);
+        
         console.log('[BreakSystem] 🔥 BREAK 텍스트 생성됨!', { centerX, textY });
         
         // GSAP으로 BREAK 텍스트 애니메이션
         if (typeof gsap !== 'undefined') {
+            // BREAK 텍스트
             gsap.timeline()
                 .to(breakText, {
                     scale: 1.5,
@@ -611,10 +640,33 @@ const BreakSystem = {
                     ease: "power2.in",
                     onComplete: () => breakText.remove()
                 });
+            
+            // 취약 텍스트 (약간 딜레이 후)
+            gsap.timeline({ delay: 0.2 })
+                .to(vulnerableText, {
+                    scale: 1.2,
+                    opacity: 1,
+                    duration: 0.2,
+                    ease: "back.out(2)"
+                })
+                .to(vulnerableText, {
+                    scale: 1,
+                    duration: 0.1
+                })
+                .to(vulnerableText, {
+                    y: -20,
+                    opacity: 0,
+                    duration: 0.4,
+                    delay: 0.8,
+                    ease: "power2.in",
+                    onComplete: () => vulnerableText.remove()
+                });
         } else {
             // GSAP 없을 때 CSS 애니메이션 폴백
             breakText.style.animation = 'breakEffectAnim 1.5s ease-out forwards';
             setTimeout(() => breakText.remove(), 1500);
+            vulnerableText.style.animation = 'vulnerablePopAnim 1.5s ease-out forwards';
+            setTimeout(() => vulnerableText.remove(), 1500);
         }
         
         // 파편 효과 (캐릭터 위치)
