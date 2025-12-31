@@ -1046,6 +1046,191 @@ const PixiRenderer = {
     },
     
     // ==========================================
+    // 🛡️✨ 쉴드 전개 이펙트! (방어 카드 사용 시)
+    // ==========================================
+    createShieldDeploy(x, y, size = 80, color = '#60a5fa', intensity = 1) {
+        if (!this.initialized) return;
+        
+        const container = new PIXI.Container();
+        container.x = x;
+        container.y = y;
+        this.effectsContainer.addChild(container);
+        
+        // 🔵 메인 육각형 쉴드 (확장 애니메이션)
+        const shield = new PIXI.Graphics();
+        const hexRadius = size * 0.8;
+        
+        // 육각형 그리기
+        shield.poly(this.getHexPoints(0, 0, hexRadius));
+        shield.fill({ color: color, alpha: 0.3 });
+        shield.stroke({ width: 4, color: '#ffffff', alpha: 0.9 });
+        shield.scale.set(0);
+        container.addChild(shield);
+        
+        // 쉴드 확장 애니메이션
+        let shieldPhase = 0;
+        const animateShield = () => {
+            shieldPhase += 0.08;
+            
+            if (shieldPhase < 1) {
+                // 확장 단계
+                const scale = Math.sin(shieldPhase * Math.PI * 0.5) * 1.2;
+                shield.scale.set(scale);
+                shield.alpha = 0.8;
+            } else if (shieldPhase < 2) {
+                // 유지 + 펄스
+                const pulse = 1 + Math.sin((shieldPhase - 1) * Math.PI * 4) * 0.1;
+                shield.scale.set(pulse);
+                shield.alpha = 0.9 - (shieldPhase - 1) * 0.4;
+            } else {
+                // 종료
+                container.removeChild(shield);
+                shield.destroy();
+                return;
+            }
+            
+            requestAnimationFrame(animateShield);
+        };
+        animateShield();
+        
+        // ⚡ 전기 스파크 (원형으로 퍼짐)
+        const sparkCount = 8 + Math.floor(intensity * 4);
+        for (let i = 0; i < sparkCount; i++) {
+            const spark = new PIXI.Graphics();
+            const angle = (Math.PI * 2 / sparkCount) * i;
+            const length = 15 + Math.random() * 25;
+            
+            // 번개 모양
+            spark.moveTo(0, 0);
+            const segments = 2 + Math.floor(Math.random() * 2);
+            let px = 0, py = 0;
+            for (let j = 1; j <= segments; j++) {
+                const segLen = length / segments;
+                const offsetAngle = angle + (Math.random() - 0.5) * 0.4;
+                px += Math.cos(offsetAngle) * segLen;
+                py += Math.sin(offsetAngle) * segLen;
+                spark.lineTo(px, py);
+            }
+            
+            spark.stroke({ width: 3, color: color, alpha: 0.7, cap: 'round' });
+            spark.stroke({ width: 1.5, color: '#ffffff', alpha: 1, cap: 'round' });
+            container.addChild(spark);
+            
+            // 스파크 애니메이션
+            let sparkLife = 0;
+            const animateSpark = () => {
+                sparkLife++;
+                spark.x = Math.cos(angle) * sparkLife * 3;
+                spark.y = Math.sin(angle) * sparkLife * 3;
+                spark.alpha = 1 - sparkLife / 20;
+                spark.scale.set(1 + sparkLife * 0.05);
+                
+                if (sparkLife >= 20) {
+                    container.removeChild(spark);
+                    spark.destroy();
+                } else {
+                    requestAnimationFrame(animateSpark);
+                }
+            };
+            setTimeout(animateSpark, i * 20);
+        }
+        
+        // 💎 유리 파편 (안에서 바깥으로)
+        const shardCount = 10 + Math.floor(intensity * 6);
+        for (let i = 0; i < shardCount; i++) {
+            const shard = new PIXI.Graphics();
+            const shardSize = 3 + Math.random() * 4;
+            const angle = Math.random() * Math.PI * 2;
+            
+            // 다이아몬드 모양
+            shard.moveTo(0, -shardSize);
+            shard.lineTo(shardSize * 0.6, 0);
+            shard.lineTo(0, shardSize);
+            shard.lineTo(-shardSize * 0.6, 0);
+            shard.closePath();
+            shard.fill({ color: '#bfdbfe', alpha: 0.9 });
+            
+            const speed = 2 + Math.random() * 4 * intensity;
+            shard.vx = Math.cos(angle) * speed;
+            shard.vy = Math.sin(angle) * speed;
+            shard.rotation = Math.random() * Math.PI * 2;
+            shard.rotationSpeed = (Math.random() - 0.5) * 0.2;
+            shard.life = 25 + Math.random() * 10;
+            shard.maxLife = shard.life;
+            
+            container.addChild(shard);
+            
+            const animateShard = () => {
+                shard.life--;
+                shard.x += shard.vx;
+                shard.y += shard.vy;
+                shard.vx *= 0.96;
+                shard.vy *= 0.96;
+                shard.rotation += shard.rotationSpeed;
+                shard.alpha = shard.life / shard.maxLife;
+                
+                if (shard.life <= 0) {
+                    container.removeChild(shard);
+                    shard.destroy();
+                } else {
+                    requestAnimationFrame(animateShard);
+                }
+            };
+            setTimeout(animateShard, 50 + Math.random() * 80);
+        }
+        
+        // 🌟 중심 플래시
+        const flash = new PIXI.Graphics();
+        flash.circle(0, 0, 30);
+        flash.fill({ color: '#ffffff', alpha: 1 });
+        container.addChild(flash);
+        
+        let flashLife = 0;
+        const animateFlash = () => {
+            flashLife++;
+            flash.alpha = 1 - flashLife / 12;
+            flash.scale.set(1 + flashLife * 0.15);
+            
+            if (flashLife >= 12) {
+                container.removeChild(flash);
+                flash.destroy();
+            } else {
+                requestAnimationFrame(animateFlash);
+            }
+        };
+        animateFlash();
+        
+        // 🔊 동심원 링 (2개)
+        for (let ring = 0; ring < 2; ring++) {
+            const ringGfx = new PIXI.Graphics();
+            ringGfx.circle(0, 0, 20);
+            ringGfx.stroke({ width: 3 - ring, color: color, alpha: 0.8 });
+            container.addChild(ringGfx);
+            
+            let ringLife = 0;
+            const animateRing = () => {
+                ringLife++;
+                ringGfx.scale.set(1 + ringLife * 0.2);
+                ringGfx.alpha = 1 - ringLife / 25;
+                
+                if (ringLife >= 25) {
+                    container.removeChild(ringGfx);
+                    ringGfx.destroy();
+                } else {
+                    requestAnimationFrame(animateRing);
+                }
+            };
+            setTimeout(animateRing, ring * 100);
+        }
+        
+        // 컨테이너 정리
+        setTimeout(() => {
+            this.effectsContainer.removeChild(container);
+            container.destroy({ children: true });
+        }, 1500);
+    },
+    
+    // ==========================================
     // 💥 히트 이펙트! (피격 시)
     // ==========================================
     createHitImpact(x, y, damage = 10, color = '#ff4444') {
