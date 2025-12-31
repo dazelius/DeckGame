@@ -262,6 +262,20 @@ img {
     display: none !important;
 }
 
+/* 모든 배경 요소 클릭 통과 */
+.battle-background,
+.battle-background *,
+.bg-layers,
+.bg-layers *,
+.bg-layer,
+.bg-sky,
+.bg-wall,
+.bg-floor,
+.background-layer,
+.background-layer * {
+    pointer-events: none !important;
+}
+
 /* 바닥 그라데이션 비활성화 - UI 가림 문제 */
 .floor {
     display: none;
