@@ -588,18 +588,61 @@ const VFX = {
     },
     
     // ==========================================
-    // 방어 이펙트 (쉴드)
+    // 방어 이펙트 (쉴드) - GSAP + PixiJS 업그레이드!
     // ==========================================
     shield(x, y, options = {}) {
         const {
             color = '#60a5fa',
             size = 80,
-            duration = 500
+            duration = 500,
+            intensity = 1
         } = options;
         
         this.ensureLoop();
         
-        // 육각형 방패 이펙트
+        // 🎆 PixiJS 쉴드 이펙트 (메인!)
+        if (typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized) {
+            PixiRenderer.createShieldDeploy(x, y, size, color, intensity);
+        }
+        
+        // 🎭 GSAP 스프라이트 애니메이션 (플레이어)
+        if (typeof gsap !== 'undefined') {
+            const playerSprite = document.querySelector('.player-sprite-img');
+            if (playerSprite) {
+                // 방어 자세!
+                gsap.timeline()
+                    .to(playerSprite, {
+                        scaleX: 1.08,
+                        scaleY: 0.94,
+                        x: -5,
+                        filter: `
+                            drop-shadow(2px 0 0 ${color})
+                            drop-shadow(-2px 0 0 ${color})
+                            drop-shadow(0 2px 0 ${color})
+                            drop-shadow(0 -2px 0 ${color})
+                            brightness(1.4)
+                        `,
+                        duration: 0.1,
+                        ease: "power2.out"
+                    })
+                    .to(playerSprite, {
+                        scaleX: 0.95,
+                        scaleY: 1.05,
+                        x: 3,
+                        duration: 0.08
+                    })
+                    .to(playerSprite, {
+                        scaleX: 1,
+                        scaleY: 1,
+                        x: 0,
+                        filter: '',
+                        duration: 0.2,
+                        ease: "elastic.out(1, 0.5)"
+                    });
+            }
+        }
+        
+        // 기존 캔버스 육각형도 유지 (폴백)
         this.animations.push({
             x, y,
             size,
@@ -651,7 +694,7 @@ const VFX = {
         });
         
         // 파티클
-        this.sparks(x, y, { color, count: 8, speed: 4, size: 3 });
+        this.sparks(x, y, { color, count: 10, speed: 6, size: 4 });
     },
     
     // ==========================================
