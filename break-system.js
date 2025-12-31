@@ -517,10 +517,12 @@ const BreakSystem = {
             this.createStunStars(centerX, centerY - 50);
             PixiRenderer.createStunLoop(centerX, centerY - 60, 1500);
             
-            // 스파크 폭발 (빨강 + 노랑 + 흰색)
-            PixiRenderer.createSparks(centerX, centerY - 30, 25, '#ff4444');
-            PixiRenderer.createSparks(centerX, centerY - 30, 20, '#ffcc00');
-            PixiRenderer.createSparks(centerX, centerY - 30, 15, '#ffffff');
+            // 스파크 폭발 (빨강 + 노랑 + 흰색) - VFX 사용
+            if (typeof VFX !== 'undefined' && VFX.sparks) {
+                VFX.sparks(centerX, centerY - 30, { color: '#ff4444', count: 25, speed: 15 });
+                VFX.sparks(centerX, centerY - 30, { color: '#ffcc00', count: 20, speed: 12 });
+                VFX.sparks(centerX, centerY - 30, { color: '#ffffff', count: 15, speed: 10 });
+            }
         }
         
         // 🌟 3단계: 화면 플래시
