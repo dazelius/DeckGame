@@ -1,0 +1,85 @@
+{
+  "name": "shadow-deck",
+  "version": "1.0.0",
+  "description": "Roguelike Deckbuilder Game - Dark Souls Style",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "electron": "electron .",
+    "electron:dev": "electron .",
+    "electron:build": "npm run build && electron-builder --win"
+  },
+  "keywords": [
+    "roguelike",
+    "deckbuilder",
+    "card-game",
+    "dark-souls"
+  ],
+  "author": "Shadow Deck Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.0.0",
+    "electron-icon-builder": "^2.0.1",
+    "png-to-ico": "^3.0.1",
+    "typescript": "^5.3.0",
+    "vite": "^5.0.0"
+  },
+  "dependencies": {
+    "howler": "^2.2.4",
+    "pixi.js": "^8.0.0"
+  },
+  "build": {
+    "appId": "com.shadowdeck.game",
+    "productName": "Shadow Deck",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "**/*",
+      "!node_modules/**/*",
+      "!dist-electron/**/*",
+      "!.git/**/*",
+      "!*.md",
+      "!*.log",
+      "!tsconfig.json",
+      "!vite.config.js",
+      "!pixi-renderer.js",
+      "!pixi-test.html",
+      "!cardtest.html",
+      "!testvfx.html",
+      "!memory.html",
+      "!backup_*/**/*",
+      "!src/**/*"
+    ],
+    "extraFiles": [],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build-icons/icons/win/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "ShadowDeck-Portable.exe"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "build-icons/icons/mac/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "build-icons/icons/png/512x512.png"
+    }
+  }
+}

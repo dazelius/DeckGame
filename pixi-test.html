@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PixiJS VFX 테스트</title>
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.x/dist/pixi.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            font-family: 'Noto Sans KR', sans-serif;
+            color: #fff;
+            overflow: hidden;
+        }
+        
+        .control-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 10000;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #ffd700;
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        h1 {
+            color: #ffd700;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        h2 {
+            color: #88ccff;
+            font-size: 1rem;
+            margin: 15px 0 10px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 5px;
+        }
+        
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        button {
+            background: linear-gradient(180deg, #4a4a4a, #2a2a2a);
+            border: 1px solid #666;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        
+        button:hover {
+            background: linear-gradient(180deg, #5a5a5a, #3a3a3a);
+            border-color: #ffd700;
+            transform: translateY(-1px);
+        }
+        
+        button:active {
+            transform: translateY(1px);
+        }
+        
+        button.particle { border-color: #ff6b35; }
+        button.effect { border-color: #4ade80; }
+        button.screen { border-color: #8b5cf6; }
+        
+        .target {
+            position: fixed;
+            width: 100px;
+            height: 150px;
+            background: rgba(255, 100, 100, 0.3);
+            border: 2px solid #ff4444;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+        
+        .target.enemy1 { left: 70%; top: 30%; }
+        .target.enemy2 { left: 80%; top: 40%; }
+        .target.player { left: 20%; top: 50%; background: rgba(100, 150, 255, 0.3); border-color: #4488ff; }
+        
+        .status {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            z-index: 10000;
+        }
+        
+        .status.ok { color: #4ade80; }
+        .status.error { color: #ff4444; }
+    </style>
+</head>
+<body>
+    <div class="control-panel">
+        <h1>🎮 PixiJS VFX 테스트 (화려한 버전)</h1>
+        
+        <h2>🔥 파티클 (개선됨)</h2>
+        <div class="btn-group">
+            <button class="particle" onclick="testEmbers()">🔥 불씨</button>
+            <button class="particle" onclick="testHitParticles()">💥 히트</button>
+            <button class="particle" onclick="testHealParticles()">💚 힐</button>
+            <button class="particle" onclick="testBlockParticles()">🛡️ 블록</button>
+            <button class="particle" onclick="testChipParticles()">🪙 칩</button>
+        </div>
+        
+        <h2>⚔️ 이펙트</h2>
+        <div class="btn-group">
+            <button class="effect" onclick="testSlash()">슬래시</button>
+            <button class="effect" onclick="testShockwave()">충격파</button>
+            <button class="effect" onclick="testExplosion()">폭발</button>
+            <button class="effect" onclick="testLightning()">번개</button>
+            <button class="effect" onclick="testMagicAura()">마법 오라</button>
+        </div>
+        
+        <h2>📺 화면 효과</h2>
+        <div class="btn-group">
+            <button class="screen" onclick="testFlash('#ffffff')">화이트 플래시</button>
+            <button class="screen" onclick="testFlash('#ff0000')">레드 플래시</button>
+            <button class="screen" onclick="testFlash('#00ff00')">그린 플래시</button>
+            <button class="screen" onclick="testScanlines()">스캔라인</button>
+            <button class="screen" onclick="testVignette()">비네팅</button>
+        </div>
+        
+        <h2>🎪 콤보</h2>
+        <div class="btn-group">
+            <button class="screen" onclick="comboCritical()">크리티컬 히트</button>
+            <button class="screen" onclick="comboMagicBurst()">마법 폭발</button>
+            <button class="screen" onclick="comboAllIn()">올인</button>
+        </div>
+    </div>
+    
+    <div class="target enemy1">👿</div>
+    <div class="target enemy2">🧟</div>
+    <div class="target player">🧙</div>
+    
+    <div class="status" id="status">로딩 중...</div>
+    
+    <script src="pixi-renderer.js"></script>
+    <script>
+        const status = document.getElementById('status');
+        
+        // 타겟 위치
+        function getTarget(selector) {
+            const el = document.querySelector(selector);
+            const rect = el.getBoundingClientRect();
+            return {
+                x: rect.left + rect.width / 2,
+                y: rect.top + rect.height / 2
+            };
+        }
+        
+        // PixiJS 초기화 대기
+        async function waitForPixi() {
+            await PixiRenderer.init();
+            status.textContent = '✅ PixiJS 준비 완료!';
+            status.className = 'status ok';
+        }
+        
+        // 파티클 테스트
+        function testEmbers() {
+            const pos = getTarget('.player');
+            PixiRenderer.createEmbers(pos.x, pos.y, 30);
+        }
+        
+        function testHitParticles() {
+            const pos = getTarget('.enemy1');
+            PixiRenderer.createHitParticles(pos.x, pos.y, 20, '#ff4444');
+        }
+        
+        function testHealParticles() {
+            const pos = getTarget('.player');
+            PixiRenderer.createHealParticles(pos.x, pos.y, 30);
+        }
+        
+        function testBlockParticles() {
+            const pos = getTarget('.player');
+            PixiRenderer.createBlockParticles(pos.x, pos.y, 15);
+        }
+        
+        function testChipParticles() {
+            const pos = getTarget('.enemy1');
+            PixiRenderer.createChipParticles(pos.x, pos.y, 40);
+        }
+        
+        // 이펙트 테스트
+        function testSlash() {
+            const pos = getTarget('.enemy1');
+            PixiRenderer.createSlashEffect(pos.x, pos.y, Math.random() - 0.5, '#ff4444');
+        }
+        
+        function testShockwave() {
+            const pos = getTarget('.enemy2');
+            PixiRenderer.createShockwave(pos.x, pos.y, '#ffaa00');
+        }
+        
+        function testExplosion() {
+            const pos = getTarget('.enemy1');
+            PixiRenderer.createExplosion(pos.x, pos.y, 120, '#ff6b35');
+        }
+        
+        function testLightning() {
+            const player = getTarget('.player');
+            const enemy = getTarget('.enemy1');
+            PixiRenderer.createLightning(player.x, player.y, enemy.x, enemy.y, '#00ffff');
+        }
+        
+        function testMagicAura() {
+            const pos = getTarget('.player');
+            PixiRenderer.createMagicAura(pos.x, pos.y, '#8b5cf6', 3000);
+        }
+        
+        // 화면 효과 테스트
+        function testFlash(color) {
+            PixiRenderer.screenFlash(color, 300);
+        }
+        
+        let scanlines = null;
+        function testScanlines() {
+            if (scanlines) {
+                PixiRenderer.effectsContainer.removeChild(scanlines);
+                scanlines.destroy();
+                scanlines = null;
+            } else {
+                scanlines = PixiRenderer.createScanlines();
+            }
+        }
+        
+        let vignette = null;
+        function testVignette() {
+            if (vignette) {
+                PixiRenderer.app.stage.removeChild(vignette);
+                vignette.destroy();
+                vignette = null;
+            } else {
+                vignette = PixiRenderer.createVignette();
+            }
+        }
+        
+        // 콤보 (더 화려하게!)
+        function comboCritical() {
+            const pos = getTarget('.enemy1');
+            
+            // 다중 슬래시
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => {
+                    const angle = (Math.random() - 0.5) * 1.5;
+                    PixiRenderer.createSlashEffect(pos.x, pos.y, angle, '#ffff00');
+                }, i * 80);
+            }
+            
+            setTimeout(() => {
+                PixiRenderer.createHitParticles(pos.x, pos.y, 40, '#ffff00');
+                PixiRenderer.createShockwave(pos.x, pos.y, '#ffff00');
+                PixiRenderer.screenFlash('#ffff00', 150);
+            }, 200);
+        }
+        
+        function comboMagicBurst() {
+            const pos = getTarget('.enemy2');
+            PixiRenderer.createMagicAura(pos.x, pos.y, '#8b5cf6', 1500);
+            
+            // 차징 파티클
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => {
+                    PixiRenderer.createHealParticles(pos.x, pos.y, 10);
+                }, i * 200);
+            }
+            
+            setTimeout(() => {
+                PixiRenderer.createExplosion(pos.x, pos.y, 150, '#8b5cf6');
+                PixiRenderer.createShockwave(pos.x, pos.y, '#8b5cf6');
+            }, 800);
+        }
+        
+        function comboAllIn() {
+            const pos = getTarget('.enemy1');
+            PixiRenderer.screenFlash('#ffd700', 200);
+            PixiRenderer.createChipParticles(pos.x, pos.y, 50);
+            
+            // 다단 히트
+            for (let i = 0; i < 8; i++) {
+                setTimeout(() => {
+                    const offsetX = (Math.random() - 0.5) * 80;
+                    const offsetY = (Math.random() - 0.5) * 80;
+                    PixiRenderer.createHitParticles(
+                        pos.x + offsetX,
+                        pos.y + offsetY,
+                        12, '#ffd700'
+                    );
+                    if (i % 2 === 0) {
+                        PixiRenderer.createShockwave(pos.x, pos.y, '#ffd700');
+                    }
+                }, i * 100);
+            }
+            
+            // 마무리 폭발
+            setTimeout(() => {
+                PixiRenderer.createExplosion(pos.x, pos.y, 100, '#ffd700');
+            }, 900);
+        }
+        
+        // 초기화
+        waitForPixi();
+    </script>
+</body>
+</html>
+

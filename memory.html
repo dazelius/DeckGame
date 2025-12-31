@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>기억조각 카드 디자인 시안</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 50%, #0f0f23 100%);
+            font-family: 'Segoe UI', sans-serif;
+            padding: 40px;
+            overflow-x: hidden;
+        }
+
+        h1 {
+            text-align: center;
+            color: #e0e0ff;
+            margin-bottom: 20px;
+            font-size: 2.5rem;
+            text-shadow: 0 0 30px rgba(138, 180, 255, 0.5);
+        }
+
+        h2 {
+            color: #a0a0d0;
+            margin: 40px 0 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .card-row {
+            display: flex;
+            gap: 40px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 30px 0;
+            perspective: 1000px;
+        }
+
+        .card-wrapper {
+            text-align: center;
+        }
+
+        .card-label {
+            color: #888;
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* ==========================================
+           기억조각 기본 스타일
+           ========================================== */
+        .memory-card {
+            width: 200px;
+            height: 300px;
+            position: relative;
+            cursor: pointer;
+            transform-style: preserve-3d;
+            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .memory-card:hover {
+            transform: translateY(-20px) rotateX(5deg) rotateY(-5deg);
+        }
+
+        .memory-card-inner {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ==========================================
+           시안 1: 크리스탈 조각
+           ========================================== */
+        .crystal .memory-card-inner {
+            background: linear-gradient(
+                135deg,
+                rgba(30, 30, 60, 0.9) 0%,
+                rgba(20, 20, 40, 0.95) 50%,
+                rgba(40, 40, 80, 0.9) 100%
+            );
+            clip-path: polygon(
+                8% 0%, 92% 0%, 100% 8%, 100% 85%, 
+                92% 100%, 15% 100%, 0% 92%, 0% 15%
+            );
+            border: none;
+            box-shadow: 
+                0 0 30px rgba(100, 150, 255, 0.3),
+                inset 0 0 60px rgba(100, 150, 255, 0.1);
+        }
+
+        .crystal .memory-card-inner::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                135deg,
+                transparent 0%,
+                rgba(255, 255, 255, 0.1) 50%,
+                transparent 100%
+            );
+            pointer-events: none;
+        }
+
+        /* 크리스탈 테두리 */
+        .crystal .memory-card-inner::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            right: 2px;
+            bottom: 2px;
+            clip-path: polygon(
+                8% 0%, 92% 0%, 100% 8%, 100% 85%, 
+                92% 100%, 15% 100%, 0% 92%, 0% 15%
+            );
+            border: 2px solid rgba(150, 200, 255, 0.4);
+            pointer-events: none;
+        }
+
+        .crystal:hover .memory-card-inner {
+            box-shadow: 
+                0 0 50px rgba(100, 150, 255, 0.5),
+                0 20px 40px rgba(0, 0, 0, 0.4),
+                inset 0 0 80px rgba(100, 150, 255, 0.2);
+        }
+
+        /* ==========================================
+           시안 2: 홀로그램 프리즘
+           ========================================== */
+        .hologram .memory-card-inner {
+            background: linear-gradient(
+                135deg,
+                rgba(20, 20, 35, 0.95) 0%,
+                rgba(30, 20, 40, 0.95) 100%
+            );
+            border-radius: 15px;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+            overflow: hidden;
+        }
+
+        .hologram::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(
+                45deg,
+                #ff00ff, #00ffff, #ffff00, #ff00ff, #00ffff
+            );
+            background-size: 400% 400%;
+            border-radius: 17px;
+            z-index: -1;
+            animation: holoShift 3s ease infinite;
+        }
+
+        .hologram .memory-card-inner::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 200%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.1),
+                transparent
+            );
+            animation: holoShine 2s ease-in-out infinite;
+        }
+
+        @keyframes holoShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        @keyframes holoShine {
+            0% { transform: translateX(-50%); }
+            100% { transform: translateX(50%); }
+        }
+
+        .hologram:hover::before {
+            animation-duration: 1s;
+        }
+
+        /* ==========================================
+           시안 3: 고대 기억 (룬)
+           ========================================== */
+        .ancient .memory-card-inner {
+            background: 
+                radial-gradient(ellipse at 30% 20%, rgba(180, 140, 80, 0.1) 0%, transparent 50%),
+                linear-gradient(160deg, #1a1510 0%, #0d0a08 100%);
+            border: 3px solid;
+            border-image: linear-gradient(
+                180deg,
+                #8b7355 0%,
+                #c9a96e 30%,
+                #8b7355 50%,
+                #c9a96e 70%,
+                #8b7355 100%
+            ) 1;
+            position: relative;
+        }
+
+        .ancient .memory-card-inner::before {
+            content: '᛭ ᚱ ᛗ ᛟ ᚱ ᛃ ᛭';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            color: rgba(201, 169, 110, 0.15);
+            letter-spacing: 8px;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .ancient .memory-card-inner::after {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+            border: 1px solid rgba(201, 169, 110, 0.2);
+            pointer-events: none;
+        }
+
+        .ancient:hover .memory-card-inner::before {
+            color: rgba(201, 169, 110, 0.4);
+            text-shadow: 0 0 20px rgba(201, 169, 110, 0.6);
+        }
+
+        /* ==========================================
+           시안 4: 글리치 메모리
+           ========================================== */
+        .glitch .memory-card-inner {
+            background: linear-gradient(160deg, #1a1a2e 0%, #0f0f1a 100%);
+            border: 2px solid #00ffff;
+            border-radius: 8px;
+            box-shadow: 
+                0 0 10px rgba(0, 255, 255, 0.3),
+                inset 0 0 30px rgba(0, 255, 255, 0.05);
+        }
+
+        .glitch:hover .memory-card-inner {
+            animation: glitchCard 0.3s ease infinite;
+        }
+
+        .glitch::before,
+        .glitch::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: inherit;
+            border-radius: 8px;
+            opacity: 0;
+        }
+
+        .glitch:hover::before {
+            animation: glitchBefore 0.3s ease infinite;
+            border: 2px solid #ff00ff;
+        }
+
+        .glitch:hover::after {
+            animation: glitchAfter 0.3s ease infinite;
+            border: 2px solid #00ff00;
+        }
+
+        @keyframes glitchCard {
+            0%, 100% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(2px, -2px); }
+            60% { transform: translate(-1px, -1px); }
+            80% { transform: translate(1px, 1px); }
+        }
+
+        @keyframes glitchBefore {
+            0%, 100% { opacity: 0; transform: translate(0); }
+            20% { opacity: 0.8; transform: translate(-5px, 0); }
+            40% { opacity: 0; }
+            60% { opacity: 0.6; transform: translate(3px, 0); }
+            80% { opacity: 0; }
+        }
+
+        @keyframes glitchAfter {
+            0%, 100% { opacity: 0; transform: translate(0); }
+            25% { opacity: 0.6; transform: translate(4px, 0); }
+            50% { opacity: 0; }
+            75% { opacity: 0.8; transform: translate(-3px, 0); }
+        }
+
+        /* ==========================================
+           시안 5: 몽환 안개
+           ========================================== */
+        .mist .memory-card-inner {
+            background: linear-gradient(
+                180deg,
+                rgba(40, 30, 60, 0.95) 0%,
+                rgba(20, 15, 35, 0.98) 100%
+            );
+            border-radius: 20px;
+            border: 2px solid rgba(180, 150, 255, 0.3);
+            overflow: hidden;
+        }
+
+        .mist::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: 
+                radial-gradient(circle at 30% 70%, rgba(150, 100, 255, 0.2) 0%, transparent 40%),
+                radial-gradient(circle at 70% 30%, rgba(100, 150, 255, 0.2) 0%, transparent 40%);
+            animation: mistFloat 8s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        .mist::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60%;
+            background: linear-gradient(
+                180deg,
+                transparent 0%,
+                rgba(150, 130, 200, 0.1) 50%,
+                rgba(150, 130, 200, 0.2) 100%
+            );
+            pointer-events: none;
+            animation: mistRise 4s ease-in-out infinite;
+        }
+
+        @keyframes mistFloat {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(10px, -10px) rotate(5deg); }
+            66% { transform: translate(-10px, 5px) rotate(-3deg); }
+        }
+
+        @keyframes mistRise {
+            0%, 100% { opacity: 0.5; transform: translateY(0); }
+            50% { opacity: 1; transform: translateY(-20px); }
+        }
+
+        /* ==========================================
+           시안 6: 깨진 거울
+           ========================================== */
+        .shattered .memory-card-inner {
+            background: linear-gradient(160deg, #1e1e2e 0%, #12121a 100%);
+            clip-path: polygon(
+                5% 3%, 95% 0%, 100% 5%, 97% 95%, 
+                90% 100%, 10% 97%, 0% 90%, 3% 10%
+            );
+            position: relative;
+        }
+
+        .shattered .memory-card-inner::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                linear-gradient(45deg, transparent 48%, rgba(255,255,255,0.1) 50%, transparent 52%),
+                linear-gradient(-30deg, transparent 48%, rgba(255,255,255,0.05) 50%, transparent 52%),
+                linear-gradient(70deg, transparent 48%, rgba(255,255,255,0.08) 50%, transparent 52%);
+            pointer-events: none;
+        }
+
+        .shattered .memory-card-inner::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            right: 3px;
+            bottom: 3px;
+            border: 1px solid rgba(200, 200, 220, 0.3);
+            clip-path: polygon(
+                5% 3%, 95% 0%, 100% 5%, 97% 95%, 
+                90% 100%, 10% 97%, 0% 90%, 3% 10%
+            );
+            pointer-events: none;
+        }
+
+        .shattered:hover .memory-card-inner {
+            box-shadow: 
+                0 0 30px rgba(200, 200, 255, 0.3),
+                inset 0 0 50px rgba(200, 200, 255, 0.1);
+        }
+
+        /* ==========================================
+           카드 내부 콘텐츠
+           ========================================== */
+        .card-cost {
+            position: absolute;
+            top: -8px;
+            left: -8px;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.3rem;
+            color: #1a1a2e;
+            box-shadow: 0 2px 15px rgba(251, 191, 36, 0.5);
+            border: 2px solid rgba(255, 215, 0, 0.6);
+            z-index: 10;
+        }
+
+        .card-header {
+            padding: 15px 15px 10px 45px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-name {
+            font-size: 1rem;
+            font-weight: bold;
+            color: #e0e0ff;
+        }
+
+        .card-type {
+            font-size: 0.7rem;
+            color: #8888aa;
+            text-transform: uppercase;
+        }
+
+        .card-icon {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3.5rem;
+        }
+
+        .card-desc {
+            padding: 10px 15px;
+            font-size: 0.8rem;
+            text-align: center;
+            color: #b0b0c0;
+            line-height: 1.4;
+        }
+
+        /* 타입별 테두리 색상 */
+        .type-attack .card-name { color: #fca5a5; }
+        .type-skill .card-name { color: #93c5fd; }
+        .type-power .card-name { color: #d8b4fe; }
+
+        .crystal.type-attack .memory-card-inner { 
+            box-shadow: 0 0 30px rgba(255, 100, 100, 0.3), inset 0 0 60px rgba(255, 100, 100, 0.1);
+        }
+        .crystal.type-skill .memory-card-inner { 
+            box-shadow: 0 0 30px rgba(100, 150, 255, 0.3), inset 0 0 60px rgba(100, 150, 255, 0.1);
+        }
+        .crystal.type-power .memory-card-inner { 
+            box-shadow: 0 0 30px rgba(180, 100, 255, 0.3), inset 0 0 60px rgba(180, 100, 255, 0.1);
+        }
+
+        /* ==========================================
+           등급별 추가 효과
+           ========================================== */
+        .rarity-rare .memory-card-inner {
+            border-color: rgba(100, 150, 255, 0.6);
+        }
+        
+        .rarity-rare::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #3b82f6, #60a5fa, #3b82f6);
+            border-radius: inherit;
+            z-index: -1;
+            opacity: 0.5;
+        }
+
+        .rarity-epic .memory-card-inner {
+            border-color: rgba(168, 85, 247, 0.6);
+        }
+
+        .rarity-legendary {
+            animation: legendaryPulse 2s ease-in-out infinite;
+        }
+
+        .rarity-legendary .memory-card-inner {
+            border-color: rgba(251, 191, 36, 0.8);
+        }
+
+        .rarity-legendary::before {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: -3px;
+            right: -3px;
+            bottom: -3px;
+            background: linear-gradient(45deg, #f59e0b, #fbbf24, #f59e0b, #fbbf24);
+            background-size: 300% 300%;
+            animation: legendaryBorder 2s ease infinite;
+            z-index: -1;
+            filter: blur(3px);
+        }
+
+        @keyframes legendaryPulse {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.1); }
+        }
+
+        @keyframes legendaryBorder {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        /* ==========================================
+           섹션 구분
+           ========================================== */
+        .section {
+            margin: 60px 0;
+            padding: 30px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .comparison {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .comparison-item {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .comparison-item h3 {
+            color: #a0a0d0;
+            margin-bottom: 15px;
+        }
+
+        .comparison-item ul {
+            list-style: none;
+            color: #888;
+            font-size: 0.9rem;
+            text-align: left;
+            padding: 0 20px;
+        }
+
+        .comparison-item li {
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .comparison-item li::before {
+            content: '✦ ';
+            color: #6366f1;
+        }
+    </style>
+</head>
+<body>
+    <h1>💎 기억조각 카드 디자인 시안</h1>
+
+    <!-- 시안 1: 크리스탈 -->
+    <div class="section">
+        <h2>💠 시안 1: 크리스탈 조각</h2>
+        <p style="color: #888; margin-bottom: 20px;">유리/보석처럼 깎인 다각형 형태. 빛 반사 효과.</p>
+        
+        <div class="card-row">
+            <div class="card-wrapper">
+                <div class="card-label">공격</div>
+                <div class="memory-card crystal type-attack">
+                    <div class="card-cost">1</div>
+                    <div class="memory-card-inner">
+                        <div class="card-header">
+                            <div class="card-name">강타</div>
+                            <div class="card-type">공격</div>
+                        </div>
+                        <div class="card-icon">⚔️</div>
+                        <div class="card-desc">12 피해를 입힌다.<br>취약 2 부여.</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-wrapper">
+                <div class="card-label">스킬</div>
+                <div class="memory-card crystal type-skill">
+                    <div class="card-cost">1</div>
+                    <div class="memory-card-inner">
+                        <div class="card-header">
+                            <div class="card-name">포춘 가드</div>
+                            <div class="card-type">스킬</div>
+                        </div>
+                        <div class="card-icon">🛡️</div>
+                        <div class="card-desc">2~8 랜덤 방어도.<br>칩 1 획득.</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-wrapper">
+                <div class="card-label">파워</div>
+                <div class="memory-card crystal type-power">
+                    <div class="card-cost">1</div>
+                    <div class="memory-card-inner">
+                        <div class="card-header">
+                            <div class="card-name">판돈 올리기</div>
+                            <div class="card-type">파워</div>
+                        </div>
+                        <div class="card-icon">📈</div>
+                        <div class="card-desc">이번 전투 동안<br>최대 수치 +3</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 시안 2: 홀로그램 -->
+    <div class="section">
+        <h2>🌈 시안 2: 홀로그램 프리즘</h2>
+        <p style="color: #888; margin-bottom: 20px;">무지개빛 테두리. 각도에 따라 색상 변화.</p>
+        
+        <div class="card-row">
+            <div class="card-wrapper">
+                <div class="card-label">일반</div>
+                <div class="memory-card hologram">
+                    <div class="card-cost">1</div>
+                    <div class="memory-card-inner">
+                        <div class="card-header">
+                            <div class="card-name">럭키 스트라이크</div>
+                            <div class="card-type">공격</div>
+                        </div>
+                        <div class="card-icon">🎲</div>
+                        <div class="card-desc">3~9 랜덤 피해.<br>MAX시 칩 +2</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-wrapper">
+                <div class="card-label">레어</div>
+                <div class="memory-card hologram rarity-rare">
+                    <div class="card-cost">2</div>
+                    <div class="memory-card-inner">
+                        <div class="card-header">
+                            <div class="card-name">운명의 카드</div>
+                            <div class="card-type">스킬</div>
+                        </div>
+                        <div class="card-icon">🃏</div>
+                        <div class="card-desc">랜덤한 카드를<br>1장 드로우.</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-wrapper">
+                <div class="card-label">전설</div>
+                <div class="memory-card hologram rarity-legendary">
+                    <div class="card-cost">3</div>
+                    <div class="memory-card-inner">
+                        <div class="card-header">
+                            <div class="card-name">올인</div>
+                            <div class="card-type">스킬</div>
+                        </div>
+                        <div class="card-icon">💰</div>
+                        <div class="card-desc">모든 칩 소모.<br>칩당 1~3 피해 x N</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 시안 3: 고대 기억 -->
+    <div class="section">
+        <h2>📜 시안 3: 고대 기억 (룬)</h2>
+        <p style="color: #888; margin-bottom: 20px;">금속 에칭. 고대 룬 문자. 유물 느낌.</p>
+        
+        <div class="card-row">
+            <div class="card-wrapper">
+                <div class="card-label">일반</div>
+                <div class="memory-card ancient">
+                    <div class="card-cost">0</div>
+                    <div class="memory-card-inner">
+                        <div class="card-header">
+                            <div class="card-name">칩 토스</div>
+                            <div class="card-type">스킬</div>
+                        </div>
+                        <div class="card-icon">🪙</div>
+                        <div class="card-desc">카드 2장 드로우.</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-wrapper">
+                <div class="card-label">에픽</div>
+                <div class="memory-card ancient rarity-epic">
+                    <div class="card-cost">1</div>
+                    <div class="memory-card-inner">
+                        <div class="card-header">
+                            <div class="card-name">핸드 셔플</div>
+                            <div class="card-type">스킬</div>
+                        </div>
+                        <div class="card-icon">🔄</div>
+                        <div class="card-desc">손패를 버리고<br>같은 수만큼 드로우</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 시안 4: 글리치 -->
+    <div class="section">
+        <h2>⚡ 시안 4: 글리치 메모리</h2>
+        <p style="color: #888; margin-bottom: 20px;">불안정한 기억. 사이버펑크 느낌. 호버시 글리치 효과.</p>
+        
+        <div class="card-row">
+            <div class="card-wrapper">
+                <div class="card-label">호버해보세요!</div>
+                <div class="memory-card glitch">
+                    <div class="card-cost">1</div>
+                    <div class="memory-card-inner">
+                        <div class="card-header">
+                            <div class="card-name">칩 스프레이</div>
+                            <div class="card-type">공격</div>
+                        </div>
+                        <div class="card-icon">💸</div>
+                        <div class="card-desc">모든 적에게<br>2~6 랜덤 피해</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 시안 5: 몽환 안개 -->
+    <div class="section">
+        <h2>🌫️ 시안 5: 몽환 안개</h2>
+        <p style="color: #888; margin-bottom: 20px;">몽환적. 희미한 기억. 안개 파티클 효과.</p>
+        
+        <div class="card-row">
+            <div class="card-wrapper">
+                <div class="card-label">드림</div>
+                <div class="memory-card mist">
+                    <div class="card-cost">2</div>
+                    <div class="memory-card-inner">
+                        <div class="card-header">
+                            <div class="card-name">잊힌 기억</div>
+                            <div class="card-type">스킬</div>
+                        </div>
+                        <div class="card-icon">💭</div>
+                        <div class="card-desc">랜덤 효과 발동.<br>무엇이 나올까?</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 시안 6: 깨진 거울 -->
+    <div class="section">
+        <h2>🪞 시안 6: 깨진 거울</h2>
+        <p style="color: #888; margin-bottom: 20px;">산산이 부서진 거울 조각. 균열 라인.</p>
+        
+        <div class="card-row">
+            <div class="card-wrapper">
+                <div class="card-label">파편</div>
+                <div class="memory-card shattered">
+                    <div class="card-cost">0</div>
+                    <div class="memory-card-inner">
+                        <div class="card-header">
+                            <div class="card-name">와일드 조커</div>
+                            <div class="card-type">스킬</div>
+                        </div>
+                        <div class="card-icon">🃏</div>
+                        <div class="card-desc">손패를 모두<br>새 카드로 교체</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 카드 뒷면 -->
+    <div class="section">
+        <h2>🎴 카드 뒷면 (고대 기억)</h2>
+        <p style="color: #888; margin-bottom: 20px;">덱/버린 카드 더미에 사용되는 카드 뒷면 디자인</p>
+        
+        <div class="card-row">
+            <div class="card-wrapper">
+                <div class="card-label">기본 크기</div>
+                <div class="card-back-demo">
+                    <div class="card-back-symbol">⚜️</div>
+                </div>
+            </div>
+            
+            <div class="card-wrapper">
+                <div class="card-label">덱 더미</div>
+                <div class="card-back-demo small">
+                    <div class="card-back-symbol">⚜️</div>
+                </div>
+            </div>
+            
+            <div class="card-wrapper">
+                <div class="card-label">심볼 변형</div>
+                <div class="card-back-demo">
+                    <div class="card-back-symbol">🜃</div>
+                </div>
+            </div>
+            
+            <div class="card-wrapper">
+                <div class="card-label">심볼 변형 2</div>
+                <div class="card-back-demo">
+                    <div class="card-back-symbol">☽</div>
+                </div>
+            </div>
+        </div>
+        
+        <style>
+            .card-back-demo {
+                width: 180px;
+                height: 260px;
+                background: 
+                    radial-gradient(ellipse at 30% 20%, rgba(180, 140, 80, 0.15) 0%, transparent 50%),
+                    radial-gradient(ellipse at 70% 80%, rgba(180, 140, 80, 0.1) 0%, transparent 50%),
+                    linear-gradient(160deg, #1a1510 0%, #0d0a08 100%);
+                border: 3px solid;
+                border-image: linear-gradient(
+                    180deg,
+                    #8b7355 0%,
+                    #c9a96e 25%,
+                    #8b7355 50%,
+                    #c9a96e 75%,
+                    #8b7355 100%
+                ) 1;
+                border-radius: 12px;
+                position: relative;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: hidden;
+                box-shadow: 
+                    0 4px 20px rgba(0, 0, 0, 0.5),
+                    inset 0 0 40px rgba(201, 169, 110, 0.1);
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .card-back-demo::before {
+                content: '᛭ ᚱ ᛗ ᛟ ᚱ ᛃ ᛭';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                font-size: 1rem;
+                color: rgba(201, 169, 110, 0.2);
+                letter-spacing: 5px;
+                white-space: nowrap;
+                pointer-events: none;
+            }
+
+            .card-back-demo::after {
+                content: '';
+                position: absolute;
+                top: 8px;
+                left: 8px;
+                right: 8px;
+                bottom: 8px;
+                border: 1px solid rgba(201, 169, 110, 0.25);
+                border-radius: 8px;
+                pointer-events: none;
+            }
+
+            .card-back-demo .card-back-symbol {
+                font-size: 3rem;
+                color: rgba(201, 169, 110, 0.4);
+                text-shadow: 0 0 20px rgba(201, 169, 110, 0.3);
+                z-index: 1;
+            }
+
+            .card-back-demo:hover {
+                box-shadow: 
+                    0 8px 30px rgba(0, 0, 0, 0.6),
+                    0 0 40px rgba(201, 169, 110, 0.4),
+                    inset 0 0 60px rgba(201, 169, 110, 0.2);
+                transform: translateY(-10px);
+            }
+
+            .card-back-demo:hover::before {
+                color: rgba(201, 169, 110, 0.5);
+                text-shadow: 0 0 15px rgba(201, 169, 110, 0.6);
+            }
+
+            .card-back-demo:hover .card-back-symbol {
+                color: rgba(201, 169, 110, 0.7);
+                text-shadow: 0 0 30px rgba(201, 169, 110, 0.6);
+            }
+
+            .card-back-demo.small {
+                width: 110px;
+                height: 160px;
+            }
+
+            .card-back-demo.small::before {
+                font-size: 0.7rem;
+                letter-spacing: 3px;
+            }
+
+            .card-back-demo.small .card-back-symbol {
+                font-size: 2rem;
+            }
+        </style>
+    </div>
+
+    <!-- 비교 -->
+    <div class="section">
+        <h2>📊 디자인 비교</h2>
+        <div class="comparison">
+            <div class="comparison-item">
+                <h3>💠 크리스탈</h3>
+                <ul>
+                    <li>깔끔하고 고급스러움</li>
+                    <li>타입별 색상 구분 명확</li>
+                    <li>구현 난이도: 중</li>
+                    <li>성능 영향: 낮음</li>
+                </ul>
+            </div>
+            <div class="comparison-item">
+                <h3>🌈 홀로그램</h3>
+                <ul>
+                    <li>화려하고 눈에 띔</li>
+                    <li>등급 구분에 효과적</li>
+                    <li>구현 난이도: 중</li>
+                    <li>성능 영향: 중간</li>
+                </ul>
+            </div>
+            <div class="comparison-item">
+                <h3>📜 고대 기억</h3>
+                <ul>
+                    <li>독특하고 세계관 친화적</li>
+                    <li>차분하고 깊이 있음</li>
+                    <li>구현 난이도: 낮음</li>
+                    <li>성능 영향: 낮음</li>
+                </ul>
+            </div>
+            <div class="comparison-item">
+                <h3>⚡ 글리치</h3>
+                <ul>
+                    <li>독특하고 현대적</li>
+                    <li>호버 효과 임팩트</li>
+                    <li>구현 난이도: 중</li>
+                    <li>성능 영향: 중간</li>
+                </ul>
+            </div>
+            <div class="comparison-item">
+                <h3>🌫️ 몽환 안개</h3>
+                <ul>
+                    <li>분위기 있고 신비로움</li>
+                    <li>애니메이션 부드러움</li>
+                    <li>구현 난이도: 중</li>
+                    <li>성능 영향: 중간</li>
+                </ul>
+            </div>
+            <div class="comparison-item">
+                <h3>🪞 깨진 거울</h3>
+                <ul>
+                    <li>불규칙 형태가 독특</li>
+                    <li>기억 조각 컨셉에 적합</li>
+                    <li>구현 난이도: 중</li>
+                    <li>성능 영향: 낮음</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
+

@@ -1,0 +1,929 @@
+/* ==========================================
+   Shadow Deck - 카드 디자인 시스템
+   
+   의존성: styles.css의 CSS 변수 필요
+   - --card-border, --card-attack, --card-skill 등
+   ========================================== */
+
+/* 등급 배지 숨김 */
+.card.uncommon::after,
+.card.rare::after,
+.card.special::after,
+.card.legendary::after {
+    display: none;
+}
+
+/* 기본 카드 스타일 - 고대 기억 테마 */
+.card {
+    width: var(--card-width, 178px);
+    height: var(--card-height, 259px);
+    background: 
+        radial-gradient(ellipse at 30% 20%, rgba(180, 140, 80, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 80%, rgba(180, 140, 80, 0.05) 0%, transparent 50%),
+        linear-gradient(160deg, var(--bg-card, #1a1815) 0%, #0d0c0a 100%);
+    border-radius: 10px;
+    border: 3px solid var(--card-border, #8a7860);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-card);
+    overflow: visible;
+    transition: var(--transition-normal);
+}
+
+/* 안쪽 장식 테두리 */
+.card::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    right: 6px;
+    bottom: 6px;
+    border: 1px solid rgba(160, 128, 96, 0.15);
+    border-radius: 6px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* 고대 룬 문자 배경 */
+.card::after {
+    content: '᛭ ᚱ ᛗ ᛟ ᚱ ᛃ ᛭';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.5rem;
+    color: rgba(160, 128, 96, 0.08);
+    letter-spacing: 8px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 0;
+    transition: all 0.3s ease;
+}
+
+.card:hover::after {
+    color: rgba(160, 128, 96, 0.15);
+    text-shadow: 0 0 20px rgba(160, 128, 96, 0.3);
+}
+
+.card:hover {
+    transform: translateY(-15px) scale(1.08);
+    z-index: 100;
+    box-shadow: 
+        0 10px 40px rgba(0, 0, 0, 0.7),
+        0 0 30px rgba(160, 128, 96, 0.2),
+        inset 0 0 40px rgba(160, 128, 96, 0.1);
+}
+
+/* ==========================================
+   카드 내부 구조
+   ========================================== */
+.card-header {
+    position: relative;
+    padding: 10px 10px 10px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(180deg, rgba(160, 128, 96, 0.15) 0%, rgba(0, 0, 0, 0.3) 100%);
+    border-bottom: 1px solid rgba(160, 128, 96, 0.2);
+}
+
+.card-cost {
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    width: 42px;
+    height: 42px;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.4rem;
+    color: #1a1a2e;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+    box-shadow: 
+        0 3px 12px rgba(251, 191, 36, 0.7),
+        0 0 20px rgba(245, 158, 11, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    border: 3px solid rgba(255, 215, 0, 0.8);
+    z-index: 10;
+}
+
+.card-type {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    color: #a09080;
+    letter-spacing: 1px;
+    font-weight: 600;
+}
+
+.card-icon {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 6.5rem;
+    padding: 25px 0;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+    position: relative;
+}
+
+/* 아이콘 배경 (타입별 구분) */
+.card-icon::before {
+    content: '';
+    position: absolute;
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    z-index: -1;
+    opacity: 0.3;
+}
+
+.card-name {
+    text-align: center;
+    font-weight: bold;
+    font-size: 1.5rem;
+    padding: 12px 15px;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #e8dcc8;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* 긴 카드 이름 흐르는 애니메이션 */
+.card-name.scrolling {
+    animation: scrollText 4s linear infinite;
+    text-overflow: clip;
+}
+
+.card:hover .card-name {
+    animation: scrollText 3s linear infinite;
+    text-overflow: clip;
+}
+
+@keyframes scrollText {
+    0% { transform: translateX(0); }
+    10% { transform: translateX(0); }
+    45% { transform: translateX(calc(-100% + 100px)); }
+    55% { transform: translateX(calc(-100% + 100px)); }
+    90% { transform: translateX(0); }
+    100% { transform: translateX(0); }
+}
+
+.card-desc {
+    padding: 18px 15px;
+    font-size: 1.15rem;
+    text-align: center;
+    color: #c4b8a8;
+    line-height: 1.5;
+    flex: 1;
+}
+
+/* ==========================================
+   카드 타입별 스타일 (공격/스킬/파워)
+   ========================================== */
+
+/* 공격 (ATTACK) - 빨간색 테두리 */
+.card.attack { 
+    border-color: var(--card-attack);
+    box-shadow: 
+        0 0 15px rgba(239, 68, 68, 0.4),
+        inset 0 0 20px rgba(239, 68, 68, 0.1);
+}
+
+.card.attack:hover {
+    box-shadow: 
+        0 0 25px rgba(239, 68, 68, 0.6),
+        inset 0 0 30px rgba(239, 68, 68, 0.2);
+}
+
+.card.attack .card-icon::before {
+    background: radial-gradient(circle, rgba(239, 68, 68, 0.3) 0%, transparent 70%);
+}
+
+.card.attack .card-header {
+    background: linear-gradient(180deg, rgba(239, 68, 68, 0.3) 0%, transparent 100%);
+}
+
+.card.attack .card-type {
+    color: #fca5a5;
+    text-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+}
+
+/* 코스트는 에너지 색상(노랑/주황)으로 통일 - 타입별 오버라이드 제거 */
+
+/* 스킬 (SKILL) - 파란색 테두리 */
+.card.skill { 
+    border-color: var(--card-skill);
+    box-shadow: 
+        0 0 15px rgba(59, 130, 246, 0.4),
+        inset 0 0 20px rgba(59, 130, 246, 0.1);
+}
+
+.card.skill:hover {
+    box-shadow: 
+        0 0 25px rgba(59, 130, 246, 0.6),
+        inset 0 0 30px rgba(59, 130, 246, 0.2);
+}
+
+.card.skill .card-icon::before {
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, transparent 70%);
+}
+
+.card.skill .card-header {
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.3) 0%, transparent 100%);
+}
+
+.card.skill .card-type {
+    color: #93c5fd;
+    text-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+}
+
+
+/* 파워 (POWER) - 보라색 테두리 */
+.card.power { 
+    border-color: var(--card-power);
+    box-shadow: 
+        0 0 15px rgba(168, 85, 247, 0.4),
+        inset 0 0 20px rgba(168, 85, 247, 0.1);
+}
+
+.card.power:hover {
+    box-shadow: 
+        0 0 25px rgba(168, 85, 247, 0.6),
+        inset 0 0 30px rgba(168, 85, 247, 0.2);
+}
+
+.card.power .card-icon::before {
+    background: radial-gradient(circle, rgba(168, 85, 247, 0.3) 0%, transparent 70%);
+}
+
+.card.power .card-header {
+    background: linear-gradient(180deg, rgba(168, 85, 247, 0.3) 0%, transparent 100%);
+}
+
+.card.power .card-type {
+    color: #d8b4fe;
+    text-shadow: 0 0 8px rgba(168, 85, 247, 0.5);
+}
+
+
+/* 상태이상 (STATUS) - 회색 테두리 */
+.card.status { 
+    border-color: var(--card-status);
+    box-shadow: 
+        0 0 10px rgba(107, 114, 128, 0.3),
+        inset 0 0 15px rgba(107, 114, 128, 0.1);
+}
+
+.card.status .card-icon::before {
+    background: radial-gradient(circle, rgba(107, 114, 128, 0.2) 0%, transparent 70%);
+}
+
+.card.status .card-header {
+    background: linear-gradient(180deg, rgba(107, 114, 128, 0.2) 0%, transparent 100%);
+}
+
+.card.status .card-type {
+    color: #9ca3af;
+}
+
+
+/* 저주 (CURSE) - 검은색/자주색 테두리 */
+.card.curse { 
+    border-color: var(--card-curse);
+    background: linear-gradient(160deg, #1a1a1a 0%, #0a0a0a 100%);
+    box-shadow: 
+        0 0 15px rgba(88, 28, 135, 0.5),
+        inset 0 0 20px rgba(88, 28, 135, 0.2);
+}
+
+.card.curse .card-icon::before {
+    background: radial-gradient(circle, rgba(88, 28, 135, 0.3) 0%, transparent 70%);
+}
+
+.card.curse .card-header {
+    background: linear-gradient(180deg, rgba(88, 28, 135, 0.3) 0%, transparent 100%);
+}
+
+.card.curse .card-type {
+    color: #a855f7;
+    text-shadow: 0 0 8px rgba(88, 28, 135, 0.8);
+}
+
+.card.curse .card-name {
+    color: #9ca3af;
+}
+
+
+/* 값 강조 */
+.damage-val { color: #ef4444; font-weight: bold; }
+.block-val { color: #60a5fa; font-weight: bold; }
+.energy-val { color: #fbbf24; font-weight: bold; }
+.debuff-val { color: #a855f7; font-weight: bold; }
+.exhaust-text { color: #9ca3af; font-style: italic; font-size: 0.7rem; }
+
+/* ==========================================
+   희귀도: BASIC (기본)
+   ========================================== */
+.card.basic {
+    border-color: #6b7280;
+    background: linear-gradient(160deg, #1f1f2e 0%, #12121a 100%);
+}
+
+/* ==========================================
+   희귀도: COMMON (일반)
+   ========================================== */
+.card.common {
+    border-color: #9ca3af;
+    background: linear-gradient(160deg, #252535 0%, #15151f 100%);
+}
+
+/* ==========================================
+   희귀도: UNCOMMON (언커먼) - 초록
+   ========================================== */
+/* 언커먼: 아이콘 배경만 녹색, 테두리는 타입별 색상 유지 */
+.card.uncommon {
+    /* 테두리와 배경은 타입별 스타일 사용 */
+}
+
+/* 언커먼 아이콘 배경에 녹색 글로우 */
+.card.uncommon .card-icon::before {
+    background: radial-gradient(circle, rgba(34, 197, 94, 0.5) 0%, transparent 70%);
+    box-shadow: 0 0 40px rgba(34, 197, 94, 0.6);
+}
+
+.card.uncommon .card-icon {
+    filter: drop-shadow(0 0 15px rgba(34, 197, 94, 0.5));
+}
+
+/* 언커먼 카드 이름만 살짝 녹색 */
+.card.uncommon .card-name {
+    color: #a3e635;
+    text-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+}
+
+.card.uncommon_DISABLED::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, 
+        rgba(34, 197, 94, 0.15) 0%, 
+        transparent 40%,
+        transparent 60%,
+        rgba(34, 197, 94, 0.1) 100%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* 언커먼 헤더는 타입별 스타일 사용 */
+
+/* 언커먼 배지 */
+/* 언커먼 배지 제거됨 */
+
+/* ==========================================
+   희귀도: RARE (레어) - 파랑
+   ========================================== */
+.card.rare {
+    border: 4px solid #3b82f6;
+    background: linear-gradient(160deg, #1a1a3e 0%, #0f0f2a 100%);
+    box-shadow: 
+        0 0 30px rgba(59, 130, 246, 0.5),
+        0 0 60px rgba(59, 130, 246, 0.3),
+        0 0 90px rgba(59, 130, 246, 0.1),
+        inset 0 0 40px rgba(59, 130, 246, 0.15);
+    animation: rarePulse 2.5s ease-in-out infinite;
+}
+
+.card.rare::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(
+        from 0deg,
+        transparent 0deg,
+        rgba(59, 130, 246, 0.3) 60deg,
+        transparent 120deg
+    );
+    animation: rareRotate 4s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.card.rare .card-header {
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.25) 0%, rgba(0, 0, 0, 0.5) 100%);
+    border-bottom: 1px solid rgba(59, 130, 246, 0.4);
+    position: relative;
+    z-index: 2;
+}
+
+.card.rare .card-icon,
+.card.rare .card-name,
+.card.rare .card-desc {
+    position: relative;
+    z-index: 2;
+}
+
+.card.rare .card-name {
+    color: #93c5fd;
+    text-shadow: 0 0 15px rgba(59, 130, 246, 0.7);
+}
+
+/* 레어 배지 */
+.card.rare::after {
+    content: '★ RARE';
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.6rem;
+    font-weight: bold;
+    letter-spacing: 2px;
+    color: #60a5fa;
+    background: rgba(59, 130, 246, 0.2);
+    padding: 4px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+    z-index: 3;
+}
+
+/* ==========================================
+   희귀도: SPECIAL (에픽) - 보라
+   ========================================== */
+.card.special {
+    border: 5px solid #a855f7;
+    background: linear-gradient(160deg, #2a1a3e 0%, #1a0f2a 100%);
+    box-shadow: 
+        0 0 40px rgba(168, 85, 247, 0.6),
+        0 0 80px rgba(168, 85, 247, 0.4),
+        0 0 120px rgba(168, 85, 247, 0.2),
+        inset 0 0 50px rgba(168, 85, 247, 0.2);
+    animation: epicPulse 2s ease-in-out infinite;
+}
+
+.card.special::before {
+    content: '';
+    position: absolute;
+    top: -100%;
+    left: -100%;
+    width: 300%;
+    height: 300%;
+    background: conic-gradient(
+        from 0deg,
+        transparent 0deg,
+        rgba(168, 85, 247, 0.4) 30deg,
+        rgba(124, 58, 237, 0.3) 60deg,
+        transparent 90deg
+    );
+    animation: epicRotate 3s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.card.special .card-header {
+    background: linear-gradient(180deg, rgba(168, 85, 247, 0.3) 0%, rgba(0, 0, 0, 0.5) 100%);
+    border-bottom: 2px solid rgba(168, 85, 247, 0.5);
+    position: relative;
+    z-index: 2;
+}
+
+.card.special .card-icon,
+.card.special .card-name,
+.card.special .card-desc {
+    position: relative;
+    z-index: 2;
+}
+
+.card.special .card-name {
+    color: #d8b4fe;
+    text-shadow: 0 0 20px rgba(168, 85, 247, 0.8);
+    font-size: 1rem;
+}
+
+.card.special .card-icon {
+    filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.6));
+}
+
+/* 에픽 배지 */
+.card.special::after {
+    content: '✦ EPIC';
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.65rem;
+    font-weight: bold;
+    letter-spacing: 2px;
+    color: #c084fc;
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(124, 58, 237, 0.3));
+    padding: 5px 15px;
+    border-radius: 12px;
+    border: 2px solid rgba(168, 85, 247, 0.6);
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+    animation: epicBadgePulse 1.5s ease-in-out infinite;
+    z-index: 3;
+}
+
+/* ==========================================
+   희귀도: LEGENDARY (전설) - 금색
+   ========================================== */
+.card.legendary {
+    border: 6px solid #fbbf24;
+    background: linear-gradient(160deg, #3d2e0f 0%, #1a1505 100%);
+    box-shadow: 
+        0 0 50px rgba(251, 191, 36, 0.8),
+        0 0 100px rgba(251, 191, 36, 0.5),
+        0 0 150px rgba(251, 191, 36, 0.3),
+        0 0 200px rgba(245, 158, 11, 0.2),
+        inset 0 0 60px rgba(251, 191, 36, 0.25);
+    animation: legendaryPulse 1.5s ease-in-out infinite;
+}
+
+.card.legendary::before {
+    content: '';
+    position: absolute;
+    top: -150%;
+    left: -150%;
+    width: 400%;
+    height: 400%;
+    background: conic-gradient(
+        from 0deg,
+        transparent 0deg,
+        rgba(251, 191, 36, 0.5) 20deg,
+        rgba(245, 158, 11, 0.4) 40deg,
+        rgba(251, 191, 36, 0.3) 60deg,
+        transparent 80deg
+    );
+    animation: legendaryRotate 2s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* 전설 카드 빛나는 테두리 */
+.card.legendary .card-border-glow {
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    border-radius: 15px;
+    background: linear-gradient(45deg, 
+        #fbbf24, #fef3c7, #f59e0b, #fbbf24, 
+        #fef3c7, #f59e0b, #fbbf24);
+    background-size: 400% 400%;
+    animation: legendaryBorderShine 2s linear infinite;
+    z-index: -1;
+}
+
+.card.legendary .card-header {
+    background: linear-gradient(180deg, rgba(251, 191, 36, 0.35) 0%, rgba(0, 0, 0, 0.5) 100%);
+    border-bottom: 2px solid rgba(251, 191, 36, 0.6);
+    position: relative;
+    z-index: 2;
+}
+
+.card.legendary .card-icon,
+.card.legendary .card-name,
+.card.legendary .card-desc {
+    position: relative;
+    z-index: 2;
+}
+
+.card.legendary .card-name {
+    color: #fef3c7;
+    text-shadow: 0 0 25px rgba(251, 191, 36, 1), 0 0 50px rgba(245, 158, 11, 0.5);
+    font-size: 1.05rem;
+}
+
+.card.legendary .card-icon {
+    filter: drop-shadow(0 0 30px rgba(251, 191, 36, 0.8));
+    animation: legendaryIconPulse 1s ease-in-out infinite;
+}
+
+/* 레전더리는 코스트도 빛남 */
+.card.legendary .card-cost {
+    box-shadow: 0 0 15px rgba(251, 191, 36, 0.8), 0 0 30px rgba(245, 158, 11, 0.4);
+}
+
+/* 전설 배지 */
+.card.legendary::after {
+    content: '♦ LEGENDARY';
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.65rem;
+    font-weight: bold;
+    letter-spacing: 2px;
+    color: #fef3c7;
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.4), rgba(245, 158, 11, 0.4));
+    padding: 5px 15px;
+    border-radius: 12px;
+    border: 2px solid rgba(251, 191, 36, 0.8);
+    box-shadow: 
+        0 0 25px rgba(251, 191, 36, 0.6),
+        inset 0 0 10px rgba(251, 191, 36, 0.3);
+    animation: legendaryBadgePulse 1s ease-in-out infinite;
+    z-index: 3;
+}
+
+/* ==========================================
+   애니메이션
+   ========================================== */
+@keyframes uncommonPulse {
+    0%, 100% { 
+        box-shadow: 0 0 20px rgba(34, 197, 94, 0.4), 0 0 40px rgba(34, 197, 94, 0.2), inset 0 0 30px rgba(34, 197, 94, 0.1);
+    }
+    50% { 
+        box-shadow: 0 0 30px rgba(34, 197, 94, 0.6), 0 0 60px rgba(34, 197, 94, 0.3), inset 0 0 40px rgba(34, 197, 94, 0.15);
+    }
+}
+
+@keyframes rarePulse {
+    0%, 100% { 
+        box-shadow: 0 0 30px rgba(59, 130, 246, 0.5), 0 0 60px rgba(59, 130, 246, 0.3), inset 0 0 40px rgba(59, 130, 246, 0.15);
+    }
+    50% { 
+        box-shadow: 0 0 50px rgba(59, 130, 246, 0.7), 0 0 100px rgba(59, 130, 246, 0.5), inset 0 0 60px rgba(59, 130, 246, 0.25);
+    }
+}
+
+@keyframes rareRotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes epicPulse {
+    0%, 100% { 
+        box-shadow: 0 0 40px rgba(168, 85, 247, 0.6), 0 0 80px rgba(168, 85, 247, 0.4), inset 0 0 50px rgba(168, 85, 247, 0.2);
+    }
+    50% { 
+        box-shadow: 0 0 60px rgba(168, 85, 247, 0.8), 0 0 120px rgba(168, 85, 247, 0.6), inset 0 0 70px rgba(168, 85, 247, 0.3);
+    }
+}
+
+@keyframes epicRotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes epicBadgePulse {
+    0%, 100% { 
+        box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+        transform: translateX(-50%) scale(1);
+    }
+    50% { 
+        box-shadow: 0 0 30px rgba(168, 85, 247, 0.8);
+        transform: translateX(-50%) scale(1.05);
+    }
+}
+
+@keyframes legendaryPulse {
+    0%, 100% { 
+        box-shadow: 0 0 50px rgba(251, 191, 36, 0.8), 0 0 100px rgba(251, 191, 36, 0.5), 0 0 150px rgba(251, 191, 36, 0.3), inset 0 0 60px rgba(251, 191, 36, 0.25);
+    }
+    50% { 
+        box-shadow: 0 0 70px rgba(251, 191, 36, 1), 0 0 140px rgba(251, 191, 36, 0.7), 0 0 200px rgba(251, 191, 36, 0.5), inset 0 0 80px rgba(251, 191, 36, 0.35);
+    }
+}
+
+@keyframes legendaryRotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes legendaryBorderShine {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+@keyframes legendaryIconPulse {
+    0%, 100% { 
+        filter: drop-shadow(0 0 30px rgba(251, 191, 36, 0.8));
+        transform: scale(1);
+    }
+    50% { 
+        filter: drop-shadow(0 0 50px rgba(251, 191, 36, 1));
+        transform: scale(1.05);
+    }
+}
+
+@keyframes legendaryCostPulse {
+    0%, 100% { 
+        box-shadow: 0 0 20px rgba(251, 191, 36, 0.8), 0 0 40px rgba(245, 158, 11, 0.5);
+    }
+    50% { 
+        box-shadow: 0 0 30px rgba(251, 191, 36, 1), 0 0 60px rgba(245, 158, 11, 0.7);
+    }
+}
+
+@keyframes legendaryBadgePulse {
+    0%, 100% { 
+        box-shadow: 0 0 25px rgba(251, 191, 36, 0.6), inset 0 0 10px rgba(251, 191, 36, 0.3);
+        transform: translateX(-50%) scale(1);
+    }
+    50% { 
+        box-shadow: 0 0 40px rgba(251, 191, 36, 0.9), inset 0 0 15px rgba(251, 191, 36, 0.5);
+        transform: translateX(-50%) scale(1.08);
+    }
+}
+
+/* ==========================================
+   호버 효과 강화
+   ========================================== */
+/* 언커먼 hover는 타입별 스타일 사용 */
+
+.card.rare:hover {
+    box-shadow: 
+        0 0 60px rgba(59, 130, 246, 0.9),
+        0 0 120px rgba(59, 130, 246, 0.6),
+        inset 0 0 80px rgba(59, 130, 246, 0.3);
+    transform: translateY(-15px) scale(1.1);
+}
+
+.card.special:hover {
+    box-shadow: 
+        0 0 80px rgba(168, 85, 247, 1),
+        0 0 160px rgba(168, 85, 247, 0.7),
+        inset 0 0 100px rgba(168, 85, 247, 0.35);
+    transform: translateY(-15px) scale(1.1);
+}
+
+.card.legendary:hover {
+    box-shadow: 
+        0 0 100px rgba(251, 191, 36, 1),
+        0 0 200px rgba(251, 191, 36, 0.8),
+        0 0 300px rgba(245, 158, 11, 0.5),
+        inset 0 0 100px rgba(251, 191, 36, 0.4);
+    transform: translateY(-15px) scale(1.12);
+}
+
+/* ==========================================
+   카드 뒷면 - 고대 기억 스타일
+   ========================================== */
+.card-back {
+    width: var(--card-width, 178px);
+    height: var(--card-height, 259px);
+    background: 
+        radial-gradient(ellipse at 30% 20%, rgba(180, 140, 80, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 80%, rgba(180, 140, 80, 0.1) 0%, transparent 50%),
+        linear-gradient(160deg, #1a1510 0%, #0d0a08 100%);
+    border: 3px solid;
+    border-image: linear-gradient(
+        180deg,
+        #8b7355 0%,
+        #c9a96e 25%,
+        #8b7355 50%,
+        #c9a96e 75%,
+        #8b7355 100%
+    ) 1;
+    border-radius: 12px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    box-shadow: 
+        0 4px 20px rgba(0, 0, 0, 0.5),
+        inset 0 0 40px rgba(201, 169, 110, 0.1);
+}
+
+/* 룬 문자 배경 */
+.card-back::before {
+    content: '᛭ ᚱ ᛗ ᛟ ᚱ ᛃ ᛭';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.2rem;
+    color: rgba(201, 169, 110, 0.2);
+    letter-spacing: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* 안쪽 테두리 */
+.card-back::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    border: 1px solid rgba(201, 169, 110, 0.25);
+    border-radius: 8px;
+    pointer-events: none;
+}
+
+/* 중앙 심볼 */
+.card-back-symbol {
+    font-size: 3rem;
+    color: rgba(201, 169, 110, 0.4);
+    text-shadow: 0 0 20px rgba(201, 169, 110, 0.3);
+    z-index: 1;
+}
+
+/* 호버 효과 */
+.card-back:hover {
+    box-shadow: 
+        0 8px 30px rgba(0, 0, 0, 0.6),
+        0 0 30px rgba(201, 169, 110, 0.3),
+        inset 0 0 60px rgba(201, 169, 110, 0.15);
+}
+
+.card-back:hover::before {
+    color: rgba(201, 169, 110, 0.4);
+    text-shadow: 0 0 15px rgba(201, 169, 110, 0.5);
+}
+
+.card-back:hover .card-back-symbol {
+    color: rgba(201, 169, 110, 0.6);
+    text-shadow: 0 0 30px rgba(201, 169, 110, 0.5);
+}
+
+/* 덱/버린 카드 더미 아이콘 */
+.deck-pile .card-back,
+.discard-pile .card-back {
+    width: calc(var(--card-width, 178px) * 0.6);
+    height: calc(var(--card-height, 259px) * 0.6);
+}
+
+.deck-pile .card-back-symbol,
+.discard-pile .card-back-symbol {
+    font-size: 2rem;
+}
+
+/* 애니메이션: 카드 드로우 시 뒷면에서 앞면으로 */
+@keyframes cardFlip {
+    0% {
+        transform: rotateY(180deg);
+    }
+    100% {
+        transform: rotateY(0deg);
+    }
+}
+
+.card.flipping {
+    animation: cardFlip 0.4s ease-out;
+    transform-style: preserve-3d;
+}
+
+/* ==========================================
+   손패(Hand) 추가 스타일
+   ========================================== */
+
+/* 에너지 부족 카드 */
+.hand .card.cannot-afford {
+    filter: grayscale(0.4) brightness(0.75);
+}
+
+.hand .card.cannot-afford .card-cost {
+    background: linear-gradient(135deg, #666, #444);
+}
+
+/* 사용 불가 카드 */
+.hand .card.unplayable {
+    filter: grayscale(0.7) brightness(0.6);
+    pointer-events: none;
+}
+
+/* 카드 드로우 파티클 애니메이션 */
+@keyframes cardDealParticle {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(2) translateY(-50px);
+    }
+}
+
+/* 카드 소각 애니메이션 */
+@keyframes cardBurnAnim {
+    0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.5);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(2) translateY(-30px);
+    }
+}
+
