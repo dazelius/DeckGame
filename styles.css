@@ -170,26 +170,16 @@ img {
 }
 
 /* ==========================================
-   배경 레이어
+   배경 레이어 - 모두 비활성화
    ========================================== */
 .background-layer {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
+    display: none;
 }
 
 .bg-gradient {
-    position: absolute;
-    inset: 0;
-    /* bg.png가 보이도록 투명하게 - 분위기만 살짝 */
-    background: 
-        radial-gradient(ellipse at 20% 30%, rgba(139, 0, 0, 0.08) 0%, transparent 50%),
-        radial-gradient(ellipse at 80% 30%, rgba(75, 0, 130, 0.08) 0%, transparent 50%);
-    pointer-events: none;
+    display: none;
 }
 
-/* 비네팅 비활성화 */
 .bg-vignette {
     display: none;
 }
@@ -254,7 +244,14 @@ img {
 
 /* 오버레이 효과 비활성화 */
 .bg-overlay {
-    display: none;
+    display: none !important;
+}
+
+/* 모든 배경 오버레이 비활성화 */
+.battle-background .bg-overlay,
+.bg-layers::after,
+.particles {
+    display: none !important;
 }
 
 /* 바닥 그라데이션 비활성화 - UI 가림 문제 */
