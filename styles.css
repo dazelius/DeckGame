@@ -1451,19 +1451,28 @@ img {
 }
 
 /* 덱 더미 */
+/* ==========================================
+   다크소울 스타일 덱 파일
+   ========================================== */
 .deck-pile {
-    width: 70px;
-    height: 95px;
+    width: 75px;
+    height: 100px;
     position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
     cursor: pointer;
-    transition: transform 0.2s;
+    transition: all 0.3s ease;
 }
 
 .deck-pile:hover {
-    transform: translateY(-5px);
+    transform: translateY(-8px);
+}
+
+.deck-pile:hover .pile-cards {
+    box-shadow: 
+        0 8px 25px rgba(0, 0, 0, 0.8),
+        0 0 20px rgba(201, 162, 39, 0.3);
 }
 
 .draw-pile {
@@ -1480,48 +1489,165 @@ img {
     transform: translateY(-50%);
 }
 
+/* 카드 더미 컨테이너 */
 .pile-cards {
     position: relative;
-    width: 60px;
-    height: 80px;
+    width: 65px;
+    height: 85px;
+    border-radius: 8px;
+    background: 
+        linear-gradient(135deg, 
+            rgba(40, 35, 30, 0.9) 0%, 
+            rgba(25, 22, 18, 0.95) 100%
+        );
+    border: 2px solid #3d3428;
+    box-shadow: 
+        inset 0 2px 4px rgba(201, 162, 39, 0.1),
+        inset 0 -3px 6px rgba(0, 0, 0, 0.5),
+        0 4px 15px rgba(0, 0, 0, 0.7),
+        0 0 0 1px rgba(201, 162, 39, 0.2);
+    transition: all 0.3s ease;
+    overflow: hidden;
 }
 
+/* 장식 테두리 */
+.pile-cards::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 1px solid rgba(201, 162, 39, 0.15);
+    border-radius: 5px;
+    pointer-events: none;
+}
+
+/* 상단 하이라이트 */
+.pile-cards::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, 
+        transparent, 
+        rgba(201, 162, 39, 0.4), 
+        transparent
+    );
+}
+
+/* 개별 카드 레이어 */
 .pile-card {
     position: absolute;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(145deg, #2a2a3e 0%, #1a1a28 100%);
-    border: 2px solid #4a4a6a;
-    border-radius: 6px;
-    box-shadow: var(--shadow-soft);
+    width: calc(100% - 8px);
+    height: calc(100% - 8px);
+    left: 4px;
+    top: 4px;
+    background: 
+        linear-gradient(145deg, 
+            #2a2520 0%, 
+            #1a1815 50%,
+            #0f0d0b 100%
+        );
+    border: 1px solid #4a4030;
+    border-radius: 4px;
+    box-shadow: 
+        inset 0 1px 2px rgba(201, 162, 39, 0.1),
+        0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-.pile-card:nth-child(1) { transform: rotate(-3deg) translateY(-2px); }
-.pile-card:nth-child(2) { transform: rotate(1deg) translateY(-4px); }
-.pile-card:nth-child(3) { transform: rotate(-1deg) translateY(-6px); }
+.pile-card:nth-child(1) { 
+    transform: rotate(-2deg) translate(-1px, -1px); 
+    opacity: 0.6;
+}
+.pile-card:nth-child(2) { 
+    transform: rotate(1deg) translate(1px, -3px); 
+    opacity: 0.8;
+}
+.pile-card:nth-child(3) { 
+    transform: rotate(-0.5deg) translate(0, -5px); 
+    opacity: 1;
+}
 
 .pile-cards.empty .pile-card {
-    opacity: 0.3;
+    opacity: 0.15;
 }
 
+.pile-cards.empty {
+    border-color: #2a2520;
+    box-shadow: 
+        inset 0 2px 8px rgba(0, 0, 0, 0.5),
+        0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+/* 카드 수 표시 */
 .pile-count {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     font-family: 'Cinzel', serif;
-    font-size: 1.5rem;
+    font-size: 1.6rem;
     font-weight: 900;
-    color: var(--accent-gold);
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+    color: #e8d5a3;
+    text-shadow: 
+        0 0 10px rgba(201, 162, 39, 0.5),
+        0 2px 4px rgba(0, 0, 0, 0.9),
+        0 0 20px rgba(201, 162, 39, 0.3);
     z-index: 5;
+    letter-spacing: 1px;
 }
 
+/* 라벨 */
 .pile-label {
     position: absolute;
-    bottom: -20px;
-    font-size: 0.75rem;
-    color: var(--text-dim);
+    bottom: -22px;
+    font-family: 'Cinzel', serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #8b7355;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* Draw 파일 특별 스타일 */
+.draw-pile .pile-cards {
+    border-color: #3d4a38;
+}
+
+.draw-pile .pile-cards::after {
+    background: linear-gradient(90deg, 
+        transparent, 
+        rgba(100, 180, 100, 0.3), 
+        transparent
+    );
+}
+
+.draw-pile:hover .pile-cards {
+    border-color: #5a7a50;
+    box-shadow: 
+        0 8px 25px rgba(0, 0, 0, 0.8),
+        0 0 20px rgba(100, 180, 100, 0.2);
+}
+
+/* Discard 파일 특별 스타일 */
+.discard-pile .pile-cards {
+    border-color: #4a3838;
+}
+
+.discard-pile .pile-cards::after {
+    background: linear-gradient(90deg, 
+        transparent, 
+        rgba(180, 100, 100, 0.3), 
+        transparent
+    );
+}
+
+.discard-pile:hover .pile-cards {
+    border-color: #7a5050;
+    box-shadow: 
+        0 8px 25px rgba(0, 0, 0, 0.8),
+        0 0 20px rgba(180, 100, 100, 0.2);
 }
 
 /* 손패 영역 */
