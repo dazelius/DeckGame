@@ -1315,7 +1315,11 @@ img {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 600; /* 배경 위에 표시 */
+    z-index: 600;
+    /* 또렷하게 보이도록 배경 추가 */
+    background: radial-gradient(circle, rgba(20, 15, 10, 0.95) 0%, rgba(10, 8, 5, 0.9) 100%);
+    border-radius: 50%;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(201, 162, 39, 0.2);
 }
 
 /* 외곽 장식 링 */
@@ -1456,7 +1460,12 @@ img {
     align-items: center;
     cursor: pointer;
     transition: all 0.3s ease;
-    z-index: 600; /* 배경 위에 표시 */
+    z-index: 600;
+    /* 또렷하게 보이도록 배경 추가 */
+    background: radial-gradient(ellipse at center, rgba(20, 15, 10, 0.9) 0%, rgba(10, 8, 5, 0.85) 100%);
+    border-radius: 8px;
+    padding: 8px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
 }
 
 .deck-pile:hover {
@@ -2852,16 +2861,21 @@ body .card-drag-ghost.can-drop {
     transform: translateY(-50%);
     width: 90px;
     height: 90px;
-    z-index: 600; /* 배경 위에 표시 */
+    z-index: 600;
+    /* 또렷하게 보이도록 배경 강화 */
     background: 
         radial-gradient(ellipse 120% 80% at 50% 20%, 
-            rgba(80, 70, 50, 0.6) 0%, 
+            rgba(100, 90, 70, 0.7) 0%, 
             transparent 50%),
         linear-gradient(180deg, 
-            #2a2520 0%, 
-            #1a1815 50%,
-            #0f0d0b 100%
+            #3a3530 0%, 
+            #2a2825 50%,
+            #1a1815 100%
         );
+    box-shadow: 
+        0 0 25px rgba(0, 0, 0, 0.9),
+        inset 0 2px 4px rgba(255, 200, 100, 0.15),
+        inset 0 -4px 8px rgba(0, 0, 0, 0.8);
     border: none;
     border-radius: 50%;
     padding: 0;
