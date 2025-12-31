@@ -1458,4 +1458,31 @@ document.addEventListener('DOMContentLoaded', () => {
 // 전역 등록
 window.SpriteAnimation = SpriteAnimation;
 
+// 🧪 디버그용: 강제 테스트 함수
+window.testEnemyHit = function() {
+    console.log('[TEST] 🧪 적 피격 테스트 시작!');
+    const enemyEl = document.querySelector('.enemy-unit');
+    console.log('[TEST] enemyEl:', enemyEl);
+    
+    if (enemyEl) {
+        const sprite = enemyEl.querySelector('.enemy-sprite-img');
+        console.log('[TEST] sprite:', sprite);
+        
+        if (sprite && typeof gsap !== 'undefined') {
+            console.log('[TEST] ✅ GSAP으로 직접 흔들기!');
+            gsap.timeline()
+                .to(sprite, { x: 50, rotation: 15, duration: 0.1 })
+                .to(sprite, { x: -40, rotation: -10, duration: 0.1 })
+                .to(sprite, { x: 30, rotation: 8, duration: 0.08 })
+                .to(sprite, { x: -20, rotation: -5, duration: 0.08 })
+                .to(sprite, { x: 0, rotation: 0, duration: 0.15 });
+        } else {
+            console.error('[TEST] ❌ sprite 또는 gsap 없음!');
+        }
+    } else {
+        console.error('[TEST] ❌ .enemy-unit 없음!');
+    }
+};
+
 console.log('[SpriteAnimation] GSAP 기반 시스템 로드됨!');
+console.log('[SpriteAnimation] 💡 콘솔에서 testEnemyHit() 실행해서 테스트 가능!');
