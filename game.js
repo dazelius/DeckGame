@@ -3225,7 +3225,9 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
         // 🔥 1단계: 새로운 인텐트 결정
         if (typeof decideEnemyIntentForEnemy === 'function') {
             decideEnemyIntentForEnemy(enemy);
-            console.log(`[BreakRecover] ${enemy.name} 인텐트 재설정: ${enemy.intent}, 값: ${enemy.intentValue}`);
+            // 🔒 플래그 설정: 다음 decideEnemyIntent() 호출 시 이 적은 건너뛰기
+            enemy.intentLockedUntilNextTurn = true;
+            console.log(`[BreakRecover] ${enemy.name} 인텐트 재설정: ${enemy.intent}, 값: ${enemy.intentValue} (잠금됨)`);
         }
         
         // 🔥 2단계: UI 업데이트
