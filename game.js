@@ -3184,6 +3184,11 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
         // 브레이크 해제 처리
         BreakSystem.onTurnEnd(enemy);
         
+        // 🔥 브레이크 해제 후 새로운 인텐트 설정!
+        if (typeof decideEnemyIntentForEnemy === 'function') {
+            decideEnemyIntentForEnemy(enemy);
+        }
+        
         // 브레이크 해제 연출
         if (enemyEl && !enemy.isBroken) {
             const recoverEffect = document.createElement('div');
@@ -3209,6 +3214,9 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
             // 브레이크 UI 업데이트
             BreakSystem.updateBreakUI(enemy);
         }
+        
+        // UI 업데이트 (새 인텐트 표시)
+        updateEnemiesUI();
         
         if (onComplete) setTimeout(onComplete, 500);
         return;
