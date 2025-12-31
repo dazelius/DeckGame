@@ -485,8 +485,21 @@ const SpriteAnimation = {
     // 적 피격 애니메이션 - GSAP + PixiJS 히트 이펙트!
     // ==========================================
     enemyHit(enemyElement, damage = 0) {
+        console.log('[SpriteAnimation] 🎯 enemyHit 호출됨!', { enemyElement, damage });
+        
         const sprite = enemyElement?.querySelector('.enemy-sprite-img');
-        if (!sprite) return;
+        console.log('[SpriteAnimation] 🔍 sprite 찾기:', sprite);
+        
+        if (!sprite) {
+            console.warn('[SpriteAnimation] ⚠️ .enemy-sprite-img를 찾지 못함!');
+            return;
+        }
+        
+        // GSAP 확인
+        if (typeof gsap === 'undefined') {
+            console.error('[SpriteAnimation] ❌ GSAP이 로드되지 않음!');
+            return;
+        }
         
         // 데미지에 따른 강도
         let intensity, freezeTime, hitType;
@@ -652,8 +665,21 @@ const SpriteAnimation = {
     // 🔥 적 연타 피격 (콤보) - GSAP + PixiJS!
     // ==========================================
     enemyComboHit(enemyElement, hitCount = 3, damagePerHit = 5) {
+        console.log('[SpriteAnimation] 🔥 enemyComboHit 호출됨!', { enemyElement, hitCount, damagePerHit });
+        
         const sprite = enemyElement?.querySelector('.enemy-sprite-img');
-        if (!sprite) return;
+        console.log('[SpriteAnimation] 🔍 sprite 찾기:', sprite);
+        
+        if (!sprite) {
+            console.warn('[SpriteAnimation] ⚠️ .enemy-sprite-img를 찾지 못함! (combo)');
+            return;
+        }
+        
+        // GSAP 확인
+        if (typeof gsap === 'undefined') {
+            console.error('[SpriteAnimation] ❌ GSAP이 로드되지 않음! (combo)');
+            return;
+        }
         
         const tl = gsap.timeline();
         const baseIntensity = Math.min(damagePerHit / 8, 1.5) + 0.5;
