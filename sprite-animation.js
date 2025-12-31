@@ -8,7 +8,7 @@ const SpriteAnimation = {
     config: {
         breathingSpeed: 2000,      // 숨쉬기 주기 (ms)
         idleSpeed: 3000,           // 대기 애니메이션 주기
-        bounceHeight: 8,           // 튀어오르는 높이 (px)
+        bounceHeight: 5,           // 튀어오르는 높이 (px)
         squashAmount: 0.05,        // 찌그러지는 정도 (0~1)
         stretchAmount: 0.08,       // 늘어나는 정도 (0~1)
     },
@@ -299,39 +299,39 @@ const SpriteAnimation = {
     },
     
     // ==========================================
-    // 적 피격 애니메이션 - 좌우 파닥파닥!
+    // 적 피격 애니메이션 - 좌우 파닥파닥! (3배 강화!)
     // ==========================================
     enemyHit(enemyElement, damage = 0) {
         const sprite = enemyElement?.querySelector('.enemy-sprite-img');
         if (!sprite) return;
         
-        const duration = 400;
+        const duration = 500;
         const startTime = performance.now();
-        const intensity = Math.min(damage / 15, 1.2) + 0.3; // 최소 0.3 강도
+        const intensity = Math.min(damage / 10, 1.5) + 0.5; // 더 강한 기본 강도
         
         const animate = (currentTime) => {
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / duration, 1);
             
-            // 빠른 좌우 파닥파닥 흔들림! (머리 흔드는 느낌)
-            const shakeFreq = 20; // 높을수록 빠르게 파닥
-            const shake = Math.sin(progress * Math.PI * shakeFreq) * (1 - progress) * 25 * intensity;
+            // 빠른 좌우 파닥파닥 흔들림! (머리 흔드는 느낌) - 3배 강화!
+            const shakeFreq = 22;
+            const shake = Math.sin(progress * Math.PI * shakeFreq) * (1 - progress) * 75 * intensity;
             
-            // 약간의 기울기 (머리 흔드는 느낌)
-            const tilt = Math.sin(progress * Math.PI * shakeFreq * 0.8) * (1 - progress) * 8 * intensity;
+            // 약간의 기울기 (머리 흔드는 느낌) - 3배 강화!
+            const tilt = Math.sin(progress * Math.PI * shakeFreq * 0.8) * (1 - progress) * 24 * intensity;
             
-            // 살짝 뒤로 밀림
-            const knockback = Math.sin(progress * Math.PI * 0.5) * 15 * intensity;
+            // 뒤로 밀림 - 3배 강화!
+            const knockback = Math.sin(progress * Math.PI * 0.5) * 45 * intensity;
             
-            // Squash 효과
+            // Squash 효과 - 3배 강화!
             let scaleX = 1, scaleY = 1;
             if (progress < 0.15) {
-                scaleX = 1 + (progress / 0.15) * 0.1 * intensity;
-                scaleY = 1 - (progress / 0.15) * 0.08 * intensity;
+                scaleX = 1 + (progress / 0.15) * 0.25 * intensity;
+                scaleY = 1 - (progress / 0.15) * 0.18 * intensity;
             } else {
                 const rec = (progress - 0.15) / 0.85;
-                scaleX = 1 + ((1 - rec) * 0.1 * intensity);
-                scaleY = 1 - ((1 - rec) * 0.08 * intensity);
+                scaleX = 1 + ((1 - rec) * 0.25 * intensity);
+                scaleY = 1 - ((1 - rec) * 0.18 * intensity);
             }
             
             sprite.style.transform = `
@@ -352,7 +352,7 @@ const SpriteAnimation = {
     },
     
     // ==========================================
-    // 플레이어 피격 애니메이션 - 좌우 파닥파닥!
+    // 플레이어 피격 애니메이션 - 좌우 파닥파닥! (3배 강화!)
     // ==========================================
     playerHit(damage = 0) {
         const sprite = document.querySelector('.player-sprite-img');
@@ -360,33 +360,33 @@ const SpriteAnimation = {
         
         this.stopAnimation('player-idle');
         
-        const duration = 450;
+        const duration = 500;
         const startTime = performance.now();
-        const intensity = Math.min(damage / 12, 1.2) + 0.3;
+        const intensity = Math.min(damage / 8, 1.5) + 0.5; // 더 강한 기본 강도
         
         const animate = (currentTime) => {
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / duration, 1);
             
-            // 빠른 좌우 파닥파닥! (머리 흔드는 느낌)
-            const shakeFreq = 18;
-            const shake = Math.sin(progress * Math.PI * shakeFreq) * (1 - progress) * 20 * intensity;
+            // 빠른 좌우 파닥파닥! (머리 흔드는 느낌) - 3배 강화!
+            const shakeFreq = 22;
+            const shake = Math.sin(progress * Math.PI * shakeFreq) * (1 - progress) * 60 * intensity;
             
-            // 머리 흔드는 기울기
-            const tilt = Math.sin(progress * Math.PI * shakeFreq * 0.7) * (1 - progress) * 6 * intensity;
+            // 머리 흔드는 기울기 - 3배 강화!
+            const tilt = Math.sin(progress * Math.PI * shakeFreq * 0.7) * (1 - progress) * 18 * intensity;
             
-            // 뒤로 밀림
-            const knockback = Math.sin(progress * Math.PI * 0.5) * -25 * intensity;
+            // 뒤로 밀림 - 3배 강화!
+            const knockback = Math.sin(progress * Math.PI * 0.5) * -75 * intensity;
             
-            // Squash 효과
+            // Squash 효과 - 3배 강화!
             let scaleX = 1, scaleY = 1;
             if (progress < 0.12) {
-                scaleX = 1 + (progress / 0.12) * 0.12 * intensity;
-                scaleY = 1 - (progress / 0.12) * 0.08 * intensity;
+                scaleX = 1 + (progress / 0.12) * 0.3 * intensity;
+                scaleY = 1 - (progress / 0.12) * 0.2 * intensity;
             } else {
                 const rec = (progress - 0.12) / 0.88;
-                scaleX = 1 + ((1 - rec) * 0.12 * intensity);
-                scaleY = 1 - ((1 - rec) * 0.08 * intensity);
+                scaleX = 1 + ((1 - rec) * 0.3 * intensity);
+                scaleY = 1 - ((1 - rec) * 0.2 * intensity);
             }
             
             sprite.style.transform = `
