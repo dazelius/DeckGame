@@ -254,6 +254,14 @@ img {
     display: none !important;
 }
 
+/* 동적 조명/안개 효과 비활성화 */
+#bg-lighting,
+.volumetric-container,
+.fog-container,
+.ground-fog {
+    display: none !important;
+}
+
 /* 바닥 그라데이션 비활성화 - UI 가림 문제 */
 .floor {
     display: none;
@@ -1271,7 +1279,7 @@ img {
     position: relative;
     z-index: 50;
     height: 260px;
-    background: linear-gradient(180deg, transparent 0%, rgba(10, 8, 6, 0.95) 15%, rgba(10, 8, 6, 1) 100%);
+    background: transparent; /* 그라데이션 제거 */
     display: flex;
     align-items: center;
     padding: 0 20px;
