@@ -591,6 +591,8 @@ const VFX = {
     // 방어 이펙트 (쉴드) - GSAP + PixiJS 업그레이드!
     // ==========================================
     shield(x, y, options = {}) {
+        console.log('[VFX] 🛡️ shield 호출됨!', { x, y, options });
+        
         const {
             color = '#60a5fa',
             size = 80,
@@ -601,8 +603,16 @@ const VFX = {
         this.ensureLoop();
         
         // 🎆 PixiJS 쉴드 이펙트 (메인!)
+        console.log('[VFX] PixiRenderer 확인:', { 
+            defined: typeof PixiRenderer !== 'undefined', 
+            initialized: typeof PixiRenderer !== 'undefined' ? PixiRenderer.initialized : 'N/A' 
+        });
+        
         if (typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized) {
+            console.log('[VFX] ✅ PixiJS 쉴드 이펙트 호출!');
             PixiRenderer.createShieldDeploy(x, y, size, color, intensity);
+        } else {
+            console.warn('[VFX] ⚠️ PixiRenderer가 초기화되지 않음!');
         }
         
         // 🎭 GSAP 스프라이트 애니메이션 (플레이어)
