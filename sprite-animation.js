@@ -351,6 +351,210 @@ const SpriteAnimation = {
     },
     
     // ==========================================
+    // 플레이어 방어 애니메이션 (작게 파닥파닥)
+    // ==========================================
+    playerDefend(blockAmount = 5) {
+        const sprite = document.querySelector('.player-sprite-img');
+        if (!sprite) return;
+        
+        this.stopAnimation('player-idle');
+        
+        const duration = 300;
+        const startTime = performance.now();
+        const intensity = Math.min(blockAmount / 10, 1) * 0.5 + 0.5; // 0.5 ~ 1.0
+        
+        const animate = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // 빠른 파닥파닥 흔들림 (작게)
+            const flutter = Math.sin(progress * Math.PI * 12) * (1 - progress) * 5 * intensity;
+            
+            // 살짝 웅크리는 느낌
+            let scaleX = 1, scaleY = 1;
+            if (progress < 0.3) {
+                const prepProgress = progress / 0.3;
+                scaleX = 1 + (prepProgress * 0.05);
+                scaleY = 1 - (prepProgress * 0.03);
+            } else {
+                const recoveryProgress = (progress - 0.3) / 0.7;
+                scaleX = 1.05 - (recoveryProgress * 0.05);
+                scaleY = 0.97 + (recoveryProgress * 0.03);
+            }
+            
+            sprite.style.transform = `
+                translateX(${flutter}px) 
+                translateY(${Math.abs(flutter) * 0.3}px)
+                scaleX(${scaleX}) 
+                scaleY(${scaleY})
+            `;
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                sprite.style.transform = '';
+                this.startPlayerIdle();
+            }
+        };
+        
+        requestAnimationFrame(animate);
+    },
+    
+    // ==========================================
+    // 적 방어 애니메이션 (작게 파닥파닥)
+    // ==========================================
+    enemyDefend(enemyElement, blockAmount = 5) {
+        const sprite = enemyElement?.querySelector('.enemy-sprite-img');
+        if (!sprite) return;
+        
+        const duration = 250;
+        const startTime = performance.now();
+        const intensity = Math.min(blockAmount / 10, 1) * 0.5 + 0.5;
+        
+        const animate = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // 빠른 파닥파닥 (작게)
+            const flutter = Math.sin(progress * Math.PI * 10) * (1 - progress) * 4 * intensity;
+            
+            // 살짝 움츠림
+            let scaleX = 1, scaleY = 1;
+            if (progress < 0.25) {
+                scaleX = 1 + (progress / 0.25) * 0.04;
+                scaleY = 1 - (progress / 0.25) * 0.03;
+            } else {
+                const rec = (progress - 0.25) / 0.75;
+                scaleX = 1.04 - rec * 0.04;
+                scaleY = 0.97 + rec * 0.03;
+            }
+            
+            sprite.style.transform = `
+                translateX(${flutter}px) 
+                scaleX(${scaleX}) 
+                scaleY(${scaleY})
+            `;
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                sprite.style.transform = '';
+            }
+        };
+        
+        requestAnimationFrame(animate);
+    },
+    
+    // ==========================================
+    // 플레이어 강한 피격 (크게 파닥파닥)
+    // ==========================================
+    playerHitHard(damage = 10) {
+        const sprite = document.querySelector('.player-sprite-img');
+        if (!sprite) return;
+        
+        this.stopAnimation('player-idle');
+        
+        const duration = 500;
+        const startTime = performance.now();
+        const intensity = Math.min(damage / 10, 1.5); // 최대 1.5배
+        
+        const animate = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // 강한 파닥파닥 흔들림
+            const flutter = Math.sin(progress * Math.PI * 16) * (1 - progress) * 20 * intensity;
+            
+            // 뒤로 밀림
+            const knockback = Math.sin(progress * Math.PI) * -40 * intensity;
+            
+            // 강한 Squash & Stretch
+            let scaleX = 1, scaleY = 1;
+            if (progress < 0.1) {
+                const impact = progress / 0.1;
+                scaleX = 1 + (impact * 0.25 * intensity);
+                scaleY = 1 - (impact * 0.15 * intensity);
+            } else if (progress < 0.3) {
+                const bounce = (progress - 0.1) / 0.2;
+                scaleX = 1.25 * intensity - (bounce * 0.35 * intensity) + (1 - intensity * 0.25);
+                scaleY = (1 - 0.15 * intensity) + (bounce * 0.2 * intensity);
+            } else {
+                const recovery = (progress - 0.3) / 0.7;
+                scaleX = 1 + ((1 - recovery) * 0.1 * intensity * (1 - recovery));
+                scaleY = 1 - ((1 - recovery) * 0.05 * intensity * (1 - recovery));
+            }
+            
+            sprite.style.transform = `
+                translateX(${knockback + flutter}px) 
+                translateY(${Math.abs(flutter) * 0.5}px)
+                scaleX(${scaleX}) 
+                scaleY(${scaleY})
+                rotate(${flutter * 0.3}deg)
+            `;
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                sprite.style.transform = '';
+                this.startPlayerIdle();
+            }
+        };
+        
+        requestAnimationFrame(animate);
+    },
+    
+    // ==========================================
+    // 적 강한 피격 (크게 파닥파닥)
+    // ==========================================
+    enemyHitHard(enemyElement, damage = 10) {
+        const sprite = enemyElement?.querySelector('.enemy-sprite-img');
+        if (!sprite) return;
+        
+        const duration = 450;
+        const startTime = performance.now();
+        const intensity = Math.min(damage / 10, 1.5);
+        
+        const animate = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // 강한 파닥파닥
+            const flutter = Math.sin(progress * Math.PI * 14) * (1 - progress) * 18 * intensity;
+            
+            // 뒤로 밀림
+            const knockback = Math.sin(progress * Math.PI) * 35 * intensity;
+            
+            // Squash & Stretch
+            let scaleX = 1, scaleY = 1;
+            if (progress < 0.12) {
+                const impact = progress / 0.12;
+                scaleX = 1 + (impact * 0.22 * intensity);
+                scaleY = 1 - (impact * 0.12 * intensity);
+            } else {
+                const recovery = (progress - 0.12) / 0.88;
+                scaleX = 1 + ((1 - recovery) * 0.22 * intensity * (1 - recovery));
+                scaleY = 1 - ((1 - recovery) * 0.12 * intensity * (1 - recovery));
+            }
+            
+            sprite.style.transform = `
+                translateX(${knockback + flutter}px) 
+                translateY(${Math.abs(flutter) * 0.4}px)
+                scaleX(${scaleX}) 
+                scaleY(${scaleY})
+                rotate(${flutter * 0.25}deg)
+            `;
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                sprite.style.transform = '';
+            }
+        };
+        
+        requestAnimationFrame(animate);
+    },
+    
+    // ==========================================
     // 적 죽음 애니메이션
     // ==========================================
     enemyDeath(enemyElement, callback) {
