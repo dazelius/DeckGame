@@ -2331,6 +2331,11 @@ function checkEnemyDefeated() {
             
             // 사망 표시 (딜레이 후)
             if (enemyEl) {
+                // 🌟 브레이크 별 이펙트 즉시 중지!
+                if (typeof PixiRenderer !== 'undefined' && PixiRenderer.stopPersistentStunLoop) {
+                    PixiRenderer.stopPersistentStunLoop(enemyEl);
+                }
+                
                 setTimeout(() => {
                     enemyEl.classList.add('dead');
                     setTimeout(() => {
