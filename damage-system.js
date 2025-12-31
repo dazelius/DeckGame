@@ -92,9 +92,13 @@ window.ComboTracker = ComboTracker;
 
 // 데미지 처리 (유물 보너스 포함)
 function dealDamage(target, amount, card = null) {
+    console.log('[dealDamage] 🎯 호출됨!', { target, amount });
+    
     // 적인지 확인 (다중 적 지원)
     const isEnemy = gameState.enemies && gameState.enemies.includes(target);
     const isPlayer = target === gameState.player;
+    
+    console.log('[dealDamage] 타겟 확인:', { isEnemy, isPlayer, enemiesExist: !!gameState.enemies });
     
     // 타겟 요소 찾기
     let targetEl;
@@ -104,15 +108,21 @@ function dealDamage(target, amount, card = null) {
         // 다중 적 컨테이너에서 찾기
         const enemyIndex = gameState.enemies.indexOf(target);
         const container = document.getElementById('enemies-container');
+        console.log('[dealDamage] 적 컨테이너:', { enemyIndex, container: !!container });
         if (container) {
             targetEl = container.querySelector(`[data-index="${enemyIndex}"]`);
+            console.log('[dealDamage] targetEl 찾음:', { targetEl: !!targetEl, selector: `[data-index="${enemyIndex}"]` });
         }
         if (!targetEl) {
             targetEl = document.getElementById('enemy');
+            console.log('[dealDamage] 폴백 enemy:', { targetEl: !!targetEl });
         }
     } else {
         targetEl = document.getElementById('enemy');
+        console.log('[dealDamage] 기본 enemy:', { targetEl: !!targetEl });
     }
+    
+    console.log('[dealDamage] 최종 targetEl:', targetEl);
     
     // 카드가 없으면 현재 사용 중인 카드 가져오기
     const activeCard = card || (gameState.currentCard || null);
