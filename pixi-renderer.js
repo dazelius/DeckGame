@@ -803,6 +803,151 @@ const PixiRenderer = {
     },
     
     // ==========================================
+    // ⭐ 스턴 이펙트 (브레이크 시)
+    // ==========================================
+    createStunEffect(x, y) {
+        if (!this.initialized) return;
+        
+        const container = new PIXI.Container();
+        container.x = x;
+        container.y = y;
+        this.effectsContainer.addChild(container);
+        
+        // 🌟 큰 노란 폭발
+        const burst = new PIXI.Graphics();
+        burst.circle(0, 0, 80);
+        burst.fill({ color: '#fbbf24', alpha: 0.6 });
+        burst.circle(0, 0, 50);
+        burst.fill({ color: '#fef3c7', alpha: 0.8 });
+        container.addChild(burst);
+        
+        // ⭐ 별 파티클 12개
+        const stars = [];
+        for (let i = 0; i < 12; i++) {
+            const star = new PIXI.Graphics();
+            const angle = (Math.PI * 2 / 12) * i;
+            
+            // 별 모양
+            star.star(0, 0, 5, 8, 4);
+            star.fill({ color: '#fef3c7', alpha: 1 });
+            star.stroke({ width: 1, color: '#f59e0b', alpha: 0.8 });
+            
+            star.x = Math.cos(angle) * 20;
+            star.y = Math.sin(angle) * 20;
+            star.rotation = angle;
+            
+            container.addChild(star);
+            stars.push({ star, angle, speed: 3 + Math.random() * 2 });
+        }
+        
+        // 💫 중앙 스파이럴 효과
+        const spiral = new PIXI.Graphics();
+        spiral.moveTo(0, 0);
+        for (let i = 0; i < 3; i++) {
+            for (let a = 0; a < Math.PI * 2; a += 0.3) {
+                const r = 10 + a * 5 + i * 20;
+                spiral.lineTo(Math.cos(a + i) * r, Math.sin(a + i) * r);
+            }
+        }
+        spiral.stroke({ width: 2, color: '#fbbf24', alpha: 0.5 });
+        container.addChild(spiral);
+        
+        let life = 40;
+        const animate = () => {
+            life--;
+            const progress = 1 - (life / 40);
+            
+            // 폭발 확장 & 페이드
+            burst.scale.set(1 + progress * 2);
+            burst.alpha = 0.6 * (1 - progress);
+            
+            // 별 퍼져나감
+            stars.forEach(data => {
+                data.star.x += Math.cos(data.angle) * data.speed;
+                data.star.y += Math.sin(data.angle) * data.speed;
+                data.star.rotation += 0.2;
+                data.star.alpha = 1 - progress;
+                data.star.scale.set(1 + progress * 0.5);
+            });
+            
+            // 스파이럴 회전
+            spiral.rotation += 0.15;
+            spiral.alpha = 0.5 * (1 - progress);
+            
+            if (life <= 0) {
+                container.destroy({ children: true });
+            } else {
+                requestAnimationFrame(animate);
+            }
+        };
+        animate();
+    },
+    
+    // ==========================================
+    // 💫 스턴 상태 유지 이펙트 (머리 위 별 회전)
+    // ==========================================
+    createStunLoop(x, y, duration = 2000) {
+        if (!this.initialized) return;
+        
+        const container = new PIXI.Container();
+        container.x = x;
+        container.y = y;
+        this.effectsContainer.addChild(container);
+        
+        // 5개의 별이 원형으로 회전
+        const stars = [];
+        const starCount = 5;
+        const radius = 35;
+        
+        for (let i = 0; i < starCount; i++) {
+            const star = new PIXI.Graphics();
+            star.star(0, 0, 5, 10, 5);
+            star.fill({ color: '#fef3c7', alpha: 1 });
+            star.stroke({ width: 1.5, color: '#f59e0b', alpha: 1 });
+            
+            const angle = (Math.PI * 2 / starCount) * i;
+            star.x = Math.cos(angle) * radius;
+            star.y = Math.sin(angle) * radius;
+            
+            container.addChild(star);
+            stars.push({ star, baseAngle: angle });
+        }
+        
+        let time = 0;
+        const totalFrames = duration / (1000 / 60);
+        
+        const animate = () => {
+            time++;
+            const progress = time / totalFrames;
+            const rotation = progress * Math.PI * 4;
+            
+            // 전체 컨테이너 회전
+            container.rotation = rotation;
+            
+            // 각 별 반짝임
+            stars.forEach((data, i) => {
+                const twinkle = Math.sin(time * 0.3 + i) * 0.3 + 0.7;
+                data.star.alpha = twinkle;
+                data.star.scale.set(0.8 + twinkle * 0.4);
+            });
+            
+            // 페이드 아웃 (마지막 20%)
+            if (progress > 0.8) {
+                container.alpha = 1 - (progress - 0.8) * 5;
+            }
+            
+            if (progress >= 1) {
+                container.destroy({ children: true });
+            } else {
+                requestAnimationFrame(animate);
+            }
+        };
+        animate();
+        
+        return container;
+    },
+    
+    // ==========================================
     // 유틸리티
     // ==========================================
     randomColor(colors) {
