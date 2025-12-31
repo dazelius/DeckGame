@@ -485,156 +485,156 @@ const SpriteAnimation = {
     },
     
     // ==========================================
-    // 적 피격 애니메이션 - GSAP + PixiJS 히트 이펙트!
+    // 적 피격 애니메이션 - 리얼리스틱 & 임팩트!
     // ==========================================
     enemyHit(enemyElement, damage = 0) {
-        console.log('[SpriteAnimation] 🎯 enemyHit 호출됨!', { enemyElement, damage });
-        
-        // 🔥 .enemy-unit 자체를 흔들어야 함! (sprite-img는 CSS가 막음)
         const target = enemyElement;
-        if (!target) {
-            console.warn('[SpriteAnimation] ⚠️ enemyElement가 없음!');
-            return;
-        }
+        const sprite = enemyElement?.querySelector('.enemy-sprite-img');
+        if (!target) return;
+        if (typeof gsap === 'undefined') return;
         
-        // GSAP 확인
-        if (typeof gsap === 'undefined') {
-            console.error('[SpriteAnimation] ❌ GSAP이 로드되지 않음!');
-            return;
-        }
+        // 🔥 데미지 기반 강도 계산
+        const intensity = Math.min(damage / 5, 8); // 최대 8
+        const freezeTime = Math.min(0.04 + damage * 0.003, 0.12); // 4~120ms
+        const isCritical = damage >= 20;
+        const isHeavy = damage >= 12;
         
-        console.log('[SpriteAnimation] ✅ GSAP 애니메이션 시작!');
-        
-        // 🔥 데미지에 따른 강도 (더 과장되게!)
-        let intensity, freezeTime, hitType;
-        if (damage >= 25) {
-            intensity = 6.0;      // 💀 크리티컬: 엄청 강하게!
-            freezeTime = 0.15;
-            hitType = 'critical';
-            console.log('[Enemy Hit] 💀 치명적!', damage);
-        } else if (damage >= 15) {
-            intensity = 4.5;      // 😱 강함
-            freezeTime = 0.10;
-            hitType = 'heavy';
-            console.log('[Enemy Hit] 😱 강함!', damage);
-        } else if (damage >= 8) {
-            intensity = 3.0;      // 😣 중간
-            freezeTime = 0.07;
-            hitType = 'medium';
-            console.log('[Enemy Hit] 😣 중간', damage);
-        } else {
-            intensity = 2.0;      // 😐 약함도 눈에 띄게!
-            freezeTime = 0.05;
-            hitType = 'light';
-            console.log('[Enemy Hit] 😐 약함', damage);
-        }
-        
-        // 🎆 PixiJS 히트 이펙트!
-        if (enemyElement && typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized) {
+        // 🎆 PixiJS 이펙트
+        if (typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized) {
             const rect = enemyElement.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2 - 20;
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2 - 20;
             
-            if (hitType === 'critical') {
-                PixiRenderer.createCriticalHit(centerX, centerY, damage);
-                PixiRenderer.hitFlash('#ff0000', 150);
+            if (isCritical) {
+                PixiRenderer.createCriticalHit(cx, cy, damage);
+                PixiRenderer.hitFlash('#ff0000', 120);
+            } else if (isHeavy) {
+                PixiRenderer.createHitImpact(cx, cy, damage, '#ff4444');
+                PixiRenderer.hitFlash('#ff0000', 60);
             } else {
-                PixiRenderer.createHitImpact(centerX, centerY, damage, '#ff4444');
-                if (hitType === 'heavy') {
-                    PixiRenderer.hitFlash('#ff0000', 80);
-                }
+                PixiRenderer.createHitImpact(cx, cy, damage, '#ff6644');
             }
         }
         
-        // 🌍 화면 흔들림 (더 강하게!)
-        this.screenShake(intensity * 5, freezeTime + 0.15);
+        // 🌍 화면 흔들림 (데미지 비례)
+        this.screenShake(intensity * 3, 0.1 + intensity * 0.02);
         
-        // GSAP 타임라인
+        // 🎬 메인 타임라인
         const tl = gsap.timeline();
         
-        // ⏸️ 히트스탑! 흰색 번쩍 + 정지 (더 크게!)
-        tl.set(target, { 
-            scale: 1.15,
-            x: 15
-        })
-        // 프리즈 유지!
-        .to(target, { duration: freezeTime });
+        // ==========================================
+        // 1️⃣ 히트스탑 (Impact Freeze) - 가장 중요!
+        // ==========================================
+        const knockbackX = 20 + intensity * 8; // 밀려나는 거리
         
-        // 💢 빨간 깜박 + 극적인 파닥파닥! (과장되게!)
-        if (hitType === 'critical') {
-            // 🔥 크리티컬: 미친듯이 흔들림!
-            tl.to(target, {
-                x: 80,
-                rotation: 25,
-                scaleX: 1.3,
-                scaleY: 0.7,
-                duration: 0.07,
-                ease: "power4.out"
-            })
-            .to(target, {
-                x: -70,
-                rotation: -20,
-                scaleX: 0.8,
-                scaleY: 1.2,
-                duration: 0.06
-            })
-            .to(target, { x: 55, rotation: 15, scaleX: 1.15, scaleY: 0.9, duration: 0.05 })
-            .to(target, { x: -40, rotation: -10, duration: 0.05 })
-            .to(target, { x: 30, rotation: 8, duration: 0.04 })
-            .to(target, { x: -20, rotation: -5, duration: 0.04 })
-            .to(target, { x: 12, rotation: 3, duration: 0.03 })
-            .to(target, { x: -6, rotation: -2, duration: 0.03 });
-        } else {
-            // 일반 히트도 과장되게!
-            tl.to(target, {
-                x: 50 * intensity / 2,
-                rotation: 12 * intensity / 2,
-                scaleX: 1 + 0.15 * intensity / 3,
-                scaleY: 1 - 0.1 * intensity / 3,
-                duration: 0.06,
-                ease: "power3.out"
-            })
-            .to(target, {
-                x: -40 * intensity / 2,
-                rotation: -10 * intensity / 2,
-                scaleX: 0.95,
-                scaleY: 1.08,
-                duration: 0.05
-            })
-            .to(target, {
-                x: 30 * intensity / 2,
-                rotation: 8 * intensity / 2,
-                scaleX: 1.05,
-                scaleY: 0.96,
-                duration: 0.05
-            })
-            .to(target, {
-                x: -20 * intensity / 2,
-                rotation: -6 * intensity / 2,
-                duration: 0.04
-            })
-            .to(target, {
-                x: 12 * intensity / 2,
-                rotation: 4 * intensity / 2,
-                duration: 0.04
-            })
-            .to(target, {
-                x: -8 * intensity / 2,
-                rotation: -2 * intensity / 2,
-                duration: 0.03
+        // 순간적으로 밀려남 + 스쿼시!
+        tl.to(target, {
+            x: knockbackX,
+            scaleX: 0.85,
+            scaleY: 1.15,
+            duration: 0.03,
+            ease: "power4.out"
+        });
+        
+        // 🔴 빨간 플래시 (sprite-img의 filter)
+        if (sprite) {
+            gsap.to(sprite, {
+                filter: 'brightness(2) sepia(1) saturate(10) hue-rotate(-20deg)',
+                duration: 0.05,
+                yoyo: true,
+                repeat: 1
             });
         }
         
-        // 🔄 복구 (탄성 있게!)
+        // ⏸️ 프리즈! (히트스탑 핵심)
+        tl.to(target, { duration: freezeTime });
+        
+        // ==========================================
+        // 2️⃣ 반동 (Recoil) - 자연스러운 물리
+        // ==========================================
+        if (isCritical) {
+            // 💀 크리티컬: 크게 밀려났다가 휘청휘청
+            tl.to(target, {
+                x: knockbackX + 30,
+                y: -15,
+                rotation: 8,
+                scaleX: 1.1,
+                scaleY: 0.92,
+                duration: 0.06,
+                ease: "power2.out"
+            })
+            .to(target, {
+                x: knockbackX - 20,
+                y: 5,
+                rotation: -5,
+                scaleX: 0.95,
+                scaleY: 1.05,
+                duration: 0.08,
+                ease: "power1.inOut"
+            })
+            .to(target, {
+                x: knockbackX * 0.3,
+                y: 0,
+                rotation: 3,
+                scaleX: 1.02,
+                scaleY: 0.98,
+                duration: 0.07
+            })
+            .to(target, {
+                x: -knockbackX * 0.15,
+                rotation: -2,
+                duration: 0.06
+            });
+        } else if (isHeavy) {
+            // 😱 강타: 밀려났다가 흔들림
+            tl.to(target, {
+                x: knockbackX * 0.6,
+                rotation: 5,
+                scaleX: 1.05,
+                scaleY: 0.95,
+                duration: 0.07,
+                ease: "power2.out"
+            })
+            .to(target, {
+                x: -knockbackX * 0.3,
+                rotation: -3,
+                scaleX: 0.97,
+                scaleY: 1.03,
+                duration: 0.08
+            })
+            .to(target, {
+                x: knockbackX * 0.15,
+                rotation: 2,
+                duration: 0.06
+            });
+        } else {
+            // 😐 약타: 가볍게 밀림
+            tl.to(target, {
+                x: knockbackX * 0.4,
+                rotation: 3,
+                scaleX: 1.03,
+                scaleY: 0.97,
+                duration: 0.06,
+                ease: "power2.out"
+            })
+            .to(target, {
+                x: -knockbackX * 0.15,
+                rotation: -1,
+                duration: 0.06
+            });
+        }
+        
+        // ==========================================
+        // 3️⃣ 복귀 (Settle) - 탄성 있게 원위치
+        // ==========================================
         tl.to(target, {
             x: 0,
             y: 0,
             rotation: 0,
-            scale: 1,
             scaleX: 1,
             scaleY: 1,
-            duration: hitType === 'critical' ? 0.25 : 0.15,
-            ease: "elastic.out(1, 0.5)"
+            duration: isCritical ? 0.35 : 0.2,
+            ease: "elastic.out(1, 0.4)"
         });
         
         return tl;
@@ -1422,22 +1422,25 @@ document.addEventListener('DOMContentLoaded', () => {
 window.SpriteAnimation = SpriteAnimation;
 
 // 🧪 디버그용: 강제 테스트 함수
-window.testEnemyHit = function() {
-    console.log('[TEST] 🧪 적 피격 테스트 시작!');
+window.testEnemyHit = function(damage = 10) {
+    console.log('[TEST] 🧪 적 피격 테스트! 데미지:', damage);
     const enemyEl = document.querySelector('.enemy-unit');
-    console.log('[TEST] enemyEl:', enemyEl);
     
-    if (enemyEl && typeof gsap !== 'undefined') {
-        console.log('[TEST] ✅ GSAP으로 .enemy-unit 흔들기!');
-        gsap.timeline()
-            .to(enemyEl, { x: 50, rotation: 15, duration: 0.1 })
-            .to(enemyEl, { x: -40, rotation: -10, duration: 0.1 })
-            .to(enemyEl, { x: 30, rotation: 8, duration: 0.08 })
-            .to(enemyEl, { x: -20, rotation: -5, duration: 0.08 })
-            .to(enemyEl, { x: 0, rotation: 0, duration: 0.15, ease: "elastic.out(1, 0.5)" });
+    if (enemyEl && typeof SpriteAnimation !== 'undefined') {
+        SpriteAnimation.enemyHit(enemyEl, damage);
     } else {
-        console.error('[TEST] ❌ enemyEl 또는 gsap 없음!');
+        console.error('[TEST] ❌ enemyEl 또는 SpriteAnimation 없음!');
     }
+};
+
+// 크리티컬 테스트
+window.testCriticalHit = function() {
+    testEnemyHit(25);
+};
+
+// 약타 테스트
+window.testLightHit = function() {
+    testEnemyHit(5);
 };
 
 console.log('[SpriteAnimation] GSAP 기반 시스템 로드됨!');
