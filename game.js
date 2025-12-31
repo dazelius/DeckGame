@@ -2480,18 +2480,130 @@ function shakeElement(el) {
 }
 
 // ==========================================
-// 히어로 슬래시 애니메이션
+// 히어로 슬래시 애니메이션 - GSAP 업그레이드!
 // ==========================================
 function playHeroSlashAnimation(hitCount = 1, hitInterval = 150, atImpactPosition = false) {
     const playerEl = document.getElementById('player');
     if (!playerEl) return;
     
     const targetEnemy = getSelectedEnemyElement();
-    const heroImg = playerEl.querySelector('img:not(.hero-slash-effect)');
+    const heroImg = playerEl.querySelector('.player-sprite-img, img:not(.hero-slash-effect)');
     
-    // 기존 히어로 이미지 숨기기
-    if (heroImg) {
-        heroImg.style.opacity = '0';
+    // 🎭 GSAP으로 스프라이트 애니메이션 (기존 이미지 숨기기 대신!)
+    if (typeof gsap !== 'undefined' && heroImg) {
+        // 기존 애니메이션 정리
+        if (typeof SpriteAnimation !== 'undefined') {
+            SpriteAnimation.stopAnimation('player-idle');
+        }
+        
+        // 연타 공격인 경우
+        if (hitCount > 1) {
+            // 콤보 공격 애니메이션
+            const comboTl = gsap.timeline();
+            
+            // 준비 자세
+            comboTl.to(heroImg, {
+                x: -30,
+                scaleX: 0.85,
+                scaleY: 1.1,
+                duration: 0.1,
+                ease: "back.in(2)"
+            });
+            
+            // 연타!
+            for (let i = 0; i < hitCount; i++) {
+                const direction = (i % 2 === 0) ? 1 : -1;
+                const hitX = 50 + (i * 10);
+                
+                comboTl.to(heroImg, {
+                    x: hitX,
+                    scaleX: 1.25,
+                    scaleY: 0.85,
+                    rotation: direction * 5,
+                    filter: `
+                        drop-shadow(2px 0 0 rgba(255, 255, 255, 1))
+                        drop-shadow(-2px 0 0 rgba(255, 255, 255, 1))
+                        drop-shadow(0 0 15px rgba(255, 200, 50, 0.9))
+                        brightness(1.5)
+                    `,
+                    duration: 0.05,
+                    ease: "power4.out"
+                })
+                .to(heroImg, {
+                    x: hitX - 20,
+                    scaleX: 1.1,
+                    scaleY: 0.95,
+                    rotation: -direction * 3,
+                    filter: '',
+                    duration: 0.04
+                });
+            }
+            
+            // 복귀
+            comboTl.to(heroImg, {
+                x: 0,
+                scaleX: 1,
+                scaleY: 1,
+                rotation: 0,
+                filter: '',
+                duration: 0.3,
+                ease: "elastic.out(1, 0.4)",
+                onComplete: () => {
+                    if (typeof SpriteAnimation !== 'undefined') {
+                        SpriteAnimation.startPlayerIdle();
+                    }
+                }
+            });
+        } else {
+            // 단일 공격 애니메이션
+            gsap.timeline()
+                // 준비
+                .to(heroImg, {
+                    x: -25,
+                    scaleX: 0.88,
+                    scaleY: 1.08,
+                    duration: 0.08,
+                    ease: "back.in(2)"
+                })
+                // 돌진!
+                .to(heroImg, {
+                    x: 80,
+                    scaleX: 1.3,
+                    scaleY: 0.85,
+                    filter: `
+                        drop-shadow(2px 0 0 rgba(255, 255, 255, 1))
+                        drop-shadow(-2px 0 0 rgba(255, 255, 255, 1))
+                        drop-shadow(0 0 20px rgba(255, 200, 50, 0.9))
+                        brightness(1.6)
+                    `,
+                    duration: 0.06,
+                    ease: "power4.out"
+                })
+                // 플래시
+                .to(heroImg, {
+                    filter: `
+                        drop-shadow(1px 0 0 rgba(255, 255, 255, 0.9))
+                        drop-shadow(-1px 0 0 rgba(255, 255, 255, 0.9))
+                        drop-shadow(0 0 8px rgba(255, 200, 100, 0.6))
+                    `,
+                    duration: 0.08
+                })
+                // 복귀
+                .to(heroImg, {
+                    x: 0,
+                    scaleX: 1,
+                    scaleY: 1,
+                    rotation: 0,
+                    filter: '',
+                    duration: 0.25,
+                    ease: "back.out(1.5)",
+                    onComplete: () => {
+                        if (typeof SpriteAnimation !== 'undefined') {
+                            SpriteAnimation.startPlayerIdle();
+                        }
+                    }
+                });
+        }
     }
     
     let currentHit = 0;
@@ -2502,13 +2614,7 @@ function playHeroSlashAnimation(hitCount = 1, hitInterval = 150, atImpactPositio
     
     const doSingleSlash = () => {
         if (currentHit >= hitCount) {
-            // 모든 히트 완료 후 이미지 복원
-            setTimeout(() => {
-                if (heroImg) {
-                    heroImg.style.opacity = '1';
-                }
-                playerEl.classList.remove('attacking');
-            }, animDuration);
+            playerEl.classList.remove('attacking');
             return;
         }
         
@@ -2538,6 +2644,33 @@ function playHeroSlashAnimation(hitCount = 1, hitInterval = 150, atImpactPositio
         
         playerEl.appendChild(slash);
         
+        // 🎆 GSAP 슬래시 이펙트 애니메이션 (선택적)
+        if (typeof gsap !== 'undefined') {
+            gsap.fromTo(slash, 
+                { 
+                    scale: slashScale * 0.8,
+                    opacity: 0,
+                    rotation: -10
+                },
+                {
+                    scale: slashScale * 1.1,
+                    opacity: 1,
+                    rotation: 5,
+                    duration: 0.06,
+                    ease: "power4.out",
+                    onComplete: () => {
+                        gsap.to(slash, {
+                            scale: slashScale,
+                            opacity: 0,
+                            rotation: 0,
+                            duration: 0.06,
+                            ease: "power2.in"
+                        });
+                    }
+                }
+            );
+        }
+        
         // 공격 모션 (reflow로 애니메이션 리셋)
         playerEl.classList.remove('attacking');
         void playerEl.offsetWidth;
@@ -2562,11 +2695,8 @@ function playHeroSlashAnimation(hitCount = 1, hitInterval = 150, atImpactPositio
         if (currentHit < hitCount) {
             setTimeout(doSingleSlash, hitInterval);
         } else {
-            // 마지막 히트 후 이미지 복원
+            // 마지막 히트 후 정리
             setTimeout(() => {
-                if (heroImg) {
-                    heroImg.style.opacity = '1';
-                }
                 playerEl.classList.remove('attacking');
             }, animDuration);
         }
