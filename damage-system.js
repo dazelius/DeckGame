@@ -231,32 +231,13 @@ function dealDamage(target, amount, card = null) {
         // 크리티컬인지 확인
         const isCriticalHit = gameState.currentCritical?.isCritical || false;
         
-        // HP 데미지가 있을 때만 팝업 표시
-        if (result.actualDamage > 0) {
-            showDamagePopup(targetEl, result.actualDamage, isCriticalHit ? 'critical' : 'damage');
-        }
-        
-        // 🎭 스프라이트 피격 애니메이션 (방어로 막혀도 반응!)
-        console.log('[DealDamage] 🎭 애니메이션 체크:', { 
-            SpriteAnimation: typeof SpriteAnimation, 
-            isPlayer, 
-            isEnemy,
-            totalDamageReceived 
-        });
+        // 🎭 1단계: 피격 애니메이션 먼저! (즉시)
+        const animDamage = result.actualDamage > 0 ? result.actualDamage : Math.ceil(result.blockedDamage / 2);
         
         if (typeof SpriteAnimation !== 'undefined') {
-            // 방어로 막힌 경우 약한 피격, HP 데미지는 강한 피격
-            const animDamage = result.actualDamage > 0 ? result.actualDamage : Math.ceil(result.blockedDamage / 2);
-            
             if (isPlayer) {
-                console.log('[DealDamage] ▶️ playerHit 호출!', animDamage);
                 SpriteAnimation.playerHit(animDamage);
             } else if (isEnemy) {
-                console.log('[DealDamage] ▶️ enemyHit 호출!', { targetEl, damage: animDamage });
-                console.log('[DealDamage] SpriteAnimation 객체:', SpriteAnimation);
-                console.log('[DealDamage] enemyHit 함수:', typeof SpriteAnimation?.enemyHit);
-                
-                // 🔥 항상 피격 애니메이션 호출!
                 try {
                     SpriteAnimation.enemyHit(targetEl, animDamage);
                 } catch (e) {
@@ -276,6 +257,16 @@ function dealDamage(target, amount, card = null) {
                     ComboTracker.triggerPlayerAttack(targetEl, 0, expectedHits);
                 }
             }
+        }
+        
+        // 💥 2단계: 대미지 플로터 (피격 후 딜레이!)
+        // 피격 애니메이션이 충분히 보인 후에 대미지 숫자 표시
+        const damagePopupDelay = isCriticalHit ? 100 : 60; // 크리티컬은 더 극적으로
+        
+        if (result.actualDamage > 0) {
+            setTimeout(() => {
+                showDamagePopup(targetEl, result.actualDamage, isCriticalHit ? 'critical' : 'damage');
+            }, damagePopupDelay);
         }
         
         // 🔊 타격 사운드 재생
@@ -419,50 +410,59 @@ function showDamagePopup(element, value, type) {
     const popup = document.createElement('div');
     popup.className = `damage-popup ${type}`;
     
+    // 🎯 대미지 크기에 따른 시각적 강조
+    const intensity = Math.min(value / 20, 1.5); // 최대 1.5배
+    const fontSize = 2.4 + intensity * 0.8; // 2.4rem ~ 3.6rem
+    
     if (type === 'block') {
-        popup.textContent = `🛡️ ${value}`;
+        popup.innerHTML = `<span class="dmg-icon">🛡️</span><span class="dmg-value">${value}</span>`;
+        popup.classList.add('block-popup');
     } else if (type === 'bleed') {
-        popup.textContent = `🩸 ${value}`;
-        popup.style.color = '#ef4444';
-        popup.style.textShadow = '0 0 10px #ef4444, 0 0 20px #dc2626';
+        popup.innerHTML = `<span class="dmg-icon">🩸</span><span class="dmg-value">${value}</span>`;
+        popup.classList.add('bleed-popup');
     } else if (type === 'thorn') {
-        popup.textContent = `🌵 ${value}`;
-        popup.style.color = '#22c55e';
+        popup.innerHTML = `<span class="dmg-icon">🌵</span><span class="dmg-value">${value}</span>`;
+        popup.classList.add('thorn-popup');
     } else if (type === 'critical') {
-        // 크리티컬 데미지 - 화려한 연출
+        // 크리티컬 데미지 - 극적인 연출!
         popup.className = 'damage-popup critical-damage';
         popup.innerHTML = `
-            <span class="crit-label">CRITICAL!</span>
-            <span class="crit-value">-${value}</span>
+            <span class="crit-label">💥 CRITICAL!</span>
+            <span class="crit-value">${value}</span>
         `;
     } else {
-        popup.textContent = `-${value}`;
+        // 일반 데미지 - 가독성 높은 스타일
+        popup.innerHTML = `<span class="dmg-value">${value}</span>`;
+        popup.style.fontSize = `${fontSize}rem`;
     }
     
     const rect = element.getBoundingClientRect();
     
-    // 랜덤 오프셋 (개체 근처에서 흩어지게)
-    const randomOffsetX = (Math.random() - 0.5) * 60;  // -30 ~ +30px
-    const randomOffsetY = (Math.random() - 0.5) * 40;  // -20 ~ +20px
+    // 위치: 캐릭터 머리 위쪽 중앙
+    const centerX = rect.left + rect.width / 2;
+    const topY = rect.top - 20;
     
-    // 크리티컬은 중앙에, 일반 데미지는 랜덤하게
+    // 크리티컬은 정중앙, 일반 데미지는 살짝 흩어지게
     if (type === 'critical') {
-        popup.style.left = `${rect.left + rect.width / 2 - 50}px`;
-        popup.style.top = `${rect.top + rect.height / 3}px`;
+        popup.style.left = `${centerX}px`;
+        popup.style.top = `${topY + 30}px`;
     } else {
-        popup.style.left = `${rect.left + rect.width / 2 - 30 + randomOffsetX}px`;
-        popup.style.top = `${rect.top + rect.height / 3 + randomOffsetY}px`;
+        const randomOffsetX = (Math.random() - 0.5) * 40;
+        popup.style.left = `${centerX + randomOffsetX}px`;
+        popup.style.top = `${topY}px`;
     }
     
-    // 살짝 회전도 추가 (더 자연스럽게)
-    if (type !== 'critical') {
-        const randomRotation = (Math.random() - 0.5) * 16; // -8 ~ +8도
+    // 살짝 회전 (더 역동적으로)
+    if (type !== 'critical' && type !== 'block') {
+        const randomRotation = (Math.random() - 0.5) * 12;
         popup.style.setProperty('--random-rotation', `${randomRotation}deg`);
     }
     
     document.body.appendChild(popup);
     
-    setTimeout(() => popup.remove(), type === 'critical' ? 1500 : 1000);
+    // 크리티컬은 오래, 큰 데미지도 조금 더 오래 표시
+    const duration = type === 'critical' ? 1800 : (1000 + Math.min(value * 20, 500));
+    setTimeout(() => popup.remove(), duration);
 }
 
 // ==========================================
@@ -540,83 +540,11 @@ function showEnergyGainEffect(amount) {
 }
 
 // ==========================================
-// CSS 애니메이션 주입
+// CSS 애니메이션 주입 (styles.css에서 주요 스타일 정의됨)
 // ==========================================
 const damageSystemStyles = document.createElement('style');
 damageSystemStyles.id = 'damage-system-styles';
 damageSystemStyles.textContent = `
-    /* 데미지 팝업 기본 스타일 */
-    .damage-popup {
-        position: fixed;
-        font-family: 'Cinzel', serif;
-        font-size: 1.8rem;
-        font-weight: 900;
-        color: #ef4444;
-        text-shadow: 0 0 10px rgba(239, 68, 68, 0.8), 2px 2px 0 #000;
-        pointer-events: none;
-        z-index: 1000;
-        animation: damagePopFloat 1s ease-out forwards;
-    }
-    
-    @keyframes damagePopFloat {
-        0% { 
-            opacity: 1; 
-            transform: translateY(0) scale(1) rotate(var(--random-rotation, 0deg)); 
-        }
-        20% { 
-            transform: translateY(-10px) scale(1.2) rotate(var(--random-rotation, 0deg)); 
-        }
-        100% { 
-            opacity: 0; 
-            transform: translateY(-50px) scale(0.8) rotate(var(--random-rotation, 0deg)); 
-        }
-    }
-    
-    /* 크리티컬 데미지 */
-    .damage-popup.critical-damage {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        animation: criticalDamagePop 1.5s ease-out forwards;
-    }
-    
-    .damage-popup.critical-damage .crit-label {
-        font-size: 1.2rem;
-        color: #fbbf24;
-        text-shadow: 0 0 15px #fbbf24, 0 0 30px #f59e0b;
-        animation: critLabelShake 0.3s ease-out;
-    }
-    
-    .damage-popup.critical-damage .crit-value {
-        font-size: 2.5rem;
-        color: #ef4444;
-        text-shadow: 0 0 20px #ef4444, 0 0 40px #dc2626, 3px 3px 0 #000;
-    }
-    
-    @keyframes criticalDamagePop {
-        0% { 
-            opacity: 0; 
-            transform: scale(0.5); 
-        }
-        15% { 
-            opacity: 1; 
-            transform: scale(1.5); 
-        }
-        30% { 
-            transform: scale(1.2); 
-        }
-        100% { 
-            opacity: 0; 
-            transform: scale(1) translateY(-30px); 
-        }
-    }
-    
-    @keyframes critLabelShake {
-        0%, 100% { transform: translateX(0); }
-        25% { transform: translateX(-5px); }
-        75% { transform: translateX(5px); }
-    }
-    
     /* 취약 팝업 */
     @keyframes vulnerablePop {
         0% { 
