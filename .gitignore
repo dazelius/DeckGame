@@ -32,3 +32,6 @@ backup_*/
 # Test
 coverage/
 
+# Firebase
+.firebase/
+.firebaserc.backup

@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VFX Effect Tester</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a0a2a 50%, #0a1a2a 100%);
+            min-height: 100vh;
+            color: #fff;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        /* 좌측 컨트롤 패널 */
+        .control-panel {
+            width: 320px;
+            background: rgba(0, 0, 0, 0.8);
+            border-right: 2px solid #333;
+            padding: 20px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        
+        .panel-title {
+            font-size: 1.5rem;
+            color: #60a5fa;
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 0 0 20px #60a5fa;
+        }
+        
+        .effect-category {
+            margin-bottom: 25px;
+        }
+        
+        .category-title {
+            font-size: 0.9rem;
+            color: #fbbf24;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .effect-btn {
+            display: block;
+            width: 100%;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+        }
+        
+        .effect-btn:hover {
+            background: linear-gradient(135deg, #2a2a4e 0%, #26315e 100%);
+            border-color: #60a5fa;
+            box-shadow: 0 0 15px rgba(96, 165, 250, 0.3);
+            transform: translateX(5px);
+        }
+        
+        .effect-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .effect-btn .icon {
+            margin-right: 10px;
+        }
+        
+        /* 공격 이펙트 */
+        .effect-btn.attack { border-left: 4px solid #ef4444; }
+        .effect-btn.attack:hover { border-color: #ef4444; box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); }
+        
+        /* 방어 이펙트 */
+        .effect-btn.defense { border-left: 4px solid #60a5fa; }
+        .effect-btn.defense:hover { border-color: #60a5fa; }
+        
+        /* 상태 이펙트 */
+        .effect-btn.status { border-left: 4px solid #a855f7; }
+        .effect-btn.status:hover { border-color: #a855f7; box-shadow: 0 0 15px rgba(168, 85, 247, 0.3); }
+        
+        /* 힐 이펙트 */
+        .effect-btn.heal { border-left: 4px solid #4ade80; }
+        .effect-btn.heal:hover { border-color: #4ade80; box-shadow: 0 0 15px rgba(74, 222, 128, 0.3); }
+        
+        /* 특수 이펙트 */
+        .effect-btn.special { border-left: 4px solid #fbbf24; }
+        .effect-btn.special:hover { border-color: #fbbf24; box-shadow: 0 0 15px rgba(251, 191, 36, 0.3); }
+        
+        /* 겜블러 이펙트 */
+        .effect-btn.gambler { border-left: 4px solid #f59e0b; background: linear-gradient(135deg, #1a1a2e 0%, #2d1f0f 100%); }
+        .effect-btn.gambler:hover { border-color: #f59e0b; box-shadow: 0 0 15px rgba(245, 158, 11, 0.4); }
+        
+        /* 대미지 플로팅 애니메이션 */
+        @keyframes damageFloat {
+            0% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+            50% { opacity: 1; transform: translateX(-50%) translateY(-30px) scale(1.2); }
+            100% { opacity: 0; transform: translateX(-50%) translateY(-60px) scale(0.8); }
+        }
+        
+        /* 우측 테스트 영역 */
+        .test-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .test-zone {
+            width: 80%;
+            height: 70%;
+            border: 2px dashed #333;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: radial-gradient(circle at center, rgba(96, 165, 250, 0.05) 0%, transparent 70%);
+        }
+        
+        .target-dummy {
+            width: 150px;
+            height: 200px;
+            background: linear-gradient(180deg, #4a4a6a 0%, #2a2a4a 100%);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid #555;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .target-dummy:hover {
+            border-color: #ef4444;
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.3);
+        }
+        
+        .target-dummy .face {
+            font-size: 60px;
+            margin-bottom: 10px;
+        }
+        
+        .target-dummy .label {
+            font-size: 0.8rem;
+            color: #888;
+        }
+        
+        .target-dummy .hp-bar {
+            position: absolute;
+            bottom: -30px;
+            width: 120px;
+            height: 15px;
+            background: #1a1a1a;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .target-dummy .hp-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #ef4444, #f87171);
+            border-radius: 10px;
+        }
+        
+        /* 도움말 */
+        .help-text {
+            position: absolute;
+            bottom: 30px;
+            color: #666;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+        
+        /* 클리어 버튼 */
+        .clear-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 5px;
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .clear-btn:hover {
+            background: #ef4444;
+            border-color: #ef4444;
+        }
+        
+        /* 좌표 표시 */
+        .coords {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #666;
+            font-size: 0.75rem;
+        }
+        
+        /* 랜덤 위치 토글 */
+        .toggle-container {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+        }
+        
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        
+        .toggle-switch {
+            width: 50px;
+            height: 26px;
+            background: #333;
+            border-radius: 13px;
+            position: relative;
+            transition: background 0.3s;
+        }
+        
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            background: #fff;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s;
+        }
+        
+        .toggle-input {
+            display: none;
+        }
+        
+        .toggle-input:checked + .toggle-label .toggle-switch {
+            background: #60a5fa;
+        }
+        
+        .toggle-input:checked + .toggle-label .toggle-switch::after {
+            transform: translateX(24px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 좌측 컨트롤 패널 -->
+        <div class="control-panel">
+            <h1 class="panel-title">⚡ VFX TESTER</h1>
+            
+            <!-- 공격 이펙트 -->
+            <div class="effect-category">
+                <div class="category-title">⚔️ ATTACK EFFECTS</div>
+                <button class="effect-btn attack" onclick="playEffect('slash')">
+                    <span class="icon">🗡️</span> Slash (베기)
+                </button>
+                <button class="effect-btn attack" onclick="playEffect('crossSlash')">
+                    <span class="icon">✖️</span> Cross Slash (X베기)
+                </button>
+                <button class="effect-btn attack" onclick="playEffect('multiHit')">
+                    <span class="icon">💥</span> Multi Hit (난도질)
+                </button>
+                <button class="effect-btn attack" onclick="playEffect('criticalHit')">
+                    <span class="icon">🔥</span> Critical Hit (크리티컬)
+                </button>
+            </div>
+            
+            <!-- 충격 이펙트 -->
+            <div class="effect-category">
+                <div class="category-title">💫 IMPACT EFFECTS</div>
+                <button class="effect-btn attack" onclick="playEffect('impact')">
+                    <span class="icon">💢</span> Impact (충격)
+                </button>
+                <button class="effect-btn attack" onclick="playEffect('sparks')">
+                    <span class="icon">✨</span> Sparks (스파크)
+                </button>
+                <button class="effect-btn attack" onclick="playEffect('shockwave')">
+                    <span class="icon">🌀</span> Shockwave (충격파)
+                </button>
+            </div>
+            
+            <!-- 방어/힐 이펙트 -->
+            <div class="effect-category">
+                <div class="category-title">🛡️ DEFENSE & HEAL</div>
+                <button class="effect-btn defense" onclick="playEffect('shield')">
+                    <span class="icon">🛡️</span> Shield (방어)
+                </button>
+                <button class="effect-btn heal" onclick="playEffect('heal')">
+                    <span class="icon">💚</span> Heal (회복)
+                </button>
+            </div>
+            
+            <!-- 상태 이펙트 -->
+            <div class="effect-category">
+                <div class="category-title">🩸 STATUS EFFECTS</div>
+                <button class="effect-btn status" onclick="playEffect('bleed')">
+                    <span class="icon">🩸</span> Bleed (출혈)
+                </button>
+                <button class="effect-btn status" onclick="playEffect('buff')">
+                    <span class="icon">⬆️</span> Buff (버프)
+                </button>
+                <button class="effect-btn status" onclick="playEffect('debuff')">
+                    <span class="icon">⬇️</span> Debuff (디버프)
+                </button>
+            </div>
+            
+            <!-- 특수 이펙트 -->
+            <div class="effect-category">
+                <div class="category-title">🌟 SPECIAL EFFECTS</div>
+                <button class="effect-btn special" onclick="playEffect('fire')">
+                    <span class="icon">🔥</span> Fire (화염)
+                </button>
+                <button class="effect-btn special" onclick="playEffect('lightning')">
+                    <span class="icon">⚡</span> Lightning (번개)
+                </button>
+                <button class="effect-btn special" onclick="playEffect('projectile')">
+                    <span class="icon">🔮</span> Projectile (투사체)
+                </button>
+                <button class="effect-btn special" onclick="playEffect('dagger')">
+                    <span class="icon">🗡️</span> Dagger (단검)
+                </button>
+                <button class="effect-btn special" onclick="playEffect('chakram')">
+                    <span class="icon">🔘</span> Chakram Throw (던지기)
+                </button>
+                <button class="effect-btn special" onclick="playEffect('chakramReturn')">
+                    <span class="icon">🔘</span> Chakram Return (되돌아오기)
+                </button>
+                <button class="effect-btn defense" onclick="playEffect('smoke')">
+                    <span class="icon">💨</span> Smoke (연막)
+                </button>
+                <button class="effect-btn special" onclick="playEffect('critical')" style="background: linear-gradient(135deg, #ff4444, #ff8800);">
+                    <span class="icon">💥</span> Critical (크리티컬)
+                </button>
+            </div>
+            
+            <!-- 겜블러 이펙트 -->
+            <div class="effect-category">
+                <div class="category-title">🎰 GAMBLER EFFECTS</div>
+                <button class="effect-btn gambler" onclick="playGamblerEffect('luckyStrikeMax')" style="background: linear-gradient(135deg, #1a1a2e 0%, #3d2f0f 100%);">
+                    <span class="icon">🎲</span> Lucky Strike MAX (럭키 최대)
+                </button>
+                <button class="effect-btn gambler" onclick="playGamblerEffect('luckyStrikeMin')">
+                    <span class="icon">🎲</span> Lucky Strike MIN (럭키 최소)
+                </button>
+                <button class="effect-btn gambler" onclick="playGamblerEffect('luckyStrikeRandom')">
+                    <span class="icon">🎲</span> Lucky Strike Random (럭키 랜덤)
+                </button>
+                <button class="effect-btn gambler" onclick="playGamblerEffect('chipDropMax')">
+                    <span class="icon">💰</span> Chip Drop MAX (칩 드롭 최대)
+                </button>
+                <button class="effect-btn gambler" onclick="playGamblerEffect('chipDropNormal')">
+                    <span class="icon">💠</span> Chip Drop Normal (칩 드롭 일반)
+                </button>
+                <button class="effect-btn gambler" onclick="playGamblerEffect('chipShieldMax')" style="background: linear-gradient(135deg, #1a1a2e 0%, #1a3a5c 100%);">
+                    <span class="icon">🛡️</span> Chip Shield MAX (칩 쉴드 최대)
+                </button>
+                <button class="effect-btn gambler" onclick="playGamblerEffect('chipShieldNormal')">
+                    <span class="icon">🛡️</span> Chip Shield Normal (칩 쉴드 일반)
+                </button>
+                <button class="effect-btn gambler" onclick="playGamblerEffect('jackpot')">
+                    <span class="icon">🎉</span> Jackpot (잭팟)
+                </button>
+                <button class="effect-btn gambler" onclick="playGamblerEffect('goodResult')">
+                    <span class="icon">✨</span> Good Result (좋은 결과)
+                </button>
+                <button class="effect-btn gambler" onclick="playGamblerEffect('missResult')">
+                    <span class="icon">💔</span> Miss Result (나쁜 결과)
+                </button>
+                <button class="effect-btn gambler" onclick="playGamblerEffect('success')">
+                    <span class="icon">✓</span> Success (성공)
+                </button>
+                <button class="effect-btn gambler" onclick="playGamblerEffect('fail')">
+                    <span class="icon">✗</span> Fail (실패)
+                </button>
+                <button class="effect-btn gambler" onclick="playGamblerEffect('allIn')">
+                    <span class="icon">🔥</span> All-In (올인)
+                </button>
+                <button class="effect-btn gambler" onclick="playGamblerEffect('chipGain')">
+                    <span class="icon">💠</span> Chip Gain (칩 획득)
+                </button>
+                <button class="effect-btn gambler" onclick="playGamblerEffect('bluff')">
+                    <span class="icon">🃏</span> Bluff (블러프)
+                </button>
+                <button class="effect-btn gambler" onclick="playGamblerEffect('slot')">
+                    <span class="icon">🎰</span> Slot Machine (슬롯)
+                </button>
+                <button class="effect-btn gambler" onclick="playGamblerEffect('dice')">
+                    <span class="icon">🎲</span> Dice Roll (주사위)
+                </button>
+                <button class="effect-btn gambler" onclick="playGamblerEffect('hit')">
+                    <span class="icon">💥</span> Hit (히트)
+                </button>
+                <button class="effect-btn gambler" onclick="playGamblerEffect('shockwave')">
+                    <span class="icon">🌀</span> Shockwave (충격파)
+                </button>
+                <button class="effect-btn gambler" onclick="playGamblerEffect('heal')">
+                    <span class="icon">💚</span> Heal (힐)
+                </button>
+            </div>
+            
+            <!-- 시너지 카드 이펙트 -->
+            <div class="effect-category">
+                <div class="category-title">🔗 SYNERGY CARDS</div>
+                <button class="effect-btn attack" onclick="playSynergyCard('cardFall')">
+                    <span class="icon">🎴</span> Card Fall (카드폴)
+                </button>
+            </div>
+            
+            <!-- 옵션 -->
+            <div class="toggle-container">
+                <input type="checkbox" id="randomPos" class="toggle-input" checked>
+                <label for="randomPos" class="toggle-label">
+                    <span>Random Position</span>
+                    <div class="toggle-switch"></div>
+                </label>
+            </div>
+            
+            <div class="toggle-container">
+                <input type="checkbox" id="clickMode" class="toggle-input">
+                <label for="clickMode" class="toggle-label">
+                    <span>Click to Play</span>
+                    <div class="toggle-switch"></div>
+                </label>
+            </div>
+        </div>
+        
+        <!-- 우측 테스트 영역 -->
+        <div class="test-area" id="testArea">
+            <div class="coords" id="coords">X: 0, Y: 0</div>
+            <button class="clear-btn" onclick="clearEffects()">Clear All</button>
+            
+            <div class="test-zone" id="testZone">
+                <div class="target-dummy" id="target">
+                    <div class="face">🎯</div>
+                    <div class="label">TARGET</div>
+                    <div class="hp-bar">
+                        <div class="hp-fill"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="help-text">
+                Click buttons to play effects on target<br>
+                Or enable "Click to Play" and click anywhere
+            </div>
+        </div>
+    </div>
+    
+    <script src="vfx.js"></script>
+    <script src="gambler_vfx.js"></script>
+    <script>
+        // VFX 초기화
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof VFX !== 'undefined') {
+                VFX.init();
+                console.log('VFX System Ready!');
+            }
+            if (typeof GamblerVFX !== 'undefined') {
+                GamblerVFX.init();
+                console.log('GamblerVFX System Ready!');
+            }
+        });
+        
+        // 타겟 위치 가져오기
+        function getTargetPos() {
+            const target = document.getElementById('target');
+            const rect = target.getBoundingClientRect();
+            return {
+                x: rect.left + rect.width / 2,
+                y: rect.top + rect.height / 2
+            };
+        }
+        
+        // 랜덤 오프셋 추가
+        function getPlayPos() {
+            const pos = getTargetPos();
+            const randomEnabled = document.getElementById('randomPos').checked;
+            
+            if (randomEnabled) {
+                pos.x += (Math.random() - 0.5) * 100;
+                pos.y += (Math.random() - 0.5) * 100;
+            }
+            
+            return pos;
+        }
+        
+        // 현재 선택된 이펙트
+        let currentEffect = 'slash';
+        
+        // 이펙트 재생
+        function playEffect(effectName, customPos = null) {
+            currentEffect = effectName;
+            const pos = customPos || getPlayPos();
+            
+            switch(effectName) {
+                case 'slash':
+                    VFX.slash(pos.x, pos.y, { color: '#ff6b6b' });
+                    break;
+                case 'crossSlash':
+                    VFX.crossSlash(pos.x, pos.y, { color: '#ff4444' });
+                    break;
+                case 'multiHit':
+                    VFX.multiHit(pos.x, pos.y, 5, { color: '#ff6b6b' });
+                    break;
+                case 'criticalHit':
+                    VFX.criticalHit(pos.x, pos.y, { size: 200 });
+                    break;
+                case 'impact':
+                    VFX.impact(pos.x, pos.y, { color: '#fff', size: 120 });
+                    break;
+                case 'sparks':
+                    VFX.sparks(pos.x, pos.y, { color: '#fbbf24', count: 30, speed: 20 });
+                    break;
+                case 'shockwave':
+                    VFX.shockwave(pos.x, pos.y, { color: '#60a5fa', size: 300 });
+                    break;
+                case 'shield':
+                    VFX.shield(pos.x, pos.y, { color: '#60a5fa', size: 100 });
+                    break;
+                case 'heal':
+                    VFX.heal(pos.x, pos.y, { color: '#4ade80', size: 100 });
+                    break;
+                case 'bleed':
+                    VFX.bleed(pos.x, pos.y, { count: 20 });
+                    break;
+                case 'buff':
+                    VFX.buff(pos.x, pos.y, { color: '#fbbf24' });
+                    break;
+                case 'debuff':
+                    VFX.buff(pos.x, pos.y, { color: '#a855f7', isDebuff: true });
+                    break;
+                case 'fire':
+                    VFX.fire(pos.x, pos.y, { size: 80 });
+                    break;
+                case 'lightning':
+                    const startPos = { x: pos.x - 100, y: pos.y - 150 };
+                    VFX.lightning(startPos.x, startPos.y, pos.x, pos.y, { color: '#60a5fa' });
+                    break;
+                case 'projectile':
+                    const fromPos = { x: pos.x - 300, y: pos.y };
+                    VFX.projectile(fromPos.x, fromPos.y, pos.x, pos.y, { 
+                        color: '#a855f7', 
+                        size: 20,
+                        speed: 20
+                    });
+                    break;
+                case 'dagger':
+                    const daggerFrom = { x: pos.x - 350, y: pos.y + 50 };
+                    VFX.dagger(daggerFrom.x, daggerFrom.y, pos.x, pos.y, { 
+                        color: '#c0c0c0',
+                        glowColor: '#60a5fa',
+                        size: 50,
+                        speed: 30,
+                        spinSpeed: 20
+                    });
+                    break;
+                case 'chakram':
+                    // 던지기: 왼쪽에서 타겟을 뚫고 화면 밖으로
+                    const chakramFrom = { x: pos.x - 400, y: pos.y };
+                    VFX.chakram(chakramFrom.x, chakramFrom.y, pos.x, pos.y, { 
+                        color: '#ffd700',
+                        glowColor: '#ff8c00',
+                        size: 55,
+                        speed: 28,
+                        spinSpeed: 35,
+                        passThrough: true  // 뚫고 지나감!
+                    });
+                    break;
+                case 'chakramReturn':
+                    // 되돌아오기: 화면 밖에서 타겟을 뚫고 왼쪽으로
+                    const returnTo = { x: pos.x - 400, y: pos.y };
+                    VFX.chakram(pos.x, pos.y, returnTo.x, returnTo.y, { 
+                        color: '#ffd700',
+                        glowColor: '#ff8c00',
+                        size: 55,
+                        speed: 28,
+                        spinSpeed: -35,     // 반대 방향 회전
+                        fromOffscreen: true // 화면 밖에서 시작!
+                    });
+                    break;
+                case 'smoke':
+                    VFX.smoke(pos.x, pos.y, { 
+                        color: '#667788', 
+                        size: 150, 
+                        duration: 800, 
+                        count: 15 
+                    });
+                    break;
+                case 'critical':
+                    VFX.criticalHit(pos.x, pos.y, { 
+                        color: '#ff4444',
+                        size: 200 
+                    });
+                    break;
+            }
+            
+            // 타겟 히트 효과
+            const target = document.getElementById('target');
+            target.style.transform = 'scale(0.95)';
+            target.style.filter = 'brightness(1.5)';
+            setTimeout(() => {
+                target.style.transform = '';
+                target.style.filter = '';
+            }, 150);
+        }
+        
+        // 겜블러 이펙트 재생
+        function playGamblerEffect(effectName) {
+            const pos = getPlayPos();
+            const target = document.getElementById('target');
+            
+            switch(effectName) {
+                case 'luckyStrikeMax':
+                    // 럭키 스트라이크 - MAX
+                    GamblerVFX.playLuckyStrike(pos.x, pos.y, 3, 9, 9, () => {
+                        console.log('Lucky Strike MAX 완료!');
+                    });
+                    break;
+                case 'luckyStrikeMin':
+                    // 럭키 스트라이크 - MIN
+                    GamblerVFX.playLuckyStrike(pos.x, pos.y, 3, 9, 3, () => {
+                        console.log('Lucky Strike MIN 완료!');
+                    });
+                    break;
+                case 'luckyStrikeRandom':
+                    // 럭키 스트라이크 - 랜덤
+                    const randomValue = 3 + Math.floor(Math.random() * 7);
+                    GamblerVFX.playLuckyStrike(pos.x, pos.y, 3, 9, randomValue, () => {
+                        console.log('Lucky Strike Random:', randomValue);
+                    });
+                    break;
+                case 'chipDropMax':
+                    // 칩 드롭 - 최대 (9개)
+                    GamblerVFX.playChipDrop(pos.x, pos.y, 9, true, false);
+                    break;
+                case 'chipDropNormal':
+                    // 칩 드롭 - 일반 (5개)
+                    GamblerVFX.playChipDrop(pos.x, pos.y, 5, false, false);
+                    break;
+                case 'chipShieldMax':
+                    // 칩 쉴드 - 최대 (8)
+                    GamblerVFX.playChipShield(pos.x, pos.y, 2, 8, 8, () => console.log('Chip Shield MAX 완료'));
+                    break;
+                case 'chipShieldNormal':
+                    // 칩 쉴드 - 일반 (5)
+                    GamblerVFX.playChipShield(pos.x, pos.y, 2, 8, 5, () => console.log('Chip Shield Normal 완료'));
+                    break;
+                case 'jackpot':
+                    // 잭팟 (최대값)
+                    GamblerVFX.playGambleResult(9, 1, 9, pos.x, pos.y - 30);
+                    break;
+                case 'goodResult':
+                    // 좋은 결과 (높은값)
+                    GamblerVFX.playGambleResult(7, 1, 9, pos.x, pos.y - 30);
+                    break;
+                case 'missResult':
+                    // 나쁜 결과 (최소값)
+                    GamblerVFX.playGambleResult(1, 1, 9, pos.x, pos.y - 30);
+                    break;
+                case 'success':
+                    GamblerVFX.playSuccessEffect(pos.x, pos.y);
+                    break;
+                case 'fail':
+                    GamblerVFX.playFailEffect(pos.x, pos.y);
+                    break;
+                case 'allIn':
+                    GamblerVFX.playAllInEffect(8, pos.x, pos.y);
+                    break;
+                case 'chipGain':
+                    GamblerVFX.playChipGainEffect(5, pos.x, pos.y);
+                    break;
+                case 'bluff':
+                    GamblerVFX.playBluffEffect(target);
+                    break;
+                case 'slot':
+                    const results = ['🍒', '🍋', '🍀'][Math.floor(Math.random() * 3)];
+                    const r1 = ['🍒', '🍋', '🍀', '⭐'][Math.floor(Math.random() * 4)];
+                    const r2 = ['🍒', '🍋', '🍀', '⭐'][Math.floor(Math.random() * 4)];
+                    const r3 = ['🍒', '🍋', '🍀', '⭐'][Math.floor(Math.random() * 4)];
+                    GamblerVFX.playSlotEffect([r1, r2, r3]);
+                    break;
+                case 'dice':
+                    const diceResult = Math.floor(Math.random() * 6) + 1;
+                    GamblerVFX.playDiceRoll(pos.x, pos.y, diceResult);
+                    break;
+                case 'hit':
+                    const damage = Math.floor(Math.random() * 8) + 4;
+                    GamblerVFX.playHitEffect(pos.x, pos.y, damage);
+                    break;
+                case 'shockwave':
+                    GamblerVFX.playShockwave(pos.x, pos.y, '#fbbf24', 300);
+                    break;
+                case 'heal':
+                    GamblerVFX.playHealEffect(target);
+                    break;
+            }
+            
+            // 타겟 히트 효과
+            target.style.transform = 'scale(0.95)';
+            target.style.filter = 'brightness(1.5)';
+            setTimeout(() => {
+                target.style.transform = '';
+                target.style.filter = '';
+            }, 150);
+        }
+        
+        // 시너지 카드 이펙트 재생
+        function playSynergyCard(cardName) {
+            const pos = getPlayPos();
+            const target = document.getElementById('target');
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            
+            switch(cardName) {
+                case 'cardFall':
+                    // 카드폴 - 카드들이 좌에서 우로 관통하는 연출
+                    const cardCount = 5; // 시뮬레이션용 카드 수
+                    
+                    // 1단계: 카드들이 여러 방향에서 중앙으로 모임
+                    for (let i = 0; i < cardCount; i++) {
+                        const angle = (i / cardCount) * Math.PI * 2;
+                        const startRadius = 300;
+                        const startX = centerX + Math.cos(angle) * startRadius;
+                        const startY = centerY + Math.sin(angle) * startRadius;
+                        
+                        const card = document.createElement('div');
+                        card.innerHTML = '🎴';
+                        card.style.cssText = `
+                            position: fixed;
+                            left: ${startX}px;
+                            top: ${startY}px;
+                            font-size: 60px;
+                            z-index: 10000;
+                            pointer-events: none;
+                            transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+                            filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.8));
+                            transform: rotate(${angle * 180 / Math.PI}deg);
+                        `;
+                        document.body.appendChild(card);
+                        
+                        // 중앙으로 모이기
+                        setTimeout(() => {
+                            const orbitRadius = 80;
+                            card.style.left = `${centerX + Math.cos(angle) * orbitRadius}px`;
+                            card.style.top = `${centerY + Math.sin(angle) * orbitRadius}px`;
+                            card.style.transform = `rotate(${720 + angle * 180 / Math.PI}deg) scale(0.8)`;
+                        }, 50 + i * 50);
+                        
+                        // 타겟으로 발사
+                        setTimeout(() => {
+                            card.style.transition = 'all 0.3s ease-in';
+                            card.style.left = `${pos.x}px`;
+                            card.style.top = `${pos.y}px`;
+                            card.style.transform = 'scale(0.2) rotate(1080deg)';
+                            card.style.opacity = '0';
+                        }, 600 + i * 80);
+                        
+                        setTimeout(() => card.remove(), 1200);
+                    }
+                    
+                    // 2단계: 충격파 + 대미지 VFX
+                    setTimeout(() => {
+                        if (typeof VFX !== 'undefined') {
+                            VFX.shockwave(pos.x, pos.y, { color: '#ffd700', size: 300 });
+                            VFX.sparks(pos.x, pos.y, { color: '#ffd700', count: 30, speed: 400 });
+                            VFX.sparks(pos.x, pos.y, { color: '#ff4444', count: 20, speed: 300 });
+                        }
+                        
+                        // 대미지 숫자 표시
+                        const damagePerCard = [];
+                        let total = 0;
+                        for (let i = 0; i < cardCount; i++) {
+                            const dmg = 2 + Math.floor(Math.random() * 3);
+                            damagePerCard.push(dmg);
+                            total += dmg;
+                        }
+                        
+                        const dmgText = document.createElement('div');
+                        dmgText.textContent = `${total}`;
+                        dmgText.style.cssText = `
+                            position: fixed;
+                            left: ${pos.x}px;
+                            top: ${pos.y - 50}px;
+                            font-family: 'Orbitron', sans-serif;
+                            font-size: 48px;
+                            font-weight: bold;
+                            color: #ffd700;
+                            text-shadow: 0 0 20px #ff4444, 0 0 40px #ffd700;
+                            z-index: 10001;
+                            pointer-events: none;
+                            transform: translateX(-50%);
+                            animation: damageFloat 1s ease-out forwards;
+                        `;
+                        document.body.appendChild(dmgText);
+                        setTimeout(() => dmgText.remove(), 1000);
+                        
+                        // 타겟 히트 효과
+                        target.style.transform = 'scale(0.9)';
+                        target.style.filter = 'brightness(2) saturate(1.5)';
+                        setTimeout(() => {
+                            target.style.transform = '';
+                            target.style.filter = '';
+                        }, 200);
+                        
+                        console.log(`🎴 카드폴! ${cardCount}장 → 전체 ${total} 데미지! (${damagePerCard.join('+')})`);
+                    }, 900);
+                    break;
+            }
+        }
+        
+        // 클리어
+        function clearEffects() {
+            if (typeof VFX !== 'undefined') {
+                VFX.particles = [];
+                VFX.animations = [];
+                VFX.ctx.clearRect(0, 0, VFX.canvas.width, VFX.canvas.height);
+            }
+            if (typeof GamblerVFX !== 'undefined') {
+                GamblerVFX.particles = [];
+                GamblerVFX.animations = [];
+                GamblerVFX.ctx.clearRect(0, 0, GamblerVFX.canvas.width, GamblerVFX.canvas.height);
+            }
+        }
+        
+        // 좌표 표시
+        const testArea = document.getElementById('testArea');
+        const coordsDisplay = document.getElementById('coords');
+        
+        testArea.addEventListener('mousemove', (e) => {
+            coordsDisplay.textContent = `X: ${e.clientX}, Y: ${e.clientY}`;
+        });
+        
+        // 클릭 모드
+        testArea.addEventListener('click', (e) => {
+            const clickMode = document.getElementById('clickMode').checked;
+            if (clickMode && e.target.id !== 'target') {
+                playEffect(currentEffect, { x: e.clientX, y: e.clientY });
+            }
+        });
+        
+        // 타겟 클릭
+        document.getElementById('target').addEventListener('click', () => {
+            playEffect(currentEffect);
+        });
+        
+        // 키보드 단축키
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case '1': playEffect('slash'); break;
+                case '2': playEffect('crossSlash'); break;
+                case '3': playEffect('multiHit'); break;
+                case '4': playEffect('criticalHit'); break;
+                case '5': playEffect('impact'); break;
+                case '6': playEffect('shockwave'); break;
+                case '7': playEffect('fire'); break;
+                case '8': playEffect('lightning'); break;
+                case 'c': case 'C': clearEffects(); break;
+            }
+        });
+    </script>
+</body>
+</html>
+

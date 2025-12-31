@@ -5,8 +5,8 @@ export default defineConfig({
     // 루트 디렉토리
     root: '.',
     
-    // Electron용 base 설정 (상대 경로)
-    base: './',
+    // GitHub Pages 배포용 base 설정 (저장소 이름)
+    base: '/DeckGame/',
     
     // 빌드 설정
     build: {

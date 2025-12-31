@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "public": "dist",
+    "public": "deploy",
     "ignore": [
       "firebase.json",
       "**/.*",
@@ -8,8 +8,8 @@
     ],
     "rewrites": [
       {
-        "source": "**",
-        "destination": "/index.html"
+        "source": "/deckgame/**",
+        "destination": "/deckgame/index.html"
       }
     ],
     "headers": [

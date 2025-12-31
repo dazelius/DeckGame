@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Shadow Deck - Roguelike Deckbuilder</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="card-styles.css">
+    <link rel="stylesheet" href="responsive.css">
+    <link rel="stylesheet" href="map.css">
+    <link rel="stylesheet" href="title.css">
+    <link rel="stylesheet" href="town.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Cinzel:wght@700;900&family=MedievalSharp&display=swap" rel="stylesheet">
+    
+    <!-- PIXI.js for Canvas-based card animations -->
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.x/dist/pixi.min.js"></script>
+</head>
+<body>
+    <!-- 즉시 표시되는 초기 로딩 화면 -->
+    <div id="initial-loading" style="
+        position: fixed;
+        inset: 0;
+        z-index: 99998;
+        background: #0a0a0f;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 30px;
+        transition: opacity 0.5s ease;
+    ">
+        <div style="
+            font-family: 'Cinzel', serif;
+            font-size: 2rem;
+            color: #c9a55c;
+            text-shadow: 0 0 20px rgba(201, 165, 92, 0.5);
+            animation: pulse 2s ease-in-out infinite;
+        ">Loading...</div>
+        <style>
+            @keyframes pulse {
+                0%, 100% { opacity: 0.5; }
+                50% { opacity: 1; }
+            }
+        </style>
+    </div>
+    
+    <div class="game-container">
+        <!-- 3-레이어 배경 시스템 -->
+        <div class="battle-background">
+            <div class="bg-layers">
+                <div id="bg-sky" class="bg-layer bg-sky"></div>
+                <div id="bg-wall" class="bg-layer bg-wall"></div>
+                <div id="bg-floor" class="bg-layer bg-floor"></div>
+            </div>
+            <div class="bg-overlay"></div>
+            <!-- 파티클 -->
+            <div class="particles">
+                <div class="particle"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+                <div class="particle"></div>
+            </div>
+        </div>
+        
+        <!-- 구 배경 레이어 (호환성용) -->
+        <div class="background-layer">
+            <div class="bg-gradient"></div>
+            <div class="bg-vignette"></div>
+        </div>
+
+        <!-- Top UI Bar -->
+        <div class="top-bar">
+            <div class="floor-info">
+                <span class="floor-text">Floor <span id="battle-num">1</span></span>
+            </div>
+            <div class="turn-indicator">
+                <span id="turn-text">Turn 1</span>
+            </div>
+        </div>
+
+        <!-- 메인 전투 영역 -->
+        <div class="battle-arena">
+            <!-- 플레이어 영역 (왼쪽) -->
+            <div class="combatant player-side">
+                <div class="character-container" id="player">
+                    <!-- 플레이어 스프라이트 -->
+                    <div class="character player-character">
+                        <div class="player-shadow"></div>
+                        <img src="hero.png" alt="Hero" class="player-sprite-img" id="player-sprite">
+                    </div>
+                    
+                    <!-- 플레이어 스탯 -->
+                    <div class="stat-bars">
+                        <div class="hp-container">
+                            <div class="hp-bar player-hp">
+                                <div class="hp-fill" id="player-hp-bar"></div>
+                                <span class="hp-text" id="player-hp-text">80/80</span>
+                            </div>
+                        </div>
+                        <div class="block-display" id="player-block-container">
+                            <div class="block-shield">
+                                <span class="block-value" id="player-block">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 플레이어 상태이상 -->
+                    <div class="player-debuffs" id="player-debuffs"></div>
+                    <div class="character-name player-name">Hero</div>
+                </div>
+            </div>
+
+            <!-- VS 표시 (숨김) -->
+            <div class="vs-divider" style="display: none;">
+                <div class="vs-glow"></div>
+                <span class="vs-text">VS</span>
+            </div>
+
+            <!-- 적 영역 (오른쪽) -->
+            <div class="combatant enemy-side enemy-area">
+                <!-- 적 의도 (기존 시스템) -->
+                <div class="intent" id="enemy-intent" style="display: none;">
+                    <div class="intent-bg"></div>
+                    <span class="intent-icon" id="intent-icon">⚔️</span>
+                    <span class="intent-value" id="intent-value">12</span>
+                </div>
+                
+                <!-- 기존 단일 적 (다중 적 시스템에서 숨겨짐) -->
+                <div class="character enemy-character" id="enemy" style="display: none;">
+                    <div class="enemy-shadow"></div>
+                    <div class="enemy-body" id="enemy-sprite">
+                        <!-- 몬스터 이미지는 동적으로 생성됨 -->
+                    </div>
+                </div>
+                
+                <!-- 다중 적 컨테이너가 여기에 동적으로 추가됨 -->
+                
+                <!-- 적 이름 (동적 업데이트) -->
+                <div class="character-name enemy-name" id="enemy-name">Enemy</div>
+            </div>
+        </div>
+
+        <!-- 하단 카드 영역 -->
+        <div class="bottom-area">
+            <!-- 에너지 오브 -->
+            <div class="energy-orb" id="energy-container">
+                <div class="energy-ring"></div>
+                <div class="energy-core"></div>
+                <span class="energy-value" id="energy-text">3/3</span>
+            </div>
+
+            <!-- Draw Pile -->
+            <div class="deck-pile draw-pile" id="draw-pile">
+                <div class="pile-cards">
+                    <div class="pile-card"></div>
+                    <div class="pile-card"></div>
+                    <div class="pile-card"></div>
+                </div>
+                <span class="pile-count" id="draw-count">5</span>
+                <span class="pile-label">Draw</span>
+            </div>
+
+            <!-- Hand Area -->
+            <div class="hand-area">
+                <div class="hand" id="hand"></div>
+            </div>
+
+            <!-- Discard Pile -->
+            <div class="deck-pile discard-pile" id="discard-pile">
+                <div class="pile-cards empty">
+                    <div class="pile-card"></div>
+                </div>
+                <span class="pile-count" id="discard-count">0</span>
+                <span class="pile-label">Discard</span>
+            </div>
+
+            <!-- End Turn Button -->
+            <button class="end-turn-btn" id="end-turn-btn">
+                <span class="btn-text">END</span>
+            </button>
+        </div>
+
+        <!-- Battle Log (Compact) -->
+        <div class="battle-log" id="battle-log">
+            <div class="log-header">LOG</div>
+            <div class="log-entries" id="log-entries"></div>
+        </div>
+
+        <!-- Game Modal -->
+        <div class="modal" id="game-modal">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content">
+                <div class="modal-icon" id="modal-icon"></div>
+                <h2 id="modal-title">Victory!</h2>
+                <p id="modal-message">Enemy defeated!</p>
+                <div class="reward-section" id="reward-section">
+                    <div class="reward-label">Card Reward</div>
+                    <div class="reward-card" id="reward-card"></div>
+                </div>
+                <button class="modal-btn" id="modal-btn">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 반응형 시스템 (최우선 로드) -->
+    <script src="responsive.js"></script>
+    
+    <script src="language.js"></script>
+    <script src="player-stats.js"></script>
+    <script src="npc.js"></script>
+    <script src="effects.js"></script>
+    <script src="vfx.js"></script>
+    <script src="shield-break-vfx.js"></script>
+    <script src="background.js"></script>
+    <script src="shield.js"></script>
+    <script src="sound-system.js"></script>
+    <script src="bgm.js"></script>
+    <script src="damage-system.js"></script>
+    <script src="relics.js"></script>
+    <script src="relics-field.js"></script>
+    <script src="critical-system.js"></script>
+    <script src="relics-ui.js"></script>
+    <script src="relic-loadout.js"></script>
+    <script src="relic-fourcard.js"></script>
+    <script src="break-system.js"></script>
+    <script src="ally.js"></script>
+    <script src="monster-dialogue.js"></script>
+    <script src="card-animation.js"></script>
+    <script src="result.js"></script>
+    <script src="monster.js"></script>
+    
+    <!-- 카드 시스템 (분리됨) -->
+    <script src="card-types.js"></script>
+    <script src="card-database.js"></script>
+    <script src="cards.js"></script>
+    <script src="field-system.js"></script>
+    <script src="field-vfx.js"></script>
+    <script src="card-triforce.js"></script>
+    <script src="card-energybolt.js"></script>
+    <script src="card-shadowclone.js"></script>
+    <script src="card-upgrade.js"></script>
+    <script src="card-mage-upgrade.js"></script>
+    <script src="card_special.js"></script>
+    <script src="card_gacha.js"></script>
+    <script src="card_rogue.js"></script>
+    <script src="cards-warrior.js"></script>
+    <script src="card-guardcrush.js"></script>
+    <script src="카드_러시안룰렛.js"></script>
+    <script src="카드_역습.js"></script>
+    <script src="card-utils.js"></script>
+    
+    <script src="starter-deck.js"></script>
+    <script src="stage.js"></script>
+    <script src="balance.js"></script>
+    <script src="map-ui.js"></script>
+    <script src="topbar.js"></script>
+    <script src="eventsystem.js"></script>
+    <script src="map.js"></script>
+    <script src="treasure.js"></script>
+    <script src="event1.js"></script>
+    <script src="event2.js"></script>
+    <script src="event3.js"></script>
+    <script src="event4.js"></script>
+    <script src="camp_event.js"></script>
+    <script src="event_shop.js"></script>
+    <script src="extraction_result.js"></script>
+    <script src="save-system.js"></script>
+    <script src="hoodshop.js"></script>
+    <script src="job-system.js"></script>
+    <script src="brave-system.js"></script>
+    <script src="gambler_vfx.js"></script>
+    <script src="hero-gambler.js"></script>
+    <script src="town.js"></script>
+    <script src="title.js"></script>
+    <script src="debug.js"></script>
+    <script src="monster-passives.js"></script>
+    <script src="buff.js"></script>
+    <script src="turn-effects.js"></script>
+    <!-- 분리된 게임 모듈 -->
+    <script src="targeting_line.js"></script>
+    <script src="card-drag.js"></script>
+    <script src="hand-manager.js"></script>
+    <script src="combat-effects.js"></script>
+    <script src="hit-effects.js"></script>
+    <script src="spell-vfx.js"></script>
+    <script src="mage-vfx.js"></script>
+    <script src="gore-vfx.js"></script>
+    <script src="memory-intent.js"></script>
+    <script src="memory-visual.js"></script>
+    <script src="stealth-system.js"></script>
+    <script src="overkill-system.js"></script>
+    <script src="image-preloader.js"></script>
+    <script src="loading-screen.js"></script>
+    <script src="deck-viewer.js"></script>
+    <script src="incantation-system.js"></script>
+    <script src="status-effects.js"></script>
+    <script src="enemy-ai.js"></script>
+    <script src="bleed-system.js"></script>
+    <script src="doppelganger.js"></script>
+    <script src="mobile-touch.js"></script>
+    <script src="camera-effects.js"></script>
+    <script src="tutorial.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
