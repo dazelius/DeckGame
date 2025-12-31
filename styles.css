@@ -184,15 +184,13 @@ img {
     display: none;
 }
 
-/* 3-레이어 배경 시스템 - 하단 그림자 문제로 비활성화 */
+/* 3-레이어 배경 시스템 */
 .battle-background {
     position: absolute;
     inset: 0;
     pointer-events: none;
     z-index: 0;
     overflow: hidden;
-    /* 하단 영역만 잘라내기 */
-    height: calc(100% - 260px); /* bottom-area 높이만큼 제외 */
 }
 
 /* 공통 배경 레이어 스타일 */
@@ -1293,9 +1291,9 @@ img {
    ========================================== */
 .bottom-area {
     position: relative;
-    z-index: 50;
+    z-index: 500; /* 배경 위에 표시되도록 z-index 대폭 상승 */
     height: 260px;
-    background: transparent; /* 그라데이션 제거 */
+    background: transparent;
     display: flex;
     align-items: center;
     padding: 0 20px;
@@ -1314,7 +1312,7 @@ img {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 60;
+    z-index: 600; /* 배경 위에 표시 */
 }
 
 /* 외곽 장식 링 */
@@ -1455,6 +1453,7 @@ img {
     align-items: center;
     cursor: pointer;
     transition: all 0.3s ease;
+    z-index: 600; /* 배경 위에 표시 */
 }
 
 .deck-pile:hover {
@@ -1653,7 +1652,7 @@ img {
     padding: 0 180px;
     height: 100%;
     position: relative;
-    z-index: 70;
+    z-index: 700; /* 배경 위에 표시 */
     pointer-events: none; /* 클릭 통과! */
 }
 
@@ -1665,7 +1664,7 @@ img {
     perspective: 1500px;
     margin-bottom: 10px;
     position: relative;
-    z-index: 70;
+    z-index: 700; /* 배경 위에 표시 */
     pointer-events: none; /* 클릭 통과! */
 }
 
@@ -2850,7 +2849,7 @@ body .card-drag-ghost.can-drop {
     transform: translateY(-50%);
     width: 90px;
     height: 90px;
-    z-index: 60;
+    z-index: 600; /* 배경 위에 표시 */
     background: 
         radial-gradient(ellipse 120% 80% at 50% 20%, 
             rgba(80, 70, 50, 0.6) 0%, 
