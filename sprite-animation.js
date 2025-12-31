@@ -1,13 +1,13 @@
 // ==========================================
-// 스프라이트 애니메이션 시스템
+// 스프라이트 애니메이션 시스템 - GSAP 기반!
 // Squash & Stretch + 생동감 있는 움직임
 // ==========================================
 
 const SpriteAnimation = {
     // 설정
     config: {
-        breathingSpeed: 2000,      // 숨쉬기 주기 (ms)
-        idleSpeed: 3000,           // 대기 애니메이션 주기
+        breathingSpeed: 2,         // 숨쉬기 주기 (초)
+        idleSpeed: 3,              // 대기 애니메이션 주기
         bounceHeight: 5,           // 튀어오르는 높이 (px)
         squashAmount: 0.05,        // 찌그러지는 정도 (0~1)
         stretchAmount: 0.08,       // 늘어나는 정도 (0~1)
@@ -16,33 +16,6 @@ const SpriteAnimation = {
     // 활성화된 애니메이션들
     activeAnimations: new Map(),
     
-    // ==========================================
-    // 🌍 화면 흔들림 (히트스탑과 함께!)
-    // ==========================================
-    screenShake(intensity = 5, duration = 150) {
-        const gameContainer = document.querySelector('.game-container') || document.body;
-        const startTime = performance.now();
-        
-        const shake = (currentTime) => {
-            const elapsed = currentTime - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            
-            if (progress < 1) {
-                // 랜덤 흔들림 (감쇠)
-                const decay = 1 - progress;
-                const offsetX = (Math.random() - 0.5) * intensity * decay * 2;
-                const offsetY = (Math.random() - 0.5) * intensity * decay * 2;
-                
-                gameContainer.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
-                requestAnimationFrame(shake);
-            } else {
-                gameContainer.style.transform = '';
-            }
-        };
-        
-        requestAnimationFrame(shake);
-    },
-    
     // MutationObserver
     observer: null,
     
@@ -50,7 +23,15 @@ const SpriteAnimation = {
     // 초기화
     // ==========================================
     init() {
-        console.log('[SpriteAnimation] 초기화');
+        console.log('[SpriteAnimation] GSAP 기반 초기화!');
+        
+        // GSAP 로드 확인
+        if (typeof gsap === 'undefined') {
+            console.error('[SpriteAnimation] GSAP이 로드되지 않았습니다!');
+            return;
+        }
+        
+        console.log('[SpriteAnimation] GSAP 버전:', gsap.version);
         this.startIdleAnimations();
         this.setupObserver();
     },
@@ -59,10 +40,8 @@ const SpriteAnimation = {
     // DOM 변화 감지 (적 생성 시 자동 애니메이션)
     // ==========================================
     setupObserver() {
-        // 적 컨테이너 감시
         const enemyArea = document.querySelector('.enemy-area, .enemies-container');
         if (!enemyArea) {
-            // 나중에 다시 시도
             setTimeout(() => this.setupObserver(), 1000);
             return;
         }
@@ -70,384 +49,278 @@ const SpriteAnimation = {
         this.observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
                 if (mutation.addedNodes.length > 0) {
-                    // 새 적이 추가되면 애니메이션 시작
                     setTimeout(() => this.refreshEnemyAnimations(), 100);
                 }
             });
         });
         
         this.observer.observe(enemyArea, { childList: true, subtree: true });
-        console.log('[SpriteAnimation] 적 감시 시작');
+        console.log('[SpriteAnimation] DOM Observer 설정 완료');
     },
     
     // ==========================================
-    // 대기 애니메이션 시작 (모든 캐릭터)
+    // 🌍 화면 흔들림 - GSAP!
     // ==========================================
-    startIdleAnimations() {
-        // 플레이어 대기 애니메이션
-        this.startPlayerIdle();
+    screenShake(intensity = 5, duration = 0.15) {
+        const gameContainer = document.querySelector('.game-container') || document.body;
         
-        // 적들 대기 애니메이션 (약간의 딜레이로 자연스럽게)
-        setTimeout(() => this.startEnemiesIdle(), 200);
-    },
-    
-    // ==========================================
-    // 플레이어 대기 애니메이션
-    // ==========================================
-    startPlayerIdle() {
-        const playerSprite = document.querySelector('.player-sprite-img');
-        if (!playerSprite) return;
-        
-        // 기존 CSS 애니메이션 제거
-        playerSprite.style.animation = 'none';
-        
-        let time = 0;
-        const animate = () => {
-            time += 16; // ~60fps
-            
-            // 숨쉬기 효과 (사인파)
-            const breathPhase = (time % this.config.breathingSpeed) / this.config.breathingSpeed;
-            const breathValue = Math.sin(breathPhase * Math.PI * 2);
-            
-            // 미세한 좌우 흔들림
-            const swayPhase = (time % (this.config.breathingSpeed * 1.5)) / (this.config.breathingSpeed * 1.5);
-            const swayValue = Math.sin(swayPhase * Math.PI * 2) * 0.5;
-            
-            // Squash & Stretch 계산
-            const scaleX = 1 + (breathValue * this.config.squashAmount * -0.5);
-            const scaleY = 1 + (breathValue * this.config.stretchAmount);
-            const translateY = breathValue * -this.config.bounceHeight;
-            const rotate = swayValue;
-            
-            // 변환 적용
-            playerSprite.style.transform = `
-                translateY(${translateY}px) 
-                scaleX(${scaleX}) 
-                scaleY(${scaleY})
-                rotate(${rotate}deg)
-            `;
-            
-            // 계속 애니메이션
-            this.activeAnimations.set('player-idle', requestAnimationFrame(animate));
-        };
-        
-        this.activeAnimations.set('player-idle', requestAnimationFrame(animate));
-    },
-    
-    // ==========================================
-    // 적들 대기 애니메이션
-    // ==========================================
-    startEnemiesIdle() {
-        const enemySprites = document.querySelectorAll('.enemy-sprite-img');
-        
-        console.log(`[SpriteAnimation] 적 스프라이트 발견: ${enemySprites.length}개`);
-        
-        if (enemySprites.length === 0) {
-            // 적이 없으면 나중에 다시 시도
-            setTimeout(() => this.startEnemiesIdle(), 500);
-            return;
-        }
-        
-        enemySprites.forEach((sprite, index) => {
-            // 이미 애니메이션 중인지 확인
-            if (this.activeAnimations.has(`enemy-idle-${index}`)) return;
-            
-            // 기존 CSS 애니메이션 제거
-            sprite.style.animation = 'none';
-            
-            let time = index * 300; // 각 적마다 다른 시작점
-            const speed = this.config.breathingSpeed + (index * 200); // 각 적마다 다른 속도
-            
-            const animate = () => {
-                // 스프라이트가 아직 DOM에 있는지 확인
-                if (!document.contains(sprite)) {
-                    this.activeAnimations.delete(`enemy-idle-${index}`);
-                    return;
-                }
-                
-                time += 16;
-                
-                // 숨쉬기 효과 (더 위협적인 느낌)
-                const breathPhase = (time % speed) / speed;
-                const breathValue = Math.sin(breathPhase * Math.PI * 2);
-                
-                // 약간의 좌우 흔들림 (위협적)
-                const threatPhase = (time % (speed * 0.7)) / (speed * 0.7);
-                const threatValue = Math.sin(threatPhase * Math.PI * 2) * 0.3;
-                
-                // Squash & Stretch
-                const scaleX = 1 + (breathValue * this.config.squashAmount * -0.3);
-                const scaleY = 1 + (breathValue * this.config.stretchAmount * 0.7);
-                const translateY = breathValue * -this.config.bounceHeight * 0.6;
-                const rotate = threatValue;
-                
-                sprite.style.transform = `
-                    translateY(${translateY}px) 
-                    scaleX(${scaleX}) 
-                    scaleY(${scaleY})
-                    rotate(${rotate}deg)
-                `;
-                
-                this.activeAnimations.set(`enemy-idle-${index}`, requestAnimationFrame(animate));
-            };
-            
-            this.activeAnimations.set(`enemy-idle-${index}`, requestAnimationFrame(animate));
+        // 랜덤 흔들림
+        gsap.to(gameContainer, {
+            x: () => (Math.random() - 0.5) * intensity * 2,
+            y: () => (Math.random() - 0.5) * intensity * 2,
+            duration: 0.02,
+            repeat: Math.floor(duration / 0.02),
+            yoyo: true,
+            ease: "none",
+            onComplete: () => {
+                gsap.set(gameContainer, { x: 0, y: 0 });
+            }
         });
     },
     
     // ==========================================
-    // 플레이어 점프 애니메이션 (공격 시)
+    // 대기 애니메이션 시작
     // ==========================================
-    playerJump(callback) {
-        const playerSprite = document.querySelector('.player-sprite-img');
-        if (!playerSprite) return;
-        
-        // 대기 애니메이션 일시 중지
-        this.stopAnimation('player-idle');
-        
-        const duration = 400;
-        const startTime = performance.now();
-        
-        const animate = (currentTime) => {
-            const elapsed = currentTime - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            
-            // 점프 곡선 (위로 갔다가 내려옴)
-            const jumpCurve = Math.sin(progress * Math.PI);
-            
-            // Squash & Stretch (점프할 때)
-            let scaleX, scaleY, translateY;
-            
-            if (progress < 0.2) {
-                // 준비 (웅크리기) - Squash
-                const prepProgress = progress / 0.2;
-                scaleX = 1 + (prepProgress * 0.15);
-                scaleY = 1 - (prepProgress * 0.1);
-                translateY = prepProgress * 5;
-            } else if (progress < 0.5) {
-                // 점프 - Stretch
-                const jumpProgress = (progress - 0.2) / 0.3;
-                scaleX = 1.15 - (jumpProgress * 0.25);
-                scaleY = 0.9 + (jumpProgress * 0.2);
-                translateY = 5 - (jumpCurve * 60);
-            } else if (progress < 0.8) {
-                // 낙하 - 약간 Stretch
-                const fallProgress = (progress - 0.5) / 0.3;
-                scaleX = 0.9 + (fallProgress * 0.05);
-                scaleY = 1.1 - (fallProgress * 0.05);
-                translateY = -60 + (jumpCurve * 60) + 5;
-            } else {
-                // 착지 - Squash
-                const landProgress = (progress - 0.8) / 0.2;
-                scaleX = 0.95 + (landProgress * 0.15);
-                scaleY = 1.05 - (landProgress * 0.15);
-                translateY = 5 - (landProgress * 5);
-            }
-            
-            playerSprite.style.transform = `
-                translateY(${translateY}px) 
-                scaleX(${scaleX}) 
-                scaleY(${scaleY})
-            `;
-            
-            if (progress < 1) {
-                requestAnimationFrame(animate);
-            } else {
-                // 애니메이션 완료 후 대기 애니메이션 재시작
-                playerSprite.style.transform = '';
-                this.startPlayerIdle();
-                if (callback) callback();
-            }
-        };
-        
-        requestAnimationFrame(animate);
+    startIdleAnimations() {
+        this.startPlayerIdle();
+        this.startEnemiesIdle();
+    },
+    
+    refreshEnemyAnimations() {
+        this.startEnemiesIdle();
     },
     
     // ==========================================
-    // 플레이어 공격 모션 (빠른 전진)
+    // 플레이어 대기 애니메이션 - GSAP!
+    // ==========================================
+    startPlayerIdle() {
+        const sprite = document.querySelector('.player-sprite-img');
+        if (!sprite) return;
+        
+        // 기존 애니메이션 정리
+        this.stopAnimation('player-idle');
+        
+        // GSAP 타임라인으로 숨쉬기 애니메이션
+        const tl = gsap.timeline({ repeat: -1, yoyo: true });
+        tl.to(sprite, {
+            y: -this.config.bounceHeight,
+            scaleY: 1 + this.config.stretchAmount,
+            scaleX: 1 - this.config.squashAmount * 0.5,
+            duration: this.config.breathingSpeed / 2,
+            ease: "sine.inOut"
+        });
+        
+        this.activeAnimations.set('player-idle', tl);
+    },
+    
+    // ==========================================
+    // 적 대기 애니메이션 - GSAP!
+    // ==========================================
+    startEnemiesIdle() {
+        const enemyUnits = document.querySelectorAll('.enemy-unit');
+        
+        enemyUnits.forEach((enemyUnit, index) => {
+            const sprite = enemyUnit.querySelector('.enemy-sprite-img');
+            if (!sprite) return;
+            
+            const key = `enemy-idle-${index}`;
+            this.stopAnimation(key);
+            
+            // 각 적마다 약간 다른 타이밍
+            const delay = index * 0.3;
+            const speed = this.config.breathingSpeed + (Math.random() * 0.5 - 0.25);
+            
+            const tl = gsap.timeline({ repeat: -1, yoyo: true, delay });
+            tl.to(sprite, {
+                y: -this.config.bounceHeight * 0.8,
+                scaleY: 1 + this.config.stretchAmount * 0.7,
+                scaleX: 1 - this.config.squashAmount * 0.3,
+                duration: speed / 2,
+                ease: "sine.inOut"
+            });
+            
+            this.activeAnimations.set(key, tl);
+        });
+    },
+    
+    // ==========================================
+    // 플레이어 점프 - GSAP!
+    // ==========================================
+    playerJump() {
+        const sprite = document.querySelector('.player-sprite-img');
+        if (!sprite) return;
+        
+        this.stopAnimation('player-idle');
+        
+        gsap.timeline()
+            // 웅크리기
+            .to(sprite, { scaleY: 0.85, scaleX: 1.1, y: 5, duration: 0.1, ease: "power2.in" })
+            // 점프!
+            .to(sprite, { scaleY: 1.15, scaleX: 0.9, y: -40, duration: 0.2, ease: "power2.out" })
+            // 착지
+            .to(sprite, { scaleY: 0.9, scaleX: 1.1, y: 0, duration: 0.15, ease: "power2.in" })
+            // 복구
+            .to(sprite, { scaleY: 1, scaleX: 1, duration: 0.2, ease: "elastic.out(1, 0.5)" })
+            .add(() => this.startPlayerIdle());
+    },
+    
+    // ==========================================
+    // 플레이어 공격 모션 - GSAP!
     // ==========================================
     playerAttack(targetElement, callback) {
-        const playerSprite = document.querySelector('.player-sprite-img');
+        const sprite = document.querySelector('.player-sprite-img');
         const playerContainer = document.querySelector('#player');
-        if (!playerSprite || !playerContainer) return;
+        if (!sprite || !playerContainer) return;
         
         this.stopAnimation('player-idle');
         
-        const duration = 300;
-        const startTime = performance.now();
-        
-        const animate = (currentTime) => {
-            const elapsed = currentTime - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            
-            // 공격 곡선 (빠르게 전진 후 복귀)
-            let translateX, scaleX, scaleY;
-            
-            if (progress < 0.3) {
-                // 준비 (뒤로 살짝)
-                const prepProgress = progress / 0.3;
-                translateX = -20 * prepProgress;
-                scaleX = 1 + (prepProgress * 0.1);
-                scaleY = 1 - (prepProgress * 0.05);
-            } else if (progress < 0.6) {
-                // 돌진
-                const rushProgress = (progress - 0.3) / 0.3;
-                const easeOut = 1 - Math.pow(1 - rushProgress, 3);
-                translateX = -20 + (120 * easeOut);
-                scaleX = 1.1 - (rushProgress * 0.2);
-                scaleY = 0.95 + (rushProgress * 0.1);
-            } else {
-                // 복귀
-                const returnProgress = (progress - 0.6) / 0.4;
-                const easeInOut = returnProgress < 0.5 
-                    ? 2 * returnProgress * returnProgress 
-                    : 1 - Math.pow(-2 * returnProgress + 2, 2) / 2;
-                translateX = 100 - (100 * easeInOut);
-                scaleX = 0.9 + (easeInOut * 0.1);
-                scaleY = 1.05 - (easeInOut * 0.05);
-            }
-            
-            playerSprite.style.transform = `
-                translateX(${translateX}px) 
-                scaleX(${scaleX}) 
-                scaleY(${scaleY})
-            `;
-            
-            if (progress < 1) {
-                requestAnimationFrame(animate);
-            } else {
-                playerSprite.style.transform = '';
+        gsap.timeline()
+            // 준비 자세 (뒤로)
+            .to(sprite, { 
+                x: -30, 
+                scaleX: 0.85, 
+                scaleY: 1.1,
+                duration: 0.15, 
+                ease: "back.in(2)" 
+            })
+            // 돌진!
+            .to(sprite, { 
+                x: 120, 
+                scaleX: 1.3, 
+                scaleY: 0.9,
+                duration: 0.1, 
+                ease: "power4.out" 
+            })
+            // 히트 순간 플래시
+            .to(sprite, {
+                filter: 'brightness(2)',
+                duration: 0.03
+            })
+            .to(sprite, {
+                filter: 'brightness(1)',
+                duration: 0.1
+            })
+            // 복귀
+            .to(sprite, { 
+                x: 0, 
+                scaleX: 1, 
+                scaleY: 1,
+                duration: 0.3, 
+                ease: "back.out(1.5)" 
+            })
+            .add(() => {
                 this.startPlayerIdle();
                 if (callback) callback();
-            }
-        };
-        
-        requestAnimationFrame(animate);
+            });
     },
     
     // ==========================================
-    // 적 피격 애니메이션 - 데미지에 따라 격렬하게!
-    // 적 피격 애니메이션 - 히트스탑 + 타격감!
+    // 적 피격 애니메이션 - GSAP! 히트스탑 포함!
     // ==========================================
     enemyHit(enemyElement, damage = 0) {
         const sprite = enemyElement?.querySelector('.enemy-sprite-img');
         if (!sprite) return;
         
-        // 🔥 데미지에 따른 강도 차이 극대화!
-        let intensity, duration, flashIntensity, freezeTime;
+        // 데미지에 따른 강도
+        let intensity, freezeTime;
         if (damage >= 25) {
-            // 💀 치명타!
             intensity = 3.5;
-            duration = 750;
-            flashIntensity = 3.0;
-            freezeTime = 130;
+            freezeTime = 0.12;
             console.log('[Enemy Hit] 💀 치명적!', damage);
         } else if (damage >= 15) {
-            // 😱 강한 피격
             intensity = 2.5;
-            duration = 600;
-            flashIntensity = 2.2;
-            freezeTime = 90;
+            freezeTime = 0.08;
             console.log('[Enemy Hit] 😱 강함!', damage);
         } else if (damage >= 8) {
-            // 😣 중간 피격
             intensity = 1.6;
-            duration = 500;
-            flashIntensity = 1.5;
-            freezeTime = 60;
+            freezeTime = 0.05;
             console.log('[Enemy Hit] 😣 중간', damage);
         } else {
-            // 😐 약한 피격
             intensity = 0.9;
-            duration = 400;
-            flashIntensity = 1.0;
-            freezeTime = 35;
+            freezeTime = 0.03;
             console.log('[Enemy Hit] 😐 약함', damage);
         }
         
-        // ⏸️ 히트스탑! (프리즈 듀레이션) - 흰색 번쩍 + 정지
-        sprite.style.transform = 'scale(1.15) translateX(10px)';
-        sprite.style.filter = `
-            drop-shadow(3px 0 0 rgba(255, 255, 255, 1))
-            drop-shadow(-3px 0 0 rgba(255, 255, 255, 1))
-            drop-shadow(0 3px 0 rgba(255, 255, 255, 1))
-            drop-shadow(0 -3px 0 rgba(255, 255, 255, 1))
-            brightness(2.5) saturate(0)
-        `;
+        // 화면 흔들림
+        this.screenShake(intensity * 4, freezeTime + 0.1);
         
-        // 🌍 화면 흔들림!
-        this.screenShake(intensity * 4, freezeTime + 100);
-        
-        // 프리즈 후 애니메이션 시작
-        setTimeout(() => {
-            const startTime = performance.now();
-            
-            const animate = (currentTime) => {
-                const elapsed = currentTime - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                
-                // 빠른 좌우 파닥파닥!
-                const shakeFreq = 20 + (intensity * 5);
-                const shake = Math.sin(progress * Math.PI * shakeFreq) * (1 - progress) * 50 * intensity;
-                
-                // 기울기
-                const tilt = Math.sin(progress * Math.PI * shakeFreq * 0.8) * (1 - progress) * 15 * intensity;
-                
-                // 뒤로 밀림
-                const knockback = Math.sin(progress * Math.PI * 0.5) * 35 * intensity;
-                
-                // Squash 효과
-                let scaleX = 1, scaleY = 1;
-                if (progress < 0.15) {
-                    scaleX = 1 + (progress / 0.15) * 0.18 * intensity;
-                    scaleY = 1 - (progress / 0.15) * 0.12 * intensity;
-                } else {
-                    const rec = (progress - 0.15) / 0.85;
-                    scaleX = 1 + ((1 - rec) * 0.18 * intensity);
-                    scaleY = 1 - ((1 - rec) * 0.12 * intensity);
-                }
-                
-                // 🔴 빨간 깜박임!
-                const flashFreq = 10 + (intensity * 4);
-                const flash = Math.sin(progress * Math.PI * flashFreq);
-                const shadowSize = 2 + Math.floor(intensity);
-                const glowSize = 12 + (intensity * 10);
-                const brightness = 1.4 + (flashIntensity * 0.35);
-                
-                if (flash > 0 && progress < 0.85) {
-                    sprite.style.filter = `
-                        drop-shadow(${shadowSize}px 0 0 rgba(255, 30, 30, 1))
-                        drop-shadow(-${shadowSize}px 0 0 rgba(255, 30, 30, 1))
-                        drop-shadow(0 ${shadowSize}px 0 rgba(255, 30, 30, 1))
-                        drop-shadow(0 -${shadowSize}px 0 rgba(255, 30, 30, 1))
-                        drop-shadow(0 0 ${glowSize}px rgba(255, 0, 0, 0.95))
-                        brightness(${brightness}) saturate(2.5)
-                    `;
-                } else {
-                    sprite.style.filter = '';
-                }
-                
-                sprite.style.transform = `
-                    translateX(${shake + knockback}px) 
-                    rotate(${tilt}deg)
-                    scaleX(${scaleX}) 
-                    scaleY(${scaleY})
-                `;
-                
-                if (progress < 1) {
-                    requestAnimationFrame(animate);
-                } else {
-                    sprite.style.transform = '';
-                    sprite.style.filter = '';
-                }
-            };
-            
-            requestAnimationFrame(animate);
-        }, freezeTime);
+        // GSAP 타임라인
+        gsap.timeline()
+            // ⏸️ 히트스탑! 흰색 번쩍 + 정지
+            .set(sprite, { 
+                scale: 1.15,
+                x: 10,
+                filter: `
+                    drop-shadow(3px 0 0 white)
+                    drop-shadow(-3px 0 0 white)
+                    drop-shadow(0 3px 0 white)
+                    drop-shadow(0 -3px 0 white)
+                    brightness(2.5) saturate(0)
+                `
+            })
+            // 프리즈 유지
+            .to(sprite, { duration: freezeTime })
+            // 빨간 깜박 + 파닥파닥!
+            .to(sprite, {
+                x: 30 * intensity,
+                rotation: 8 * intensity,
+                scaleX: 1 + 0.15 * intensity,
+                scaleY: 1 - 0.1 * intensity,
+                filter: `
+                    drop-shadow(2px 0 0 rgba(255, 50, 50, 1))
+                    drop-shadow(-2px 0 0 rgba(255, 50, 50, 1))
+                    drop-shadow(0 2px 0 rgba(255, 50, 50, 1))
+                    drop-shadow(0 -2px 0 rgba(255, 50, 50, 1))
+                    drop-shadow(0 0 15px rgba(255, 0, 0, 0.8))
+                    brightness(1.5)
+                `,
+                duration: 0.05,
+                ease: "power2.out"
+            })
+            .to(sprite, {
+                x: -20 * intensity,
+                rotation: -6 * intensity,
+                filter: 'brightness(1)',
+                duration: 0.05
+            })
+            .to(sprite, {
+                x: 15 * intensity,
+                rotation: 5 * intensity,
+                filter: `
+                    drop-shadow(2px 0 0 rgba(255, 50, 50, 1))
+                    drop-shadow(-2px 0 0 rgba(255, 50, 50, 1))
+                    drop-shadow(0 0 10px rgba(255, 0, 0, 0.6))
+                    brightness(1.3)
+                `,
+                duration: 0.04
+            })
+            .to(sprite, {
+                x: -10 * intensity,
+                rotation: -3 * intensity,
+                filter: 'brightness(1)',
+                duration: 0.04
+            })
+            .to(sprite, {
+                x: 5 * intensity,
+                rotation: 2 * intensity,
+                duration: 0.03
+            })
+            // 복구
+            .to(sprite, {
+                x: 0,
+                y: 0,
+                rotation: 0,
+                scale: 1,
+                scaleX: 1,
+                scaleY: 1,
+                filter: '',
+                duration: 0.15,
+                ease: "elastic.out(1, 0.5)"
+            });
     },
     
     // ==========================================
-    // 플레이어 피격 애니메이션 - 약하게 조절!
+    // 플레이어 피격 애니메이션 - GSAP! (약하게)
     // ==========================================
     playerHit(damage = 0) {
         const sprite = document.querySelector('.player-sprite-img');
@@ -455,370 +328,195 @@ const SpriteAnimation = {
         
         this.stopAnimation('player-idle');
         
-        // 🎯 플레이어는 약하게! (적의 1/2 수준)
-        let intensity, duration, flashIntensity, freezeTime;
+        // 플레이어는 약하게
+        let intensity, freezeTime;
         if (damage >= 20) {
-            // 💀 치명타
             intensity = 1.5;
-            duration = 500;
-            flashIntensity = 1.5;
-            freezeTime = 60;
-            console.log('[Hit] 💀 치명적 피격!', damage);
+            freezeTime = 0.06;
         } else if (damage >= 12) {
-            // 😱 강한 피격
             intensity = 1.2;
-            duration = 450;
-            flashIntensity = 1.2;
-            freezeTime = 45;
-            console.log('[Hit] 😱 강한 피격!', damage);
+            freezeTime = 0.04;
         } else if (damage >= 6) {
-            // 😣 중간 피격
             intensity = 0.8;
-            duration = 400;
-            flashIntensity = 1.0;
-            freezeTime = 30;
-            console.log('[Hit] 😣 중간 피격', damage);
+            freezeTime = 0.03;
         } else {
-            // 😐 약한 피격
             intensity = 0.5;
-            duration = 350;
-            flashIntensity = 0.8;
-            freezeTime = 20;
-            console.log('[Hit] 😐 약한 피격', damage);
+            freezeTime = 0.02;
         }
         
-        // ⏸️ 히트스탑! (약하게)
-        sprite.style.transform = 'scale(1.05) translateX(-5px)';
-        sprite.style.filter = `
-            drop-shadow(2px 0 0 rgba(255, 255, 255, 1))
-            drop-shadow(-2px 0 0 rgba(255, 255, 255, 1))
-            drop-shadow(0 2px 0 rgba(255, 255, 255, 1))
-            drop-shadow(0 -2px 0 rgba(255, 255, 255, 1))
-            brightness(1.8) saturate(0)
-        `;
+        // 화면 흔들림 (약하게)
+        this.screenShake(intensity * 2, freezeTime + 0.05);
         
-        // 🌍 화면 흔들림 (약하게)
-        this.screenShake(intensity * 1.5, freezeTime + 50);
-        
-        // 프리즈 후 애니메이션 시작
-        setTimeout(() => {
-            const startTime = performance.now();
-            
-            const animate = (currentTime) => {
-                const elapsed = currentTime - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                
-                // 좌우 파닥파닥 (약하게!)
-                const shakeFreq = 15 + (intensity * 3);
-                const shake = Math.sin(progress * Math.PI * shakeFreq) * (1 - progress) * 15 * intensity;
-                
-                // 머리 흔드는 기울기 (약하게!)
-                const tilt = Math.sin(progress * Math.PI * shakeFreq * 0.7) * (1 - progress) * 5 * intensity;
-                
-                // 뒤로 밀림 (약하게!)
-                const knockback = Math.sin(progress * Math.PI * 0.5) * -20 * intensity;
-                
-                // Squash 효과 (약하게!)
-                let scaleX = 1, scaleY = 1;
-                if (progress < 0.15) {
-                    scaleX = 1 + (progress / 0.15) * 0.08 * intensity;
-                    scaleY = 1 - (progress / 0.15) * 0.05 * intensity;
-                } else {
-                    const rec = (progress - 0.15) / 0.85;
-                    scaleX = 1 + ((1 - rec) * 0.08 * intensity);
-                    scaleY = 1 - ((1 - rec) * 0.05 * intensity);
-                }
-                
-                // 🔴 빨간 깜박임 (약하게!)
-                const flashFreq = 8 + (intensity * 3);
-                const flash = Math.sin(progress * Math.PI * flashFreq);
-                const shadowSize = 1 + Math.floor(intensity * 0.5);
-                const glowSize = 6 + (intensity * 4);
-                const brightness = 1.2 + (flashIntensity * 0.2);
-                
-                if (flash > 0 && progress < 0.7) {
-                    sprite.style.filter = `
-                        drop-shadow(${shadowSize}px 0 0 rgba(255, 60, 60, 1))
-                        drop-shadow(-${shadowSize}px 0 0 rgba(255, 60, 60, 1))
-                        drop-shadow(0 ${shadowSize}px 0 rgba(255, 60, 60, 1))
-                        drop-shadow(0 -${shadowSize}px 0 rgba(255, 60, 60, 1))
-                        drop-shadow(0 0 ${glowSize}px rgba(255, 0, 0, 0.7))
-                        brightness(${brightness}) saturate(1.5)
-                    `;
-                } else {
-                    sprite.style.filter = '';
-                }
-                
-                sprite.style.transform = `
-                    translateX(${knockback + shake}px) 
-                    rotate(${tilt}deg)
-                    scaleX(${scaleX}) 
-                    scaleY(${scaleY})
-                `;
-                
-                if (progress < 1) {
-                    requestAnimationFrame(animate);
-                } else {
-                    sprite.style.transform = '';
-                    sprite.style.filter = '';
-                    this.startPlayerIdle();
-                }
-            };
-            
-            requestAnimationFrame(animate);
-        }, freezeTime);
+        gsap.timeline()
+            // 히트스탑
+            .set(sprite, {
+                scale: 1.05,
+                x: -5,
+                filter: `
+                    drop-shadow(2px 0 0 white)
+                    drop-shadow(-2px 0 0 white)
+                    drop-shadow(0 2px 0 white)
+                    drop-shadow(0 -2px 0 white)
+                    brightness(1.8) saturate(0)
+                `
+            })
+            .to(sprite, { duration: freezeTime })
+            // 파닥파닥 (약하게)
+            .to(sprite, {
+                x: -15 * intensity,
+                rotation: -4 * intensity,
+                filter: `
+                    drop-shadow(1px 0 0 rgba(255, 60, 60, 1))
+                    drop-shadow(-1px 0 0 rgba(255, 60, 60, 1))
+                    drop-shadow(0 0 8px rgba(255, 0, 0, 0.6))
+                    brightness(1.3)
+                `,
+                duration: 0.05
+            })
+            .to(sprite, {
+                x: 10 * intensity,
+                rotation: 3 * intensity,
+                filter: 'brightness(1)',
+                duration: 0.05
+            })
+            .to(sprite, {
+                x: -6 * intensity,
+                rotation: -2 * intensity,
+                duration: 0.04
+            })
+            .to(sprite, {
+                x: 3 * intensity,
+                rotation: 1 * intensity,
+                duration: 0.03
+            })
+            // 복구
+            .to(sprite, {
+                x: 0,
+                y: 0,
+                rotation: 0,
+                scale: 1,
+                filter: '',
+                duration: 0.2,
+                ease: "elastic.out(1, 0.5)"
+            })
+            .add(() => this.startPlayerIdle());
     },
     
     // ==========================================
-    // 플레이어 방어 애니메이션 (작게 파닥파닥)
+    // 플레이어 방어 애니메이션 - GSAP!
     // ==========================================
     playerDefend(blockAmount = 5) {
         const sprite = document.querySelector('.player-sprite-img');
         if (!sprite) return;
         
-        this.stopAnimation('player-idle');
+        const intensity = Math.min(blockAmount / 10, 1) + 0.3;
         
-        const duration = 300;
-        const startTime = performance.now();
-        const intensity = Math.min(blockAmount / 10, 1) * 0.5 + 0.5; // 0.5 ~ 1.0
-        
-        const animate = (currentTime) => {
-            const elapsed = currentTime - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            
-            // 빠른 파닥파닥 흔들림 (작게)
-            const flutter = Math.sin(progress * Math.PI * 12) * (1 - progress) * 5 * intensity;
-            
-            // 살짝 웅크리는 느낌
-            let scaleX = 1, scaleY = 1;
-            if (progress < 0.3) {
-                const prepProgress = progress / 0.3;
-                scaleX = 1 + (prepProgress * 0.05);
-                scaleY = 1 - (prepProgress * 0.03);
-            } else {
-                const recoveryProgress = (progress - 0.3) / 0.7;
-                scaleX = 1.05 - (recoveryProgress * 0.05);
-                scaleY = 0.97 + (recoveryProgress * 0.03);
-            }
-            
-            sprite.style.transform = `
-                translateX(${flutter}px) 
-                translateY(${Math.abs(flutter) * 0.3}px)
-                scaleX(${scaleX}) 
-                scaleY(${scaleY})
-            `;
-            
-            if (progress < 1) {
-                requestAnimationFrame(animate);
-            } else {
-                sprite.style.transform = '';
-                this.startPlayerIdle();
-            }
-        };
-        
-        requestAnimationFrame(animate);
+        gsap.timeline()
+            .to(sprite, {
+                scaleX: 1.05 * intensity,
+                scaleY: 0.95,
+                x: -3 * intensity,
+                filter: `
+                    drop-shadow(0 0 10px rgba(59, 130, 246, 0.8))
+                    brightness(1.2)
+                `,
+                duration: 0.08
+            })
+            .to(sprite, {
+                rotation: 2 * intensity,
+                duration: 0.03
+            })
+            .to(sprite, {
+                rotation: -1 * intensity,
+                duration: 0.03
+            })
+            .to(sprite, {
+                x: 0,
+                rotation: 0,
+                scaleX: 1,
+                scaleY: 1,
+                filter: '',
+                duration: 0.15,
+                ease: "elastic.out(1, 0.6)"
+            });
     },
     
     // ==========================================
-    // 적 방어 애니메이션 (작게 파닥파닥)
+    // 적 방어 애니메이션 - GSAP!
     // ==========================================
     enemyDefend(enemyElement, blockAmount = 5) {
         const sprite = enemyElement?.querySelector('.enemy-sprite-img');
         if (!sprite) return;
         
-        const duration = 250;
-        const startTime = performance.now();
-        const intensity = Math.min(blockAmount / 10, 1) * 0.5 + 0.5;
+        const intensity = Math.min(blockAmount / 10, 1) + 0.3;
         
-        const animate = (currentTime) => {
-            const elapsed = currentTime - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            
-            // 빠른 파닥파닥 (작게)
-            const flutter = Math.sin(progress * Math.PI * 10) * (1 - progress) * 4 * intensity;
-            
-            // 살짝 움츠림
-            let scaleX = 1, scaleY = 1;
-            if (progress < 0.25) {
-                scaleX = 1 + (progress / 0.25) * 0.04;
-                scaleY = 1 - (progress / 0.25) * 0.03;
-            } else {
-                const rec = (progress - 0.25) / 0.75;
-                scaleX = 1.04 - rec * 0.04;
-                scaleY = 0.97 + rec * 0.03;
-            }
-            
-            sprite.style.transform = `
-                translateX(${flutter}px) 
-                scaleX(${scaleX}) 
-                scaleY(${scaleY})
-            `;
-            
-            if (progress < 1) {
-                requestAnimationFrame(animate);
-            } else {
-                sprite.style.transform = '';
-            }
-        };
-        
-        requestAnimationFrame(animate);
+        gsap.timeline()
+            .to(sprite, {
+                scaleX: 1.08 * intensity,
+                scaleY: 0.92,
+                x: 5 * intensity,
+                filter: `
+                    drop-shadow(0 0 12px rgba(100, 150, 255, 0.8))
+                    brightness(1.3)
+                `,
+                duration: 0.08
+            })
+            .to(sprite, { rotation: -3 * intensity, duration: 0.03 })
+            .to(sprite, { rotation: 2 * intensity, duration: 0.03 })
+            .to(sprite, {
+                x: 0,
+                rotation: 0,
+                scaleX: 1,
+                scaleY: 1,
+                filter: '',
+                duration: 0.15,
+                ease: "elastic.out(1, 0.5)"
+            });
     },
     
     // ==========================================
-    // 플레이어 강한 피격 (크게 파닥파닥)
+    // 적 사망 애니메이션 - GSAP!
     // ==========================================
-    playerHitHard(damage = 10) {
-        const sprite = document.querySelector('.player-sprite-img');
-        if (!sprite) return;
-        
-        this.stopAnimation('player-idle');
-        
-        const duration = 500;
-        const startTime = performance.now();
-        const intensity = Math.min(damage / 10, 1.5); // 최대 1.5배
-        
-        const animate = (currentTime) => {
-            const elapsed = currentTime - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            
-            // 강한 파닥파닥 흔들림
-            const flutter = Math.sin(progress * Math.PI * 16) * (1 - progress) * 20 * intensity;
-            
-            // 뒤로 밀림
-            const knockback = Math.sin(progress * Math.PI) * -40 * intensity;
-            
-            // 강한 Squash & Stretch
-            let scaleX = 1, scaleY = 1;
-            if (progress < 0.1) {
-                const impact = progress / 0.1;
-                scaleX = 1 + (impact * 0.25 * intensity);
-                scaleY = 1 - (impact * 0.15 * intensity);
-            } else if (progress < 0.3) {
-                const bounce = (progress - 0.1) / 0.2;
-                scaleX = 1.25 * intensity - (bounce * 0.35 * intensity) + (1 - intensity * 0.25);
-                scaleY = (1 - 0.15 * intensity) + (bounce * 0.2 * intensity);
-            } else {
-                const recovery = (progress - 0.3) / 0.7;
-                scaleX = 1 + ((1 - recovery) * 0.1 * intensity * (1 - recovery));
-                scaleY = 1 - ((1 - recovery) * 0.05 * intensity * (1 - recovery));
-            }
-            
-            sprite.style.transform = `
-                translateX(${knockback + flutter}px) 
-                translateY(${Math.abs(flutter) * 0.5}px)
-                scaleX(${scaleX}) 
-                scaleY(${scaleY})
-                rotate(${flutter * 0.3}deg)
-            `;
-            
-            if (progress < 1) {
-                requestAnimationFrame(animate);
-            } else {
-                sprite.style.transform = '';
-                this.startPlayerIdle();
-            }
-        };
-        
-        requestAnimationFrame(animate);
-    },
-    
-    // ==========================================
-    // 적 강한 피격 (크게 파닥파닥)
-    // ==========================================
-    enemyHitHard(enemyElement, damage = 10) {
+    enemyDeath(enemyElement, callback) {
         const sprite = enemyElement?.querySelector('.enemy-sprite-img');
         if (!sprite) return;
         
-        const duration = 450;
-        const startTime = performance.now();
-        const intensity = Math.min(damage / 10, 1.5);
-        
-        const animate = (currentTime) => {
-            const elapsed = currentTime - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            
-            // 강한 파닥파닥
-            const flutter = Math.sin(progress * Math.PI * 14) * (1 - progress) * 18 * intensity;
-            
-            // 뒤로 밀림
-            const knockback = Math.sin(progress * Math.PI) * 35 * intensity;
-            
-            // Squash & Stretch
-            let scaleX = 1, scaleY = 1;
-            if (progress < 0.12) {
-                const impact = progress / 0.12;
-                scaleX = 1 + (impact * 0.22 * intensity);
-                scaleY = 1 - (impact * 0.12 * intensity);
-            } else {
-                const recovery = (progress - 0.12) / 0.88;
-                scaleX = 1 + ((1 - recovery) * 0.22 * intensity * (1 - recovery));
-                scaleY = 1 - ((1 - recovery) * 0.12 * intensity * (1 - recovery));
-            }
-            
-            sprite.style.transform = `
-                translateX(${knockback + flutter}px) 
-                translateY(${Math.abs(flutter) * 0.4}px)
-                scaleX(${scaleX}) 
-                scaleY(${scaleY})
-                rotate(${flutter * 0.25}deg)
-            `;
-            
-            if (progress < 1) {
-                requestAnimationFrame(animate);
-            } else {
-                sprite.style.transform = '';
-            }
-        };
-        
-        requestAnimationFrame(animate);
-    },
-    
-    // ==========================================
-    // 적 죽음 애니메이션
-    // ==========================================
-    enemyDeath(enemyElement, callback) {
-        const sprite = enemyElement.querySelector('.enemy-sprite-img');
-        if (!sprite) {
-            if (callback) callback();
-            return;
-        }
-        
-        const duration = 600;
-        const startTime = performance.now();
-        
-        const animate = (currentTime) => {
-            const elapsed = currentTime - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            
-            // 위로 튀어오른 후 아래로 떨어지며 사라짐
-            const jumpCurve = progress < 0.3 
-                ? Math.sin((progress / 0.3) * Math.PI * 0.5) 
-                : 1 - ((progress - 0.3) / 0.7);
-            
-            const translateY = -50 * jumpCurve + (progress > 0.3 ? (progress - 0.3) * 100 : 0);
-            const rotate = progress * 360;
-            const scale = 1 - (progress * 0.5);
-            const opacity = 1 - progress;
-            
-            sprite.style.transform = `
-                translateY(${translateY}px) 
-                rotate(${rotate}deg)
-                scale(${scale})
-            `;
-            sprite.style.opacity = opacity;
-            
-            if (progress < 1) {
-                requestAnimationFrame(animate);
-            } else {
+        gsap.timeline()
+            // 충격
+            .to(sprite, {
+                scaleX: 1.3,
+                scaleY: 0.7,
+                filter: 'brightness(2) saturate(0)',
+                duration: 0.1
+            })
+            // 흔들림
+            .to(sprite, { x: -15, rotation: -10, duration: 0.05 })
+            .to(sprite, { x: 15, rotation: 10, duration: 0.05 })
+            .to(sprite, { x: -10, rotation: -5, duration: 0.05 })
+            // 쓰러짐
+            .to(sprite, {
+                y: 30,
+                rotation: -20,
+                scaleX: 1.2,
+                scaleY: 0.8,
+                duration: 0.2,
+                ease: "power2.in"
+            })
+            // 사라짐
+            .to(sprite, {
+                alpha: 0,
+                scale: 0.5,
+                filter: 'brightness(3) blur(5px)',
+                duration: 0.3,
+                ease: "power2.in"
+            })
+            .add(() => {
                 if (callback) callback();
-            }
-        };
-        
-        requestAnimationFrame(animate);
+            });
     },
     
     // ==========================================
-    // 승리 애니메이션 (플레이어)
+    // 플레이어 승리 애니메이션 - GSAP!
     // ==========================================
     playerVictory() {
         const sprite = document.querySelector('.player-sprite-img');
@@ -826,64 +524,103 @@ const SpriteAnimation = {
         
         this.stopAnimation('player-idle');
         
-        let bounceCount = 0;
-        const maxBounces = 3;
+        gsap.timeline()
+            // 점프!
+            .to(sprite, { y: -50, scaleY: 1.15, scaleX: 0.9, duration: 0.25, ease: "power2.out" })
+            .to(sprite, { y: 0, scaleY: 0.85, scaleX: 1.15, duration: 0.15, ease: "power2.in" })
+            // 다시 점프
+            .to(sprite, { y: -30, scaleY: 1.1, scaleX: 0.95, duration: 0.2, ease: "power2.out" })
+            .to(sprite, { y: 0, scaleY: 1, scaleX: 1, duration: 0.3, ease: "elastic.out(1, 0.4)" })
+            .add(() => this.startPlayerIdle());
+    },
+    
+    // ==========================================
+    // 카드 사용 모션 - GSAP!
+    // ==========================================
+    playerCastSpell() {
+        const sprite = document.querySelector('.player-sprite-img');
+        if (!sprite) return;
         
-        const bounce = () => {
-            if (bounceCount >= maxBounces) {
-                this.startPlayerIdle();
-                return;
-            }
-            
-            const duration = 400;
-            const startTime = performance.now();
-            
-            const animate = (currentTime) => {
-                const elapsed = currentTime - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                
-                const jumpCurve = Math.sin(progress * Math.PI);
-                const height = 40 * (1 - bounceCount * 0.3);
-                
-                // Squash & Stretch
-                let scaleX, scaleY;
-                if (progress < 0.2) {
-                    scaleX = 1 + (progress / 0.2) * 0.1;
-                    scaleY = 1 - (progress / 0.2) * 0.08;
-                } else if (progress < 0.5) {
-                    scaleX = 1.1 - ((progress - 0.2) / 0.3) * 0.15;
-                    scaleY = 0.92 + ((progress - 0.2) / 0.3) * 0.13;
-                } else {
-                    scaleX = 0.95 + ((progress - 0.5) / 0.5) * 0.05;
-                    scaleY = 1.05 - ((progress - 0.5) / 0.5) * 0.05;
-                }
-                
-                sprite.style.transform = `
-                    translateY(${-jumpCurve * height}px) 
-                    scaleX(${scaleX}) 
-                    scaleY(${scaleY})
-                `;
-                
-                if (progress < 1) {
-                    requestAnimationFrame(animate);
-                } else {
-                    bounceCount++;
-                    bounce();
-                }
-            };
-            
-            requestAnimationFrame(animate);
-        };
+        this.stopAnimation('player-idle');
         
-        bounce();
+        gsap.timeline()
+            // 집중
+            .to(sprite, {
+                scaleY: 0.95,
+                filter: 'brightness(1.3) drop-shadow(0 0 20px rgba(147, 51, 234, 0.8))',
+                duration: 0.2
+            })
+            // 발동!
+            .to(sprite, {
+                scaleY: 1.1,
+                scaleX: 0.95,
+                y: -10,
+                filter: 'brightness(1.8) drop-shadow(0 0 40px rgba(147, 51, 234, 1))',
+                duration: 0.1,
+                ease: "power2.out"
+            })
+            // 복구
+            .to(sprite, {
+                scaleY: 1,
+                scaleX: 1,
+                y: 0,
+                filter: '',
+                duration: 0.3,
+                ease: "elastic.out(1, 0.5)"
+            })
+            .add(() => this.startPlayerIdle());
+    },
+    
+    // ==========================================
+    // 힐 이펙트 - GSAP!
+    // ==========================================
+    playerHeal() {
+        const sprite = document.querySelector('.player-sprite-img');
+        if (!sprite) return;
+        
+        gsap.timeline()
+            .to(sprite, {
+                y: -8,
+                filter: 'brightness(1.4) drop-shadow(0 0 25px rgba(34, 197, 94, 0.9))',
+                duration: 0.3,
+                ease: "sine.out"
+            })
+            .to(sprite, {
+                y: 0,
+                filter: '',
+                duration: 0.4,
+                ease: "sine.inOut"
+            });
+    },
+    
+    // ==========================================
+    // 버프 이펙트 - GSAP!
+    // ==========================================
+    playerBuff() {
+        const sprite = document.querySelector('.player-sprite-img');
+        if (!sprite) return;
+        
+        gsap.timeline()
+            .to(sprite, {
+                scaleY: 1.08,
+                filter: 'brightness(1.3) drop-shadow(0 0 20px rgba(251, 191, 36, 0.8))',
+                duration: 0.15
+            })
+            .to(sprite, {
+                scaleY: 1,
+                filter: '',
+                duration: 0.25,
+                ease: "elastic.out(1, 0.5)"
+            });
     },
     
     // ==========================================
     // 애니메이션 중지
     // ==========================================
     stopAnimation(key) {
-        if (this.activeAnimations.has(key)) {
-            cancelAnimationFrame(this.activeAnimations.get(key));
+        const anim = this.activeAnimations.get(key);
+        if (anim) {
+            anim.kill();
             this.activeAnimations.delete(key);
         }
     },
@@ -891,64 +628,23 @@ const SpriteAnimation = {
     // ==========================================
     // 모든 애니메이션 중지
     // ==========================================
-    stopAll() {
-        this.activeAnimations.forEach((animId, key) => {
-            cancelAnimationFrame(animId);
+    stopAllAnimations() {
+        this.activeAnimations.forEach((anim, key) => {
+            anim.kill();
         });
         this.activeAnimations.clear();
-        
-        // 스프라이트 변환 초기화
-        const playerSprite = document.querySelector('.player-sprite-img');
-        if (playerSprite) playerSprite.style.transform = '';
-        
-        document.querySelectorAll('.enemy-sprite-img').forEach(sprite => {
-            sprite.style.transform = '';
-        });
-    },
-    
-    // ==========================================
-    // 적 갱신 시 애니메이션 재시작
-    // ==========================================
-    refreshEnemyAnimations() {
-        // 기존 적 애니메이션 중지
-        this.activeAnimations.forEach((animId, key) => {
-            if (key.startsWith('enemy-idle')) {
-                cancelAnimationFrame(animId);
-                this.activeAnimations.delete(key);
-            }
-        });
-        
-        // 새로운 적 애니메이션 시작
-        setTimeout(() => this.startEnemiesIdle(), 100);
     }
 };
 
-// ==========================================
-// 전역 이벤트 리스너
-// ==========================================
-
-// DOM 로드 시 초기화
+// 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', () => {
-    // 약간의 딜레이 후 초기화 (다른 요소들이 로드된 후)
+    // GSAP 로드 후 초기화
     setTimeout(() => {
         SpriteAnimation.init();
-    }, 500);
+    }, 100);
 });
 
-// 전투 시작 시 애니메이션 시작
-document.addEventListener('battleStart', () => {
-    SpriteAnimation.stopAll();
-    setTimeout(() => {
-        SpriteAnimation.startIdleAnimations();
-    }, 300);
-});
-
-// 전투 종료 시 애니메이션 정리
-document.addEventListener('battleEnd', () => {
-    SpriteAnimation.stopAll();
-});
-
-// 전역 접근 가능하도록
+// 전역 등록
 window.SpriteAnimation = SpriteAnimation;
 
-console.log('[SpriteAnimation] 모듈 로드 완료');
+console.log('[SpriteAnimation] GSAP 기반 시스템 로드됨!');
