@@ -1667,6 +1667,8 @@ img {
     align-items: flex-end;
     padding: 0 180px;
     height: 100%;
+    position: relative;
+    z-index: 520;
 }
 
 .hand {
@@ -1676,6 +1678,8 @@ img {
     height: 250px;
     perspective: 1500px;
     margin-bottom: 10px;
+    position: relative;
+    z-index: 520;
 }
 
 /* ==========================================
