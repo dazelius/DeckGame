@@ -300,10 +300,19 @@ const BreakSystem = {
         
         console.log(`[BreakSystem] ${enemy.name} BREAK!!!`);
         
-        // 즉시 그레이스케일 적용 + 지속 별 이펙트 시작!
         const enemyIndex = gameState.enemies?.indexOf(enemy);
-        if (enemyIndex !== -1) {
-            const enemyEl = document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`);
+        const enemyEl = enemyIndex !== -1 ? document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`) : null;
+        
+        // 🔥 1단계: 브레이크 연출 먼저!
+        this.showBreakEffect(enemy);
+        
+        // 인텐트 데이터 초기화
+        enemy.intent = null;
+        enemy.intentValue = 0;
+        enemy.currentBreakRecipe = null;
+        
+        // 🔥 2단계: 연출 후 UI 업데이트 (500ms 딜레이)
+        setTimeout(() => {
             if (enemyEl) {
                 enemyEl.classList.add('enemy-broken');
                 
@@ -311,22 +320,19 @@ const BreakSystem = {
                 if (typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized) {
                     PixiRenderer.startPersistentStunLoop(enemyEl);
                 }
+                
+                // 인텐트 숨기기
+                const intentEl = enemyEl.querySelector('.enemy-intent-display');
+                if (intentEl) {
+                    intentEl.style.display = 'none';
+                    intentEl.classList.add('is-broken');
+                }
             }
-        }
-        
-        // 브레이크 이펙트
-        this.showBreakEffect(enemy);
-        
-        // 인텐트 파괴
-        enemy.intent = null;
-        enemy.intentValue = 0;
-        enemy.currentBreakRecipe = null;
-        
-        // UI 업데이트
-        this.updateBreakUI(enemy);
-        if (typeof updateEnemiesUI === 'function') {
-            updateEnemiesUI();
-        }
+            
+            if (typeof updateEnemiesUI === 'function') {
+                updateEnemiesUI();
+            }
+        }, 500);
     },
     
     // ==========================================
