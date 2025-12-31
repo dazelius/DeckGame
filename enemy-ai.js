@@ -154,12 +154,28 @@ function decideEnemyIntentForEnemy(enemy) {
     }
     
     if (!intent) {
-        const normalIntents = intents.filter(i => i.type !== 'blind');
-        intent = normalIntents[Math.floor(Math.random() * normalIntents.length)];
+        // intents 배열이 없거나 비어있는 경우 기본 공격 인텐트 생성
+        if (!intents || intents.length === 0) {
+            console.warn(`[EnemyAI] ${enemy.name}의 intents가 비어있습니다. 기본 공격 사용.`);
+            intent = { type: 'attack', value: 5, hits: 1 };
+        } else {
+            const normalIntents = intents.filter(i => i.type !== 'blind');
+            if (normalIntents.length > 0) {
+                intent = normalIntents[Math.floor(Math.random() * normalIntents.length)];
+            } else {
+                intent = intents[0]; // 첫 번째 인텐트 사용 (폴백)
+            }
+        }
+    }
+    
+    // 인텐트가 여전히 없으면 기본값 설정
+    if (!intent) {
+        console.error(`[EnemyAI] ${enemy.name}의 인텐트를 결정할 수 없습니다. 기본 공격 사용.`);
+        intent = { type: 'attack', value: 5, hits: 1 };
     }
     
     enemy.intent = intent.type;
-    enemy.intentValue = intent.value;
+    enemy.intentValue = intent.value || 0;
     enemy.intentHits = intent.hits || 1;
     enemy.intentBleed = intent.bleed || 0;
     

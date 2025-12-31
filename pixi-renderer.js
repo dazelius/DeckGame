@@ -803,6 +803,89 @@ const PixiRenderer = {
     },
     
     // ==========================================
+    // 🎵 도발 음표 이펙트
+    // ==========================================
+    createTauntNotes(x, y) {
+        if (!this.initialized) return;
+        
+        const notes = ['♪', '♫', '♬', '♩', '🎵'];
+        const colors = ['#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', '#54a0ff'];
+        const noteCount = 8;
+        
+        for (let i = 0; i < noteCount; i++) {
+            const note = new PIXI.Text({
+                text: notes[Math.floor(Math.random() * notes.length)],
+                style: {
+                    fontSize: 20 + Math.random() * 16,
+                    fill: colors[Math.floor(Math.random() * colors.length)],
+                    fontFamily: 'Arial',
+                    fontWeight: 'bold',
+                    stroke: { color: '#000000', width: 2 },
+                    dropShadow: {
+                        color: '#000000',
+                        blur: 4,
+                        distance: 2,
+                        angle: Math.PI / 4
+                    }
+                }
+            });
+            
+            // 시작 위치 (캐릭터 주변 랜덤)
+            const offsetX = (Math.random() - 0.5) * 60;
+            note.x = x + offsetX;
+            note.y = y;
+            note.anchor.set(0.5);
+            note.alpha = 0;
+            note.rotation = (Math.random() - 0.5) * 0.5;
+            
+            this.effectsContainer.addChild(note);
+            
+            // 딜레이를 주어 순차적으로 올라가게
+            const delay = i * 100;
+            const floatX = (Math.random() - 0.5) * 40; // 좌우 흔들림
+            const floatDuration = 1000 + Math.random() * 500;
+            
+            setTimeout(() => {
+                let startTime = performance.now();
+                
+                const animate = () => {
+                    const elapsed = performance.now() - startTime;
+                    const progress = Math.min(elapsed / floatDuration, 1);
+                    
+                    // 위로 올라감 (사인파로 좌우 흔들림)
+                    note.y = y - progress * 80;
+                    note.x = x + offsetX + Math.sin(progress * Math.PI * 3) * floatX;
+                    
+                    // 회전
+                    note.rotation = Math.sin(progress * Math.PI * 4) * 0.3;
+                    
+                    // 알파 (등장 -> 유지 -> 페이드아웃)
+                    if (progress < 0.2) {
+                        note.alpha = progress * 5; // 빠르게 등장
+                    } else if (progress > 0.7) {
+                        note.alpha = 1 - (progress - 0.7) / 0.3; // 페이드아웃
+                    } else {
+                        note.alpha = 1;
+                    }
+                    
+                    // 스케일 (살짝 커졌다 작아짐)
+                    const scaleWave = 1 + Math.sin(progress * Math.PI * 2) * 0.2;
+                    note.scale.set(scaleWave);
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        this.effectsContainer.removeChild(note);
+                        note.destroy();
+                    }
+                };
+                
+                animate();
+            }, delay);
+        }
+    },
+    
+    // ==========================================
     // ⭐ 스턴 이펙트 (브레이크 시)
     // ==========================================
     createStunEffect(x, y) {

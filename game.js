@@ -3577,6 +3577,12 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
         
         addLog(`${name}: 도발! 방어도 생성량 감소 ${intentValue}턴!`, 'debuff');
         
+        // 🎵 도발 음표 이펙트 (PixiJS)
+        if (typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized && enemyEl) {
+            const rect = enemyEl.getBoundingClientRect();
+            PixiRenderer.createTauntNotes(rect.left + rect.width / 2, rect.top);
+        }
+        
         // 도발 이펙트
         const playerEl = document.getElementById('player');
         if (typeof EffectSystem !== 'undefined' && playerEl) {
