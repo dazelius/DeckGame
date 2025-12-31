@@ -2,23 +2,7 @@
 // Shadow Deck - 카드 데이터베이스
 // ==========================================
 // 카드 이동 연출은 card-animation.js에서 관리
-
-// 카드 타입
-const CardType = {
-    ATTACK: 'attack',
-    SKILL: 'skill',
-    POWER: 'power',
-    STATUS: 'status', // 상태이상 카드 (사용 불가)
-    CURSE: 'curse'    // 저주 카드
-};
-
-// 희귀도
-const Rarity = {
-    BASIC: 'basic',
-    COMMON: 'common',
-    UNCOMMON: 'uncommon',
-    RARE: 'rare'
-};
+// CardType, Rarity는 card-types.js에서 정의됨
 
 // ==========================================
 // 트라이포스 시스템

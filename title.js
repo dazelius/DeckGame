@@ -284,6 +284,11 @@ const TitleSystem = {
             this.continueGame();
         });
         
+        // 전투 테스트 버튼
+        document.getElementById('title-test-btn').addEventListener('click', () => {
+            this.startBattleTest();
+        });
+        
         // 데이터 초기화 버튼
         document.getElementById('reset-data-btn').addEventListener('click', () => {
             this.resetAllData();
