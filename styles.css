@@ -164,17 +164,19 @@ img {
     -webkit-touch-callout: none;
 }
 
-/* 배경 오버레이 (살짝 어둡게) */
+/* 배경 오버레이 (상단만 살짝 어둡게 - 하단 UI 가리지 않음) */
 .game-container::before {
     content: '';
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 70%; /* 상단 70%에만 적용 */
     background: linear-gradient(
         180deg,
         rgba(0, 0, 0, 0.15) 0%,
-        rgba(0, 0, 0, 0.05) 30%,
-        rgba(0, 0, 0, 0.05) 70%,
-        rgba(0, 0, 0, 0.3) 100%
+        rgba(0, 0, 0, 0.05) 50%,
+        transparent 100%
     );
     pointer-events: none;
     z-index: 0;
@@ -293,9 +295,10 @@ img {
     height: 45%;
     background: linear-gradient(180deg, 
         transparent 0%,
-        rgba(30, 25, 35, 0.5) 20%,
-        rgba(40, 35, 50, 0.7) 100%
+        rgba(30, 25, 35, 0.3) 20%,
+        rgba(40, 35, 50, 0.4) 100%
     );
+    z-index: 0;
 }
 
 .floor::before {
@@ -1308,9 +1311,9 @@ img {
    ========================================== */
 .bottom-area {
     position: relative;
-    z-index: 500;
+    z-index: 1000;
     height: 260px;
-    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.85) 10%, rgba(10, 8, 6, 0.98) 100%);
+    background: linear-gradient(180deg, transparent 0%, rgba(10, 8, 6, 0.95) 15%, rgba(10, 8, 6, 1) 100%);
     display: flex;
     align-items: center;
     padding: 0 20px;
@@ -1329,7 +1332,7 @@ img {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 510;
+    z-index: 1010;
 }
 
 /* 외곽 장식 링 */
@@ -1487,7 +1490,7 @@ img {
     left: 120px;
     top: 50%;
     transform: translateY(-50%);
-    z-index: 510;
+    z-index: 1010;
 }
 
 .discard-pile {
@@ -1495,7 +1498,7 @@ img {
     right: 120px;
     top: 50%;
     transform: translateY(-50%);
-    z-index: 510;
+    z-index: 1010;
 }
 
 /* 카드 더미 컨테이너 */
@@ -1668,7 +1671,7 @@ img {
     padding: 0 180px;
     height: 100%;
     position: relative;
-    z-index: 520;
+    z-index: 1020;
 }
 
 .hand {
@@ -1679,7 +1682,7 @@ img {
     perspective: 1500px;
     margin-bottom: 10px;
     position: relative;
-    z-index: 520;
+    z-index: 1020;
 }
 
 /* ==========================================
@@ -2858,7 +2861,7 @@ body .card-drag-ghost.can-drop {
     transform: translateY(-50%);
     width: 90px;
     height: 90px;
-    z-index: 510;
+    z-index: 1010;
     background: 
         radial-gradient(ellipse 120% 80% at 50% 20%, 
             rgba(80, 70, 50, 0.6) 0%, 
