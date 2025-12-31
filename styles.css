@@ -492,9 +492,16 @@ img {
     justify-content: center;
 }
 
-/* 플레이어 캐릭터 */
+/* 플레이어 캐릭터 - 하얀 외곽선 + 생동감 */
 .player-character {
-    filter: drop-shadow(0 0 30px rgba(52, 152, 219, 0.3));
+    /* 하얀 외곽선 (여러 방향 drop-shadow) */
+    filter: 
+        drop-shadow(1px 0 0 rgba(255, 255, 255, 0.9))
+        drop-shadow(-1px 0 0 rgba(255, 255, 255, 0.9))
+        drop-shadow(0 1px 0 rgba(255, 255, 255, 0.9))
+        drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.9))
+        drop-shadow(0 0 8px rgba(255, 255, 255, 0.5))
+        drop-shadow(0 0 20px rgba(100, 180, 255, 0.3));
 }
 
 /* 플레이어 위치 - 바닥선 정렬 (translateY 제거) */
@@ -518,19 +525,37 @@ img {
     max-height: 300px;
     object-fit: contain;
     image-rendering: pixelated;
-    animation: playerIdle 3s ease-in-out infinite;
+    animation: playerIdle 2.5s ease-in-out infinite;
     position: relative;
     z-index: 1;
 }
 
+/* 플레이어 생동감 애니메이션 - 호흡 + 약간의 흔들림 */
 @keyframes playerIdle {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
+    0%, 100% { 
+        transform: translateY(0) scale(1); 
+    }
+    25% {
+        transform: translateY(-3px) scale(1.01);
+    }
+    50% { 
+        transform: translateY(-6px) scale(1.02); 
+    }
+    75% {
+        transform: translateY(-3px) scale(1.01);
+    }
 }
 
-/* 적 캐릭터 공통 */
+/* 적 캐릭터 공통 - 하얀 외곽선 + 생동감 */
 .enemy-character {
-    filter: drop-shadow(0 0 30px rgba(220, 53, 69, 0.3));
+    /* 하얀 외곽선 (여러 방향 drop-shadow) */
+    filter: 
+        drop-shadow(1px 0 0 rgba(255, 255, 255, 0.85))
+        drop-shadow(-1px 0 0 rgba(255, 255, 255, 0.85))
+        drop-shadow(0 1px 0 rgba(255, 255, 255, 0.85))
+        drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.85))
+        drop-shadow(0 0 6px rgba(255, 255, 255, 0.4))
+        drop-shadow(0 0 15px rgba(255, 100, 100, 0.3));
 }
 
 .enemy-shadow {
@@ -555,7 +580,7 @@ img {
     50% { transform: translateY(-8px) scaleY(1.05); }
 }
 
-/* 적 이미지 스프라이트 */
+/* 적 이미지 스프라이트 - 생동감 애니메이션 */
 .enemy-sprite-img {
     width: 180px;
     height: auto;
@@ -565,6 +590,26 @@ img {
     position: relative;
     z-index: 1;
     transition: filter 0.2s ease;
+    animation: enemyIdle 2s ease-in-out infinite;
+}
+
+/* 각 적마다 다른 애니메이션 딜레이로 자연스럽게 */
+.enemy-unit:nth-child(1) .enemy-sprite-img { animation-delay: 0s; }
+.enemy-unit:nth-child(2) .enemy-sprite-img { animation-delay: 0.3s; }
+.enemy-unit:nth-child(3) .enemy-sprite-img { animation-delay: 0.6s; }
+.enemy-unit:nth-child(4) .enemy-sprite-img { animation-delay: 0.9s; }
+
+/* 적 생동감 애니메이션 - 위협적인 흔들림 */
+@keyframes enemyIdle {
+    0%, 100% { 
+        transform: translateY(0) scale(1); 
+    }
+    30% {
+        transform: translateY(-4px) scale(1.01);
+    }
+    60% { 
+        transform: translateY(-2px) scale(1.005); 
+    }
 }
 
 /* ==========================================
