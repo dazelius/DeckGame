@@ -615,46 +615,40 @@ const VFX = {
             console.warn('[VFX] ⚠️ PixiRenderer가 초기화되지 않음!');
         }
         
-        // 🎭 GSAP 스프라이트 애니메이션 (플레이어) - 부드럽게!
+        // 🎭 GSAP 스프라이트 애니메이션 (플레이어) - 아주 약하게!
         if (typeof gsap !== 'undefined') {
             const playerSprite = document.querySelector('.player-sprite-img');
             if (playerSprite) {
-                // 방어 자세 (글로우 약하게!)
+                // 방어 자세 (글로우 거의 없이!)
                 gsap.timeline()
                     .to(playerSprite, {
-                        scaleX: 1.05,
-                        scaleY: 0.96,
-                        x: -3,
-                        filter: `
-                            drop-shadow(1px 0 0 rgba(96, 165, 250, 0.7))
-                            drop-shadow(-1px 0 0 rgba(96, 165, 250, 0.7))
-                            drop-shadow(0 1px 0 rgba(96, 165, 250, 0.7))
-                            drop-shadow(0 -1px 0 rgba(96, 165, 250, 0.7))
-                            brightness(1.15)
-                        `,
-                        duration: 0.08,
+                        scaleX: 1.03,
+                        scaleY: 0.98,
+                        x: -2,
+                        filter: 'brightness(1.05)',  // 글로우 제거, 살짝 밝게만
+                        duration: 0.06,
                         ease: "power2.out"
                     })
                     .to(playerSprite, {
-                        scaleX: 0.97,
-                        scaleY: 1.03,
-                        x: 2,
-                        filter: 'brightness(1.05)',
-                        duration: 0.06
+                        scaleX: 0.98,
+                        scaleY: 1.02,
+                        x: 1,
+                        filter: 'brightness(1.02)',
+                        duration: 0.05
                     })
                     .to(playerSprite, {
                         scaleX: 1,
                         scaleY: 1,
                         x: 0,
                         filter: '',
-                        duration: 0.15,
+                        duration: 0.12,
                         ease: "power2.out"
                     });
             }
         }
         
-        // 🛡️ 작은 파티클만 (큰 글로우 제거!)
-        this.sparks(x, y, { color, count: 6, speed: 4, size: 3 });
+        // 🛡️ 최소한의 파티클만
+        this.sparks(x, y, { color, count: 3, speed: 3, size: 2 });
     },
     
     // ==========================================
