@@ -700,26 +700,90 @@ img {
     }
 }
 
-/* 🔥 공격 준비 - 위협적 흔들림 */
+/* 🔥 강한 공격 준비 - 힘을 모으는 느낌! */
 .enemy-unit.intent-attack-strong .enemy-sprite-img {
-    animation: threatShake 0.6s ease-in-out infinite;
+    animation: powerCharge 1.5s ease-in-out infinite;
+    /* 붉은 글로우 (힘 축적) */
+    filter: 
+        drop-shadow(1px 0 0 rgba(255, 255, 255, 0.9))
+        drop-shadow(-1px 0 0 rgba(255, 255, 255, 0.9))
+        drop-shadow(0 1px 0 rgba(255, 255, 255, 0.9))
+        drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.9))
+        drop-shadow(0 0 10px rgba(255, 100, 50, 0.6))
+        drop-shadow(0 0 20px rgba(255, 50, 0, 0.4)) !important;
 }
 
-@keyframes threatShake {
-    0%, 100% { 
-        transform: translateX(0) rotate(0deg); 
+@keyframes powerCharge {
+    /* 1단계: 웅크리기 (힘을 모으기 시작) */
+    0% { 
+        transform: translateY(0) scaleY(1) scaleX(1); 
+    }
+    /* 2단계: 깊이 웅크리기 + 부들부들 */
+    15% { 
+        transform: translateY(8px) scaleY(0.92) scaleX(1.05); 
     }
     20% { 
-        transform: translateX(-4px) rotate(-1deg); 
+        transform: translateY(8px) scaleY(0.92) scaleX(1.05) translateX(-2px); 
     }
+    25% { 
+        transform: translateY(8px) scaleY(0.92) scaleX(1.05) translateX(2px); 
+    }
+    30% { 
+        transform: translateY(8px) scaleY(0.92) scaleX(1.05) translateX(-1px); 
+    }
+    35% { 
+        transform: translateY(8px) scaleY(0.92) scaleX(1.05) translateX(1px); 
+    }
+    /* 3단계: 힘이 축적되며 떨림 */
     40% { 
-        transform: translateX(4px) rotate(1deg); 
+        transform: translateY(6px) scaleY(0.94) scaleX(1.04) translateX(-2px); 
     }
-    60% { 
-        transform: translateX(-3px) rotate(-0.5deg); 
+    45% { 
+        transform: translateY(6px) scaleY(0.94) scaleX(1.04) translateX(2px); 
     }
-    80% { 
-        transform: translateX(3px) rotate(0.5deg); 
+    50% { 
+        transform: translateY(6px) scaleY(0.94) scaleX(1.04) translateX(-1px); 
+    }
+    55% { 
+        transform: translateY(6px) scaleY(0.94) scaleX(1.04) translateX(1px); 
+    }
+    /* 4단계: 살짝 일어나면서 위협 포즈 */
+    70% { 
+        transform: translateY(3px) scaleY(0.97) scaleX(1.02); 
+    }
+    /* 5단계: 잠시 정지 (타격 직전 긴장감) */
+    85% { 
+        transform: translateY(2px) scaleY(0.98) scaleX(1.01); 
+    }
+    /* 다시 처음으로 (루프) */
+    100% { 
+        transform: translateY(0) scaleY(1) scaleX(1); 
+    }
+}
+
+/* 강한 공격 - 추가 이펙트 (부모 요소에 펄스) */
+.enemy-unit.intent-attack-strong::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(255, 80, 0, 0.15) 0%, transparent 70%);
+    animation: powerPulse 1.5s ease-in-out infinite;
+    pointer-events: none;
+    z-index: -1;
+}
+
+@keyframes powerPulse {
+    0%, 100% {
+        opacity: 0.3;
+        transform: translate(-50%, -50%) scale(0.8);
+    }
+    50% {
+        opacity: 0.6;
+        transform: translate(-50%, -50%) scale(1.1);
     }
 }
 
