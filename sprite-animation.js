@@ -299,7 +299,7 @@ const SpriteAnimation = {
     },
     
     // ==========================================
-    // 적 피격 애니메이션 - 좌우 파닥파닥! (3배 강화!)
+    // 적 피격 애니메이션 - 좌우 파닥파닥! (3배 강화!) + 빨간 깜박임!
     // ==========================================
     enemyHit(enemyElement, damage = 0) {
         const sprite = enemyElement?.querySelector('.enemy-sprite-img');
@@ -307,23 +307,23 @@ const SpriteAnimation = {
         
         const duration = 500;
         const startTime = performance.now();
-        const intensity = Math.min(damage / 10, 1.5) + 0.5; // 더 강한 기본 강도
+        const intensity = Math.min(damage / 10, 1.5) + 0.5;
         
         const animate = (currentTime) => {
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / duration, 1);
             
-            // 빠른 좌우 파닥파닥 흔들림! (머리 흔드는 느낌) - 3배 강화!
+            // 빠른 좌우 파닥파닥 흔들림!
             const shakeFreq = 22;
             const shake = Math.sin(progress * Math.PI * shakeFreq) * (1 - progress) * 75 * intensity;
             
-            // 약간의 기울기 (머리 흔드는 느낌) - 3배 강화!
+            // 약간의 기울기
             const tilt = Math.sin(progress * Math.PI * shakeFreq * 0.8) * (1 - progress) * 24 * intensity;
             
-            // 뒤로 밀림 - 3배 강화!
+            // 뒤로 밀림
             const knockback = Math.sin(progress * Math.PI * 0.5) * 45 * intensity;
             
-            // Squash 효과 - 3배 강화!
+            // Squash 효과
             let scaleX = 1, scaleY = 1;
             if (progress < 0.15) {
                 scaleX = 1 + (progress / 0.15) * 0.25 * intensity;
@@ -332,6 +332,22 @@ const SpriteAnimation = {
                 const rec = (progress - 0.15) / 0.85;
                 scaleX = 1 + ((1 - rec) * 0.25 * intensity);
                 scaleY = 1 - ((1 - rec) * 0.18 * intensity);
+            }
+            
+            // 🔴 빨간 깜박임! (2D 게임 스타일)
+            const flashFreq = 12;
+            const flash = Math.sin(progress * Math.PI * flashFreq);
+            if (flash > 0 && progress < 0.8) {
+                sprite.style.filter = `
+                    drop-shadow(2px 0 0 rgba(255, 50, 50, 1))
+                    drop-shadow(-2px 0 0 rgba(255, 50, 50, 1))
+                    drop-shadow(0 2px 0 rgba(255, 50, 50, 1))
+                    drop-shadow(0 -2px 0 rgba(255, 50, 50, 1))
+                    drop-shadow(0 0 15px rgba(255, 0, 0, 0.8))
+                    brightness(1.5) saturate(1.5)
+                `;
+            } else {
+                sprite.style.filter = '';
             }
             
             sprite.style.transform = `
@@ -345,6 +361,7 @@ const SpriteAnimation = {
                 requestAnimationFrame(animate);
             } else {
                 sprite.style.transform = '';
+                sprite.style.filter = '';
             }
         };
         
@@ -352,33 +369,34 @@ const SpriteAnimation = {
     },
     
     // ==========================================
-    // 플레이어 피격 애니메이션 - 좌우 파닥파닥! (3배 강화!)
+    // 플레이어 피격 애니메이션 - 좌우 파닥파닥! (3배 강화!) + 빨간 깜박임!
     // ==========================================
     playerHit(damage = 0) {
         const sprite = document.querySelector('.player-sprite-img');
+        const character = document.querySelector('.player-character');
         if (!sprite) return;
         
         this.stopAnimation('player-idle');
         
         const duration = 500;
         const startTime = performance.now();
-        const intensity = Math.min(damage / 8, 1.5) + 0.5; // 더 강한 기본 강도
+        const intensity = Math.min(damage / 8, 1.5) + 0.5;
         
         const animate = (currentTime) => {
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / duration, 1);
             
-            // 빠른 좌우 파닥파닥! (머리 흔드는 느낌) - 3배 강화!
+            // 빠른 좌우 파닥파닥!
             const shakeFreq = 22;
             const shake = Math.sin(progress * Math.PI * shakeFreq) * (1 - progress) * 60 * intensity;
             
-            // 머리 흔드는 기울기 - 3배 강화!
+            // 머리 흔드는 기울기
             const tilt = Math.sin(progress * Math.PI * shakeFreq * 0.7) * (1 - progress) * 18 * intensity;
             
-            // 뒤로 밀림 - 3배 강화!
+            // 뒤로 밀림
             const knockback = Math.sin(progress * Math.PI * 0.5) * -75 * intensity;
             
-            // Squash 효과 - 3배 강화!
+            // Squash 효과
             let scaleX = 1, scaleY = 1;
             if (progress < 0.12) {
                 scaleX = 1 + (progress / 0.12) * 0.3 * intensity;
@@ -387,6 +405,23 @@ const SpriteAnimation = {
                 const rec = (progress - 0.12) / 0.88;
                 scaleX = 1 + ((1 - rec) * 0.3 * intensity);
                 scaleY = 1 - ((1 - rec) * 0.2 * intensity);
+            }
+            
+            // 🔴 빨간 깜박임! (2D 게임 스타일)
+            const flashFreq = 12;
+            const flash = Math.sin(progress * Math.PI * flashFreq);
+            if (flash > 0 && progress < 0.8) {
+                // 빨간 외곽선 + 밝기
+                sprite.style.filter = `
+                    drop-shadow(2px 0 0 rgba(255, 50, 50, 1))
+                    drop-shadow(-2px 0 0 rgba(255, 50, 50, 1))
+                    drop-shadow(0 2px 0 rgba(255, 50, 50, 1))
+                    drop-shadow(0 -2px 0 rgba(255, 50, 50, 1))
+                    drop-shadow(0 0 15px rgba(255, 0, 0, 0.8))
+                    brightness(1.5) saturate(1.5)
+                `;
+            } else {
+                sprite.style.filter = '';
             }
             
             sprite.style.transform = `
@@ -400,6 +435,7 @@ const SpriteAnimation = {
                 requestAnimationFrame(animate);
             } else {
                 sprite.style.transform = '';
+                sprite.style.filter = '';
                 this.startPlayerIdle();
             }
         };
