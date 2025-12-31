@@ -3603,81 +3603,195 @@ body .card-drag-ghost.can-drop {
 }
 
 /* ==========================================
-   데미지 팝업
+   데미지 팝업 - 고가독성 스타일!
    ========================================== */
 .damage-popup {
     position: fixed;
-    font-family: 'Cinzel', serif;
-    font-size: 2.2rem;
+    font-family: 'Impact', 'Arial Black', sans-serif;
+    font-size: 2.8rem;
     font-weight: 900;
     pointer-events: none;
     z-index: 999999;
-    animation: damageFloat 1s forwards;
-    letter-spacing: 1px;
+    animation: damagePopNew 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    letter-spacing: 2px;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
 }
 
+/* 대미지 숫자 스타일 */
+.damage-popup .dmg-value {
+    font-size: inherit;
+    font-weight: inherit;
+}
+
+.damage-popup .dmg-icon {
+    font-size: 0.7em;
+    margin-right: 2px;
+}
+
+/* 일반 데미지 - 빨간색 + 강한 외곽선 */
 .damage-popup.damage {
-    color: #ff4444;
+    color: #ff3333;
     text-shadow: 
-        2px 2px 0 #000,
-        -2px -2px 0 #000,
-        2px -2px 0 #000,
-        -2px 2px 0 #000,
-        3px 3px 4px rgba(0, 0, 0, 0.9),
-        0 0 10px rgba(0, 0, 0, 0.5);
+        /* 흰색 내부 테두리 */
+        1px 1px 0 #fff,
+        -1px -1px 0 #fff,
+        1px -1px 0 #fff,
+        -1px 1px 0 #fff,
+        /* 검은색 외부 테두리 */
+        3px 3px 0 #000,
+        -3px -3px 0 #000,
+        3px -3px 0 #000,
+        -3px 3px 0 #000,
+        /* 글로우 효과 */
+        0 0 15px rgba(255, 50, 50, 0.8),
+        0 0 30px rgba(255, 0, 0, 0.5);
+    -webkit-text-stroke: 1px #fff;
 }
 
+/* 방어 팝업 - 파란색 */
+.damage-popup.block-popup,
+.damage-popup.block {
+    color: #4fc3f7;
+    text-shadow: 
+        1px 1px 0 #fff,
+        -1px -1px 0 #fff,
+        1px -1px 0 #fff,
+        -1px 1px 0 #fff,
+        3px 3px 0 #000,
+        -3px -3px 0 #000,
+        0 0 15px rgba(79, 195, 247, 0.8);
+    animation: blockPop 0.8s ease-out forwards;
+}
+
+/* 출혈 팝업 - 진한 빨강 */
+.damage-popup.bleed-popup {
+    color: #dc2626;
+    text-shadow: 
+        1px 1px 0 #fff,
+        -1px -1px 0 #fff,
+        3px 3px 0 #000,
+        0 0 20px rgba(220, 38, 38, 0.9);
+}
+
+/* 가시 팝업 - 초록색 */
+.damage-popup.thorn-popup,
 .damage-popup.thorn {
     color: #22c55e;
     text-shadow: 
-        0 0 10px rgba(34, 197, 94, 0.8),
-        2px 2px 0 #000;
+        1px 1px 0 #fff,
+        -1px -1px 0 #fff,
+        3px 3px 0 #000,
+        0 0 15px rgba(34, 197, 94, 0.8);
 }
 
-.damage-popup.thorn::before {
-    content: '🌵 ';
-}
-
-/* 가시 히트 애니메이션 */
-@keyframes spikeHit {
+/* 🔥 새로운 대미지 애니메이션 - 펀치감 있게! */
+@keyframes damagePopNew {
     0% { 
-        opacity: 1; 
-        transform: scale(0.5) rotate(0deg); 
+        transform: translate(-50%, -50%) scale(0.2) rotate(var(--random-rotation, 0deg)); 
+        opacity: 0; 
     }
-    50% { 
+    15% { 
+        /* 💥 펑! 하고 터지는 느낌 */
+        transform: translate(-50%, -50%) scale(1.6) rotate(var(--random-rotation, 0deg)); 
         opacity: 1; 
-        transform: scale(1.2) rotate(180deg); 
+    }
+    25% { 
+        transform: translate(-50%, -50%) scale(1.0) rotate(var(--random-rotation, 0deg)); 
+    }
+    35% { 
+        transform: translate(-50%, -60%) scale(1.1) rotate(var(--random-rotation, 0deg)); 
     }
     100% { 
+        transform: translate(-50%, -150%) scale(0.8) rotate(var(--random-rotation, 0deg)); 
         opacity: 0; 
-        transform: scale(0.3) rotate(360deg) translateY(-30px); 
     }
 }
 
-.damage-popup.block {
-    color: var(--accent-azure);
-    text-shadow: 
-        0 0 10px rgba(52, 152, 219, 0.8),
-        2px 2px 0 #000;
+/* 방어 팝업 전용 애니메이션 */
+@keyframes blockPop {
+    0% { 
+        transform: translate(-50%, -50%) scale(0.3); 
+        opacity: 0; 
+    }
+    20% { 
+        transform: translate(-50%, -50%) scale(1.3); 
+        opacity: 1; 
+    }
+    40% { 
+        transform: translate(-50%, -70%) scale(1.0); 
+    }
+    100% { 
+        transform: translate(-50%, -120%) scale(0.9); 
+        opacity: 0; 
+    }
 }
 
-@keyframes damageFloat {
+/* 크리티컬 대미지 - 초극적! */
+.damage-popup.critical-damage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: criticalDamageNew 1.5s ease-out forwards;
+    font-size: 3.5rem;
+}
+
+.damage-popup.critical-damage .crit-label {
+    font-size: 1.1rem;
+    color: #fbbf24;
+    text-shadow: 
+        1px 1px 0 #000,
+        -1px -1px 0 #000,
+        0 0 20px #fbbf24,
+        0 0 40px #f59e0b;
+    animation: critLabelShake 0.4s ease-out;
+    letter-spacing: 3px;
+}
+
+.damage-popup.critical-damage .crit-value {
+    font-size: 4rem;
+    color: #ff1a1a;
+    text-shadow: 
+        2px 2px 0 #fff,
+        -2px -2px 0 #fff,
+        4px 4px 0 #000,
+        -4px -4px 0 #000,
+        0 0 30px #ff0000,
+        0 0 60px rgba(255, 0, 0, 0.7);
+    -webkit-text-stroke: 2px #fff;
+}
+
+@keyframes criticalDamageNew {
     0% { 
-        transform: translateY(0) scale(0.3) rotate(var(--random-rotation, 0deg)); 
         opacity: 0; 
+        transform: translate(-50%, -50%) scale(0.3); 
     }
     10% { 
-        transform: translateY(-5px) scale(1.4) rotate(var(--random-rotation, 0deg)); 
+        /* 💥 대폭발! */
         opacity: 1; 
+        transform: translate(-50%, -50%) scale(2.0); 
+    }
+    20% { 
+        transform: translate(-50%, -50%) scale(1.3); 
     }
     30% { 
-        transform: translateY(-20px) scale(1.1) rotate(var(--random-rotation, 0deg)); 
-        opacity: 1; 
+        transform: translate(-50%, -60%) scale(1.4); 
     }
     100% { 
-        transform: translateY(-80px) scale(0.9) rotate(var(--random-rotation, 0deg)); 
         opacity: 0; 
+        transform: translate(-50%, -150%) scale(1.0); 
     }
+}
+
+@keyframes critLabelShake {
+    0%, 100% { transform: translateX(0) rotate(0deg); }
+    20% { transform: translateX(-8px) rotate(-3deg); }
+    40% { transform: translateX(8px) rotate(3deg); }
+    60% { transform: translateX(-5px) rotate(-2deg); }
+    80% { transform: translateX(5px) rotate(2deg); }
 }
 
 /* 히트 이펙트 */
