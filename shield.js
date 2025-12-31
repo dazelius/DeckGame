@@ -47,11 +47,26 @@ const ShieldSystem = {
         // UI 업데이트 (증가 애니메이션)
         this.updateBlockUI(target, 'gain', amount);
         
-        // 캐릭터 색상 플래시 효과
+        // 캐릭터 색상 플래시 효과 + 파란 외곽선
         const isPlayer = target === gameState.player;
         let targetEl;
         if (isPlayer) {
             targetEl = document.getElementById('player');
+            if (targetEl) {
+                targetEl.classList.add('block-flash', 'has-block');
+                setTimeout(() => targetEl.classList.remove('block-flash'), 300);
+            }
+        } else {
+            // 🛡️ 적에게도 has-block 클래스 추가!
+            if (typeof gameState !== 'undefined' && gameState.enemies) {
+                const enemyIndex = gameState.enemies.indexOf(target);
+                if (enemyIndex !== -1) {
+                    targetEl = document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`);
+                }
+            }
+            if (!targetEl) {
+                targetEl = document.querySelector('.enemy-unit:not(.dead)');
+            }
             if (targetEl) {
                 targetEl.classList.add('block-flash', 'has-block');
                 setTimeout(() => targetEl.classList.remove('block-flash'), 300);
@@ -243,6 +258,11 @@ const ShieldSystem = {
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
         
+        // 🛡️ 방어도 0이 되면 has-block 클래스 제거!
+        if (containerEl) {
+            containerEl.classList.remove('has-block');
+        }
+        
         // 🎬 캔버스 유리창 깨지는 VFX 실행
         if (typeof ShieldBreakVFX !== 'undefined') {
             ShieldBreakVFX.play(centerX, centerY, 1);
@@ -309,6 +329,26 @@ const ShieldSystem = {
             this.showBlockFadeEffect(target, previousBlock);
             target.block = 0;
             this.updateBlockUI(target, 'reset');
+            
+            // 🛡️ has-block 클래스 제거!
+            const isPlayer = target === gameState.player;
+            let targetEl;
+            if (isPlayer) {
+                targetEl = document.getElementById('player');
+            } else {
+                if (typeof gameState !== 'undefined' && gameState.enemies) {
+                    const enemyIndex = gameState.enemies.indexOf(target);
+                    if (enemyIndex !== -1) {
+                        targetEl = document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`);
+                    }
+                }
+                if (!targetEl) {
+                    targetEl = document.querySelector('.enemy-unit:not(.dead)');
+                }
+            }
+            if (targetEl) {
+                targetEl.classList.remove('has-block');
+            }
             
             console.log(`[Shield] ${this.getTargetName(target)} 방어도 소멸 (${previousBlock} -> 0)`);
         }

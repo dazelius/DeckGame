@@ -59,14 +59,17 @@ const SpriteAnimation = {
     },
     
     // ==========================================
-    // 🌍 화면 흔들림 - GSAP!
+    // 🌍 화면 흔들림 - GSAP! (더 과장되게!)
     // ==========================================
     screenShake(intensity = 5, duration = 0.15) {
         const gameContainer = document.querySelector('.game-container') || document.body;
         
+        // 🔥 강도 증폭 (1.5배!)
+        const boostedIntensity = intensity * 1.5;
+        
         // 랜덤 흔들림
         gsap.to(gameContainer, {
-            x: () => (Math.random() - 0.5) * intensity * 2,
+            x: () => (Math.random() - 0.5) * boostedIntensity * 2,
             y: () => (Math.random() - 0.5) * intensity * 2,
             duration: 0.02,
             repeat: Math.floor(duration / 0.02),
@@ -501,26 +504,26 @@ const SpriteAnimation = {
             return;
         }
         
-        // 데미지에 따른 강도
+        // 🔥 데미지에 따른 강도 (더 과장되게!)
         let intensity, freezeTime, hitType;
         if (damage >= 25) {
-            intensity = 3.5;
-            freezeTime = 0.12;
+            intensity = 6.0;      // 💀 크리티컬: 엄청 강하게!
+            freezeTime = 0.15;
             hitType = 'critical';
             console.log('[Enemy Hit] 💀 치명적!', damage);
         } else if (damage >= 15) {
-            intensity = 2.5;
-            freezeTime = 0.08;
+            intensity = 4.5;      // 😱 강함
+            freezeTime = 0.10;
             hitType = 'heavy';
             console.log('[Enemy Hit] 😱 강함!', damage);
         } else if (damage >= 8) {
-            intensity = 1.6;
-            freezeTime = 0.05;
+            intensity = 3.0;      // 😣 중간
+            freezeTime = 0.07;
             hitType = 'medium';
             console.log('[Enemy Hit] 😣 중간', damage);
         } else {
-            intensity = 0.9;
-            freezeTime = 0.03;
+            intensity = 2.0;      // 😐 약함도 눈에 띄게!
+            freezeTime = 0.05;
             hitType = 'light';
             console.log('[Enemy Hit] 😐 약함', damage);
         }
@@ -542,105 +545,118 @@ const SpriteAnimation = {
             }
         }
         
-        // 🌍 화면 흔들림
-        this.screenShake(intensity * 4, freezeTime + 0.1);
+        // 🌍 화면 흔들림 (더 강하게!)
+        this.screenShake(intensity * 5, freezeTime + 0.15);
         
         // GSAP 타임라인
         const tl = gsap.timeline();
         
-        // ⏸️ 히트스탑! 흰색 번쩍 + 정지
+        // ⏸️ 히트스탑! 흰색 번쩍 + 정지 (더 크게!)
         tl.set(sprite, { 
-            scale: 1.15,
-            x: 10,
+            scale: 1.25,
+            x: 15,
             filter: `
-                drop-shadow(3px 0 0 white)
-                drop-shadow(-3px 0 0 white)
-                drop-shadow(0 3px 0 white)
-                drop-shadow(0 -3px 0 white)
-                brightness(2.5) saturate(0)
+                drop-shadow(4px 0 0 white)
+                drop-shadow(-4px 0 0 white)
+                drop-shadow(0 4px 0 white)
+                drop-shadow(0 -4px 0 white)
+                brightness(3) saturate(0)
             `
         })
         // 프리즈 유지!
         .to(sprite, { duration: freezeTime });
         
-        // 💢 빨간 깜박 + 극적인 파닥파닥!
+        // 💢 빨간 깜박 + 극적인 파닥파닥! (과장되게!)
         if (hitType === 'critical') {
-            // 크리티컬: 더 극적인 반응
+            // 🔥 크리티컬: 미친듯이 흔들림!
             tl.to(sprite, {
-                x: 50 * intensity,
-                rotation: 15,
-                scaleX: 1.3,
-                scaleY: 0.7,
+                x: 80,
+                rotation: 25,
+                scaleX: 1.5,
+                scaleY: 0.6,
                 filter: `
-                    drop-shadow(3px 0 0 rgba(255, 255, 0, 1))
-                    drop-shadow(-3px 0 0 rgba(255, 255, 0, 1))
-                    drop-shadow(0 3px 0 rgba(255, 255, 0, 1))
-                    drop-shadow(0 -3px 0 rgba(255, 255, 0, 1))
-                    drop-shadow(0 0 25px rgba(255, 200, 0, 0.9))
-                    brightness(2)
+                    drop-shadow(4px 0 0 rgba(255, 255, 0, 1))
+                    drop-shadow(-4px 0 0 rgba(255, 255, 0, 1))
+                    drop-shadow(0 4px 0 rgba(255, 255, 0, 1))
+                    drop-shadow(0 -4px 0 rgba(255, 255, 0, 1))
+                    drop-shadow(0 0 35px rgba(255, 200, 0, 1))
+                    brightness(2.5)
                 `,
-                duration: 0.06,
+                duration: 0.07,
                 ease: "power4.out"
             })
             .to(sprite, {
-                x: -40,
-                rotation: -12,
+                x: -70,
+                rotation: -20,
+                scaleX: 0.8,
+                scaleY: 1.3,
                 filter: `
-                    drop-shadow(2px 0 0 rgba(255, 50, 50, 1))
-                    drop-shadow(-2px 0 0 rgba(255, 50, 50, 1))
-                    drop-shadow(0 0 20px rgba(255, 0, 0, 0.9))
-                    brightness(1.5)
+                    drop-shadow(3px 0 0 rgba(255, 50, 50, 1))
+                    drop-shadow(-3px 0 0 rgba(255, 50, 50, 1))
+                    drop-shadow(0 0 25px rgba(255, 0, 0, 1))
+                    brightness(1.8)
                 `,
-                duration: 0.05
+                duration: 0.06
             })
+            .to(sprite, { x: 55, rotation: 15, scaleX: 1.2, scaleY: 0.85, duration: 0.05 })
+            .to(sprite, { x: -40, rotation: -10, filter: 'brightness(1.5)', duration: 0.05 })
             .to(sprite, { x: 30, rotation: 8, duration: 0.04 })
-            .to(sprite, { x: -20, rotation: -5, filter: 'brightness(1.2)', duration: 0.04 })
+            .to(sprite, { x: -20, rotation: -5, duration: 0.04 })
             .to(sprite, { x: 12, rotation: 3, duration: 0.03 })
             .to(sprite, { x: -6, rotation: -2, duration: 0.03 });
         } else {
-            // 일반 히트
+            // 일반 히트도 과장되게!
             tl.to(sprite, {
-                x: 30 * intensity,
-                rotation: 8 * intensity,
-                scaleX: 1 + 0.15 * intensity,
-                scaleY: 1 - 0.1 * intensity,
+                x: 50 * intensity / 2,
+                rotation: 12 * intensity / 2,
+                scaleX: 1 + 0.25 * intensity / 3,
+                scaleY: 1 - 0.15 * intensity / 3,
                 filter: `
-                    drop-shadow(2px 0 0 rgba(255, 50, 50, 1))
-                    drop-shadow(-2px 0 0 rgba(255, 50, 50, 1))
-                    drop-shadow(0 2px 0 rgba(255, 50, 50, 1))
-                    drop-shadow(0 -2px 0 rgba(255, 50, 50, 1))
-                    drop-shadow(0 0 15px rgba(255, 0, 0, 0.8))
-                    brightness(1.5)
+                    drop-shadow(3px 0 0 rgba(255, 50, 50, 1))
+                    drop-shadow(-3px 0 0 rgba(255, 50, 50, 1))
+                    drop-shadow(0 3px 0 rgba(255, 50, 50, 1))
+                    drop-shadow(0 -3px 0 rgba(255, 50, 50, 1))
+                    drop-shadow(0 0 20px rgba(255, 0, 0, 0.9))
+                    brightness(1.8)
                 `,
-                duration: 0.05,
-                ease: "power2.out"
+                duration: 0.06,
+                ease: "power3.out"
             })
             .to(sprite, {
-                x: -20 * intensity,
-                rotation: -6 * intensity,
-                filter: 'brightness(1)',
+                x: -40 * intensity / 2,
+                rotation: -10 * intensity / 2,
+                scaleX: 0.9,
+                scaleY: 1.15,
+                filter: 'brightness(1.2)',
                 duration: 0.05
             })
             .to(sprite, {
-                x: 15 * intensity,
-                rotation: 5 * intensity,
+                x: 30 * intensity / 2,
+                rotation: 8 * intensity / 2,
+                scaleX: 1.1,
+                scaleY: 0.92,
                 filter: `
                     drop-shadow(2px 0 0 rgba(255, 50, 50, 1))
                     drop-shadow(-2px 0 0 rgba(255, 50, 50, 1))
-                    drop-shadow(0 0 10px rgba(255, 0, 0, 0.6))
-                    brightness(1.3)
+                    drop-shadow(0 0 15px rgba(255, 0, 0, 0.7))
+                    brightness(1.5)
                 `,
+                duration: 0.05
+            })
+            .to(sprite, {
+                x: -20 * intensity / 2,
+                rotation: -6 * intensity / 2,
+                filter: 'brightness(1.1)',
                 duration: 0.04
             })
             .to(sprite, {
-                x: -10 * intensity,
-                rotation: -3 * intensity,
-                filter: 'brightness(1)',
+                x: 12 * intensity / 2,
+                rotation: 4 * intensity / 2,
                 duration: 0.04
             })
             .to(sprite, {
-                x: 5 * intensity,
-                rotation: 2 * intensity,
+                x: -8 * intensity / 2,
+                rotation: -2 * intensity / 2,
                 duration: 0.03
             });
         }
@@ -712,66 +728,75 @@ const SpriteAnimation = {
         }
         
         for (let i = 0; i < hitCount; i++) {
-            const intensity = baseIntensity + (i * 0.2); // 점점 강해짐
+            const intensity = baseIntensity + (i * 0.4); // 🔥 더 강하게 점점 강해짐!
             const direction = (i % 2 === 0) ? 1 : -1;
             const isLast = i === hitCount - 1;
             
-            // 💥 히트스탑 + 흰색 플래시
+            // 💥 히트스탑 + 흰색 플래시 (과장되게!)
             tl.set(sprite, {
-                scale: 1.1 + (i * 0.03),
-                x: direction * 8,
+                scale: 1.2 + (i * 0.05),
+                x: direction * 15,
                 filter: `
-                    drop-shadow(2px 0 0 white)
-                    drop-shadow(-2px 0 0 white)
-                    drop-shadow(0 2px 0 white)
-                    drop-shadow(0 -2px 0 white)
-                    brightness(2.2) saturate(0)
+                    drop-shadow(4px 0 0 white)
+                    drop-shadow(-4px 0 0 white)
+                    drop-shadow(0 4px 0 white)
+                    drop-shadow(0 -4px 0 white)
+                    brightness(3) saturate(0)
                 `
             })
-            // 프리즈
-            .to(sprite, { duration: 0.04 + (i * 0.01) })
-            // 반동 + 빨간/주황 플래시
+            // 프리즈 (더 길게!)
+            .to(sprite, { duration: 0.06 + (i * 0.015) })
+            // 반동 + 빨간/주황 플래시 (과장되게!)
             .to(sprite, {
-                x: direction * 25 * intensity,
-                rotation: direction * 6 * intensity,
-                scaleX: 1.18,
-                scaleY: 0.88,
+                x: direction * 50 * intensity / 2,
+                rotation: direction * 15 * intensity / 2,
+                scaleX: 1.35,
+                scaleY: 0.75,
                 filter: `
-                    drop-shadow(2px 0 0 rgba(255, ${100 - i * 15}, 50, 1))
-                    drop-shadow(-2px 0 0 rgba(255, ${100 - i * 15}, 50, 1))
-                    drop-shadow(0 0 ${12 + i * 4}px rgba(255, ${50 - i * 10}, 0, 0.9))
-                    brightness(${1.5 + i * 0.1})
+                    drop-shadow(3px 0 0 rgba(255, ${100 - i * 15}, 50, 1))
+                    drop-shadow(-3px 0 0 rgba(255, ${100 - i * 15}, 50, 1))
+                    drop-shadow(0 0 ${20 + i * 6}px rgba(255, ${50 - i * 10}, 0, 1))
+                    brightness(${1.8 + i * 0.15})
                 `,
-                duration: 0.04,
-                ease: "power3.out"
+                duration: 0.05,
+                ease: "power4.out"
             })
-            // 흔들림
+            // 흔들림 (과장되게!)
             .to(sprite, {
-                x: -direction * 15 * intensity,
-                rotation: -direction * 4 * intensity,
-                filter: 'brightness(1.1)',
+                x: -direction * 35 * intensity / 2,
+                rotation: -direction * 10 * intensity / 2,
+                scaleX: 0.9,
+                scaleY: 1.15,
+                filter: 'brightness(1.3)',
                 duration: 0.04
             })
             .to(sprite, {
-                x: direction * 8 * intensity,
-                rotation: direction * 2 * intensity,
-                filter: 'brightness(1)',
-                duration: 0.03
+                x: direction * 20 * intensity / 2,
+                rotation: direction * 6 * intensity / 2,
+                filter: 'brightness(1.1)',
+                duration: 0.04
             });
             
-            // 마지막 히트에 추가 반동
+            // 마지막 히트에 추가 반동 (더 극적으로!)
             if (isLast) {
                 tl.to(sprite, {
-                    x: direction * 35,
-                    rotation: direction * 10,
-                    scaleX: 1.25,
-                    scaleY: 0.8,
+                    x: direction * 70,
+                    rotation: direction * 20,
+                    scaleX: 1.4,
+                    scaleY: 0.65,
                     filter: `
-                        drop-shadow(3px 0 0 rgba(255, 50, 50, 1))
-                        drop-shadow(-3px 0 0 rgba(255, 50, 50, 1))
-                        drop-shadow(0 0 20px rgba(255, 0, 0, 0.9))
-                        brightness(1.8)
+                        drop-shadow(4px 0 0 rgba(255, 255, 0, 1))
+                        drop-shadow(-4px 0 0 rgba(255, 255, 0, 1))
+                        drop-shadow(0 0 30px rgba(255, 100, 0, 1))
+                        brightness(2.5)
                     `,
+                    duration: 0.06
+                })
+                .to(sprite, {
+                    x: -50,
+                    rotation: -15,
+                    scaleX: 0.85,
+                    scaleY: 1.2,
                     duration: 0.05
                 });
             }
@@ -830,70 +855,92 @@ const SpriteAnimation = {
         
         // ⚡ 잔상 효과 추가
         tl.set(sprite, {
-            filter: 'blur(3px) brightness(0.8)'
+            filter: 'blur(4px) brightness(0.7)'
         });
         
-        // 초고속 연타!
+        // 🔥 초고속 연타! (더 과장되게!)
         for (let i = 0; i < hitCount; i++) {
-            const offsetX = (Math.random() - 0.5) * 50;
-            const offsetY = (Math.random() - 0.5) * 25;
-            const rot = (Math.random() - 0.5) * 18;
+            const offsetX = (Math.random() - 0.5) * 80;  // 더 크게!
+            const offsetY = (Math.random() - 0.5) * 40;
+            const rot = (Math.random() - 0.5) * 30;      // 더 많이!
             const isEven = i % 2 === 0;
             
-            tl.to(sprite, {
+            // 히트스탑 (잠깐 멈춤)
+            tl.set(sprite, {
                 x: offsetX,
                 y: offsetY,
                 rotation: rot,
-                scaleX: isEven ? 1.12 : 0.92,
-                scaleY: isEven ? 0.92 : 1.12,
+                scaleX: isEven ? 1.35 : 0.8,
+                scaleY: isEven ? 0.8 : 1.35,
                 filter: `
-                    drop-shadow(0 0 18px rgba(255, ${200 - i * 20}, 0, 0.9))
-                    brightness(2.2)
-                    blur(0px)
+                    drop-shadow(4px 0 0 white)
+                    drop-shadow(-4px 0 0 white)
+                    drop-shadow(0 4px 0 white)
+                    drop-shadow(0 -4px 0 white)
+                    brightness(3) saturate(0)
+                `
+            })
+            .to(sprite, { duration: 0.03 })  // 히트스탑!
+            .to(sprite, {
+                filter: `
+                    drop-shadow(0 0 25px rgba(255, ${200 - i * 20}, 0, 1))
+                    brightness(2.5)
                 `,
                 duration: 0.025,
                 ease: "power4.out"
             })
             .to(sprite, {
                 filter: `
-                    drop-shadow(0 0 12px rgba(255, 100, 0, 0.7))
-                    brightness(1.3)
+                    drop-shadow(0 0 15px rgba(255, 100, 0, 0.8))
+                    brightness(1.5)
                 `,
                 duration: 0.02
             });
         }
         
-        // 💥 마무리 충격 (더 극적으로!)
+        // 💥 마무리 충격 (훨씬 더 극적으로!)
         tl.to(sprite, {
-            x: 40,
-            y: -10,
-            rotation: 12,
-            scaleX: 1.3,
-            scaleY: 0.75,
+            x: 80,
+            y: -20,
+            rotation: 25,
+            scaleX: 1.5,
+            scaleY: 0.6,
             filter: `
-                drop-shadow(3px 0 0 white)
-                drop-shadow(-3px 0 0 white)
-                drop-shadow(0 3px 0 white)
-                drop-shadow(0 -3px 0 white)
-                brightness(2.5) saturate(0)
+                drop-shadow(5px 0 0 rgba(255, 255, 0, 1))
+                drop-shadow(-5px 0 0 rgba(255, 255, 0, 1))
+                drop-shadow(0 5px 0 rgba(255, 255, 0, 1))
+                drop-shadow(0 -5px 0 rgba(255, 255, 0, 1))
+                drop-shadow(0 0 40px rgba(255, 200, 0, 1))
+                brightness(3) saturate(0)
             `,
-            duration: 0.05,
+            duration: 0.06,
             ease: "power4.out"
         })
-        .to(sprite, { duration: 0.1 }) // 긴 프리즈!
+        .to(sprite, { duration: 0.12 }) // 긴 프리즈!
         // 🔄 복구 (크게 튕겨나옴)
         .to(sprite, {
-            x: -30,
-            rotation: -8,
-            scaleX: 0.9,
-            scaleY: 1.1,
-            filter: 'brightness(1.2)',
+            x: -60,
+            rotation: -18,
+            scaleX: 0.8,
+            scaleY: 1.25,
+            filter: `
+                drop-shadow(3px 0 0 rgba(255, 50, 50, 1))
+                drop-shadow(-3px 0 0 rgba(255, 50, 50, 1))
+                brightness(1.5)
+            `,
             duration: 0.08
         })
         .to(sprite, {
-            x: 15,
-            rotation: 4,
+            x: 40,
+            rotation: 12,
+            scaleX: 1.15,
+            scaleY: 0.9,
             duration: 0.06
+        })
+        .to(sprite, {
+            x: -25,
+            rotation: -8,
+            duration: 0.05
         })
         .to(sprite, {
             x: 0,
