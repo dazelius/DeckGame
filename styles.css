@@ -203,9 +203,11 @@ img {
 .bg-vignette {
     position: absolute;
     inset: 0;
-    /* 하단 카드 영역을 가리지 않도록 비네팅 범위 조정 */
-    background: radial-gradient(ellipse 100% 80% at center 40%, transparent 30%, rgba(0, 0, 0, 0.5) 100%);
+    /* 하단 카드 영역을 가리지 않도록 상단/좌우에만 비네팅 적용 */
+    background: 
+        radial-gradient(ellipse 150% 100% at 50% 0%, transparent 50%, rgba(0, 0, 0, 0.4) 100%);
     z-index: 1;
+    pointer-events: none;
 }
 
 /* 3-레이어 배경 시스템 */
@@ -1304,9 +1306,9 @@ img {
    ========================================== */
 .bottom-area {
     position: relative;
-    z-index: 100;
+    z-index: 500;
     height: 260px;
-    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.7) 15%, rgba(10, 8, 6, 0.95) 100%);
+    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.85) 10%, rgba(10, 8, 6, 0.98) 100%);
     display: flex;
     align-items: center;
     padding: 0 20px;
@@ -1325,6 +1327,7 @@ img {
     display: flex;
     align-items: center;
     justify-content: center;
+    z-index: 510;
 }
 
 /* 외곽 장식 링 */
@@ -1482,6 +1485,7 @@ img {
     left: 120px;
     top: 50%;
     transform: translateY(-50%);
+    z-index: 510;
 }
 
 .discard-pile {
@@ -1489,6 +1493,7 @@ img {
     right: 120px;
     top: 50%;
     transform: translateY(-50%);
+    z-index: 510;
 }
 
 /* 카드 더미 컨테이너 */
@@ -2847,6 +2852,7 @@ body .card-drag-ghost.can-drop {
     transform: translateY(-50%);
     width: 90px;
     height: 90px;
+    z-index: 510;
     background: 
         radial-gradient(ellipse 120% 80% at 50% 20%, 
             rgba(80, 70, 50, 0.6) 0%, 
