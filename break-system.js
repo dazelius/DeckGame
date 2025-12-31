@@ -381,31 +381,20 @@ const BreakSystem = {
                         enemyEl.style.transform = '';
                     }
                     
-                    // 인텐트 다시 표시
+                    // 인텐트 다시 표시 (스타일만 복구, innerHTML은 game.js에서 처리)
                     const intentEl = enemyEl.querySelector('.enemy-intent-display');
                     if (intentEl) {
                         intentEl.style.display = '';
                         intentEl.style.visibility = '';
                         intentEl.style.opacity = '';
                         intentEl.classList.remove('is-broken');
-                        intentEl.innerHTML = ''; // 나중에 updateEnemiesUI가 채워줌
-                        console.log(`[BreakSystem.onTurnEnd] ${enemy.name} 인텐트 복구 완료`);
+                        // innerHTML은 건드리지 않음! game.js에서 updateEnemiesUI가 처리
+                        console.log(`[BreakSystem.onTurnEnd] ${enemy.name} 인텐트 스타일 복구 완료`);
                     }
                     enemyEl.classList.remove('enemy-broken');
                 }
             }
-            
-            // 새로운 인텐트 결정
-            if (typeof decideEnemyIntentForEnemy === 'function') {
-                decideEnemyIntentForEnemy(enemy);
-                console.log(`[BreakSystem.onTurnEnd] ${enemy.name} 새 인텐트: ${enemy.intent}, 값: ${enemy.intentValue}`);
-            }
-            
-            // 🔥 UI 업데이트 (인텐트 표시!)
-            if (typeof updateEnemiesUI === 'function') {
-                updateEnemiesUI();
-                console.log(`[BreakSystem.onTurnEnd] updateEnemiesUI 호출 완료`);
-            }
+            // ⚠️ 인텐트 결정과 UI 업데이트는 game.js에서 처리 (중복 방지)
         }
     },
     

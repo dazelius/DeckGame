@@ -3196,24 +3196,8 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
         const enemyEl = getEnemyElement(enemyIndex);
         addLog(`${enemy.name} is BROKEN! Skipping action.`, 'system');
         
-        // 브레이크 해제 처리
+        // 브레이크 해제 처리 (스타일만 복구)
         BreakSystem.onTurnEnd(enemy);
-        
-        // 🔥 브레이크 해제 후 새로운 인텐트 설정!
-        if (typeof decideEnemyIntentForEnemy === 'function') {
-            decideEnemyIntentForEnemy(enemy);
-            console.log(`[BreakRecover] ${enemy.name} 인텐트 재설정: ${enemy.intent}, 값: ${enemy.intentValue}`);
-        }
-        
-        // 인텐트 표시 강제 복구
-        if (enemyEl) {
-            const intentEl = enemyEl.querySelector('.enemy-intent-display');
-            if (intentEl) {
-                intentEl.style.display = '';
-                intentEl.classList.remove('is-broken');
-                console.log(`[BreakRecover] ${enemy.name} 인텐트 UI 복구 완료`);
-            }
-        }
         
         // 브레이크 해제 연출
         if (enemyEl && !enemy.isBroken) {
@@ -3238,20 +3222,35 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
             setTimeout(() => recoverEffect.remove(), 1000);
         }
         
-        // 🔥 UI 업데이트 (새 인텐트 표시) - 먼저 호출!
+        // 🔥 1단계: 새로운 인텐트 결정
+        if (typeof decideEnemyIntentForEnemy === 'function') {
+            decideEnemyIntentForEnemy(enemy);
+            console.log(`[BreakRecover] ${enemy.name} 인텐트 재설정: ${enemy.intent}, 값: ${enemy.intentValue}`);
+        }
+        
+        // 🔥 2단계: UI 업데이트
         updateEnemiesUI();
         
-        // 🔥 인텐트 innerHTML 직접 채우기 (updateEnemiesUI가 안 채웠을 경우 대비)
-        if (enemyEl && enemy.intent) {
-            const intentEl = enemyEl.querySelector('.enemy-intent-display');
-            if (intentEl && (!intentEl.innerHTML || intentEl.innerHTML.trim() === '')) {
-                intentEl.innerHTML = typeof getIntentIcon === 'function' 
-                    ? getIntentIcon(enemy.intent, enemy.intentValue, enemy.intentHits || 1, enemy.intentBleed || 0)
-                    : `${enemy.intent} ${enemy.intentValue || ''}`;
-                intentEl.style.display = '';
-                console.log(`[BreakRecover] 🔧 인텐트 직접 채움: ${enemy.intent}`);
+        // 🔥 3단계: 인텐트 표시 강제 (최종 보장!)
+        setTimeout(() => {
+            if (enemyEl) {
+                const intentEl = enemyEl.querySelector('.enemy-intent-display');
+                if (intentEl) {
+                    intentEl.style.display = '';
+                    intentEl.style.visibility = 'visible';
+                    intentEl.style.opacity = '1';
+                    intentEl.classList.remove('is-broken');
+                    
+                    // innerHTML이 비어있으면 직접 채우기
+                    if (!intentEl.innerHTML || intentEl.innerHTML.trim() === '') {
+                        intentEl.innerHTML = typeof getIntentIcon === 'function' 
+                            ? getIntentIcon(enemy.intent, enemy.intentValue, enemy.intentHits || 1, enemy.intentBleed || 0)
+                            : `${enemy.intent} ${enemy.intentValue || ''}`;
+                        console.log(`[BreakRecover] 🔧 인텐트 직접 채움: ${enemy.intent}`);
+                    }
+                }
             }
-        }
+        }, 100); // 모든 애니메이션 후 100ms 딜레이
         
         if (onComplete) setTimeout(onComplete, 500);
         return;
