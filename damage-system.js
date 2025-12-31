@@ -122,6 +122,15 @@ function dealDamage(target, amount, card = null) {
         const isCriticalHit = gameState.currentCritical?.isCritical || false;
         showDamagePopup(targetEl, result.actualDamage, isCriticalHit ? 'critical' : 'damage');
         
+        // 🎭 스프라이트 피격 애니메이션 (파닥파닥!)
+        if (typeof SpriteAnimation !== 'undefined') {
+            if (isPlayer) {
+                SpriteAnimation.playerHit(result.actualDamage);
+            } else if (isEnemy) {
+                SpriteAnimation.enemyHit(targetEl, result.actualDamage);
+            }
+        }
+        
         // 🔊 타격 사운드 재생
         if (typeof SoundSystem !== 'undefined') {
             if (isCriticalHit) {
@@ -187,6 +196,17 @@ function dealDamage(target, amount, card = null) {
     // actualDamage가 0이어도 공격 시도 자체에 반응하는 패시브용
     if (isEnemy && target.onDamageTaken && result.actualDamage === 0 && result.blockedDamage > 0) {
         target.onDamageTaken.call(target, totalDamage, gameState);
+    }
+    
+    // 🎭 방어도로 막혔을 때도 작은 파닥파닥
+    if (result.blockedDamage > 0 && result.actualDamage === 0 && targetEl) {
+        if (typeof SpriteAnimation !== 'undefined') {
+            if (isPlayer) {
+                SpriteAnimation.playerDefend(result.blockedDamage);
+            } else if (isEnemy) {
+                SpriteAnimation.enemyDefend(targetEl, result.blockedDamage);
+            }
+        }
     }
     
     // 분열 체크 (슬라임)

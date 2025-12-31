@@ -299,39 +299,44 @@ const SpriteAnimation = {
     },
     
     // ==========================================
-    // 적 피격 애니메이션
+    // 적 피격 애니메이션 - 좌우 파닥파닥!
     // ==========================================
     enemyHit(enemyElement, damage = 0) {
-        const sprite = enemyElement.querySelector('.enemy-sprite-img');
+        const sprite = enemyElement?.querySelector('.enemy-sprite-img');
         if (!sprite) return;
         
-        const duration = 300;
+        const duration = 400;
         const startTime = performance.now();
-        const intensity = Math.min(damage / 20, 1); // 데미지에 따른 강도
+        const intensity = Math.min(damage / 15, 1.2) + 0.3; // 최소 0.3 강도
         
         const animate = (currentTime) => {
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / duration, 1);
             
-            // 흔들림 (감쇠)
-            const shake = Math.sin(progress * Math.PI * 6) * (1 - progress) * 15 * (0.5 + intensity * 0.5);
+            // 빠른 좌우 파닥파닥 흔들림! (머리 흔드는 느낌)
+            const shakeFreq = 20; // 높을수록 빠르게 파닥
+            const shake = Math.sin(progress * Math.PI * shakeFreq) * (1 - progress) * 25 * intensity;
             
-            // Squash 효과 (맞는 순간)
+            // 약간의 기울기 (머리 흔드는 느낌)
+            const tilt = Math.sin(progress * Math.PI * shakeFreq * 0.8) * (1 - progress) * 8 * intensity;
+            
+            // 살짝 뒤로 밀림
+            const knockback = Math.sin(progress * Math.PI * 0.5) * 15 * intensity;
+            
+            // Squash 효과
             let scaleX = 1, scaleY = 1;
-            if (progress < 0.2) {
-                const impactProgress = progress / 0.2;
-                scaleX = 1 + (impactProgress * 0.2 * intensity);
-                scaleY = 1 - (impactProgress * 0.15 * intensity);
+            if (progress < 0.15) {
+                scaleX = 1 + (progress / 0.15) * 0.1 * intensity;
+                scaleY = 1 - (progress / 0.15) * 0.08 * intensity;
             } else {
-                const recoveryProgress = (progress - 0.2) / 0.8;
-                scaleX = 1.2 * intensity + 1 - (recoveryProgress * 0.2 * intensity);
-                scaleY = 0.85 + (0.15 * intensity) + (recoveryProgress * 0.15 * intensity) - (0.15 * intensity);
-                scaleX = 1 + ((1 - recoveryProgress) * 0.2 * intensity);
-                scaleY = 1 - ((1 - recoveryProgress) * 0.15 * intensity);
+                const rec = (progress - 0.15) / 0.85;
+                scaleX = 1 + ((1 - rec) * 0.1 * intensity);
+                scaleY = 1 - ((1 - rec) * 0.08 * intensity);
             }
             
             sprite.style.transform = `
-                translateX(${shake}px) 
+                translateX(${shake + knockback}px) 
+                rotate(${tilt}deg)
                 scaleX(${scaleX}) 
                 scaleY(${scaleY})
             `;
@@ -347,7 +352,7 @@ const SpriteAnimation = {
     },
     
     // ==========================================
-    // 플레이어 피격 애니메이션
+    // 플레이어 피격 애니메이션 - 좌우 파닥파닥!
     // ==========================================
     playerHit(damage = 0) {
         const sprite = document.querySelector('.player-sprite-img');
@@ -355,32 +360,38 @@ const SpriteAnimation = {
         
         this.stopAnimation('player-idle');
         
-        const duration = 400;
+        const duration = 450;
         const startTime = performance.now();
-        const intensity = Math.min(damage / 15, 1);
+        const intensity = Math.min(damage / 12, 1.2) + 0.3;
         
         const animate = (currentTime) => {
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / duration, 1);
             
-            // 뒤로 밀림 + 흔들림
-            const knockback = Math.sin(progress * Math.PI) * -30 * intensity;
-            const shake = Math.sin(progress * Math.PI * 8) * (1 - progress) * 10;
+            // 빠른 좌우 파닥파닥! (머리 흔드는 느낌)
+            const shakeFreq = 18;
+            const shake = Math.sin(progress * Math.PI * shakeFreq) * (1 - progress) * 20 * intensity;
+            
+            // 머리 흔드는 기울기
+            const tilt = Math.sin(progress * Math.PI * shakeFreq * 0.7) * (1 - progress) * 6 * intensity;
+            
+            // 뒤로 밀림
+            const knockback = Math.sin(progress * Math.PI * 0.5) * -25 * intensity;
             
             // Squash 효과
             let scaleX = 1, scaleY = 1;
-            if (progress < 0.15) {
-                const impactProgress = progress / 0.15;
-                scaleX = 1 + (impactProgress * 0.15);
-                scaleY = 1 - (impactProgress * 0.1);
+            if (progress < 0.12) {
+                scaleX = 1 + (progress / 0.12) * 0.12 * intensity;
+                scaleY = 1 - (progress / 0.12) * 0.08 * intensity;
             } else {
-                const recoveryProgress = (progress - 0.15) / 0.85;
-                scaleX = 1.15 - (recoveryProgress * 0.15);
-                scaleY = 0.9 + (recoveryProgress * 0.1);
+                const rec = (progress - 0.12) / 0.88;
+                scaleX = 1 + ((1 - rec) * 0.12 * intensity);
+                scaleY = 1 - ((1 - rec) * 0.08 * intensity);
             }
             
             sprite.style.transform = `
                 translateX(${knockback + shake}px) 
+                rotate(${tilt}deg)
                 scaleX(${scaleX}) 
                 scaleY(${scaleY})
             `;
