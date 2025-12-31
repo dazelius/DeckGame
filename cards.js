@@ -721,46 +721,57 @@ Object.assign(cardDatabase, {
         icon: '<img src="yungyuk.png" alt="Flurry" class="card-icon-img">',
         description: '<span class="damage">2</span> 데미지를 3회 줍니다.',
         hitCount: 3,
-        hitInterval: 120,
+        hitInterval: 100,
         effect: (state) => {
             const playerEl = document.getElementById('player');
             const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
             const totalHits = 3;
-            const interval = 120;
+            const interval = 100; // 더 빠르게!
             
-            // 플레이어 돌진
-            EffectSystem.playerAttack(playerEl, enemyEl);
-            
-            // 연속 찌르기 이펙트 시작
-            EffectSystem.flurryStab(enemyEl, { 
-                color: '#60a5fa', 
-                hitCount: totalHits,
-                interval: interval 
+            // 플레이어 돌진 → 돌진 후에 공격 시작!
+            EffectSystem.playerAttack(playerEl, enemyEl, () => {
+                // 돌진 완료 후 연속 찌르기 시작!
+                let hitCount = 0;
+                
+                const doHit = () => {
+                    if (hitCount >= totalHits) return;
+                    if (state.enemy.hp <= 0) return; // 적 사망 체크
+                    
+                    // 슬래시 이펙트 + 데미지 동시에!
+                    const rect = enemyEl.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+                    const offsetY = (hitCount - 1) * 25;
+                    
+                    if (typeof VFX !== 'undefined') {
+                        VFX.slash(centerX, centerY + offsetY, {
+                            color: '#60a5fa',
+                            length: 200,
+                            width: 10,
+                            angle: (Math.random() - 0.5) * 20
+                        });
+                        VFX.sparks(centerX + 30, centerY + offsetY, { color: '#60a5fa', count: 8 });
+                    }
+                    
+                    // 데미지
+                    dealDamage(state.enemy, 2);
+                    
+                    hitCount++;
+                    
+                    // 추가 콤보 카운트 (2번째, 3번째 타격)
+                    if (hitCount < totalHits && typeof RelicSystem !== 'undefined') {
+                        RelicSystem.onCardPlayed({ type: CardType.ATTACK }, state);
+                    }
+                    
+                    // 다음 타격
+                    if (hitCount < totalHits && state.enemy.hp > 0) {
+                        setTimeout(doHit, interval);
+                    }
+                };
+                
+                doHit();
             });
             
-            // 데미지 및 콤보 처리
-            let hitCount = 0;
-            
-            const doHit = () => {
-                if (hitCount >= totalHits) return;
-                
-                // 데미지
-                dealDamage(state.enemy, 2);
-                
-                hitCount++;
-                
-                // 추가 콤보 카운트 (2번째, 3번째 타격)
-                if (hitCount < totalHits && typeof RelicSystem !== 'undefined') {
-                    RelicSystem.onCardPlayed({ type: CardType.ATTACK }, state);
-                }
-                
-                // 다음 타격
-                if (hitCount < totalHits) {
-                    setTimeout(doHit, interval);
-                }
-            };
-            
-            doHit();
             addLog('연속 찌르기! 2×3 데미지!', 'damage');
         }
     },
@@ -3588,32 +3599,53 @@ const upgradedCardDatabase = {
         icon: '<img src="yungyuk.png" alt="Flurry+" class="card-icon-img">',
         description: '<span class="damage">3</span> 데미지를 4회 줍니다.',
         hitCount: 4,
-        hitInterval: 120,
+        hitInterval: 80,
         upgraded: true,
         effect: (state) => {
             const playerEl = document.getElementById('player');
             const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
+            const totalHits = 4;
+            const interval = 80; // 업그레이드라 더 빠르게!
             
-            EffectSystem.playerAttack(playerEl, enemyEl);
+            // 플레이어 돌진 → 콜백 안에서 공격!
+            EffectSystem.playerAttack(playerEl, enemyEl, () => {
+                let hits = 0;
+                const doHit = () => {
+                    if (hits >= totalHits) return;
+                    if (state.enemy.hp <= 0) return;
+                    
+                    // 슬래시 이펙트 + 데미지 동시에!
+                    const rect = enemyEl.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+                    const offsetY = (hits - 1) * 20;
+                    
+                    if (typeof VFX !== 'undefined') {
+                        VFX.slash(centerX, centerY + offsetY, {
+                            color: '#60a5fa',
+                            length: 180,
+                            width: 8,
+                            angle: (Math.random() - 0.5) * 25
+                        });
+                        VFX.sparks(centerX + 25, centerY + offsetY, { color: '#60a5fa', count: 6 });
+                    }
+                    
+                    dealDamage(state.enemy, 3);
+                    
+                    if (hits > 0 && typeof RelicSystem !== 'undefined') {
+                        RelicSystem.incrementCombo();
+                        RelicSystem.showComboFloater(RelicSystem.combo.count);
+                    }
+                    
+                    hits++;
+                    if (hits < totalHits && state.enemy.hp > 0) {
+                        setTimeout(doHit, interval);
+                    }
+                };
+                
+                doHit();
+            });
             
-            let hits = 0;
-            const doHit = () => {
-                if (hits >= 4) return;
-                if (state.enemy.hp <= 0) return;
-                
-                EffectSystem.flurryHit(enemyEl, hits);
-                dealDamage(state.enemy, 3);
-                
-                if (hits > 0 && typeof RelicSystem !== 'undefined') {
-                    RelicSystem.incrementCombo();
-                    RelicSystem.showComboFloater(RelicSystem.combo.count);
-                }
-                
-                hits++;
-                setTimeout(doHit, 120);
-            };
-            
-            setTimeout(doHit, 200);
             addLog('연속 찌르기+! 3x4 데미지!', 'damage');
         }
     },

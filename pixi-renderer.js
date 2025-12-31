@@ -1046,7 +1046,7 @@ const PixiRenderer = {
     },
     
     // ==========================================
-    // 🛡️ 쉴드 전개 이펙트 (간결하게!)
+    // 🛡️ 쉴드 전개 이펙트 (매우 미니멀!)
     // ==========================================
     createShieldDeploy(x, y, size = 60, color = '#60a5fa', intensity = 1) {
         if (!this.initialized) return;
@@ -1056,30 +1056,30 @@ const PixiRenderer = {
         container.y = y;
         this.effectsContainer.addChild(container);
         
-        // 🔵 작은 육각형 쉴드 (빠르게 사라짐)
+        // 🔵 아주 작은 육각형 (빠르게 사라짐)
         const shield = new PIXI.Graphics();
-        const hexRadius = size * 0.5;  // 더 작게!
+        const hexRadius = size * 0.35;  // 더 작게!
         
         // 육각형 그리기
         shield.poly(this.getHexPoints(0, 0, hexRadius));
-        shield.fill({ color: color, alpha: 0.15 });  // 더 투명하게!
-        shield.stroke({ width: 2, color: color, alpha: 0.6 });  // 선도 약하게
+        shield.fill({ color: color, alpha: 0.08 });  // 거의 투명!
+        shield.stroke({ width: 1.5, color: color, alpha: 0.4 });  // 선도 약하게
         shield.scale.set(0);
         container.addChild(shield);
         
         // 쉴드 확장 애니메이션 (빠르게!)
         let shieldPhase = 0;
         const animateShield = () => {
-            shieldPhase += 0.12;  // 더 빠르게!
+            shieldPhase += 0.15;  // 더 빠르게!
             
-            if (shieldPhase < 0.5) {
+            if (shieldPhase < 0.4) {
                 // 확장 단계
-                const scale = shieldPhase * 2;
+                const scale = shieldPhase * 2.5;
                 shield.scale.set(scale);
-                shield.alpha = 0.5;
-            } else if (shieldPhase < 1) {
+                shield.alpha = 0.3;  // 약하게
+            } else if (shieldPhase < 0.8) {
                 // 사라짐
-                shield.alpha = 1 - shieldPhase;
+                shield.alpha = 0.3 * (1 - (shieldPhase - 0.4) / 0.4);
             } else {
                 // 종료
                 container.removeChild(shield);
@@ -1091,41 +1091,41 @@ const PixiRenderer = {
         };
         animateShield();
         
-        // ⚡ 작은 스파크 몇 개만
-        const sparkCount = 4;
+        // ⚡ 스파크 2개만
+        const sparkCount = 2;
         for (let i = 0; i < sparkCount; i++) {
             const spark = new PIXI.Graphics();
             const angle = (Math.PI * 2 / sparkCount) * i + Math.PI / 4;
-            const length = 10 + Math.random() * 15;
+            const length = 6 + Math.random() * 8;
             
             spark.moveTo(0, 0);
             spark.lineTo(Math.cos(angle) * length, Math.sin(angle) * length);
-            spark.stroke({ width: 2, color: color, alpha: 0.5, cap: 'round' });
+            spark.stroke({ width: 1.5, color: color, alpha: 0.3, cap: 'round' });
             container.addChild(spark);
             
             // 스파크 애니메이션
             let sparkLife = 0;
             const animateSpark = () => {
                 sparkLife++;
-                spark.x = Math.cos(angle) * sparkLife * 2;
-                spark.y = Math.sin(angle) * sparkLife * 2;
-                spark.alpha = 1 - sparkLife / 15;
+                spark.x = Math.cos(angle) * sparkLife * 1.5;
+                spark.y = Math.sin(angle) * sparkLife * 1.5;
+                spark.alpha = 0.3 * (1 - sparkLife / 10);
                 
-                if (sparkLife >= 15) {
+                if (sparkLife >= 10) {
                     container.removeChild(spark);
                     spark.destroy();
                 } else {
                     requestAnimationFrame(animateSpark);
                 }
             };
-            setTimeout(animateSpark, i * 30);
+            setTimeout(animateSpark, i * 20);
         }
         
-        // 💎 작은 파편 몇 개만
-        const shardCount = 5;
+        // 💎 파편 3개만
+        const shardCount = 3;
         for (let i = 0; i < shardCount; i++) {
             const shard = new PIXI.Graphics();
-            const shardSize = 2 + Math.random() * 2;
+            const shardSize = 1.5 + Math.random() * 1.5;
             const angle = Math.random() * Math.PI * 2;
             
             shard.moveTo(0, -shardSize);
@@ -1133,14 +1133,14 @@ const PixiRenderer = {
             shard.lineTo(0, shardSize);
             shard.lineTo(-shardSize * 0.5, 0);
             shard.closePath();
-            shard.fill({ color: '#93c5fd', alpha: 0.6 });
+            shard.fill({ color: '#93c5fd', alpha: 0.35 });
             
-            const speed = 1 + Math.random() * 2;
+            const speed = 0.8 + Math.random() * 1.2;
             shard.vx = Math.cos(angle) * speed;
             shard.vy = Math.sin(angle) * speed;
             shard.rotation = Math.random() * Math.PI * 2;
-            shard.rotationSpeed = (Math.random() - 0.5) * 0.1;
-            shard.life = 15;
+            shard.rotationSpeed = (Math.random() - 0.5) * 0.08;
+            shard.life = 12;
             shard.maxLife = shard.life;
             
             container.addChild(shard);
