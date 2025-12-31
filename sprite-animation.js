@@ -447,7 +447,7 @@ const SpriteAnimation = {
     },
     
     // ==========================================
-    // 플레이어 피격 애니메이션 - 히트스탑 + 타격감!
+    // 플레이어 피격 애니메이션 - 약하게 조절!
     // ==========================================
     playerHit(damage = 0) {
         const sprite = document.querySelector('.player-sprite-img');
@@ -455,50 +455,50 @@ const SpriteAnimation = {
         
         this.stopAnimation('player-idle');
         
-        // 🔥 데미지에 따른 강도 차이 극대화!
+        // 🎯 플레이어는 약하게! (적의 1/2 수준)
         let intensity, duration, flashIntensity, freezeTime;
         if (damage >= 20) {
-            // 💀 치명타!
-            intensity = 3.0;
-            duration = 700;
-            flashIntensity = 2.5;
-            freezeTime = 120; // 히트스탑!
-            console.log('[Hit] 💀 치명적 피격!', damage);
-        } else if (damage >= 12) {
-            // 😱 강한 피격
-            intensity = 2.2;
-            duration = 600;
-            flashIntensity = 2.0;
-            freezeTime = 80;
-            console.log('[Hit] 😱 강한 피격!', damage);
-        } else if (damage >= 6) {
-            // 😣 중간 피격
+            // 💀 치명타
             intensity = 1.5;
             duration = 500;
             flashIntensity = 1.5;
-            freezeTime = 50;
-            console.log('[Hit] 😣 중간 피격', damage);
-        } else {
-            // 😐 약한 피격
+            freezeTime = 60;
+            console.log('[Hit] 💀 치명적 피격!', damage);
+        } else if (damage >= 12) {
+            // 😱 강한 피격
+            intensity = 1.2;
+            duration = 450;
+            flashIntensity = 1.2;
+            freezeTime = 45;
+            console.log('[Hit] 😱 강한 피격!', damage);
+        } else if (damage >= 6) {
+            // 😣 중간 피격
             intensity = 0.8;
             duration = 400;
             flashIntensity = 1.0;
             freezeTime = 30;
+            console.log('[Hit] 😣 중간 피격', damage);
+        } else {
+            // 😐 약한 피격
+            intensity = 0.5;
+            duration = 350;
+            flashIntensity = 0.8;
+            freezeTime = 20;
             console.log('[Hit] 😐 약한 피격', damage);
         }
         
-        // ⏸️ 히트스탑! (프리즈 듀레이션)
-        sprite.style.transform = 'scale(1.1) translateX(-10px)';
+        // ⏸️ 히트스탑! (약하게)
+        sprite.style.transform = 'scale(1.05) translateX(-5px)';
         sprite.style.filter = `
-            drop-shadow(3px 0 0 rgba(255, 255, 255, 1))
-            drop-shadow(-3px 0 0 rgba(255, 255, 255, 1))
-            drop-shadow(0 3px 0 rgba(255, 255, 255, 1))
-            drop-shadow(0 -3px 0 rgba(255, 255, 255, 1))
-            brightness(2) saturate(0)
+            drop-shadow(2px 0 0 rgba(255, 255, 255, 1))
+            drop-shadow(-2px 0 0 rgba(255, 255, 255, 1))
+            drop-shadow(0 2px 0 rgba(255, 255, 255, 1))
+            drop-shadow(0 -2px 0 rgba(255, 255, 255, 1))
+            brightness(1.8) saturate(0)
         `;
         
-        // 🌍 화면 흔들림!
-        this.screenShake(intensity * 3, freezeTime + 100);
+        // 🌍 화면 흔들림 (약하게)
+        this.screenShake(intensity * 1.5, freezeTime + 50);
         
         // 프리즈 후 애니메이션 시작
         setTimeout(() => {
@@ -508,42 +508,42 @@ const SpriteAnimation = {
                 const elapsed = currentTime - startTime;
                 const progress = Math.min(elapsed / duration, 1);
                 
-                // 빠른 좌우 파닥파닥! (강도에 따라 확 다름)
-                const shakeFreq = 20 + (intensity * 5);
-                const shake = Math.sin(progress * Math.PI * shakeFreq) * (1 - progress) * 40 * intensity;
+                // 좌우 파닥파닥 (약하게!)
+                const shakeFreq = 15 + (intensity * 3);
+                const shake = Math.sin(progress * Math.PI * shakeFreq) * (1 - progress) * 15 * intensity;
                 
-                // 머리 흔드는 기울기
-                const tilt = Math.sin(progress * Math.PI * shakeFreq * 0.7) * (1 - progress) * 12 * intensity;
+                // 머리 흔드는 기울기 (약하게!)
+                const tilt = Math.sin(progress * Math.PI * shakeFreq * 0.7) * (1 - progress) * 5 * intensity;
                 
-                // 뒤로 밀림 (강할수록 더 멀리!)
-                const knockback = Math.sin(progress * Math.PI * 0.5) * -50 * intensity;
+                // 뒤로 밀림 (약하게!)
+                const knockback = Math.sin(progress * Math.PI * 0.5) * -20 * intensity;
                 
-                // Squash 효과 (강할수록 더 찌그러짐!)
+                // Squash 효과 (약하게!)
                 let scaleX = 1, scaleY = 1;
                 if (progress < 0.15) {
-                    scaleX = 1 + (progress / 0.15) * 0.2 * intensity;
-                    scaleY = 1 - (progress / 0.15) * 0.15 * intensity;
+                    scaleX = 1 + (progress / 0.15) * 0.08 * intensity;
+                    scaleY = 1 - (progress / 0.15) * 0.05 * intensity;
                 } else {
                     const rec = (progress - 0.15) / 0.85;
-                    scaleX = 1 + ((1 - rec) * 0.2 * intensity);
-                    scaleY = 1 - ((1 - rec) * 0.15 * intensity);
+                    scaleX = 1 + ((1 - rec) * 0.08 * intensity);
+                    scaleY = 1 - ((1 - rec) * 0.05 * intensity);
                 }
                 
-                // 🔴 빨간 깜박임! (강할수록 더 붉고 밝게!)
-                const flashFreq = 10 + (intensity * 4);
+                // 🔴 빨간 깜박임 (약하게!)
+                const flashFreq = 8 + (intensity * 3);
                 const flash = Math.sin(progress * Math.PI * flashFreq);
-                const shadowSize = 2 + Math.floor(intensity);
-                const glowSize = 10 + (intensity * 8);
-                const brightness = 1.3 + (flashIntensity * 0.3);
+                const shadowSize = 1 + Math.floor(intensity * 0.5);
+                const glowSize = 6 + (intensity * 4);
+                const brightness = 1.2 + (flashIntensity * 0.2);
                 
-                if (flash > 0 && progress < 0.85) {
+                if (flash > 0 && progress < 0.7) {
                     sprite.style.filter = `
-                        drop-shadow(${shadowSize}px 0 0 rgba(255, 30, 30, 1))
-                        drop-shadow(-${shadowSize}px 0 0 rgba(255, 30, 30, 1))
-                        drop-shadow(0 ${shadowSize}px 0 rgba(255, 30, 30, 1))
-                        drop-shadow(0 -${shadowSize}px 0 rgba(255, 30, 30, 1))
-                        drop-shadow(0 0 ${glowSize}px rgba(255, 0, 0, 0.9))
-                        brightness(${brightness}) saturate(2)
+                        drop-shadow(${shadowSize}px 0 0 rgba(255, 60, 60, 1))
+                        drop-shadow(-${shadowSize}px 0 0 rgba(255, 60, 60, 1))
+                        drop-shadow(0 ${shadowSize}px 0 rgba(255, 60, 60, 1))
+                        drop-shadow(0 -${shadowSize}px 0 rgba(255, 60, 60, 1))
+                        drop-shadow(0 0 ${glowSize}px rgba(255, 0, 0, 0.7))
+                        brightness(${brightness}) saturate(1.5)
                     `;
                 } else {
                     sprite.style.filter = '';
