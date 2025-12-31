@@ -615,39 +615,40 @@ const VFX = {
             console.warn('[VFX] ⚠️ PixiRenderer가 초기화되지 않음!');
         }
         
-        // 🎭 GSAP 스프라이트 애니메이션 (플레이어)
+        // 🎭 GSAP 스프라이트 애니메이션 (플레이어) - 부드럽게!
         if (typeof gsap !== 'undefined') {
             const playerSprite = document.querySelector('.player-sprite-img');
             if (playerSprite) {
-                // 방어 자세!
+                // 방어 자세 (글로우 약하게!)
                 gsap.timeline()
                     .to(playerSprite, {
-                        scaleX: 1.08,
-                        scaleY: 0.94,
-                        x: -5,
+                        scaleX: 1.05,
+                        scaleY: 0.96,
+                        x: -3,
                         filter: `
-                            drop-shadow(2px 0 0 ${color})
-                            drop-shadow(-2px 0 0 ${color})
-                            drop-shadow(0 2px 0 ${color})
-                            drop-shadow(0 -2px 0 ${color})
-                            brightness(1.4)
+                            drop-shadow(1px 0 0 rgba(96, 165, 250, 0.7))
+                            drop-shadow(-1px 0 0 rgba(96, 165, 250, 0.7))
+                            drop-shadow(0 1px 0 rgba(96, 165, 250, 0.7))
+                            drop-shadow(0 -1px 0 rgba(96, 165, 250, 0.7))
+                            brightness(1.15)
                         `,
-                        duration: 0.1,
+                        duration: 0.08,
                         ease: "power2.out"
                     })
                     .to(playerSprite, {
-                        scaleX: 0.95,
-                        scaleY: 1.05,
-                        x: 3,
-                        duration: 0.08
+                        scaleX: 0.97,
+                        scaleY: 1.03,
+                        x: 2,
+                        filter: 'brightness(1.05)',
+                        duration: 0.06
                     })
                     .to(playerSprite, {
                         scaleX: 1,
                         scaleY: 1,
                         x: 0,
                         filter: '',
-                        duration: 0.2,
-                        ease: "elastic.out(1, 0.5)"
+                        duration: 0.15,
+                        ease: "power2.out"
                     });
             }
         }
