@@ -16,12 +16,41 @@ const SpriteAnimation = {
     // 활성화된 애니메이션들
     activeAnimations: new Map(),
     
+    // MutationObserver
+    observer: null,
+    
     // ==========================================
     // 초기화
     // ==========================================
     init() {
         console.log('[SpriteAnimation] 초기화');
         this.startIdleAnimations();
+        this.setupObserver();
+    },
+    
+    // ==========================================
+    // DOM 변화 감지 (적 생성 시 자동 애니메이션)
+    // ==========================================
+    setupObserver() {
+        // 적 컨테이너 감시
+        const enemyArea = document.querySelector('.enemy-area, .enemies-container');
+        if (!enemyArea) {
+            // 나중에 다시 시도
+            setTimeout(() => this.setupObserver(), 1000);
+            return;
+        }
+        
+        this.observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.addedNodes.length > 0) {
+                    // 새 적이 추가되면 애니메이션 시작
+                    setTimeout(() => this.refreshEnemyAnimations(), 100);
+                }
+            });
+        });
+        
+        this.observer.observe(enemyArea, { childList: true, subtree: true });
+        console.log('[SpriteAnimation] 적 감시 시작');
     },
     
     // ==========================================
@@ -84,7 +113,18 @@ const SpriteAnimation = {
     startEnemiesIdle() {
         const enemySprites = document.querySelectorAll('.enemy-sprite-img');
         
+        console.log(`[SpriteAnimation] 적 스프라이트 발견: ${enemySprites.length}개`);
+        
+        if (enemySprites.length === 0) {
+            // 적이 없으면 나중에 다시 시도
+            setTimeout(() => this.startEnemiesIdle(), 500);
+            return;
+        }
+        
         enemySprites.forEach((sprite, index) => {
+            // 이미 애니메이션 중인지 확인
+            if (this.activeAnimations.has(`enemy-idle-${index}`)) return;
+            
             // 기존 CSS 애니메이션 제거
             sprite.style.animation = 'none';
             
@@ -92,6 +132,12 @@ const SpriteAnimation = {
             const speed = this.config.breathingSpeed + (index * 200); // 각 적마다 다른 속도
             
             const animate = () => {
+                // 스프라이트가 아직 DOM에 있는지 확인
+                if (!document.contains(sprite)) {
+                    this.activeAnimations.delete(`enemy-idle-${index}`);
+                    return;
+                }
+                
                 time += 16;
                 
                 // 숨쉬기 효과 (더 위협적인 느낌)
