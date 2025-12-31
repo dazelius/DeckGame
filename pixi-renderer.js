@@ -1043,6 +1043,350 @@ const PixiRenderer = {
             );
         }
         return points;
+    },
+    
+    // ==========================================
+    // 💥 히트 이펙트! (피격 시)
+    // ==========================================
+    createHitImpact(x, y, damage = 10, color = '#ff4444') {
+        if (!this.initialized) return;
+        
+        const container = new PIXI.Container();
+        container.x = x;
+        container.y = y;
+        this.effectsContainer.addChild(container);
+        
+        const intensity = Math.min(damage / 15, 2) + 0.5;
+        
+        // 🔴 중심 플래시 (빨간색/흰색)
+        const flash = new PIXI.Graphics();
+        flash.circle(0, 0, 25 * intensity);
+        flash.fill({ color: '#ffffff', alpha: 1 });
+        container.addChild(flash);
+        
+        let flashLife = 8;
+        const animateFlash = () => {
+            flashLife--;
+            flash.alpha = flashLife / 8;
+            flash.scale.set(1 + (1 - flashLife / 8) * 2);
+            
+            if (flashLife <= 0) {
+                container.removeChild(flash);
+                flash.destroy();
+            } else {
+                requestAnimationFrame(animateFlash);
+            }
+        };
+        animateFlash();
+        
+        // 💢 충격선 (스피드라인)
+        const lineCount = 6 + Math.floor(intensity * 4);
+        for (let i = 0; i < lineCount; i++) {
+            const line = new PIXI.Graphics();
+            const angle = (Math.PI * 2 / lineCount) * i + Math.random() * 0.3;
+            const length = 30 + Math.random() * 50 * intensity;
+            const width = 2 + Math.random() * 3;
+            
+            line.moveTo(15, 0);
+            line.lineTo(15 + length, 0);
+            line.stroke({ 
+                width: width, 
+                color: color, 
+                alpha: 0.9,
+                cap: 'round'
+            });
+            line.rotation = angle;
+            container.addChild(line);
+            
+            let lineLife = 12 + Math.random() * 8;
+            const maxLineLife = lineLife;
+            const animateLine = () => {
+                lineLife--;
+                line.alpha = lineLife / maxLineLife;
+                line.scale.set(1 + (1 - lineLife / maxLineLife) * 0.5);
+                
+                if (lineLife <= 0) {
+                    container.removeChild(line);
+                    line.destroy();
+                } else {
+                    requestAnimationFrame(animateLine);
+                }
+            };
+            setTimeout(animateLine, i * 10);
+        }
+        
+        // 🩸 피 파티클 (작은 점들)
+        const bloodCount = 8 + Math.floor(intensity * 8);
+        for (let i = 0; i < bloodCount; i++) {
+            const blood = new PIXI.Graphics();
+            const size = 2 + Math.random() * 4;
+            const angle = Math.random() * Math.PI * 2;
+            
+            blood.circle(0, 0, size);
+            blood.fill({ color: color, alpha: 0.9 });
+            
+            const speed = 4 + Math.random() * 8 * intensity;
+            blood.vx = Math.cos(angle) * speed;
+            blood.vy = Math.sin(angle) * speed - 3;
+            blood.life = 25 + Math.random() * 15;
+            blood.maxLife = blood.life;
+            blood.gravity = 0.2 + Math.random() * 0.1;
+            
+            container.addChild(blood);
+            
+            const animateBlood = () => {
+                blood.life--;
+                blood.x += blood.vx;
+                blood.y += blood.vy;
+                blood.vy += blood.gravity;
+                blood.vx *= 0.98;
+                blood.alpha = (blood.life / blood.maxLife) * 0.9;
+                blood.scale.set(1 - (1 - blood.life / blood.maxLife) * 0.5);
+                
+                if (blood.life <= 0) {
+                    container.removeChild(blood);
+                    blood.destroy();
+                } else {
+                    requestAnimationFrame(animateBlood);
+                }
+            };
+            setTimeout(animateBlood, Math.random() * 30);
+        }
+        
+        // 💫 별 파티클 (데미지 큰 경우)
+        if (damage >= 15) {
+            const starCount = 3 + Math.floor(intensity * 2);
+            for (let i = 0; i < starCount; i++) {
+                const star = new PIXI.Graphics();
+                const starSize = 6 + Math.random() * 4;
+                
+                // 4각 별 그리기
+                star.moveTo(0, -starSize);
+                star.lineTo(starSize * 0.3, -starSize * 0.3);
+                star.lineTo(starSize, 0);
+                star.lineTo(starSize * 0.3, starSize * 0.3);
+                star.lineTo(0, starSize);
+                star.lineTo(-starSize * 0.3, starSize * 0.3);
+                star.lineTo(-starSize, 0);
+                star.lineTo(-starSize * 0.3, -starSize * 0.3);
+                star.closePath();
+                star.fill({ color: '#ffff00', alpha: 0.9 });
+                
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 20 + Math.random() * 30;
+                star.x = Math.cos(angle) * dist;
+                star.y = Math.sin(angle) * dist;
+                star.rotation = Math.random() * Math.PI;
+                star.rotationSpeed = (Math.random() - 0.5) * 0.2;
+                star.life = 20 + Math.random() * 10;
+                star.maxLife = star.life;
+                
+                container.addChild(star);
+                
+                const animateStar = () => {
+                    star.life--;
+                    star.rotation += star.rotationSpeed;
+                    star.alpha = star.life / star.maxLife;
+                    star.scale.set(1 + (1 - star.life / star.maxLife) * 0.3);
+                    
+                    if (star.life <= 0) {
+                        container.removeChild(star);
+                        star.destroy();
+                    } else {
+                        requestAnimationFrame(animateStar);
+                    }
+                };
+                setTimeout(animateStar, 50 + i * 30);
+            }
+        }
+        
+        // 🔊 충격파 링 (데미지 큰 경우)
+        if (damage >= 10) {
+            const ring = new PIXI.Graphics();
+            ring.circle(0, 0, 15);
+            ring.stroke({ width: 3, color: color, alpha: 0.8 });
+            container.addChild(ring);
+            
+            let ringLife = 20;
+            const animateRing = () => {
+                ringLife--;
+                ring.scale.set(1 + (1 - ringLife / 20) * 3 * intensity);
+                ring.alpha = ringLife / 20;
+                
+                if (ringLife <= 0) {
+                    container.removeChild(ring);
+                    ring.destroy();
+                } else {
+                    requestAnimationFrame(animateRing);
+                }
+            };
+            animateRing();
+        }
+        
+        // 컨테이너 정리
+        setTimeout(() => {
+            this.effectsContainer.removeChild(container);
+            container.destroy({ children: true });
+        }, 1500);
+    },
+    
+    // ==========================================
+    // 💀 크리티컬 히트 이펙트!
+    // ==========================================
+    createCriticalHit(x, y, damage = 25) {
+        if (!this.initialized) return;
+        
+        const container = new PIXI.Container();
+        container.x = x;
+        container.y = y;
+        this.effectsContainer.addChild(container);
+        
+        // 💥 대형 플래시 (여러 층)
+        for (let layer = 0; layer < 3; layer++) {
+            const flash = new PIXI.Graphics();
+            const size = 60 - layer * 15;
+            const colors = ['#ffffff', '#ffff00', '#ff4444'];
+            
+            flash.circle(0, 0, size);
+            flash.fill({ color: colors[layer], alpha: 0.9 - layer * 0.2 });
+            container.addChild(flash);
+            
+            let life = 15 - layer * 2;
+            const maxLife = life;
+            const animate = () => {
+                life--;
+                flash.alpha = (life / maxLife) * (0.9 - layer * 0.2);
+                flash.scale.set(1 + (1 - life / maxLife) * (3 - layer * 0.5));
+                
+                if (life <= 0) {
+                    container.removeChild(flash);
+                    flash.destroy();
+                } else {
+                    requestAnimationFrame(animate);
+                }
+            };
+            setTimeout(animate, layer * 30);
+        }
+        
+        // ⚡ X자 슬래시
+        for (let i = 0; i < 2; i++) {
+            const slash = new PIXI.Graphics();
+            const angle = i === 0 ? -0.7 : 0.7;
+            
+            slash.moveTo(-80, 0);
+            slash.lineTo(80, 0);
+            slash.stroke({ width: 8, color: '#ffff00', alpha: 0.9, cap: 'round' });
+            slash.stroke({ width: 4, color: '#ffffff', alpha: 1, cap: 'round' });
+            slash.rotation = angle;
+            container.addChild(slash);
+            
+            let slashLife = 20;
+            const animateSlash = () => {
+                slashLife--;
+                slash.alpha = slashLife / 20;
+                slash.scale.set(1 + (1 - slashLife / 20) * 0.3);
+                
+                if (slashLife <= 0) {
+                    container.removeChild(slash);
+                    slash.destroy();
+                } else {
+                    requestAnimationFrame(animateSlash);
+                }
+            };
+            setTimeout(animateSlash, i * 50);
+        }
+        
+        // 🌟 폭발 파티클
+        const particleCount = 20;
+        for (let i = 0; i < particleCount; i++) {
+            const particle = new PIXI.Graphics();
+            const size = 3 + Math.random() * 6;
+            const colors = ['#ff4444', '#ffff00', '#ffffff', '#ff8800'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            
+            particle.circle(0, 0, size);
+            particle.fill({ color: color, alpha: 1 });
+            
+            const angle = (Math.PI * 2 / particleCount) * i + Math.random() * 0.3;
+            const speed = 8 + Math.random() * 12;
+            particle.vx = Math.cos(angle) * speed;
+            particle.vy = Math.sin(angle) * speed;
+            particle.life = 30 + Math.random() * 20;
+            particle.maxLife = particle.life;
+            
+            container.addChild(particle);
+            
+            const animateParticle = () => {
+                particle.life--;
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.vx *= 0.95;
+                particle.vy *= 0.95;
+                particle.alpha = particle.life / particle.maxLife;
+                
+                if (particle.life <= 0) {
+                    container.removeChild(particle);
+                    particle.destroy();
+                } else {
+                    requestAnimationFrame(animateParticle);
+                }
+            };
+            animateParticle();
+        }
+        
+        // 이중 충격파
+        for (let ring = 0; ring < 2; ring++) {
+            const shockwave = new PIXI.Graphics();
+            shockwave.circle(0, 0, 20);
+            shockwave.stroke({ width: 5 - ring * 2, color: '#ffff00', alpha: 0.9 });
+            container.addChild(shockwave);
+            
+            let life = 25;
+            const animate = () => {
+                life--;
+                shockwave.scale.set(1 + (1 - life / 25) * 5);
+                shockwave.alpha = life / 25;
+                
+                if (life <= 0) {
+                    container.removeChild(shockwave);
+                    shockwave.destroy();
+                } else {
+                    requestAnimationFrame(animate);
+                }
+            };
+            setTimeout(animate, ring * 80);
+        }
+        
+        // 컨테이너 정리
+        setTimeout(() => {
+            this.effectsContainer.removeChild(container);
+            container.destroy({ children: true });
+        }, 2000);
+    },
+    
+    // ==========================================
+    // 🔥 화면 플래시 (히트 시)
+    // ==========================================
+    hitFlash(color = '#ff0000', duration = 100) {
+        const flash = new PIXI.Graphics();
+        flash.rect(0, 0, window.innerWidth, window.innerHeight);
+        flash.fill({ color: color, alpha: 0.3 });
+        this.effectsContainer.addChild(flash);
+        
+        let life = duration / 16;
+        const maxLife = life;
+        const animate = () => {
+            life--;
+            flash.alpha = (life / maxLife) * 0.3;
+            
+            if (life <= 0) {
+                this.effectsContainer.removeChild(flash);
+                flash.destroy();
+            } else {
+                requestAnimationFrame(animate);
+            }
+        };
+        animate();
     }
 };
 
