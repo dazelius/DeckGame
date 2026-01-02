@@ -303,11 +303,17 @@ const EnemyRenderer = {
         enemyContainer.on('pointerover', () => this.onEnemyHover(enemyRef, true));
         enemyContainer.on('pointerout', () => this.onEnemyHover(enemyRef, false));
         
+        // ✅ 아웃라인 효과 (DropShadow 필터로 구현)
+        this.applyOutlineEffect(sprite);
+        
         // 메인 컨테이너에 추가
         this.container.addChild(enemyContainer);
         
         // 등장 애니메이션
         this.playEntranceAnimation(enemyContainer);
+        
+        // ✅ 숨쉬는 애니메이션 시작
+        this.startBreathingAnimation(enemyContainer, scale);
         
         return { sprite, container: enemyContainer };
     },
@@ -634,9 +640,15 @@ const EnemyRenderer = {
         // 스프라이트 글로벌 위치
         const globalPos = data.container.getGlobalPosition();
         
-        // UI 위치 업데이트 (스프라이트 위에)
+        // 스프라이트 높이 계산 (스케일 적용)
+        let spriteHeight = 200;  // 기본값
+        if (data.sprite && data.sprite.height) {
+            spriteHeight = data.sprite.height * data.container.scale.y;
+        }
+        
+        // UI 위치 업데이트 (스프라이트 머리 위)
         data.uiElement.style.left = globalPos.x + 'px';
-        data.uiElement.style.top = (globalPos.y - 150) + 'px';  // 스프라이트 위
+        data.uiElement.style.top = (globalPos.y - spriteHeight - 30) + 'px';  // 스프라이트 높이 + 여백
     },
     
     syncAllUI() {
@@ -841,6 +853,87 @@ const EnemyRenderer = {
         requestAnimationFrame(animate);
         
         console.log(`[EnemyRenderer] 등장 애니메이션 시작, targetScale: ${targetScale}`);
+    },
+    
+    // ✅ 아웃라인 효과 적용
+    applyOutlineEffect(sprite) {
+        if (!sprite) return;
+        
+        // PixiJS v8 DropShadow 필터로 아웃라인 효과
+        try {
+            // 여러 방향의 그림자로 아웃라인 효과
+            const outlineFilters = [];
+            const outlineColor = 0x000000;
+            const outlineDistance = 2;
+            const outlineAlpha = 0.8;
+            
+            // 8방향 그림자
+            const angles = [0, 45, 90, 135, 180, 225, 270, 315];
+            angles.forEach(angle => {
+                const rad = angle * Math.PI / 180;
+                const filter = new PIXI.DropShadowFilter({
+                    offset: { x: Math.cos(rad) * outlineDistance, y: Math.sin(rad) * outlineDistance },
+                    color: outlineColor,
+                    alpha: outlineAlpha,
+                    blur: 0,
+                    quality: 1
+                });
+                outlineFilters.push(filter);
+            });
+            
+            sprite.filters = outlineFilters;
+        } catch (e) {
+            // DropShadowFilter 없으면 스킵
+            console.log('[EnemyRenderer] 아웃라인 필터 사용 불가, 스킵');
+        }
+    },
+    
+    // ✅ 숨쉬는 애니메이션 (Idle Animation)
+    startBreathingAnimation(container, baseScale) {
+        if (!container) return;
+        
+        // 고유 위상 (여러 적이 동시에 같은 타이밍으로 움직이지 않도록)
+        const phase = Math.random() * Math.PI * 2;
+        const speed = 0.02 + Math.random() * 0.01;  // 속도 약간 랜덤
+        
+        // 애니메이션 데이터 저장
+        container.breathingData = {
+            baseScale: baseScale,
+            phase: phase,
+            speed: speed,
+            time: 0
+        };
+        
+        // 애니메이션 틱
+        const breathe = () => {
+            if (!container || container.destroyed) return;
+            
+            const data = container.breathingData;
+            if (!data) return;
+            
+            data.time += data.speed;
+            
+            // 부드러운 사인파로 스케일 변화
+            const breathFactor = Math.sin(data.time + data.phase) * 0.015;  // ±1.5%
+            const newScale = data.baseScale * (1 + breathFactor);
+            
+            // Y 위치도 살짝 변화 (위아래로 숨쉬는 느낌)
+            const yOffset = Math.sin(data.time + data.phase) * 2;
+            
+            container.scale.set(newScale);
+            // container.y 는 건드리지 않음 (위치 시스템과 충돌 방지)
+            
+            requestAnimationFrame(breathe);
+        };
+        
+        requestAnimationFrame(breathe);
+    },
+    
+    // 숨쉬기 애니메이션 중지
+    stopBreathingAnimation(container) {
+        if (container && container.breathingData) {
+            container.breathingData = null;
+        }
     },
     
     playDeathAnimation(enemy) {

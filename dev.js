@@ -4,7 +4,7 @@
 
 const DevMode = {
     // ✅ 점검중 설정 - true로 바꾸면 점검 화면 표시
-    maintenance: false,
+    maintenance: true,
     
     // 점검 메시지
     maintenanceMessage: '서버 점검중입니다.',
