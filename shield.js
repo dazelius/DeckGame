@@ -59,6 +59,10 @@ const ShieldSystem = {
                 if (playerChar) playerChar.classList.add('has-block');
                 setTimeout(() => targetEl.classList.remove('block-flash'), 300);
             }
+            // 🎯 PixiJS 플레이어 방어막 효과!
+            if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.initialized) {
+                PlayerRenderer.setBlockEffect(true);
+            }
         } else {
             // 🛡️ 적에게도 has-block 클래스 추가!
             if (typeof gameState !== 'undefined' && gameState.enemies) {
@@ -267,6 +271,12 @@ const ShieldSystem = {
             // .player-character에서도 제거
             const playerChar = containerEl.querySelector('.player-character');
             if (playerChar) playerChar.classList.remove('has-block');
+            
+            // 🎯 PixiJS 플레이어 방어막 효과 제거!
+            const isPlayerEl = containerEl.id === 'player' || containerEl.classList.contains('player-side');
+            if (isPlayerEl && typeof PlayerRenderer !== 'undefined' && PlayerRenderer.initialized) {
+                PlayerRenderer.setBlockEffect(false);
+            }
         }
         
         // 🎬 캔버스 유리창 깨지는 VFX 실행
@@ -346,6 +356,10 @@ const ShieldSystem = {
                     // 🛡️ .player-character에서도 제거!
                     const playerChar = targetEl.querySelector('.player-character');
                     if (playerChar) playerChar.classList.remove('has-block');
+                }
+                // 🎯 PixiJS 플레이어 방어막 효과 제거!
+                if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.initialized) {
+                    PlayerRenderer.setBlockEffect(false);
                 }
             } else {
                 if (typeof gameState !== 'undefined' && gameState.enemies) {
