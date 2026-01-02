@@ -2420,20 +2420,24 @@ body .card-drag-ghost.can-drop {
     transition: filter 0.2s ease;
 }
 
-/* ✅ 3D transform 유지 - filter가 translateZ를 깨지 않도록 */
+/* ✅ 3D transform 유지 + will-change로 GPU 레이어 분리 */
 .enemy-unit.drop-target,
 .enemy-unit.drop-target-active,
 .enemy-unit.drop-target-all {
     transform-style: preserve-3d !important;
+    will-change: transform, filter;
 }
 
-/* 드롭 타겟 대기 상태 - 하얀 외곽선 유지 + 살짝 밝게 */
-/* ✅ outline + box-shadow로 변경 (filter 대신) - 3D 깨짐 방지 */
+/* 드롭 타겟 대기 상태 - 하얀 외곽선 (스프라이트 모양 따라감) */
 .drop-target .enemy-sprite-img {
-    outline: 2px solid rgba(255, 255, 255, 0.85);
-    outline-offset: -1px;
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
-    transition: outline 0.2s ease, box-shadow 0.2s ease;
+    filter: 
+        drop-shadow(1px 0 0 rgba(255, 255, 255, 0.85))
+        drop-shadow(-1px 0 0 rgba(255, 255, 255, 0.85))
+        drop-shadow(0 1px 0 rgba(255, 255, 255, 0.85))
+        drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.85))
+        drop-shadow(0 0 10px rgba(255, 255, 255, 0.4))
+        brightness(1.1);
+    transition: filter 0.2s ease;
 }
 
 /* 적 활성화 상태 - 노란색 타겟 글로우! */
@@ -2441,48 +2445,62 @@ body .card-drag-ghost.can-drop {
     position: relative;
 }
 
-/* ✅ outline + box-shadow로 변경 - 3D 유지 */
+/* ✅ drop-shadow로 스프라이트 모양 따라가는 외곽선 */
 .enemy-unit.drop-target-active .enemy-sprite-img {
-    outline: 3px solid rgba(255, 220, 50, 1);
-    outline-offset: -1px;
-    box-shadow: 
-        0 0 25px rgba(255, 200, 0, 0.9),
-        0 0 50px rgba(255, 180, 0, 0.6),
-        inset 0 0 20px rgba(255, 220, 50, 0.3);
-    animation: targetPulseYellowOutline 0.4s ease-in-out infinite alternate;
+    filter: 
+        drop-shadow(2px 0 0 rgba(255, 220, 50, 1))
+        drop-shadow(-2px 0 0 rgba(255, 220, 50, 1))
+        drop-shadow(0 2px 0 rgba(255, 220, 50, 1))
+        drop-shadow(0 -2px 0 rgba(255, 220, 50, 1))
+        drop-shadow(0 0 20px rgba(255, 200, 0, 0.9))
+        drop-shadow(0 0 40px rgba(255, 180, 0, 0.6))
+        brightness(1.3);
+    animation: targetPulseYellow 0.4s ease-in-out infinite alternate;
 }
 
 /* 전체 공격 타겟 - 모든 적 노란 하이라이트 */
-/* ✅ outline + box-shadow로 변경 */
 .enemy-unit.drop-target-all .enemy-sprite-img {
-    outline: 2px solid rgba(255, 200, 50, 0.9);
-    outline-offset: -1px;
-    box-shadow: 0 0 20px rgba(255, 180, 0, 0.7);
+    filter: 
+        drop-shadow(1px 0 0 rgba(255, 200, 50, 0.9))
+        drop-shadow(-1px 0 0 rgba(255, 200, 50, 0.9))
+        drop-shadow(0 1px 0 rgba(255, 200, 50, 0.9))
+        drop-shadow(0 -1px 0 rgba(255, 200, 50, 0.9))
+        drop-shadow(0 0 15px rgba(255, 180, 0, 0.7))
+        brightness(1.2);
 }
 
 .enemy-unit.drop-target-all.drop-target-active .enemy-sprite-img {
-    outline: 3px solid rgba(255, 220, 50, 1);
-    outline-offset: -1px;
-    box-shadow: 
-        0 0 30px rgba(255, 200, 0, 1),
-        0 0 60px rgba(255, 180, 0, 0.7);
+    filter: 
+        drop-shadow(2px 0 0 rgba(255, 220, 50, 1))
+        drop-shadow(-2px 0 0 rgba(255, 220, 50, 1))
+        drop-shadow(0 2px 0 rgba(255, 220, 50, 1))
+        drop-shadow(0 -2px 0 rgba(255, 220, 50, 1))
+        drop-shadow(0 0 25px rgba(255, 200, 0, 1))
+        drop-shadow(0 0 50px rgba(255, 180, 0, 0.7))
+        brightness(1.4);
 }
 
-/* ✅ outline 기반 펄스 애니메이션 */
-@keyframes targetPulseYellowOutline {
+/* ✅ drop-shadow 기반 펄스 애니메이션 */
+@keyframes targetPulseYellow {
     0% { 
-        outline-width: 3px;
-        outline-color: rgba(255, 220, 50, 1);
-        box-shadow: 
-            0 0 25px rgba(255, 200, 0, 0.9),
-            0 0 50px rgba(255, 180, 0, 0.6);
+        filter: 
+            drop-shadow(2px 0 0 rgba(255, 220, 50, 1))
+            drop-shadow(-2px 0 0 rgba(255, 220, 50, 1))
+            drop-shadow(0 2px 0 rgba(255, 220, 50, 1))
+            drop-shadow(0 -2px 0 rgba(255, 220, 50, 1))
+            drop-shadow(0 0 20px rgba(255, 200, 0, 0.9))
+            drop-shadow(0 0 40px rgba(255, 180, 0, 0.6))
+            brightness(1.3); 
     }
     100% { 
-        outline-width: 4px;
-        outline-color: rgba(255, 230, 80, 1);
-        box-shadow: 
-            0 0 35px rgba(255, 220, 0, 1),
-            0 0 70px rgba(255, 200, 0, 0.8);
+        filter: 
+            drop-shadow(3px 0 0 rgba(255, 230, 80, 1))
+            drop-shadow(-3px 0 0 rgba(255, 230, 80, 1))
+            drop-shadow(0 3px 0 rgba(255, 230, 80, 1))
+            drop-shadow(0 -3px 0 rgba(255, 230, 80, 1))
+            drop-shadow(0 0 30px rgba(255, 220, 0, 1))
+            drop-shadow(0 0 60px rgba(255, 200, 0, 0.8))
+            brightness(1.5); 
     }
 }
 
@@ -2510,23 +2528,27 @@ body .card-drag-ghost.can-drop {
 /* 플레이어 드롭 타겟 (스킬/파워 카드) - JRPG 스타일 */
 .drop-target-self {
     position: relative;
-    transition: outline 0.2s ease, box-shadow 0.2s ease;
+    transition: filter 0.2s ease;
 }
 
-/* ✅ 3D transform 유지 */
+/* ✅ 3D transform 유지 + will-change로 GPU 레이어 분리 */
 #player.drop-target-self,
 #player.drop-target-self-active {
     transform-style: preserve-3d !important;
+    will-change: transform, filter;
 }
 
-/* 플레이어 대기 상태 - 하얀 외곽선 유지 */
-/* ✅ outline + box-shadow로 변경 */
+/* 플레이어 대기 상태 - 하얀 외곽선 (스프라이트 모양 따라감) */
 .drop-target-self .player-sprite-img,
 #player.drop-target-self .player-sprite-img {
-    outline: 2px solid rgba(255, 255, 255, 0.9);
-    outline-offset: -1px;
-    box-shadow: 0 0 15px rgba(100, 180, 255, 0.6);
-    transition: outline 0.2s ease, box-shadow 0.2s ease;
+    filter: 
+        drop-shadow(1px 0 0 rgba(255, 255, 255, 0.9))
+        drop-shadow(-1px 0 0 rgba(255, 255, 255, 0.9))
+        drop-shadow(0 1px 0 rgba(255, 255, 255, 0.9))
+        drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.9))
+        drop-shadow(0 0 10px rgba(100, 180, 255, 0.5))
+        brightness(1.1);
+    transition: filter 0.2s ease;
 }
 
 /* 플레이어 활성화 상태 - 노란 타겟 글로우 */
@@ -2534,24 +2556,37 @@ body .card-drag-ghost.can-drop {
     position: relative;
 }
 
-/* ✅ outline + box-shadow로 변경 */
+/* ✅ drop-shadow로 스프라이트 모양 따라가는 외곽선 */
 #player.drop-target-self-active .player-sprite-img {
-    outline: 3px solid rgba(255, 220, 50, 1);
-    outline-offset: -1px;
-    box-shadow: 
-        0 0 25px rgba(255, 200, 0, 0.9),
-        0 0 50px rgba(100, 180, 255, 0.5);
-    animation: selfTargetPulseOutline 0.4s ease-in-out infinite alternate;
+    filter: 
+        drop-shadow(2px 0 0 rgba(255, 220, 50, 1))
+        drop-shadow(-2px 0 0 rgba(255, 220, 50, 1))
+        drop-shadow(0 2px 0 rgba(255, 220, 50, 1))
+        drop-shadow(0 -2px 0 rgba(255, 220, 50, 1))
+        drop-shadow(0 0 20px rgba(255, 200, 0, 0.9))
+        drop-shadow(0 0 40px rgba(100, 180, 255, 0.5))
+        brightness(1.3);
+    animation: selfTargetPulse 0.4s ease-in-out infinite alternate;
 }
 
-@keyframes selfTargetPulseOutline {
+@keyframes selfTargetPulse {
     0% { 
-        outline-color: rgba(255, 220, 50, 1);
-        box-shadow: 0 0 25px rgba(59, 130, 246, 0.9); 
+        filter: 
+            drop-shadow(2px 0 0 rgba(255, 220, 50, 1))
+            drop-shadow(-2px 0 0 rgba(255, 220, 50, 1))
+            drop-shadow(0 2px 0 rgba(255, 220, 50, 1))
+            drop-shadow(0 -2px 0 rgba(255, 220, 50, 1))
+            drop-shadow(0 0 20px rgba(59, 130, 246, 0.9))
+            brightness(1.3); 
     }
     100% { 
-        outline-color: rgba(255, 230, 80, 1);
-        box-shadow: 0 0 40px rgba(59, 130, 246, 1); 
+        filter: 
+            drop-shadow(3px 0 0 rgba(255, 230, 80, 1))
+            drop-shadow(-3px 0 0 rgba(255, 230, 80, 1))
+            drop-shadow(0 3px 0 rgba(255, 230, 80, 1))
+            drop-shadow(0 -3px 0 rgba(255, 230, 80, 1))
+            drop-shadow(0 0 30px rgba(59, 130, 246, 1))
+            brightness(1.5); 
     }
 }
 
