@@ -20,11 +20,49 @@ const ChainScytheSystem = {
         
         console.log(`[ChainScythe] 끌어오기 시작! 인덱스: ${targetIndex}`);
         
+        // DOM 요소 먼저 찾기 (적이 죽어서 인덱스가 안 맞을 수 있음)
+        const container = document.getElementById('enemies-container');
+        const enemyEls = container ? Array.from(container.querySelectorAll('.enemy-unit')) : [];
+        
+        // gameState.enemies 순서대로 DOM을 매칭 (배열 인덱스로 접근)
+        const targetEl = enemyEls[targetIndex];
+        
+        if (!targetEl) {
+            console.log('[ChainScythe] 타겟 DOM 요소 없음, renderEnemies 호출');
+            // DOM과 gameState가 맞지 않으면 다시 그리기
+            this.forceSwapWithRender(targetIndex, targetEnemy, onComplete);
+            return;
+        }
+        
+        console.log(`[ChainScythe] 끌어오기 시작! 인덱스: ${targetIndex}, DOM 요소 수: ${enemyEls.length}`);
+        
         // 끌어오기 연출 실행 (연출 끝나면 위치 교환)
         this.playPullAnimation(targetIndex, targetEnemy, () => {
             // DOM 재생성 없이 자연스럽게 위치 교환
             this.swapEnemyPositions(targetIndex, targetEnemy, onComplete);
         });
+    },
+    
+    // DOM과 gameState가 맞지 않을 때 강제로 재렌더링
+    forceSwapWithRender(targetIndex, targetEnemy, onComplete) {
+        // gameState 배열 재배치
+        const pulled = gameState.enemies.splice(targetIndex, 1)[0];
+        gameState.enemies.unshift(pulled);
+        
+        console.log(`[ChainScythe] (강제) ${targetEnemy.name}을(를) 맨 앞으로!`);
+        
+        // 재렌더링
+        if (typeof renderEnemies === 'function') {
+            renderEnemies(false);
+        }
+        
+        this.restoreBreakStates();
+        
+        if (typeof updateUI === 'function') {
+            updateUI();
+        }
+        
+        if (onComplete) onComplete();
     },
     
     // DOM 재생성 없이 적 위치 재배치 (자연스러운 애니메이션)
@@ -37,6 +75,14 @@ const ChainScytheSystem = {
         }
         
         const enemyEls = Array.from(container.querySelectorAll('.enemy-unit'));
+        
+        // DOM 요소 수와 gameState 수가 다르면 강제 재렌더링
+        if (enemyEls.length !== gameState.enemies.length) {
+            console.log('[ChainScythe] DOM/gameState 불일치, 강제 재렌더링');
+            this.forceSwapWithRender(targetIndex, targetEnemy, onComplete);
+            return;
+        }
+        
         const targetEl = enemyEls[targetIndex];
         
         if (!targetEl || targetIndex === 0) {
