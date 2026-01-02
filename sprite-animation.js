@@ -97,6 +97,11 @@ const SpriteAnimation = {
     // 플레이어 대기 애니메이션 - GSAP!
     // ==========================================
     startPlayerIdle() {
+        // ✅ PixiJS PlayerRenderer 활성화 시 DOM 애니메이션 스킵
+        if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
+            return;
+        }
+        
         const sprite = document.querySelector('.player-sprite-img');
         if (!sprite) return;
         
@@ -120,6 +125,11 @@ const SpriteAnimation = {
     // 적 대기 애니메이션 - GSAP!
     // ==========================================
     startEnemiesIdle() {
+        // ✅ PixiJS EnemyRenderer 활성화 시 DOM 애니메이션 스킵
+        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled && EnemyRenderer.initialized) {
+            return;
+        }
+        
         const enemyUnits = document.querySelectorAll('.enemy-unit');
         
         enemyUnits.forEach((enemyUnit, index) => {
@@ -923,6 +933,11 @@ const SpriteAnimation = {
     // 플레이어 피격 애니메이션 - GSAP + PixiJS!
     // ==========================================
     playerHit(damage = 0) {
+        // ✅ PixiJS PlayerRenderer 활성화 시 DOM 애니메이션 스킵
+        if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
+            return;
+        }
+        
         const sprite = document.querySelector('.player-sprite-img');
         if (!sprite) return;
         

@@ -11,6 +11,38 @@ const ResponsiveSystem = {
     debugMode: false,
     
     // ==========================================
+    // 🎯 기준 해상도 (모든 좌표 계산의 기준)
+    // ==========================================
+    baseWidth: 1920,
+    baseHeight: 1080,
+    baseAspect: 16 / 9,
+    
+    // 현재 화면 정보
+    screen: {
+        width: 1920,
+        height: 1080,
+        scale: 1,
+        aspect: 16 / 9
+    },
+    
+    // 게임 영역 (종횡비 유지 시 레터박스 적용)
+    gameArea: {
+        x: 0,
+        y: 0,
+        width: 1920,
+        height: 1080,
+        scale: 1
+    },
+    
+    // 설정
+    layoutConfig: {
+        maintainAspect: false,     // 종횡비 강제 유지 (레터박스)
+        targetAspect: 16 / 9,      // 목표 종횡비
+        minScale: 0.5,
+        maxScale: 2.0
+    },
+    
+    // ==========================================
     // 브레이크포인트 정의
     // ==========================================
     breakpoints: {
@@ -41,6 +73,7 @@ const ResponsiveSystem = {
         
         // 초기 해상도 감지
         this.detectResolution();
+        this.updateGameArea();
         
         // 리사이즈 이벤트 리스너 (디바운스 적용)
         let resizeTimeout;
@@ -48,6 +81,8 @@ const ResponsiveSystem = {
             clearTimeout(resizeTimeout);
             resizeTimeout = setTimeout(() => {
                 this.detectResolution();
+                this.updateGameArea();
+                this.notifyRenderers();
             }, 100);
         });
         
@@ -55,15 +90,97 @@ const ResponsiveSystem = {
         window.addEventListener('orientationchange', () => {
             setTimeout(() => {
                 this.detectResolution();
+                this.updateGameArea();
+                this.notifyRenderers();
             }, 100);
         });
         
         // 풀스크린 변경 이벤트
         document.addEventListener('fullscreenchange', () => {
             this.detectResolution();
+            this.updateGameArea();
+            this.notifyRenderers();
         });
         
         console.log('[Responsive] 초기화 완료');
+    },
+    
+    // ==========================================
+    // 🎯 게임 영역 계산
+    // ==========================================
+    updateGameArea() {
+        this.screen.width = window.innerWidth;
+        this.screen.height = window.innerHeight;
+        this.screen.aspect = this.screen.width / this.screen.height;
+        
+        if (this.layoutConfig.maintainAspect) {
+            // 종횡비 유지 모드 (레터박스/필러박스)
+            const targetAspect = this.layoutConfig.targetAspect;
+            let width, height, x, y;
+            
+            if (this.screen.aspect > targetAspect) {
+                // 화면이 더 넓음 → 좌우 필러박스
+                height = this.screen.height;
+                width = height * targetAspect;
+                x = (this.screen.width - width) / 2;
+                y = 0;
+            } else {
+                // 화면이 더 높음 → 상하 레터박스
+                width = this.screen.width;
+                height = width / targetAspect;
+                x = 0;
+                y = (this.screen.height - height) / 2;
+            }
+            
+            this.gameArea = { x, y, width, height };
+        } else {
+            // 전체 화면 사용
+            this.gameArea = {
+                x: 0,
+                y: 0,
+                width: this.screen.width,
+                height: this.screen.height
+            };
+        }
+        
+        // 스케일 계산 (기준 해상도 대비)
+        this.gameArea.scale = Math.min(
+            this.gameArea.width / this.baseWidth,
+            this.gameArea.height / this.baseHeight
+        );
+        this.gameArea.scale = Math.max(
+            this.layoutConfig.minScale,
+            Math.min(this.layoutConfig.maxScale, this.gameArea.scale)
+        );
+        
+        this.screen.scale = this.gameArea.scale;
+        
+        // CSS 변수 업데이트
+        const root = document.documentElement;
+        root.style.setProperty('--game-scale', this.gameArea.scale);
+        root.style.setProperty('--game-width', `${this.gameArea.width}px`);
+        root.style.setProperty('--game-height', `${this.gameArea.height}px`);
+    },
+    
+    // ==========================================
+    // 🎯 렌더러 알림
+    // ==========================================
+    notifyRenderers() {
+        // PixiJS 렌더러
+        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.handleResize) {
+            EnemyRenderer.handleResize();
+        }
+        if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.handleResize) {
+            PlayerRenderer.handleResize();
+        }
+        if (typeof PixiRenderer !== 'undefined' && PixiRenderer.resize) {
+            PixiRenderer.resize();
+        }
+        
+        // Three.js 배경
+        if (typeof Background3D !== 'undefined' && Background3D.handleResize) {
+            Background3D.handleResize();
+        }
     },
     
     // ==========================================
@@ -306,6 +423,91 @@ const ResponsiveSystem = {
                 turnIndicator.style.display = '';
             }
         }
+    },
+    
+    // ==========================================
+    // 🎯 좌표 변환 유틸리티
+    // ==========================================
+    
+    /**
+     * 기준 좌표(1920x1080)를 현재 화면 좌표로 변환
+     * @param {number} x - 기준 해상도 기준 X (0~1920)
+     * @param {number} y - 기준 해상도 기준 Y (0~1080)
+     * @returns {{x: number, y: number}} 화면 좌표
+     */
+    toScreenCoords(x, y) {
+        return {
+            x: this.gameArea.x + (x / this.baseWidth) * this.gameArea.width,
+            y: this.gameArea.y + (y / this.baseHeight) * this.gameArea.height
+        };
+    },
+    
+    /**
+     * 화면 좌표를 기준 좌표로 변환
+     * @param {number} screenX - 화면 X
+     * @param {number} screenY - 화면 Y
+     * @returns {{x: number, y: number}} 기준 해상도 좌표 (0~1920, 0~1080)
+     */
+    toBaseCoords(screenX, screenY) {
+        return {
+            x: ((screenX - this.gameArea.x) / this.gameArea.width) * this.baseWidth,
+            y: ((screenY - this.gameArea.y) / this.gameArea.height) * this.baseHeight
+        };
+    },
+    
+    /**
+     * 기준 크기를 현재 화면 크기로 스케일링
+     * @param {number} size - 기준 해상도 기준 크기
+     * @returns {number} 화면 크기
+     */
+    scaleSize(size) {
+        return size * this.screen.scale;
+    },
+    
+    /**
+     * 비율 기반 X 좌표 (0~1 → 화면 X)
+     */
+    percentX(percent) {
+        return this.gameArea.x + this.gameArea.width * percent;
+    },
+    
+    /**
+     * 비율 기반 Y 좌표 (0~1 → 화면 Y)
+     */
+    percentY(percent) {
+        return this.gameArea.y + this.gameArea.height * percent;
+    },
+    
+    /**
+     * battle-arena 영역 정보 반환
+     */
+    getBattleArea() {
+        const arena = document.querySelector('.battle-arena');
+        if (arena) {
+            const rect = arena.getBoundingClientRect();
+            return {
+                x: rect.left,
+                y: rect.top,
+                width: rect.width,
+                height: rect.height,
+                scale: this.screen.scale
+            };
+        }
+        // 폴백: 게임 영역의 상단 60%
+        return {
+            x: this.gameArea.x,
+            y: this.gameArea.y,
+            width: this.gameArea.width,
+            height: this.gameArea.height * 0.6,
+            scale: this.screen.scale
+        };
+    },
+    
+    /**
+     * 게임 영역 정보 반환
+     */
+    getGameArea() {
+        return { ...this.gameArea };
     },
     
     // ==========================================

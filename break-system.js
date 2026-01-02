@@ -384,6 +384,9 @@ const BreakSystem = {
             enemy.breakProgress = [];
             console.log(`[BreakSystem] ${enemy.name} 브레이크 해제`);
             
+            // 🎆 리커버리 연출!
+            this.showRecoveryEffect(enemy);
+            
             // ✅ PixiJS EnemyRenderer 환경
             if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
                 EnemyRenderer.setEnemyBrokenState(enemy, false);
@@ -429,6 +432,286 @@ const BreakSystem = {
                 }
             }
             // ⚠️ 인텐트 결정과 UI 업데이트는 game.js에서 처리 (중복 방지)
+        }
+    },
+    
+    // ==========================================
+    // 리커버리 연출 (브레이크에서 회복!)
+    // ==========================================
+    showRecoveryEffect(enemy) {
+        // 위치 계산
+        let centerX = window.innerWidth / 2;
+        let centerY = window.innerHeight / 2 - 50;
+        
+        // EnemyRenderer에서 위치 가져오기
+        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+            const enemyId = enemy.pixiId || enemy.id || enemy.name;
+            const data = EnemyRenderer.sprites?.get(enemyId);
+            if (data && data.container) {
+                const globalPos = data.container.getGlobalPosition();
+                const canvas = EnemyRenderer.app?.canvas;
+                if (canvas) {
+                    const canvasRect = canvas.getBoundingClientRect();
+                    centerX = canvasRect.left + globalPos.x;
+                    centerY = canvasRect.top + globalPos.y - 80;
+                }
+                
+                // 🎆 PixiJS 스프라이트 리커버리 애니메이션
+                if (typeof gsap !== 'undefined' && data.sprite) {
+                    const baseScale = data.container.breathingBaseScale || 1;
+                    
+                    // 🔧 이전 리커버리 애니메이션이 있으면 정리!
+                    if (data.currentRecoveryTween) {
+                        data.currentRecoveryTween.kill();
+                        data.currentRecoveryTween = null;
+                    }
+                    
+                    // 🎬 애니메이션 중 플래그 설정 (위치 리셋 방지!)
+                    data.isAnimating = true;
+                    
+                    // 밝아지면서 일어나는 효과
+                    const recoveryTl = gsap.timeline({
+                        onComplete: () => {
+                            // 🎬 애니메이션 종료
+                            data.isAnimating = false;
+                            data.currentRecoveryTween = null;
+                        }
+                    });
+                    
+                    // 🔧 현재 timeline 저장 (나중에 정리용)
+                    data.currentRecoveryTween = recoveryTl;
+                    
+                    recoveryTl
+                        .set(data.sprite, { tint: 0xffffff })
+                        .fromTo(data.container.scale, 
+                            { x: baseScale * 0.8, y: baseScale * 0.8 },
+                            { 
+                                x: baseScale * 1.15, 
+                                y: baseScale * 1.15,
+                                duration: 0.25,
+                                ease: "back.out(2)"
+                            }
+                        )
+                        .to(data.container.scale, {
+                            x: baseScale,
+                            y: baseScale,
+                            duration: 0.15,
+                            ease: "power2.out"
+                        });
+                }
+            }
+        } else {
+            // DOM 환경
+            const enemyIndex = gameState.enemies?.indexOf(enemy);
+            if (enemyIndex !== -1) {
+                const enemyEl = document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`);
+                if (enemyEl) {
+                    const rect = enemyEl.getBoundingClientRect();
+                    centerX = rect.left + rect.width / 2;
+                    centerY = rect.top + rect.height / 3;
+                    
+                    // DOM 스프라이트 애니메이션
+                    const sprite = enemyEl.querySelector('.enemy-sprite-img');
+                    if (sprite && typeof gsap !== 'undefined') {
+                        gsap.timeline()
+                            .set(sprite, { filter: 'brightness(2) saturate(1.5)' })
+                            .to(sprite, {
+                                filter: 'brightness(1) saturate(1)',
+                                duration: 0.4,
+                                ease: "power2.out"
+                            });
+                    }
+                }
+            }
+        }
+        
+        // 🌟 리커버리 텍스트
+        const recoveryText = document.createElement('div');
+        recoveryText.className = 'recovery-effect-text';
+        recoveryText.textContent = 'RECOVER!';
+        recoveryText.style.cssText = `
+            position: fixed;
+            left: ${centerX}px;
+            top: ${centerY}px;
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 0;
+            z-index: 99999;
+            pointer-events: none;
+            font-family: 'Cinzel', serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #a855f7;
+            text-shadow: 
+                0 0 15px rgba(168, 85, 247, 1),
+                0 0 30px rgba(168, 85, 247, 0.7),
+                2px 2px 0 #000;
+            letter-spacing: 4px;
+        `;
+        document.body.appendChild(recoveryText);
+        
+        // 리커버리 파티클 (보라색 + 하얀색)
+        this.createRecoveryParticles(centerX, centerY + 30);
+        
+        // 상승 링 이펙트
+        this.createRecoveryRing(centerX, centerY + 50);
+        
+        // GSAP 애니메이션
+        if (typeof gsap !== 'undefined') {
+            gsap.timeline()
+                .to(recoveryText, {
+                    scale: 1.2,
+                    opacity: 1,
+                    duration: 0.2,
+                    ease: "back.out(2)"
+                })
+                .to(recoveryText, {
+                    scale: 1,
+                    duration: 0.1
+                })
+                .to(recoveryText, {
+                    y: -40,
+                    opacity: 0,
+                    duration: 0.5,
+                    delay: 0.3,
+                    ease: "power2.in",
+                    onComplete: () => recoveryText.remove()
+                });
+        } else {
+            recoveryText.style.animation = 'recoveryTextAnim 1s ease-out forwards';
+            setTimeout(() => recoveryText.remove(), 1000);
+        }
+        
+        // 화면 플래시 (보라색)
+        this.createRecoveryFlash();
+        
+        // 사운드
+        if (typeof SoundSystem !== 'undefined') {
+            SoundSystem.play('recover', { volume: 0.6 });
+        }
+        
+        console.log(`[BreakSystem] 🎆 ${enemy.name} 리커버리 연출!`);
+    },
+    
+    // ==========================================
+    // 리커버리 파티클
+    // ==========================================
+    createRecoveryParticles(x, y) {
+        const colors = ['#a855f7', '#c084fc', '#e879f9', '#ffffff', '#d8b4fe'];
+        
+        for (let i = 0; i < 15; i++) {
+            const particle = document.createElement('div');
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 30 + Math.random() * 60;
+            const size = 4 + Math.random() * 6;
+            const delay = Math.random() * 100;
+            
+            particle.style.cssText = `
+                position: fixed;
+                left: ${x}px;
+                top: ${y}px;
+                width: ${size}px;
+                height: ${size}px;
+                background: ${colors[Math.floor(Math.random() * colors.length)]};
+                border-radius: 50%;
+                transform: translate(-50%, -50%);
+                z-index: 99998;
+                pointer-events: none;
+                box-shadow: 0 0 ${size}px currentColor;
+                opacity: 0;
+            `;
+            document.body.appendChild(particle);
+            
+            // 상승하면서 사라지는 애니메이션
+            if (typeof gsap !== 'undefined') {
+                gsap.timeline({ delay: delay / 1000 })
+                    .fromTo(particle, 
+                        { opacity: 0, scale: 0 },
+                        { opacity: 1, scale: 1, duration: 0.15 }
+                    )
+                    .to(particle, {
+                        x: Math.cos(angle) * distance,
+                        y: -50 - Math.random() * 40,  // 위로 상승
+                        opacity: 0,
+                        scale: 0.3,
+                        duration: 0.6 + Math.random() * 0.3,
+                        ease: "power2.out",
+                        onComplete: () => particle.remove()
+                    });
+            } else {
+                setTimeout(() => particle.remove(), 800);
+            }
+        }
+    },
+    
+    // ==========================================
+    // 리커버리 링 이펙트 (상승)
+    // ==========================================
+    createRecoveryRing(x, y) {
+        for (let i = 0; i < 3; i++) {
+            const ring = document.createElement('div');
+            ring.style.cssText = `
+                position: fixed;
+                left: ${x}px;
+                top: ${y}px;
+                width: 60px;
+                height: 20px;
+                border: 2px solid rgba(168, 85, 247, 0.8);
+                border-radius: 50%;
+                transform: translate(-50%, -50%) scale(0.5);
+                z-index: 99997;
+                pointer-events: none;
+                opacity: 0;
+                box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+            `;
+            document.body.appendChild(ring);
+            
+            if (typeof gsap !== 'undefined') {
+                gsap.timeline({ delay: i * 0.15 })
+                    .to(ring, {
+                        opacity: 0.8,
+                        scale: 1,
+                        duration: 0.2
+                    })
+                    .to(ring, {
+                        y: -80 - i * 20,
+                        scale: 1.5,
+                        opacity: 0,
+                        duration: 0.5,
+                        ease: "power2.out",
+                        onComplete: () => ring.remove()
+                    });
+            } else {
+                setTimeout(() => ring.remove(), 700);
+            }
+        }
+    },
+    
+    // ==========================================
+    // 리커버리 화면 플래시
+    // ==========================================
+    createRecoveryFlash() {
+        const flash = document.createElement('div');
+        flash.style.cssText = `
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at center, rgba(168, 85, 247, 0.3), transparent 70%);
+            z-index: 9998;
+            pointer-events: none;
+            opacity: 0;
+        `;
+        document.body.appendChild(flash);
+        
+        if (typeof gsap !== 'undefined') {
+            gsap.timeline()
+                .to(flash, { opacity: 1, duration: 0.1 })
+                .to(flash, {
+                    opacity: 0,
+                    duration: 0.3,
+                    ease: "power2.out",
+                    onComplete: () => flash.remove()
+                });
+        } else {
+            setTimeout(() => flash.remove(), 400);
         }
     },
     
@@ -1480,6 +1763,44 @@ const BreakSystem = {
                     transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) rotate(360deg) scale(0);
                     opacity: 0;
                 }
+            }
+            
+            /* 리커버리 텍스트 애니메이션 (GSAP 폴백) */
+            @keyframes recoveryTextAnim {
+                0% {
+                    transform: translate(-50%, -50%) scale(0);
+                    opacity: 0;
+                }
+                20% {
+                    transform: translate(-50%, -50%) scale(1.2);
+                    opacity: 1;
+                }
+                40% {
+                    transform: translate(-50%, -50%) scale(1);
+                }
+                70% {
+                    transform: translate(-50%, -50%) scale(1);
+                    opacity: 1;
+                }
+                100% {
+                    transform: translate(-50%, calc(-50% - 40px));
+                    opacity: 0;
+                }
+            }
+            
+            /* 리커버리 텍스트 스타일 */
+            .recovery-effect-text {
+                font-family: 'Cinzel', serif;
+                font-size: 2.5rem;
+                font-weight: 800;
+                background: linear-gradient(180deg, #e879f9 0%, #a855f7 50%, #7c3aed 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                filter: 
+                    drop-shadow(0 0 10px rgba(168, 85, 247, 1))
+                    drop-shadow(0 0 20px rgba(168, 85, 247, 0.6))
+                    drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.8));
+                letter-spacing: 4px;
             }
             
             /* 위협 상태 몬스터 - 하얀 외곽선 + 붉은 글로우 */
