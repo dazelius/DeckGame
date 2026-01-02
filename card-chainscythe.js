@@ -72,15 +72,31 @@ const ChainScytheSystem = {
             
             const diffX = oldRect.left - newRect.left;
             
+            // data-index 업데이트 (먼저!)
+            el.dataset.index = newIndex;
+            
             if (Math.abs(diffX) > 1) {
+                // 3D transform 보존하면서 x 애니메이션
+                const z3d = -80 - (newIndex * 20);
                 gsap.fromTo(el, 
                     { x: diffX },
-                    { x: 0, duration: 0.25, ease: 'power2.out' }
+                    { 
+                        x: 0, 
+                        duration: 0.25, 
+                        ease: 'power2.out',
+                        onComplete: () => {
+                            // 애니메이션 끝나면 3D transform 복원
+                            el.style.transform = `translateZ(${z3d}px)`;
+                            el.style.transformStyle = 'preserve-3d';
+                        }
+                    }
                 );
+            } else {
+                // 이동 없어도 3D 위치 설정
+                const z3d = -80 - (newIndex * 20);
+                el.style.transform = `translateZ(${z3d}px)`;
+                el.style.transformStyle = 'preserve-3d';
             }
-            
-            // data-index 업데이트
-            el.dataset.index = newIndex;
         });
         
         // 브레이크 상태 복원
