@@ -27,7 +27,8 @@ const ChainScytheSystem = {
         });
     },
     
-    // DOM 재생성 없이 적 위치 교환 (자연스러운 애니메이션)
+    // DOM 재생성 없이 적 위치 재배치 (자연스러운 애니메이션)
+    // [1,2,3] 에서 3을 당기면 → [3,1,2] (타겟이 맨 앞, 나머지 뒤로 밀림)
     swapEnemyPositions(targetIndex, targetEnemy, onComplete) {
         const container = document.getElementById('enemies-container');
         if (!container) {
@@ -37,53 +38,52 @@ const ChainScytheSystem = {
         
         const enemyEls = Array.from(container.querySelectorAll('.enemy-unit'));
         const targetEl = enemyEls[targetIndex];
-        const firstEl = enemyEls[0];
         
-        if (!targetEl || !firstEl) {
+        if (!targetEl || targetIndex === 0) {
             if (onComplete) onComplete();
             return;
         }
         
-        // 현재 위치 저장
-        const targetRect = targetEl.getBoundingClientRect();
-        const firstRect = firstEl.getBoundingClientRect();
+        // 모든 요소의 현재 위치 저장 (FLIP의 First)
+        const oldRects = enemyEls.map(el => el.getBoundingClientRect());
         
-        // gameState 배열 교환
-        const firstEnemy = gameState.enemies[0];
-        gameState.enemies[0] = targetEnemy;
-        gameState.enemies[targetIndex] = firstEnemy;
+        // gameState 배열 재배치: 타겟을 빼서 맨 앞에 넣기
+        // [1, 2, 3] 에서 index=2를 당기면 → [3, 1, 2]
+        const pulled = gameState.enemies.splice(targetIndex, 1)[0];
+        gameState.enemies.unshift(pulled);
         
-        console.log(`[ChainScythe] ${targetEnemy.name}을(를) 첫 번째 위치로 끌어옴!`);
+        console.log(`[ChainScythe] ${targetEnemy.name}을(를) 맨 앞으로! 새 순서:`, 
+            gameState.enemies.map(e => e.name));
         
-        // DOM 순서 변경 (재생성 없이!)
-        container.insertBefore(targetEl, firstEl);
+        // DOM 순서 재배치: 타겟을 맨 앞으로
+        container.insertBefore(targetEl, container.firstChild);
         
-        // 새 위치 계산
-        const newTargetRect = targetEl.getBoundingClientRect();
-        const newFirstRect = firstEl.getBoundingClientRect();
-        
-        // 위치 차이 계산
-        const targetDiffX = targetRect.left - newTargetRect.left;
-        const firstDiffX = firstRect.left - newFirstRect.left;
-        
-        // FLIP 애니메이션: 이전 위치에서 시작해서 새 위치로 이동
-        gsap.fromTo(targetEl, 
-            { x: targetDiffX },
-            { x: 0, duration: 0.3, ease: 'power2.out' }
-        );
-        
-        gsap.fromTo(firstEl,
-            { x: firstDiffX },
-            { x: 0, duration: 0.3, ease: 'power2.out' }
-        );
-        
-        // data-index 업데이트
+        // 새 순서로 요소 다시 가져오기 (FLIP의 Last)
         const newEnemyEls = Array.from(container.querySelectorAll('.enemy-unit'));
-        newEnemyEls.forEach((el, i) => {
-            el.dataset.index = i;
+        
+        // FLIP 애니메이션: 각 요소가 이전 위치에서 새 위치로 이동 (Invert + Play)
+        newEnemyEls.forEach((el, newIndex) => {
+            // 이 요소가 원래 어디 있었는지 찾기
+            const oldIndex = enemyEls.indexOf(el);
+            if (oldIndex === -1) return;
+            
+            const oldRect = oldRects[oldIndex];
+            const newRect = el.getBoundingClientRect();
+            
+            const diffX = oldRect.left - newRect.left;
+            
+            if (Math.abs(diffX) > 1) {
+                gsap.fromTo(el, 
+                    { x: diffX },
+                    { x: 0, duration: 0.25, ease: 'power2.out' }
+                );
+            }
+            
+            // data-index 업데이트
+            el.dataset.index = newIndex;
         });
         
-        // 브레이크 상태 복원 (0.3초 후)
+        // 브레이크 상태 복원
         setTimeout(() => {
             this.restoreBreakStates();
             
@@ -92,7 +92,7 @@ const ChainScytheSystem = {
             }
             
             if (onComplete) onComplete();
-        }, 350);
+        }, 300);
         
         return true;
     },
