@@ -90,8 +90,14 @@ const ChainScytheSystem = {
             return;
         }
         
-        // 모든 요소의 현재 위치 저장 (FLIP의 First)
-        const oldRects = enemyEls.map(el => el.getBoundingClientRect());
+        // ✅ 타겟 외 다른 요소들의 현재 위치만 저장 (FLIP의 First)
+        // 타겟은 이미 playPixiPullAnimation에서 시각적으로 끌어온 상태!
+        const otherRects = {};
+        enemyEls.forEach((el, i) => {
+            if (i !== targetIndex) {
+                otherRects[i] = el.getBoundingClientRect();
+            }
+        });
         
         // gameState 배열 재배치: 타겟을 빼서 맨 앞에 넣기
         // [1, 2, 3] 에서 index=2를 당기면 → [3, 1, 2]
@@ -107,18 +113,29 @@ const ChainScytheSystem = {
         // 새 순서로 요소 다시 가져오기 (FLIP의 Last)
         const newEnemyEls = Array.from(container.querySelectorAll('.enemy-unit'));
         
-        // FLIP 애니메이션: 각 요소가 이전 위치에서 새 위치로 이동 (Invert + Play)
+        // ✅ 타겟: 이미 첫 번째 위치에 있으므로 x, filter 정리만
+        gsap.to(targetEl, {
+            x: 0,
+            filter: 'brightness(1)',
+            duration: 0.15,
+            ease: 'power2.out'
+        });
+        targetEl.dataset.index = 0;
+        
+        // ✅ 나머지 적들: FLIP으로 밀림 애니메이션
         newEnemyEls.forEach((el, newIndex) => {
+            if (el === targetEl) return; // 타겟은 이미 처리함
+            
             // 이 요소가 원래 어디 있었는지 찾기
             const oldIndex = enemyEls.indexOf(el);
-            if (oldIndex === -1) return;
+            if (oldIndex === -1 || !otherRects[oldIndex]) return;
             
-            const oldRect = oldRects[oldIndex];
+            const oldRect = otherRects[oldIndex];
             const newRect = el.getBoundingClientRect();
             
             const diffX = oldRect.left - newRect.left;
             
-            // data-index 업데이트 (먼저!)
+            // data-index 업데이트
             el.dataset.index = newIndex;
             
             // 3D 위치는 Background3D API 사용 (통일된 시스템)
@@ -127,22 +144,20 @@ const ChainScytheSystem = {
                 : -80 - (newIndex * 20);
             
             if (Math.abs(diffX) > 1) {
-                // 3D transform 보존하면서 x 애니메이션
+                // 밀리는 애니메이션
                 gsap.fromTo(el, 
                     { x: diffX },
                     { 
                         x: 0, 
-                        duration: 0.25, 
+                        duration: 0.2, 
                         ease: 'power2.out',
                         onComplete: () => {
-                            // 애니메이션 끝나면 3D transform 복원
                             el.style.transform = `translateZ(${z3d}px)`;
                             el.style.transformStyle = 'preserve-3d';
                         }
                     }
                 );
             } else {
-                // 이동 없어도 3D 위치 설정
                 el.style.transform = `translateZ(${z3d}px)`;
                 el.style.transformStyle = 'preserve-3d';
             }
@@ -497,11 +512,15 @@ const ChainScytheSystem = {
                         }
                     });
                     
-                    // 모든 적 스타일 초기화
-                    gsap.set(targetEl, { clearProps: 'all' });
+                    // ✅ 충돌당한 적들만 원래 위치로 (타겟은 그대로 유지!)
                     collisionPoints.forEach(p => {
-                        if (p.el) gsap.set(p.el, { clearProps: 'all' });
+                        if (p.el && !p.isFinal) {
+                            gsap.set(p.el, { clearProps: 'x,rotation,filter' });
+                        }
                     });
+                    
+                    // ✅ 타겟은 현재 끌어온 위치에 유지 (clearProps 안 함)
+                    // 콜백에서 DOM 재배치 후 자연스럽게 처리
                     
                     // 바로 콜백
                     if (onComplete) onComplete();

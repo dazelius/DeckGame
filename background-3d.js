@@ -619,9 +619,26 @@ const Background3D = {
     // ==========================================
     // 게임 요소 3D 배치
     // ==========================================
+    parallaxDisabled: false,  // 드래그 중 비활성화 플래그
+    
+    disableParallax() {
+        this.parallaxDisabled = true;
+    },
+    
+    enableParallax() {
+        this.parallaxDisabled = false;
+        // 재활성화 시 즉시 한번 적용
+        this.applyGameParallax();
+    },
+    
     applyGameParallax() {
         const arena = document.querySelector('.battle-arena');
         if (!arena) return;
+        
+        // ✅ 드래그 중이면 3D 배치 건너뛰기 (filter가 3D를 깨트림)
+        if (this.parallaxDisabled || arena.classList.contains('drag-in-progress')) {
+            return;
+        }
         
         // 전투 영역 3D 설정
         arena.style.perspective = '1000px';

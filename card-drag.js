@@ -192,11 +192,23 @@ const CardDragSystem = {
         const target = this.getCardTarget(card);
         const playerEl = document.getElementById('player');
         
-        // ✅ 드래그 중 3D parallax 비활성화 (filter가 3D를 깨트림)
+        // ✅ 드래그 중 3D parallax 완전 비활성화 (filter가 3D를 깨트림)
+        if (typeof Background3D !== 'undefined') {
+            Background3D.disableParallax();
+        }
+        
         const arena = document.querySelector('.battle-arena');
         if (arena) {
             arena.classList.add('drag-in-progress');
+            // inline style 직접 제거
+            arena.style.transform = 'none';
+            arena.style.perspective = 'none';
         }
+        
+        // 모든 적과 플레이어의 3D transform 제거
+        document.querySelectorAll('.enemy-unit, #player, .gimmick-unit').forEach(el => {
+            el.style.transform = 'none';
+        });
 
         if (target === 'enemy') {
             const container = document.getElementById('enemies-container');
@@ -256,12 +268,22 @@ const CardDragSystem = {
         const arena = document.querySelector('.battle-arena');
         if (arena) {
             arena.classList.remove('drag-in-progress');
+            // inline style 제거 (Background3D가 다시 설정)
+            arena.style.transform = '';
+            arena.style.perspective = '';
         }
         
-        // ✅ Background3D 재적용
-        if (typeof Background3D !== 'undefined' && Background3D.applyGameParallax) {
-            Background3D.applyGameParallax();
-        }
+        // 모든 적과 플레이어의 inline style 제거
+        document.querySelectorAll('.enemy-unit, #player, .gimmick-unit').forEach(el => {
+            el.style.transform = '';
+        });
+        
+        // ✅ Background3D 재활성화 (약간 지연)
+        setTimeout(() => {
+            if (typeof Background3D !== 'undefined') {
+                Background3D.enableParallax();
+            }
+        }, 50);
         
         if (container) {
             container.querySelectorAll('.enemy-unit').forEach(el => {
