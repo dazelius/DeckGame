@@ -338,6 +338,39 @@ const EnemyRenderer = {
         const data = this.sprites.get(enemyId);
         
         if (data) {
+            // ✅ 1. 모든 GSAP 애니메이션 먼저 정리 (중요!)
+            if (data.container) {
+                // 숨쉬기 애니메이션 정리
+                this.stopBreathingAnimation(data.container);
+                
+                // 스턴 트윈 정리
+                if (data.container._stunTweenX) {
+                    data.container._stunTweenX.kill();
+                    data.container._stunTweenX = null;
+                }
+                if (data.container._stunTweenY) {
+                    data.container._stunTweenY.kill();
+                    data.container._stunTweenY = null;
+                }
+                if (data.container._stunTweenScale) {
+                    data.container._stunTweenScale.kill();
+                    data.container._stunTweenScale = null;
+                }
+                if (data.container._stunTweenRot) {
+                    data.container._stunTweenRot.kill();
+                    data.container._stunTweenRot = null;
+                }
+                
+                // 모든 GSAP 트윈 강제 종료
+                gsap.killTweensOf(data.container);
+                if (data.container.scale) {
+                    gsap.killTweensOf(data.container.scale);
+                }
+                
+                // 스턴 이펙트 제거
+                this.stopStunEffect(enemy);
+            }
+            
             // 스프라이트 제거
             if (data.container && data.container.parent) {
                 data.container.parent.removeChild(data.container);
@@ -361,6 +394,15 @@ const EnemyRenderer = {
     
     clearAllEnemies() {
         this.sprites.forEach((data, id) => {
+            // ✅ GSAP 애니메이션 먼저 정리
+            if (data.container) {
+                this.stopBreathingAnimation(data.container);
+                gsap.killTweensOf(data.container);
+                if (data.container.scale) {
+                    gsap.killTweensOf(data.container.scale);
+                }
+            }
+            
             if (data.container && data.container.parent) {
                 data.container.parent.removeChild(data.container);
                 data.container.destroy({ children: true });
@@ -374,6 +416,13 @@ const EnemyRenderer = {
                 data.bottomUI.parentNode.removeChild(data.bottomUI);
             }
         });
+        
+        // 스턴 이펙트 전부 정리
+        this.stunEffects.forEach((effect, id) => {
+            if (effect && effect.kill) effect.kill();
+        });
+        this.stunEffects.clear();
+        
         this.sprites.clear();
         console.log('[EnemyRenderer] Cleared all enemies');
     },
@@ -1608,11 +1657,23 @@ const EnemyRenderer = {
         // ========================================
         // 단일 호흡 애니메이션 (심플하게!)
         // ========================================
+        
+        // 컨테이너 파괴 여부 체크 함수
+        const isContainerValid = () => {
+            return container && container.scale && container.parent !== null && !container.destroyed;
+        };
+        
         const breathTl = gsap.timeline({ 
             repeat: -1, 
             yoyo: true,
             delay: delay,
-            defaults: { ease: "sine.inOut" }
+            defaults: { ease: "sine.inOut" },
+            onUpdate: function() {
+                // 컨테이너가 제거되었으면 애니메이션 중지
+                if (!isContainerValid()) {
+                    this.kill();
+                }
+            }
         });
         
         // 들숨: 살짝 늘어나면서 위로 (미세하게!)
