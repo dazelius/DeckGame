@@ -3,6 +3,27 @@
 // ==========================================
 
 // ==========================================
+// 🧹 GSAP 애니메이션 유틸리티 (누수 방지)
+// ==========================================
+function safeGsapAnimate(element, animationConfig) {
+    if (!element || typeof gsap === 'undefined') return null;
+    
+    // 기존 애니메이션 정리 후 새 애니메이션 시작
+    gsap.killTweensOf(element);
+    return gsap.to(element, animationConfig);
+}
+
+function safeGsapTimeline(elements = []) {
+    if (typeof gsap === 'undefined') return null;
+    
+    // 모든 타겟 요소의 기존 애니메이션 정리
+    elements.forEach(el => {
+        if (el) gsap.killTweensOf(el);
+    });
+    return gsap.timeline();
+}
+
+// ==========================================
 // 🛡️ 인텐트 안전 체크 시스템
 // ==========================================
 let intentSafetyCheckInterval = null;
@@ -817,34 +838,53 @@ async function renderEnemiesWithPixi(withEntrance = true) {
         await EnemyRenderer.init();
     }
     
+    // ✅ PlayerRenderer도 함께 초기화 (동일한 좌표 시스템)
+    if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled) {
+        if (!PlayerRenderer.initialized) {
+            await PlayerRenderer.init();
+        }
+        // 플레이어 생성 (아직 없으면)
+        if (!PlayerRenderer.playerContainer) {
+            await PlayerRenderer.createPlayer();
+        }
+    }
+    
+    // ✅ PixiProjectile 발사체 시스템 초기화
+    if (typeof PixiProjectile !== 'undefined' && !PixiProjectile.initialized) {
+        await PixiProjectile.init();
+    }
+    
     // 기존 DOM 적 숨기기
     const existingContainer = document.getElementById('enemies-container');
     if (existingContainer) {
         existingContainer.style.display = 'none';
     }
     
+    // 🔑 ID 기반 오버라이드! 더 이상 인덱스 매핑 불필요
     // 기존 스프라이트 클리어
     EnemyRenderer.clearAllEnemies();
     
     // 살아있는 적만 렌더링
-    const aliveEnemies = gameState.enemies.filter(e => e.hp > 0);
-    
-    // 순차적으로 적 추가 (비동기 스프라이트 로딩)
-    for (let slotIndex = 0; slotIndex < aliveEnemies.length; slotIndex++) {
-        const enemy = aliveEnemies[slotIndex];
-        // 스프라이트 경로 설정 (img 필드 사용!)
-        enemy.sprite = enemy.sprite || enemy.img || enemy.image || getEnemySpritePath(enemy);
-        // ID는 슬롯 기반으로 항상 새로 생성 (중복 방지)
-        const enemyId = `enemy_slot_${slotIndex}_${Date.now()}`;
-        enemy.pixiId = enemyId;  // PixiJS용 고유 ID
+    let slotIndex = 0;
+    for (let originalIndex = 0; originalIndex < gameState.enemies.length; originalIndex++) {
+        const enemy = gameState.enemies[originalIndex];
+        if (!enemy || enemy.hp <= 0) continue;
         
-        console.log(`[renderEnemiesWithPixi] 적 추가: ${enemy.name}, slot: ${slotIndex}, 스프라이트: ${enemy.sprite}`);
+        // 스프라이트 경로 설정
+        enemy.sprite = enemy.sprite || enemy.img || enemy.image || getEnemySpritePath(enemy);
+        
+        // 🔑 고유 인스턴스 ID (한 번 생성되면 유지!)
+        // enemy.id는 종류 ID라서 같은 종류 적들이 겹침 → instanceId 사용
+        if (!enemy.instanceId) {
+            enemy.instanceId = `${enemy.id || enemy.name || 'enemy'}_${originalIndex}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+        }
+        enemy.pixiId = enemy.instanceId;
+        
         await EnemyRenderer.addEnemy(enemy, slotIndex);
+        slotIndex++;
     }
     
-    console.log(`[renderEnemiesWithPixi] 총 ${aliveEnemies.length}마리 렌더링 완료`);
-    
-    console.log(`[renderEnemiesWithPixi] Rendered ${aliveEnemies.length} enemies`);
+    // console.log(`[renderEnemiesWithPixi] 총 ${slotIndex}마리 렌더링 완료`);
     
     // 인텐트 업데이트
     if (typeof updateAllIntents === 'function') {
@@ -1621,18 +1661,31 @@ function showReviveEffect() {
 
 // 플레이어 취약 이펙트
 function showPlayerVulnerableEffect() {
-    const playerEl = document.getElementById('player');
-    if (!playerEl) return;
-    
-    const rect = playerEl.getBoundingClientRect();
+    // ✅ PixiJS PlayerRenderer 위치 우선 사용
+    let effectX, effectY;
+    if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
+        const playerPos = PlayerRenderer.getPlayerPosition();
+        if (playerPos) {
+            effectX = playerPos.centerX;
+            effectY = playerPos.top;
+        }
+    }
+    // DOM 폴백
+    if (effectX === undefined) {
+        const playerEl = document.getElementById('player');
+        if (!playerEl) return;
+        const rect = playerEl.getBoundingClientRect();
+        effectX = rect.left + rect.width / 2;
+        effectY = rect.top;
+    }
     
     // 취약 텍스트 팝업
     const popup = document.createElement('div');
     popup.innerHTML = '💔 취약!';
     popup.style.cssText = `
         position: fixed;
-        left: ${rect.left + rect.width / 2}px;
-        top: ${rect.top}px;
+        left: ${effectX}px;
+        top: ${effectY}px;
         transform: translateX(-50%);
         font-family: 'Cinzel', serif;
         font-size: 1.8rem;
@@ -4187,14 +4240,29 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
         if (typeof EffectSystem !== 'undefined' && playerEl) {
             EffectSystem.debuff(playerEl);
         }
-        if (typeof VFX !== 'undefined' && playerEl) {
-            const rect = playerEl.getBoundingClientRect();
-            // 보라색 스파크로 저주 효과 표현
-            VFX.sparks(rect.left + rect.width / 2, rect.top + rect.height / 2, { 
-                color: '#a855f7', 
-                count: 12,
-                speed: 8
-            });
+        if (typeof VFX !== 'undefined') {
+            // ✅ PixiJS PlayerRenderer 위치 우선 사용
+            let effectX, effectY;
+            if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
+                const playerPos = PlayerRenderer.getPlayerPosition();
+                if (playerPos) {
+                    effectX = playerPos.centerX;
+                    effectY = playerPos.centerY;
+                }
+            }
+            if (effectX === undefined && playerEl) {
+                const rect = playerEl.getBoundingClientRect();
+                effectX = rect.left + rect.width / 2;
+                effectY = rect.top + rect.height / 2;
+            }
+            if (effectX !== undefined) {
+                // 보라색 스파크로 저주 효과 표현
+                VFX.sparks(effectX, effectY, { 
+                    color: '#a855f7', 
+                    count: 12,
+                    speed: 8
+                });
+            }
         }
         
         // 취약 표시
@@ -4220,17 +4288,32 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
         }
         
         // 도발 이펙트
-        const playerEl = document.getElementById('player');
-        if (typeof EffectSystem !== 'undefined' && playerEl) {
-            EffectSystem.debuff(playerEl);
+        const tauntPlayerEl = document.getElementById('player');
+        if (typeof EffectSystem !== 'undefined' && tauntPlayerEl) {
+            EffectSystem.debuff(tauntPlayerEl);
         }
-        if (typeof VFX !== 'undefined' && playerEl) {
-            const rect = playerEl.getBoundingClientRect();
-            VFX.sparks(rect.left + rect.width / 2, rect.top + rect.height / 2, { 
-                color: '#f59e0b', 
-                count: 10,
-                speed: 6
-            });
+        if (typeof VFX !== 'undefined') {
+            // ✅ PixiJS PlayerRenderer 위치 우선 사용
+            let tauntEffectX, tauntEffectY;
+            if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
+                const tauntPlayerPos = PlayerRenderer.getPlayerPosition();
+                if (tauntPlayerPos) {
+                    tauntEffectX = tauntPlayerPos.centerX;
+                    tauntEffectY = tauntPlayerPos.centerY;
+                }
+            }
+            if (tauntEffectX === undefined && tauntPlayerEl) {
+                const tauntRect = tauntPlayerEl.getBoundingClientRect();
+                tauntEffectX = tauntRect.left + tauntRect.width / 2;
+                tauntEffectY = tauntRect.top + tauntRect.height / 2;
+            }
+            if (tauntEffectX !== undefined) {
+                VFX.sparks(tauntEffectX, tauntEffectY, { 
+                    color: '#f59e0b', 
+                    count: 10,
+                    speed: 6
+                });
+            }
         }
         
         if (typeof updatePlayerStatusUI === 'function') {
@@ -5172,6 +5255,11 @@ function updateUI() {
     const playerHpPercent = (gameState.player.hp / gameState.player.maxHp) * 100;
     elements.playerHpBar.style.width = `${playerHpPercent}%`;
     elements.playerHpText.textContent = `${gameState.player.hp}/${gameState.player.maxHp}`;
+    
+    // ✅ PixiJS PlayerRenderer UI 업데이트
+    if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
+        PlayerRenderer.updatePlayerUI();
+    }
     
     // 플레이어 방어도 (ShieldSystem 사용)
     ShieldSystem.updateBlockUI(gameState.player);

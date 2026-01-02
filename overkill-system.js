@@ -274,9 +274,12 @@ const OverkillSystem = {
         // 티어별 효과 실행 (imgSrc 포함)
         this.executeEffectWithSprite(tier, x, y, width, height, overkillDamage, imgSrc);
         
-        // PixiJS UI 숨기기
+        // PixiJS 스프라이트 즉시 제거! (절단 효과가 대신함)
         if (typeof EnemyRenderer !== 'undefined') {
             EnemyRenderer.hideEnemyUI(enemy);
+            // 🎯 스프라이트 즉시 제거 (페이드아웃 없이!)
+            EnemyRenderer.removeEnemy(enemy);
+            console.log('[Overkill] PixiJS 스프라이트 제거됨:', enemy.name);
         }
         
         // 로그

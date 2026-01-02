@@ -236,7 +236,13 @@ function dealDamage(target, amount, card = null) {
         
         if (typeof SpriteAnimation !== 'undefined') {
             if (isPlayer) {
-                SpriteAnimation.playerHit(animDamage);
+                // ✅ PixiJS PlayerRenderer 사용 시
+                if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
+                    PlayerRenderer.playHitAnimation(animDamage, isCriticalHit);
+                    PlayerRenderer.updatePlayerHP();
+                } else {
+                    SpriteAnimation.playerHit(animDamage);
+                }
                 // 🔦 3D 광원 효과 - 플레이어 피격
                 if (typeof Background3D !== 'undefined' && Background3D.playerHit) {
                     Background3D.playerHit();

@@ -15,9 +15,26 @@ const EnemyRenderer = {
     config: {
         slotSpacing: 180,      // 슬롯 간격 (넓게)
         baseY: 100,            // 기본 Y 위치
-        baseScale: 0.35,       // 기본 스케일 (작게!)
+        baseScale: 0.7,        // 기본 스케일 (2배로!)
         depthScale: 0.85,      // 깊이에 따른 스케일 감소
-        maxSlots: 5            // 최대 슬롯 수
+        maxSlots: 5,           // 최대 슬롯 수
+        
+        // ✅ 3D 바닥면 연동 설정
+        floor3D: {
+            enabled: true,           // 3D 연동 활성화
+            parallaxStrength: 25,    // 패럴랙스 강도 (마우스 이동에 따른 픽셀 이동)
+            depthParallax: 8,        // 깊이별 패럴랙스 차이
+            floorY: 0.62,            // 3D 바닥면 Y 위치 (화면 비율)
+            perspectiveScale: 0.02   // 원근감 스케일 조절
+        }
+    },
+    
+    // 3D 패럴랙스 상태
+    parallax: {
+        x: 0,
+        y: 0,
+        targetX: 0,
+        targetY: 0
     },
     
     // 상태
@@ -60,6 +77,9 @@ const EnemyRenderer = {
         
         // UI 오버레이 컨테이너 (HTML)
         this.createUIOverlay();
+        
+        // ✅ 3D 패럴랙스 업데이트 루프
+        this.app.ticker.add(this.update3DParallax.bind(this));
         
         this.initialized = true;
         
@@ -160,27 +180,74 @@ const EnemyRenderer = {
     },
     
     // ==========================================
-    // 슬롯 위치 계산 (2D 나란히 배치)
+    // 🎯 실제 3D 좌표 기반 슬롯 위치 계산
     // ==========================================
-    getSlotX(slotIndex) {
-        // 화면 중앙 기준으로 슬롯 배치 (오른쪽에 배치)
-        const centerX = this.app ? this.app.renderer.width / 2 : 600;
-        const totalSlots = Math.max(gameState?.enemies?.filter(e => e.hp > 0).length || 1, 1);
-        const totalWidth = (totalSlots - 1) * this.config.slotSpacing;
-        const startX = centerX - totalWidth / 2 + 220;  // 오른쪽으로 더 이동
+    
+    /**
+     * 슬롯의 3D 좌표에서 투영된 화면 좌표 가져오기
+     * @returns {object} { arenaX, arenaY, screenX, screenY, scale, visible }
+     */
+    getSlotScreenPosition(slotIndex) {
+        // Background3D가 초기화되지 않았으면 폴백
+        if (typeof Background3D === 'undefined' || !Background3D.isInitialized) {
+            return this.getFallbackSlotPosition(slotIndex);
+        }
         
-        return startX + (slotIndex * this.config.slotSpacing);
+        // 3D 좌표에서 화면 좌표로 투영
+        const screenPos = Background3D.getEnemyScreenPosition(slotIndex);
+        if (!screenPos || !screenPos.visible) {
+            return this.getFallbackSlotPosition(slotIndex);
+        }
+        
+        return screenPos;
     },
     
-    getSlotY(slotIndex) {
-        // ✅ 모든 적 같은 Y 위치
+    /**
+     * 3D 사용 불가시 폴백 위치 (battle-arena 로컬 좌표)
+     */
+    getFallbackSlotPosition(slotIndex) {
+        const appWidth = this.app?.renderer?.width || 1200;
         const appHeight = this.app?.renderer?.height || 600;
-        return appHeight * 0.58;  // 화면 높이의 58% 위치 (5% 위로)
+        const centerX = appWidth / 2;
+        const totalSlots = Math.max(gameState?.enemies?.filter(e => e.hp > 0).length || 1, 1);
+        const totalWidth = (totalSlots - 1) * this.config.slotSpacing;
+        const startX = centerX - totalWidth / 2 + 220;
+        
+        const x = startX + (slotIndex * this.config.slotSpacing);
+        const y = appHeight * (this.config.floor3D?.floorY || 0.62);
+        
+        return {
+            arenaX: x,           // battle-arena 로컬 좌표
+            arenaY: y,
+            screenX: x,          // 절대 화면 좌표 (폴백에선 동일)
+            screenY: y,
+            scale: 1.0,
+            visible: true
+        };
+    },
+    
+    /**
+     * 슬롯 X 좌표 (battle-arena 로컬)
+     */
+    getSlotX(slotIndex) {
+        const pos = this.getSlotScreenPosition(slotIndex);
+        // arenaX가 있으면 사용, 없으면 screenX 폴백
+        return pos.arenaX !== undefined ? pos.arenaX : pos.screenX;
+    },
+    
+    /**
+     * 슬롯 Y 좌표 (battle-arena 로컬)
+     */
+    getSlotY(slotIndex) {
+        const pos = this.getSlotScreenPosition(slotIndex);
+        return pos.arenaY !== undefined ? pos.arenaY : pos.screenY;
     },
     
     getSlotScale(slotIndex, enemy = null) {
-        // ✅ 모든 적 같은 스케일 (2D 배치)
-        let scale = this.config.baseScale;
+        const pos = this.getSlotScreenPosition(slotIndex);
+        
+        // 기본 스케일 * 3D 거리 스케일
+        let scale = this.config.baseScale * (pos.scale || 1.0);
         
         // 보스/엘리트는 더 크게!
         if (enemy) {
@@ -195,8 +262,40 @@ const EnemyRenderer = {
     },
     
     getSlotZIndex(slotIndex) {
-        // 앞에 있을수록 위에 그려짐 (왼쪽이 앞)
-        return 100 - slotIndex;
+        // 3D에서는 depth 기반으로 정렬
+        const pos = this.getSlotScreenPosition(slotIndex);
+        // depth가 클수록 뒤에 있으므로 zIndex가 낮아짐
+        return Math.floor(1000 - (pos.depth || 0) * 10);
+    },
+    
+    /**
+     * 3D 좌표 변경 시 호출되는 업데이트
+     * @param {number} slotIndex - 살아있는 적들의 슬롯 인덱스
+     */
+    updatePositionFrom3D(slotIndex) {
+        // 🔑 slotIndex로 sprites에서 직접 찾기 (gameState.enemies 인덱스 아님!)
+        let data = null;
+        let enemy = null;
+        
+        this.sprites.forEach((d, id) => {
+            if (d.slotIndex === slotIndex) {
+                data = d;
+                enemy = d.enemy;
+            }
+        });
+        
+        if (!data || !data.container || !enemy) return;
+        
+        const pos = this.getSlotScreenPosition(slotIndex);
+        // 🎯 arenaX/arenaY 사용 (battle-arena 로컬 좌표)
+        data.container.x = pos.arenaX !== undefined ? pos.arenaX : pos.screenX;
+        data.container.y = pos.arenaY !== undefined ? pos.arenaY : pos.screenY;
+        
+        const scale = this.getSlotScale(slotIndex, enemy);
+        if (!data.container.breathingTween?.isActive?.()) {
+            data.container.scale.set(scale);
+        }
+        data.container.breathingBaseScale = scale;
     },
     
     // ==========================================
@@ -821,37 +920,51 @@ const EnemyRenderer = {
         const screenX = pixiPos.x + canvasOffsetX;
         const screenY = pixiPos.y + canvasOffsetY;
         
-        // 스프라이트 실제 높이 계산 (컨테이너 스케일 적용)
+        // 🎯 스프라이트의 실제 바운딩 박스로 높이 자동 계산
         let spriteHeight = 150;
-        if (data.sprite && data.sprite.texture && data.sprite.texture.valid) {
-            // texture의 원본 높이 × 컨테이너 스케일
-            const textureHeight = data.sprite.texture.height || 150;
-            const containerScale = data.container.scale?.y || 1;
-            spriteHeight = textureHeight * containerScale;
+        let spriteTopY = screenY - 150;
+        
+        if (data.sprite) {
+            try {
+                // getBounds()로 실제 화면상의 바운딩 박스 얻기
+                const bounds = data.sprite.getBounds();
+                spriteHeight = bounds.height;
+                // 바운딩 박스의 실제 top 위치
+                spriteTopY = bounds.y + canvasOffsetY;
+            } catch (e) {
+                // fallback: 텍스처 기반 계산
+                if (data.sprite.texture && data.sprite.texture.valid) {
+                    const textureHeight = data.sprite.texture.height || 150;
+                    const containerScale = data.container.scale?.y || 1;
+                    const spriteScale = data.sprite.scale?.y || 1;
+                    spriteHeight = textureHeight * containerScale * spriteScale;
+                    spriteTopY = screenY - spriteHeight;
+                }
+            }
         }
         
         // ========================================
-        // 인텐트: 스프라이트 머리 바로 위 (5px 간격)
+        // 인텐트: 스프라이트 머리 바로 위 (자동 피팅)
         // ========================================
         if (data.topUI) {
-            // 머리 위치 = 발 위치 - 스프라이트 높이
-            const headY = screenY - spriteHeight;
+            // 여유 공간 (20px)
+            const padding = 20;
             
             data.topUI.style.left = screenX + 'px';
-            data.topUI.style.top = (headY - 5) + 'px';
-            data.topUI.style.transform = 'translate(-50%, -100%)';
+            data.topUI.style.top = (spriteTopY - padding) + 'px';
+            data.topUI.style.transform = 'translate(-50%, -100%) scale(1.3)';  // 1.3배 크기
             data.topUI.style.display = 'flex';
             data.topUI.style.visibility = 'visible';
             data.topUI.style.opacity = '1';
         }
         
         // ========================================
-        // HP바: 스프라이트 발 바로 아래 (5px 간격)
+        // HP바: 스프라이트 발 바로 아래 (8px 간격)
         // ========================================
         if (data.bottomUI) {
             data.bottomUI.style.left = screenX + 'px';
-            data.bottomUI.style.top = (screenY + 5) + 'px';
-            data.bottomUI.style.transform = 'translateX(-50%)';
+            data.bottomUI.style.top = (screenY + 8) + 'px';
+            data.bottomUI.style.transform = 'translateX(-50%) scale(1.3)';  // 1.3배 크기
             data.bottomUI.style.display = 'flex';
             data.bottomUI.style.visibility = 'visible';
             data.bottomUI.style.opacity = '1';
@@ -938,9 +1051,12 @@ const EnemyRenderer = {
         
         try {
             if (isBroken) {
-                // 브레이크 상태: 스턴 효과
+                // 🔥 브레이크 상태 플래그 설정
+                data.isBroken = true;
+                
+                // 💫 스프라이트 색조 변경 (파란빛 + 어둡게)
                 if (sprite && sprite.tint !== undefined) {
-                    sprite.tint = 0x8888ff;  // 파란 빛 (더 강하게)
+                    sprite.tint = 0x6666dd;  // 더 진한 파란빛
                 }
                 
                 // ✅ 모든 숨쉬기 애니메이션 완전 정지
@@ -959,35 +1075,53 @@ const EnemyRenderer = {
                 // 기존 GSAP 트윈 정리
                 gsap.killTweensOf(container);
                 gsap.killTweensOf(container.scale);
+                if (sprite) gsap.killTweensOf(sprite);
                 
-                // ✅ 부들부들 떨림 애니메이션 (더 강하게!)
-                if (typeof gsap !== 'undefined') {
-                    // X축 떨림
-                    container._stunTweenX = gsap.to(container, {
-                        x: container.x + 3,
-                        duration: 0.04,
+                // ✅ 스프라이트 피벗으로 떨림! (container.x 대신 - 좌표 업데이트와 충돌 방지)
+                if (typeof gsap !== 'undefined' && sprite) {
+                    // 스프라이트 X 떨림 (pivot 사용으로 container 좌표와 분리!)
+                    container._stunTweenX = gsap.to(sprite, {
+                        x: 4,
+                        duration: 0.035,
                         yoyo: true,
                         repeat: -1,
                         ease: 'none'
                     });
                     
-                    // 회전 떨림
-                    container._stunTweenRot = gsap.to(container, {
-                        rotation: 0.03,
-                        duration: 0.06,
+                    // 스프라이트 회전 떨림
+                    container._stunTweenRot = gsap.to(sprite, {
+                        rotation: 0.04,
+                        duration: 0.05,
                         yoyo: true,
                         repeat: -1,
                         ease: 'sine.inOut'
                     });
                     
-                    // 스케일 떨림 (찌그러짐)
+                    // 스케일 펄스 (찌그러짐)
                     container._stunTweenScale = gsap.to(container.scale, {
-                        x: baseScale * 0.97,
-                        y: baseScale * 1.03,
-                        duration: 0.08,
+                        x: baseScale * 0.96,
+                        y: baseScale * 1.04,
+                        duration: 0.07,
                         yoyo: true,
                         repeat: -1,
                         ease: 'sine.inOut'
+                    });
+                    
+                    // 💫 틴트 펄스 (파란빛 깜빡임)
+                    container._stunTweenTint = gsap.to({}, {
+                        duration: 0.3,
+                        repeat: -1,
+                        yoyo: true,
+                        onUpdate: function() {
+                            if (sprite && sprite.tint !== undefined) {
+                                const progress = this.progress();
+                                // 파란색과 보라색 사이 펄스
+                                const r = Math.floor(0x66 + (0x88 - 0x66) * progress);
+                                const g = Math.floor(0x66 + (0x66 - 0x66) * progress);
+                                const b = Math.floor(0xdd + (0xff - 0xdd) * progress);
+                                sprite.tint = (r << 16) | (g << 8) | b;
+                            }
+                        }
                     });
                 }
                 
@@ -996,6 +1130,9 @@ const EnemyRenderer = {
                 
                 console.log('[EnemyRenderer] 🔥 브레이크 상태 설정:', enemyId);
             } else {
+                // 🔥 브레이크 상태 플래그 해제
+                data.isBroken = false;
+                
                 // 브레이크 해제
                 if (sprite && sprite.tint !== undefined) {
                     sprite.tint = 0xffffff;  // 원래 색상
@@ -1014,16 +1151,21 @@ const EnemyRenderer = {
                     container._stunTweenScale.kill();
                     container._stunTweenScale = null;
                 }
+                if (container._stunTweenTint) {
+                    container._stunTweenTint.kill();
+                    container._stunTweenTint = null;
+                }
                 
-                // 원래 상태 복원
-                if (container.breathingBaseRotation !== undefined) {
-                    container.rotation = container.breathingBaseRotation;
-                } else {
-                    container.rotation = 0;
+                // 스프라이트 원래 상태 복원
+                if (sprite) {
+                    sprite.x = 0;
+                    sprite.rotation = 0;
                 }
-                if (container.breathingBaseX !== undefined) {
-                    container.x = container.breathingBaseX;
-                }
+                
+                // 컨테이너 회전 복원
+                container.rotation = 0;
+                
+                // 스케일 복원
                 if (container.scale && baseScale) {
                     container.scale.set(baseScale);
                 }
@@ -1064,7 +1206,7 @@ const EnemyRenderer = {
         // 스턴 이펙트 컨테이너
         const stunContainer = new PIXI.Container();
         stunContainer.label = 'StunEffect';
-        stunContainer.zIndex = 1000;  // 맨 위에
+        stunContainer.zIndex = 1000;
         data.container.addChild(stunContainer);
         
         // 스프라이트 높이 계산
@@ -1073,77 +1215,137 @@ const EnemyRenderer = {
             spriteHeight = data.sprite.texture.height;
         }
         
-        // 별 위치 (머리 위) - 더 위로
-        stunContainer.y = -spriteHeight - 40;
+        // 별 위치 (머리 위)
+        stunContainer.y = -spriteHeight - 50;
         
-        // 별 6개 생성 (더 크고 화려하게!)
-        const starCount = 6;
+        // ==========================================
+        // 🌟 더 화려한 스턴 이펙트!
+        // ==========================================
+        
+        // 1️⃣ 외곽 글로우 링
+        const outerGlow = new PIXI.Graphics();
+        outerGlow.circle(0, 0, 55);
+        outerGlow.fill({ color: 0x4488ff, alpha: 0.2 });
+        stunContainer.addChild(outerGlow);
+        
+        // 2️⃣ 중앙 글로우 (더 밝게)
+        const glow = new PIXI.Graphics();
+        glow.circle(0, 0, 30);
+        glow.fill({ color: 0xaaddff, alpha: 0.4 });
+        stunContainer.addChild(glow);
+        
+        // 3️⃣ 별 8개 (더 많이!)
+        const starCount = 8;
         const stars = [];
-        const radius = 35;  // 더 넓게
+        const radius = 45;
         
         for (let i = 0; i < starCount; i++) {
             const star = new PIXI.Graphics();
             
-            // 별 모양 그리기 (더 크게!)
+            // 별 모양 그리기
             const points = [];
-            const outerR = 12;  // 바깥 반지름
-            const innerR = 5;   // 안쪽 반지름
+            const outerR = 16;
+            const innerR = 7;
             for (let j = 0; j < 10; j++) {
                 const r = j % 2 === 0 ? outerR : innerR;
                 const a = (Math.PI * 2 / 10) * j - Math.PI / 2;
                 points.push(Math.cos(a) * r, Math.sin(a) * r);
             }
             star.poly(points);
-            star.fill({ color: 0xffdd00 });  // 더 밝은 노랑
-            star.stroke({ width: 2, color: 0xffffff });
+            
+            // 색상 번갈아가며 (금색 / 은색)
+            const starColor = i % 2 === 0 ? 0xffdd00 : 0xffffff;
+            star.fill({ color: starColor });
+            star.stroke({ width: 2, color: 0xffffff, alpha: 0.8 });
             
             const angle = (Math.PI * 2 / starCount) * i;
             star.x = Math.cos(angle) * radius;
             star.y = Math.sin(angle) * radius;
             star._baseAngle = angle;
-            star._pulseOffset = Math.random() * Math.PI * 2;  // 각각 다른 펄스
+            star._pulseOffset = Math.random() * Math.PI * 2;
             
             stunContainer.addChild(star);
             stars.push(star);
         }
         
-        // 중앙 글로우 효과
-        const glow = new PIXI.Graphics();
-        glow.circle(0, 0, 20);
-        glow.fill({ color: 0xffff00, alpha: 0.3 });
-        stunContainer.addChildAt(glow, 0);
+        // 4️⃣ 스파클 파티클들 (작은 점들)
+        const sparkles = [];
+        for (let i = 0; i < 16; i++) {
+            const sparkle = new PIXI.Graphics();
+            sparkle.circle(0, 0, 3 + Math.random() * 2);
+            sparkle.fill({ color: i % 2 === 0 ? 0xffffff : 0xffff88 });
+            
+            sparkle._angle = Math.random() * Math.PI * 2;
+            sparkle._radius = 25 + Math.random() * 40;
+            sparkle._speed = 0.015 + Math.random() * 0.025;
+            sparkle._phase = Math.random() * Math.PI * 2;
+            
+            stunContainer.addChild(sparkle);
+            sparkles.push(sparkle);
+        }
         
-        // 회전 애니메이션 (더 빠르게!)
+        // 5️⃣ 중앙 "💫" 텍스트 (PIXI BitmapText 대신 이모지)
+        const breakText = new PIXI.Text({
+            text: '💫',
+            style: {
+                fontSize: 32,
+                fill: 0xffffff
+            }
+        });
+        breakText.anchor.set(0.5);
+        breakText.y = -3;
+        stunContainer.addChild(breakText);
+        
+        // ==========================================
+        // 애니메이션 루프
+        // ==========================================
         let time = 0;
         const animate = () => {
-            if (!stunContainer.parent) return; // 제거됨
+            if (!stunContainer.parent) return;
             
-            time += 0.05;  // 더 빠르게
+            time += 0.055;
             
-            // 전체 회전
-            stunContainer.rotation = time * 0.8;
+            // 전체 살짝 회전 (떨림 느낌)
+            stunContainer.rotation = Math.sin(time * 0.6) * 0.08;
             
-            // 각 별 위치 + 펄스 효과
+            // 별 애니메이션
             stars.forEach((star, i) => {
-                const newAngle = star._baseAngle + time;
-                // 반지름도 펄스
-                const pulseRadius = radius + Math.sin(time * 3 + star._pulseOffset) * 5;
+                const newAngle = star._baseAngle + time * 0.7;
+                const pulseRadius = radius + Math.sin(time * 2.5 + star._pulseOffset) * 10;
                 star.x = Math.cos(newAngle) * pulseRadius;
                 star.y = Math.sin(newAngle) * pulseRadius;
-                star.rotation = -time * 2;
+                star.rotation = -time * 2.2;
                 
-                // 스케일 펄스 (반짝반짝)
-                const scalePulse = 0.8 + Math.sin(time * 4 + star._pulseOffset) * 0.3;
+                // 반짝반짝 스케일
+                const scalePulse = 0.6 + Math.sin(time * 5 + star._pulseOffset) * 0.5;
                 star.scale.set(scalePulse);
                 
                 // 알파 펄스
-                star.alpha = 0.7 + Math.sin(time * 5 + star._pulseOffset) * 0.3;
+                star.alpha = 0.5 + Math.sin(time * 6 + star._pulseOffset) * 0.5;
             });
             
-            // 중앙 글로우 펄스
-            const glowScale = 0.8 + Math.sin(time * 3) * 0.4;
+            // 스파클 애니메이션
+            sparkles.forEach(sparkle => {
+                sparkle._angle += sparkle._speed;
+                const sparkleRadius = sparkle._radius + Math.sin(time * 3 + sparkle._phase) * 12;
+                sparkle.x = Math.cos(sparkle._angle) * sparkleRadius;
+                sparkle.y = Math.sin(sparkle._angle) * sparkleRadius;
+                sparkle.alpha = 0.3 + Math.sin(time * 9 + sparkle._phase) * 0.7;
+                sparkle.scale.set(0.4 + Math.sin(time * 11 + sparkle._phase) * 0.6);
+            });
+            
+            // 글로우 펄스
+            const glowScale = 0.85 + Math.sin(time * 2) * 0.25;
             glow.scale.set(glowScale);
-            glow.alpha = 0.2 + Math.sin(time * 4) * 0.2;
+            glow.alpha = 0.25 + Math.sin(time * 3) * 0.2;
+            
+            const outerGlowScale = 0.85 + Math.sin(time * 1.5) * 0.15;
+            outerGlow.scale.set(outerGlowScale);
+            outerGlow.alpha = 0.12 + Math.sin(time * 2) * 0.08;
+            
+            // 중앙 텍스트 펄스
+            breakText.scale.set(0.85 + Math.sin(time * 4) * 0.2);
+            breakText.rotation = Math.sin(time * 3) * 0.25;
             
             stunContainer._animFrame = requestAnimationFrame(animate);
         };
@@ -1742,7 +1944,7 @@ const EnemyRenderer = {
     },
     
     // ==========================================
-    // 공격 애니메이션 (PixiJS 전용)
+    // 공격 애니메이션 (PixiJS + 3D 대시!)
     // ==========================================
     playAttackAnimation(enemy, attackType = 'melee', damage = 0) {
         const enemyId = enemy.pixiId || enemy.id || enemy.name;
@@ -1755,22 +1957,43 @@ const EnemyRenderer = {
         
         const container = data.container;
         const sprite = data.sprite;
-        const originalX = container.x;
-        const originalY = container.y;
         const originalScaleX = container.scale.x;
         const originalScaleY = container.scale.y;
+        
+        // 🎯 슬롯 인덱스 사용! (enemyIndex가 아님 - 죽은 적 포함 여부 차이)
+        const slotIndex = data.slotIndex;
+        
+        // 🔧 이전 애니메이션이 있으면 정리! (isAnimating 누락 방지)
+        if (data.currentAttackTween) {
+            data.currentAttackTween.kill();
+            data.currentAttackTween = null;
+        }
+        
+        // 🎬 애니메이션 시작
+        data.isAnimating = true;
         
         // 숨쉬기 애니메이션 일시 중지
         if (container.breathingTween) {
             container.breathingTween.pause();
         }
         
-        if (typeof gsap === 'undefined') return;
+        if (typeof gsap === 'undefined') {
+            data.isAnimating = false;
+            return;
+        }
         
-        console.log('[EnemyRenderer] playAttackAnimation:', attackType, damage);
+        console.log('[EnemyRenderer] playAttackAnimation:', attackType, damage, 'slotIndex:', slotIndex);
+        
+        // 🏃 3D 월드 대시! (근접 공격 시)
+        if (attackType === 'melee' && slotIndex !== undefined && typeof Background3D !== 'undefined' && Background3D.dashEnemy) {
+            Background3D.dashEnemy(slotIndex);
+        }
         
         const tl = gsap.timeline({
             onComplete: () => {
+                // 🎬 애니메이션 종료
+                data.isAnimating = false;
+                data.currentAttackTween = null;
                 // 복귀 후 숨쉬기 재개
                 setTimeout(() => {
                     if (container.breathingTween) {
@@ -1780,34 +2003,37 @@ const EnemyRenderer = {
             }
         });
         
+        // 🔧 현재 timeline 저장 (나중에 정리용)
+        data.currentAttackTween = tl;
+        
         // 공격 타입별 애니메이션
         if (attackType === 'melee') {
-            // 근접 공격: 앞으로 돌진 후 복귀
-            const dashDistance = -150;  // 플레이어 방향 (왼쪽)
+            // 근접 공격: 스케일/회전 애니메이션 (X 이동은 3D 대시가 처리!)
             
-            // 1️⃣ 준비 자세 (뒤로 살짝)
-            tl.to(container, {
-                x: originalX + 30,
-                duration: 0.1,
+            // 1️⃣ 준비 자세 (웅크림)
+            tl.to(container.scale, {
+                x: originalScaleX * 0.85,
+                y: originalScaleY * 1.15,
+                duration: 0.08,
                 ease: 'power2.in'
-            })
-            .to(container.scale, {
-                x: originalScaleX * 0.9,
-                y: originalScaleY * 1.1,
-                duration: 0.1,
+            });
+            tl.to(container, {
+                rotation: 0.1,
+                duration: 0.08,
                 ease: 'power2.in'
             }, '<');
             
-            // 2️⃣ 돌진!
-            tl.to(container, {
-                x: originalX + dashDistance,
-                duration: 0.12,
-                ease: 'power4.in'
+            // 2️⃣ 돌진! (스케일 변화)
+            tl.to(container.scale, {
+                x: originalScaleX * 1.2,
+                y: originalScaleY * 0.9,
+                duration: 0.1,
+                ease: 'power4.out'
             })
             .to(container.scale, {
                 x: originalScaleX * 1.3,
                 y: originalScaleY * 0.8,
-                duration: 0.12,
+                duration: 0.1,
                 ease: 'power4.in'
             }, '<');
             
@@ -1816,17 +2042,17 @@ const EnemyRenderer = {
                 duration: 0.08
             });
             
-            // 4️⃣ 복귀 (탄성)
-            tl.to(container, {
-                x: originalX,
-                duration: 0.25,
-                ease: 'elastic.out(1, 0.5)'
-            })
-            .to(container.scale, {
+            // 4️⃣ 복귀 (스케일/회전만 - 위치는 3D 대시가 처리!)
+            tl.to(container.scale, {
                 x: originalScaleX,
                 y: originalScaleY,
-                duration: 0.25,
+                duration: 0.3,
                 ease: 'elastic.out(1, 0.5)'
+            });
+            tl.to(container, {
+                rotation: 0,
+                duration: 0.2,
+                ease: 'power2.out'
             }, '<');
             
             // Tint 플래시 (공격 강조)
@@ -1839,43 +2065,28 @@ const EnemyRenderer = {
             }
             
         } else if (attackType === 'ranged') {
-            // 원거리 공격: 손 내밀기
-            tl.to(container, {
-                x: originalX - 20,
-                duration: 0.15,
-                ease: 'power2.out'
-            })
-            .to(container.scale, {
+            // 원거리 공격: 손 내밀기 (스케일만)
+            tl.to(container.scale, {
                 x: originalScaleX * 1.1,
                 duration: 0.15,
                 ease: 'power2.out'
-            }, '<');
+            });
             
-            // 발사 후 복귀
-            tl.to(container, {
-                x: originalX,
-                duration: 0.2,
-                ease: 'power2.out'
-            }, '+=0.1')
-            .to(container.scale, {
+            // 발사 후 복귀 (스케일만)
+            tl.to(container.scale, {
                 x: originalScaleX,
                 duration: 0.2,
                 ease: 'power2.out'
-            }, '<');
+            }, '+=0.1');
             
         } else if (attackType === 'magic') {
-            // 마법 공격: 팽창 + 글로우
-            tl.to(container, {
-                y: originalY - 15,
-                duration: 0.3,
-                ease: 'power2.out'
-            })
-            .to(container.scale, {
+            // 마법 공격: 팽창 + 글로우 (스케일만)
+            tl.to(container.scale, {
                 x: originalScaleX * 1.15,
                 y: originalScaleY * 1.15,
                 duration: 0.3,
                 ease: 'power2.out'
-            }, '<');
+            });
             
             // 마법 방출
             tl.to(container.scale, {
@@ -1885,18 +2096,13 @@ const EnemyRenderer = {
                 ease: 'power4.in'
             });
             
-            // 복귀
-            tl.to(container, {
-                y: originalY,
-                duration: 0.3,
-                ease: 'power2.out'
-            })
-            .to(container.scale, {
+            // 복귀 (스케일만)
+            tl.to(container.scale, {
                 x: originalScaleX,
                 y: originalScaleY,
                 duration: 0.3,
                 ease: 'power2.out'
-            }, '<');
+            });
             
             // Tint 플래시 (마법 색상)
             if (sprite && sprite.tint !== undefined) {
@@ -1914,6 +2120,11 @@ const EnemyRenderer = {
         const data = this.sprites.get(enemyId);
         
         if (!data) return Promise.resolve();
+        
+        // 🎥 카메라 자동 줌 트리거
+        if (typeof Background3D !== 'undefined' && Background3D.onEnemyDeath) {
+            Background3D.onEnemyDeath();
+        }
         
         return new Promise((resolve) => {
             gsap.to(data.container, {
@@ -1940,6 +2151,15 @@ const EnemyRenderer = {
         const container = data.container;
         const sprite = data.sprite;
         
+        // 🔧 이전 피격 애니메이션이 있으면 정리! (isAnimating 누락 방지)
+        if (data.currentHitTween) {
+            data.currentHitTween.kill();
+            data.currentHitTween = null;
+        }
+        
+        // 🎬 애니메이션 시작
+        data.isAnimating = true;
+        
         try {
             // 숨쉬기 애니메이션 일시 중지
             if (container.breathingTween) {
@@ -1951,6 +2171,10 @@ const EnemyRenderer = {
             const knockbackX = 20 + intensity * 8;
             const isHeavy = damage >= 12;
             const baseScale = container.breathingBaseScale || this.getSlotScale(data.slotIndex);
+            
+            // 🎯 3D 월드 넉백 비활성화 (시각적 효과 단순화)
+            const slotIndex = data.slotIndex;
+            // 넉백 제거됨 - 피격 애니메이션만 유지
             
             // 🎆 PixiJS 이펙트 (글로벌 좌표에서)
             if (container.getGlobalPosition) {
@@ -1980,48 +2204,58 @@ const EnemyRenderer = {
                 SpriteAnimation.screenShake(intensity * 3, 0.1 + intensity * 0.02);
             }
             
-            // 원래 위치 저장 (null 체크)
-            const originalX = container.x || 0;
             const freezeTime = Math.min(0.04 + damage * 0.003, 0.12);  // 히트스탑
             
-            // 🎬 피격 애니메이션 타임라인
+            // 🎬 피격 애니메이션 타임라인 (x 이동은 3D 넉백에 맡김!)
             const tl = gsap.timeline();
             
-            // 1️⃣ 순간 넉백 + 스쿼시
-            tl.to(container, {
-                x: originalX + knockbackX,
-                duration: 0.03,
+            // 🔧 현재 timeline 저장 (나중에 정리용)
+            data.currentHitTween = tl;
+            
+            // 1️⃣ 스쿼시 (찌그러짐) + 회전
+            tl.to(container.scale, {
+                x: baseScale * 0.8,
+                y: baseScale * 1.2,
+                duration: 0.04,
                 ease: "power4.out"
             }, 0);
             
-            tl.to(container.scale, {
-                x: baseScale * 0.85,
-                y: baseScale * 1.15,
-                duration: 0.03,
+            tl.to(container, {
+                rotation: (Math.random() - 0.5) * 0.15,  // 약간 회전
+                duration: 0.04,
                 ease: "power4.out"
             }, 0);
             
             // 2️⃣ 히트스탑 (프리즈!)
             tl.to({}, { duration: freezeTime });
             
-            // 3️⃣ 복귀 (탄성있게)
-            tl.to(container, {
-                x: originalX,
-                duration: 0.25,
-                ease: "elastic.out(1, 0.4)"
-            });
-            
+            // 3️⃣ 복귀 (탄성있게) - 스케일, 회전만!
             tl.to(container.scale, {
                 x: baseScale,
                 y: baseScale,
-                duration: 0.2,
+                duration: 0.25,
                 ease: "elastic.out(1, 0.5)"
+            });
+            
+            tl.to(container, {
+                rotation: 0,
+                duration: 0.2,
+                ease: "elastic.out(1, 0.4)"
             }, "<");
             
-            // 4️⃣ 숨쉬기 재개
+            // 4️⃣ 숨쉬기 재개 + 애니메이션 종료
             tl.add(() => {
+                // 🎬 애니메이션 종료
+                data.isAnimating = false;
+                data.currentHitTween = null;
                 if (container.breathingTween) {
                     container.breathingTween.resume();
+                }
+                
+                // 3D 위치 다시 적용 (넉백 후 위치 유지)
+                // ⚠️ slotIndex 사용!
+                if (typeof Background3D !== 'undefined' && slotIndex !== undefined) {
+                    EnemyRenderer.updatePositionFrom3D(slotIndex);
                 }
             });
             
@@ -2041,6 +2275,7 @@ const EnemyRenderer = {
             }
         } catch (e) {
             console.warn('[EnemyRenderer] playHitAnimation error:', e);
+            data.isAnimating = false;  // 에러 시에도 플래그 해제
         }
     },
     
@@ -2118,28 +2353,58 @@ const EnemyRenderer = {
     },
     
     // ==========================================
-    // 전체 업데이트
+    // 전체 업데이트 (3D 오버라이드 존중!)
     // ==========================================
     updateAllPositions() {
         this.sprites.forEach((data, id) => {
-            const x = this.getSlotX(data.slotIndex);
-            const y = this.getSlotY(data.slotIndex);
+            // 🎯 애니메이션 중이면 스킵!
+            if (data.isAnimating) return;
+            
+            const slotIndex = data.slotIndex;
+            
+            // 🔑 적 ID로 오버라이드 체크! (slotIndex가 아님)
+            if (typeof Background3D !== 'undefined' && Background3D.isInitialized) {
+                const enemyId = data.enemy?.pixiId || data.enemy?.instanceId || id;
+                const hasOverride = Background3D.worldPositions?.enemyOverrides?.[enemyId];
+                if (hasOverride) {
+                    // 오버라이드된 3D 위치에서 화면 좌표 계산
+                    this.updatePositionFrom3D(slotIndex);
+                    return;
+                }
+            }
+            
+            // 오버라이드 없으면 기본 슬롯 위치
+            const x = this.getSlotX(slotIndex);
+            const y = this.getSlotY(slotIndex);
             data.container.x = x;
             data.container.y = y;
             this.syncEnemyUI(id);
         });
     },
     
-    // ✅ 적 화면 좌표 조회 (타겟팅 라인용)
+    // ✅ 적 화면 좌표 조회 (타겟팅 라인용 - 전체 화면 절대 좌표)
     getEnemyScreenPositions() {
         const positions = [];
+        
+        // 🎯 battle-arena 오프셋 가져오기
+        const arena = document.querySelector('.battle-arena');
+        let offsetX = 0, offsetY = 0;
+        if (arena) {
+            const arenaRect = arena.getBoundingClientRect();
+            offsetX = arenaRect.left;
+            offsetY = arenaRect.top;
+        }
         
         this.sprites.forEach((data, id) => {
             if (!data.container || !data.enemy) return;
             if (data.enemy.hp <= 0) return;
             
-            // 글로벌 위치
+            // PixiJS 캔버스 내 글로벌 위치
             const globalPos = data.container.getGlobalPosition();
+            
+            // 화면 절대 좌표로 변환
+            const screenX = globalPos.x + offsetX;
+            const screenY = globalPos.y + offsetY;
             
             // 스프라이트 크기 계산
             let width = 100, height = 200;
@@ -2151,14 +2416,14 @@ const EnemyRenderer = {
             positions.push({
                 enemy: data.enemy,
                 slotIndex: data.slotIndex,
-                // 중심 좌표
-                centerX: globalPos.x,
-                centerY: globalPos.y - height / 2,  // 스프라이트 중앙
+                // 중심 좌표 (화면 절대 좌표)
+                centerX: screenX,
+                centerY: screenY - height / 2,  // 스프라이트 중앙
                 // 바운딩 박스
-                left: globalPos.x - width / 2,
-                right: globalPos.x + width / 2,
-                top: globalPos.y - height,
-                bottom: globalPos.y,
+                left: screenX - width / 2,
+                right: screenX + width / 2,
+                top: screenY - height,
+                bottom: screenY,
                 width: width,
                 height: height
             });
@@ -2188,7 +2453,7 @@ const EnemyRenderer = {
         return null;
     },
     
-    // ✅ 특정 적의 화면 좌표 반환 (이펙트 출력용)
+    // ✅ 특정 적의 화면 좌표 반환 (이펙트 출력용 - 전체 화면 절대 좌표)
     getEnemyPosition(enemy) {
         if (!enemy) return null;
         
@@ -2197,8 +2462,20 @@ const EnemyRenderer = {
         
         if (!data || !data.container) return null;
         
-        // 글로벌 위치
+        // PixiJS 캔버스 내 글로벌 위치
         const globalPos = data.container.getGlobalPosition();
+        
+        // 🎯 battle-arena 오프셋 추가 (화면 절대 좌표로 변환)
+        const arena = document.querySelector('.battle-arena');
+        let offsetX = 0, offsetY = 0;
+        if (arena) {
+            const arenaRect = arena.getBoundingClientRect();
+            offsetX = arenaRect.left;
+            offsetY = arenaRect.top;
+        }
+        
+        const screenX = globalPos.x + offsetX;
+        const screenY = globalPos.y + offsetY;
         
         // 스프라이트 크기 계산
         let width = 100, height = 200;
@@ -2208,14 +2485,14 @@ const EnemyRenderer = {
         }
         
         return {
-            // 중심 좌표 (이펙트 출력용)
-            centerX: globalPos.x,
-            centerY: globalPos.y - height / 2,
+            // 중심 좌표 (이펙트 출력용 - 화면 절대 좌표)
+            centerX: screenX,
+            centerY: screenY - height / 2,
             // 바운딩 박스
-            left: globalPos.x - width / 2,
-            right: globalPos.x + width / 2,
-            top: globalPos.y - height,
-            bottom: globalPos.y,
+            left: screenX - width / 2,
+            right: screenX + width / 2,
+            top: screenY - height,
+            bottom: screenY,
             width: width,
             height: height,
             // 추가 정보
@@ -2344,6 +2621,61 @@ const EnemyRenderer = {
         } else {
             this.enable();
         }
+    },
+    
+    // ==========================================
+    // ✅ 3D 좌표 기반 위치 업데이트 (매 프레임)
+    // Background3D의 카메라 투영을 사용하여 위치 계산
+    // ==========================================
+    update3DParallax() {
+        if (!this.container) return;
+        
+        // ✅ 모든 적 스프라이트 위치 업데이트 (3D 좌표에서 투영)
+        this.sprites.forEach((data, id) => {
+            if (!data.container) return;
+            
+            // 🎬 애니메이션 중이면 위치 업데이트 스킵!
+            if (data.isAnimating) return;
+            
+            const slotIndex = data.slotIndex || 0;
+            
+            // 3D 좌표에서 투영된 화면 좌표 가져오기
+            const pos = this.getSlotScreenPosition(slotIndex);
+            
+            // 부드럽게 위치 업데이트 (숨쉬기만 체크)
+            const breathingActive = data.container.breathingTween?.isActive?.();
+            
+            if (!breathingActive) {
+                // 🎯 arenaX/arenaY 사용 (battle-arena 로컬 좌표)
+                data.container.x = pos.arenaX !== undefined ? pos.arenaX : pos.screenX;
+                data.container.y = pos.arenaY !== undefined ? pos.arenaY : pos.screenY;
+            }
+            
+            // 스케일 업데이트 (3D 거리 기반)
+            const scale = this.getSlotScale(slotIndex, data.enemy);
+            data.container.breathingBaseScale = scale;
+            
+            if (!breathingActive) {
+                data.container.scale.set(scale);
+            }
+            
+            // zIndex 업데이트 (3D 깊이 기반)
+            data.container.zIndex = this.getSlotZIndex(slotIndex);
+        });
+        
+        // UI 동기화
+        this.sprites.forEach((data, id) => {
+            this.syncEnemyUI(id);
+        });
+    },
+    
+    // 패럴랙스 없는 기본 X 위치
+    getBaseSlotX(slotIndex) {
+        const centerX = this.app ? this.app.renderer.width / 2 : 600;
+        const totalSlots = Math.max(gameState?.enemies?.filter(e => e.hp > 0).length || 1, 1);
+        const totalWidth = (totalSlots - 1) * this.config.slotSpacing;
+        const startX = centerX - totalWidth / 2 + 220;
+        return startX + (slotIndex * this.config.slotSpacing);
     }
 };
 
