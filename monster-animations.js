@@ -3,6 +3,37 @@
 // 패턴별 유니크 애니메이션 바인딩
 // ==========================================
 
+// ✅ 적 위치 가져오기 유틸리티 (PixiJS/DOM 자동 선택)
+function getEnemyPositionForAnimation(enemyEl) {
+    // PixiJS 적 렌더링 사용 시
+    if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled && enemyEl) {
+        const pos = EnemyRenderer.getPositionFromElement(enemyEl);
+        if (pos) {
+            return {
+                centerX: pos.centerX,
+                centerY: pos.centerY,
+                topY: pos.top + (pos.height * 0.4),  // 발사 위치 (상단 40%)
+                width: pos.width,
+                height: pos.height
+            };
+        }
+    }
+    
+    // DOM 폴백
+    if (enemyEl) {
+        const rect = enemyEl.getBoundingClientRect();
+        return {
+            centerX: rect.left + rect.width / 2,
+            centerY: rect.top + rect.height / 2,
+            topY: rect.top + rect.height * 0.4,
+            width: rect.width,
+            height: rect.height
+        };
+    }
+    
+    return null;
+}
+
 const MonsterAnimations = {
     // ==========================================
     // 애니메이션 레지스트리
@@ -76,18 +107,27 @@ const MonsterAnimations = {
 MonsterAnimations.register('arrow_shot', (context) => {
     const { enemyEl, targetEl, damage, onHit, onComplete } = context;
     
-    if (!enemyEl || !targetEl) return;
+    if (!targetEl) return;
     
-    // 활 쏘기 애니메이션 시작
-    enemyEl.classList.add('enemy-shooting');
+    // ✅ 적 위치 가져오기 (PixiJS/DOM 자동 선택)
+    const enemyPos = getEnemyPositionForAnimation(enemyEl);
+    if (!enemyPos) {
+        if (onHit) onHit();
+        if (onComplete) onComplete();
+        return;
+    }
+    
+    // 활 쏘기 애니메이션 시작 (DOM 있을 때만)
+    if (enemyEl) {
+        enemyEl.classList.add('enemy-shooting');
+    }
     
     // 발사 타이밍 (애니메이션 50% = 0.4초 * 0.5 = 200ms)
     setTimeout(() => {
-        const enemyRect = enemyEl.getBoundingClientRect();
         const targetRect = targetEl.getBoundingClientRect();
         
-        const fromX = enemyRect.left + enemyRect.width / 2;
-        const fromY = enemyRect.top + enemyRect.height * 0.4;
+        const fromX = enemyPos.centerX;
+        const fromY = enemyPos.topY;
         const toX = targetRect.left + targetRect.width / 2;
         const toY = targetRect.top + targetRect.height / 2;
         
@@ -109,7 +149,9 @@ MonsterAnimations.register('arrow_shot', (context) => {
     }, 200);
     
     setTimeout(() => {
-        enemyEl.classList.remove('enemy-shooting');
+        if (enemyEl) {
+            enemyEl.classList.remove('enemy-shooting');
+        }
         if (onComplete) onComplete();
     }, 400);
 });
@@ -118,33 +160,43 @@ MonsterAnimations.register('arrow_shot', (context) => {
 MonsterAnimations.register('arrow_poison', (context) => {
     const { enemyEl, targetEl, damage, onHit, onComplete } = context;
     
-    if (!enemyEl || !targetEl) {
+    if (!targetEl) {
         if (onHit) onHit();
         if (onComplete) onComplete();
         return;
     }
     
-    const spriteImg = enemyEl.querySelector('.enemy-sprite-img');
-    
-    // 독 기운 이펙트 (초록색 글로우)
-    if (spriteImg && typeof gsap !== 'undefined') {
-        gsap.to(spriteImg, {
-            filter: 'brightness(1.2) hue-rotate(-40deg) drop-shadow(0 0 15px #22c55e)',
-            duration: 0.15,
-            yoyo: true,
-            repeat: 1
-        });
+    // ✅ 적 위치 가져오기 (PixiJS/DOM 자동 선택)
+    const enemyPos = getEnemyPositionForAnimation(enemyEl);
+    if (!enemyPos) {
+        if (onHit) onHit();
+        if (onComplete) onComplete();
+        return;
     }
     
-    // 활 쏘기 애니메이션
-    enemyEl.classList.add('enemy-shooting');
+    // DOM 요소가 있을 때만 DOM 애니메이션
+    if (enemyEl) {
+        const spriteImg = enemyEl.querySelector('.enemy-sprite-img');
+        
+        // 독 기운 이펙트 (초록색 글로우)
+        if (spriteImg && typeof gsap !== 'undefined') {
+            gsap.to(spriteImg, {
+                filter: 'brightness(1.2) hue-rotate(-40deg) drop-shadow(0 0 15px #22c55e)',
+                duration: 0.15,
+                yoyo: true,
+                repeat: 1
+            });
+        }
+        
+        // 활 쏘기 애니메이션
+        enemyEl.classList.add('enemy-shooting');
+    }
     
     setTimeout(() => {
-        const enemyRect = enemyEl.getBoundingClientRect();
         const targetRect = targetEl.getBoundingClientRect();
         
-        const fromX = enemyRect.left + enemyRect.width / 2;
-        const fromY = enemyRect.top + enemyRect.height * 0.4;
+        const fromX = enemyPos.centerX;
+        const fromY = enemyPos.topY;
         const toX = targetRect.left + targetRect.width / 2;
         const toY = targetRect.top + targetRect.height / 2;
         
@@ -172,7 +224,9 @@ MonsterAnimations.register('arrow_poison', (context) => {
     }, 180);
     
     setTimeout(() => {
-        enemyEl.classList.remove('enemy-shooting');
+        if (enemyEl) {
+            enemyEl.classList.remove('enemy-shooting');
+        }
         if (onComplete) onComplete();
     }, 450);
 });
@@ -181,18 +235,27 @@ MonsterAnimations.register('arrow_poison', (context) => {
 MonsterAnimations.register('arrow_precision', (context) => {
     const { enemyEl, targetEl, damage, onHit, onComplete } = context;
     
-    if (!enemyEl || !targetEl) return;
+    if (!targetEl) return;
     
-    // 강화 활 쏘기 (파워샷)
-    enemyEl.classList.add('enemy-shooting', 'enemy-power-shot');
+    // ✅ 적 위치 가져오기 (PixiJS/DOM 자동 선택)
+    const enemyPos = getEnemyPositionForAnimation(enemyEl);
+    if (!enemyPos) {
+        if (onHit) onHit();
+        if (onComplete) onComplete();
+        return;
+    }
+    
+    // 강화 활 쏘기 (파워샷) - DOM 있을 때만
+    if (enemyEl) {
+        enemyEl.classList.add('enemy-shooting', 'enemy-power-shot');
+    }
     
     // 발사 (200ms)
     setTimeout(() => {
-        const enemyRect = enemyEl.getBoundingClientRect();
         const targetRect = targetEl.getBoundingClientRect();
         
-        const fromX = enemyRect.left + enemyRect.width / 2;
-        const fromY = enemyRect.top + enemyRect.height * 0.4;
+        const fromX = enemyPos.centerX;
+        const fromY = enemyPos.topY;
         const toX = targetRect.left + targetRect.width / 2;
         const toY = targetRect.top + targetRect.height / 2;
         
@@ -220,7 +283,9 @@ MonsterAnimations.register('arrow_precision', (context) => {
     }, 200);
     
     setTimeout(() => {
-        enemyEl.classList.remove('enemy-shooting', 'enemy-power-shot');
+        if (enemyEl) {
+            enemyEl.classList.remove('enemy-shooting', 'enemy-power-shot');
+        }
         if (onComplete) onComplete();
     }, 450);
 });

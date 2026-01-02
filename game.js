@@ -4886,6 +4886,45 @@ function healAllMinions(healSource, healAmount) {
 }
 
 function getEnemyElement(index) {
+    // ✅ PixiJS 사용 시 가상 요소 반환 (이펙트 위치 참조용)
+    if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+        const enemy = gameState.enemies?.[index];
+        if (enemy) {
+            const pos = EnemyRenderer.getEnemyPosition(enemy);
+            if (pos) {
+                // 가상 요소 객체 반환 (DOM API 모방)
+                return {
+                    dataset: { index: String(index) },
+                    classList: {
+                        add: () => {},
+                        remove: () => {},
+                        contains: () => false,
+                        toggle: () => {}
+                    },
+                    getBoundingClientRect: () => ({
+                        left: pos.left,
+                        right: pos.right,
+                        top: pos.top,
+                        bottom: pos.bottom,
+                        width: pos.width,
+                        height: pos.height,
+                        x: pos.left,
+                        y: pos.top
+                    }),
+                    querySelector: () => null,
+                    querySelectorAll: () => [],
+                    appendChild: () => {},
+                    removeChild: () => {},
+                    contains: () => false,
+                    style: {},
+                    // PixiJS 요소 플래그
+                    isPixiElement: true,
+                    enemy: enemy
+                };
+            }
+        }
+    }
+    
     // 다중 적 컨테이너에서 요소 찾기
     const container = document.getElementById('enemies-container');
     if (container) {
@@ -4897,6 +4936,11 @@ function getEnemyElement(index) {
 
 // 현재 선택된 적 요소 가져오기 (카드 이펙트용)
 function getSelectedEnemyElement() {
+    // ✅ PixiJS 사용 시 getEnemyElement 사용
+    if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+        return getEnemyElement(gameState.selectedEnemyIndex);
+    }
+    
     const container = document.getElementById('enemies-container');
     if (container) {
         return container.querySelector(`[data-index="${gameState.selectedEnemyIndex}"]`);

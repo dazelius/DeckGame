@@ -1134,6 +1134,39 @@ const EnemyRenderer = {
         };
     },
     
+    // ✅ 인덱스로 적 좌표 반환 (DOM index 기반)
+    getEnemyPositionByIndex(index) {
+        if (!gameState || !gameState.enemies) return null;
+        const enemy = gameState.enemies[index];
+        if (!enemy) return null;
+        return this.getEnemyPosition(enemy);
+    },
+    
+    // ✅ DOM 요소에서 적 좌표 추출 (호환성용)
+    getPositionFromElement(enemyEl) {
+        if (!enemyEl) return null;
+        
+        // data-index에서 인덱스 추출
+        const index = parseInt(enemyEl.dataset?.index);
+        if (!isNaN(index)) {
+            const pos = this.getEnemyPositionByIndex(index);
+            if (pos) return pos;
+        }
+        
+        // 폴백: DOM rect 사용
+        const rect = enemyEl.getBoundingClientRect();
+        return {
+            centerX: rect.left + rect.width / 2,
+            centerY: rect.top + rect.height / 2,
+            left: rect.left,
+            right: rect.right,
+            top: rect.top,
+            bottom: rect.bottom,
+            width: rect.width,
+            height: rect.height
+        };
+    },
+    
     // gameState와 동기화
     syncWithGameState() {
         if (!gameState || !gameState.enemies) return;
