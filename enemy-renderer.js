@@ -956,27 +956,74 @@ const EnemyRenderer = {
         });
     },
     
-    playHitAnimation(enemy) {
+    playHitAnimation(enemy, damage = 10, isCritical = false) {
         const enemyId = enemy.pixiId || enemy.id || enemy.name;
         const data = this.sprites.get(enemyId);
         
         if (!data) return;
         
-        // 흔들림 + 플래시
+        // 🔥 데미지 기반 강도 계산
+        const intensity = Math.min(damage / 5, 8);
+        const knockbackX = 15 + intensity * 5;
+        const isHeavy = damage >= 12;
+        
+        // 🎆 PixiJS 이펙트 (글로벌 좌표에서)
+        const globalPos = data.container.getGlobalPosition();
+        const effectX = globalPos.x;
+        const effectY = globalPos.y - (data.sprite ? data.sprite.height * data.container.scale.y / 2 : 100);
+        
+        if (typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized) {
+            if (isCritical) {
+                PixiRenderer.createCriticalHit(effectX, effectY, damage);
+                PixiRenderer.hitFlash('#ff0000', 120);
+            } else if (isHeavy) {
+                PixiRenderer.createHitImpact(effectX, effectY, damage, '#ff4444');
+                PixiRenderer.hitFlash('#ff0000', 60);
+            } else {
+                PixiRenderer.createHitImpact(effectX, effectY, damage, '#ff6644');
+            }
+        }
+        
+        // 🌍 화면 흔들림
+        if (typeof SpriteAnimation !== 'undefined') {
+            SpriteAnimation.screenShake(intensity * 2, 0.1 + intensity * 0.02);
+        }
+        
+        // ⚡ 스쿼시 & 넉백 애니메이션
+        const originalX = data.container.x;
         gsap.to(data.container, {
-            x: data.container.x + 10,
-            duration: 0.05,
-            yoyo: true,
-            repeat: 3
+            x: originalX + knockbackX,
+            duration: 0.03,
+            ease: "power4.out",
+            onComplete: () => {
+                // 프리즈 후 복귀
+                gsap.to(data.container, {
+                    x: originalX,
+                    duration: 0.15,
+                    ease: "elastic.out(1, 0.5)"
+                });
+            }
         });
         
-        // 틴트 플래시
+        // 스쿼시 효과
+        gsap.to(data.container.scale, {
+            x: 0.9,
+            y: 1.1,
+            duration: 0.05,
+            yoyo: true,
+            repeat: 1
+        });
+        
+        // 🔴 빨간 플래시 (틴트)
         if (data.sprite && data.sprite.tint !== undefined) {
-            const originalTint = data.sprite.tint;
-            data.sprite.tint = 0xff6666;
+            const originalTint = 0xffffff;
+            const flashTint = isCritical ? 0xff0000 : 0xff6666;
+            const flashDuration = isCritical ? 150 : 100;
+            
+            data.sprite.tint = flashTint;
             setTimeout(() => {
                 data.sprite.tint = originalTint;
-            }, 100);
+            }, flashDuration);
         }
     },
     
@@ -1049,6 +1096,42 @@ const EnemyRenderer = {
         }
         
         return null;
+    },
+    
+    // ✅ 특정 적의 화면 좌표 반환 (이펙트 출력용)
+    getEnemyPosition(enemy) {
+        if (!enemy) return null;
+        
+        const enemyId = enemy.pixiId || enemy.id || enemy.name;
+        const data = this.sprites.get(enemyId);
+        
+        if (!data || !data.container) return null;
+        
+        // 글로벌 위치
+        const globalPos = data.container.getGlobalPosition();
+        
+        // 스프라이트 크기 계산
+        let width = 100, height = 200;
+        if (data.sprite) {
+            width = (data.sprite.width || 100) * data.container.scale.x;
+            height = (data.sprite.height || 200) * data.container.scale.y;
+        }
+        
+        return {
+            // 중심 좌표 (이펙트 출력용)
+            centerX: globalPos.x,
+            centerY: globalPos.y - height / 2,
+            // 바운딩 박스
+            left: globalPos.x - width / 2,
+            right: globalPos.x + width / 2,
+            top: globalPos.y - height,
+            bottom: globalPos.y,
+            width: width,
+            height: height,
+            // 추가 정보
+            enemy: enemy,
+            slotIndex: data.slotIndex
+        };
     },
     
     // gameState와 동기화
