@@ -4891,6 +4891,60 @@ body .card-drag-ghost.can-drop {
     50% { opacity: 0.6; }
 }
 
+/* 🏷️ 특수 공격 인텐트 (이름 표시 + 툴팁) */
+.intent-special {
+    position: relative;
+    cursor: help;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.intent-special::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+    background: rgba(15, 23, 42, 0.95);
+    color: #e2e8f0;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 400;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    z-index: 100;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    pointer-events: none;
+}
+
+.intent-special::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(2px);
+    border: 6px solid transparent;
+    border-top-color: rgba(15, 23, 42, 0.95);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    z-index: 101;
+}
+
+.intent-special:hover::after,
+.intent-special:hover::before {
+    opacity: 1;
+    visibility: visible;
+}
+
+.intent-special:hover::after {
+    transform: translateX(-50%) translateY(-12px);
+}
+
 /* 자해 인텐트 - 어두운 붉은색 + 펄스 */
 .enemy-unit .intent-selfharm {
     color: #fecaca;
@@ -5272,9 +5326,10 @@ body .card-drag-ghost.can-drop {
     pointer-events: none;
 }
 
+/* 마우스 오버 시 이름 표시 제거됨 */
 .enemy-unit:hover .enemy-name-label {
-    opacity: 1;
-    visibility: visible;
+    opacity: 0;
+    visibility: hidden;
 }
 
 /* 상태이상 표시 - HP바 아래에 표시 (이름 대신) */

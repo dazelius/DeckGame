@@ -544,8 +544,8 @@ const BreakSystem = {
             PixiRenderer.createShockwave(centerX, centerY - 30, '#ffcc00');
             
             // 별 회전 스턴 이펙트 (CSS용 + PixiJS용 둘 다)
-            this.createStunStars(centerX, centerY - 50);
-            PixiRenderer.createStunLoop(centerX, centerY - 60, 1500);
+            this.createStunStars(centerX, centerY - 50, enemyIndex);
+            PixiRenderer.createStunLoop(centerX, centerY - 60, 1500, enemyIndex);
             
             // 스파크 폭발 (빨강 + 노랑 + 흰색) - VFX 사용
             if (typeof VFX !== 'undefined' && VFX.sparks) {
@@ -705,7 +705,7 @@ const BreakSystem = {
     // ==========================================
     // 스턴 별 회전 이펙트 (PixiJS)
     // ==========================================
-    createStunStars(x, y) {
+    createStunStars(x, y, enemyIndex = null) {
         if (typeof PixiRenderer === 'undefined' || !PixiRenderer.initialized) return;
         
         const container = new PIXI.Container();
@@ -715,6 +715,24 @@ const BreakSystem = {
         
         const starCount = 5;
         const starGraphics = [];
+        let destroyed = false;
+        
+        // 임시 이펙트 추적에 등록
+        if (enemyIndex !== null && typeof PixiRenderer.tempStunEffects !== 'undefined') {
+            const indexStr = String(enemyIndex);
+            if (!PixiRenderer.tempStunEffects.has(indexStr)) {
+                PixiRenderer.tempStunEffects.set(indexStr, []);
+            }
+            PixiRenderer.tempStunEffects.get(indexStr).push({
+                container,
+                destroy: () => {
+                    if (!destroyed) {
+                        destroyed = true;
+                        container.destroy({ children: true });
+                    }
+                }
+            });
+        }
         
         // 별 생성
         for (let i = 0; i < starCount; i++) {
@@ -746,6 +764,8 @@ const BreakSystem = {
         const duration = 120; // 2초
         
         const animate = () => {
+            if (destroyed) return;
+            
             time++;
             const progress = time / duration;
             
@@ -772,6 +792,7 @@ const BreakSystem = {
             if (progress < 1) {
                 requestAnimationFrame(animate);
             } else {
+                destroyed = true;
                 container.destroy({ children: true });
             }
         };

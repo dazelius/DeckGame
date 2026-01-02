@@ -969,7 +969,7 @@ const PixiRenderer = {
     // ==========================================
     // 💫 스턴 상태 유지 이펙트 (머리 위 별 회전) - 3D 원근법 적용!
     // ==========================================
-    createStunLoop(x, y, duration = 2000) {
+    createStunLoop(x, y, duration = 2000, enemyIndex = null) {
         if (!this.initialized) return;
         
         const container = new PIXI.Container();
@@ -998,8 +998,27 @@ const PixiRenderer = {
         let time = 0;
         const totalFrames = duration / (1000 / 60);
         const rotationSpeed = 0.05; // 회전 속도
+        let destroyed = false;
+        
+        // 임시 이펙트 추적에 등록
+        if (enemyIndex !== null) {
+            if (!this.tempStunEffects.has(String(enemyIndex))) {
+                this.tempStunEffects.set(String(enemyIndex), []);
+            }
+            this.tempStunEffects.get(String(enemyIndex)).push({
+                container,
+                destroy: () => {
+                    if (!destroyed) {
+                        destroyed = true;
+                        container.destroy({ children: true });
+                    }
+                }
+            });
+        }
         
         const animate = () => {
+            if (destroyed) return;
+            
             time++;
             const progress = time / totalFrames;
             
@@ -1048,6 +1067,7 @@ const PixiRenderer = {
             }
             
             if (progress >= 1) {
+                destroyed = true;
                 container.destroy({ children: true });
             } else {
                 requestAnimationFrame(animate);
@@ -1062,6 +1082,7 @@ const PixiRenderer = {
     // 💫 지속적인 스턴 별 (브레이크 상태 유지 중)
     // ==========================================
     stunLoopInstances: new Map(), // enemyIndex -> container
+    tempStunEffects: new Map(), // enemyIndex -> [containers] - 임시 스턴 이펙트 추적
     
     startPersistentStunLoop(enemyEl) {
         if (!this.initialized || !enemyEl) return;
@@ -1158,11 +1179,31 @@ const PixiRenderer = {
         if (!enemyEl) return;
         
         const enemyIndex = enemyEl.dataset.index;
-        const instance = this.stunLoopInstances.get(enemyIndex);
+        this.stopAllStunEffects(enemyIndex);
+    },
+    
+    // 모든 스턴 이펙트 중지 (지속적 + 임시)
+    stopAllStunEffects(enemyIndex) {
+        if (enemyIndex === null || enemyIndex === undefined) return;
         
+        const indexStr = String(enemyIndex);
+        
+        // 지속적인 스턴 루프 중지
+        const instance = this.stunLoopInstances.get(indexStr);
         if (instance) {
             instance.stop();
-            this.stunLoopInstances.delete(enemyIndex);
+            this.stunLoopInstances.delete(indexStr);
+        }
+        
+        // 임시 스턴 이펙트들 중지
+        const tempEffects = this.tempStunEffects.get(indexStr);
+        if (tempEffects) {
+            tempEffects.forEach(effect => {
+                if (effect && effect.destroy) {
+                    effect.destroy();
+                }
+            });
+            this.tempStunEffects.delete(indexStr);
         }
     },
     
