@@ -175,7 +175,11 @@ const EnemyRenderer = {
                 battleArena.offsetWidth,
                 battleArena.offsetHeight
             );
-            this.updateAllPositions();
+            
+            // 🎯 딜레이 후 위치 갱신 (DOM 레이아웃 완료 후)
+            requestAnimationFrame(() => {
+                this.updateAllPositions();
+            });
         }
     },
     
