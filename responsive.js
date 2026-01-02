@@ -166,7 +166,12 @@ const ResponsiveSystem = {
     // 🎯 렌더러 알림
     // ==========================================
     notifyRenderers() {
-        // PixiJS 렌더러
+        // 🎯 1. Background3D 먼저! (arena 캐시 무효화)
+        if (typeof Background3D !== 'undefined' && Background3D.handleResize) {
+            Background3D.handleResize();
+        }
+        
+        // 🎯 2. PixiJS 렌더러들 (캔버스 리사이즈)
         if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.handleResize) {
             EnemyRenderer.handleResize();
         }
@@ -177,10 +182,12 @@ const ResponsiveSystem = {
             PixiRenderer.resize();
         }
         
-        // Three.js 배경
-        if (typeof Background3D !== 'undefined' && Background3D.handleResize) {
-            Background3D.handleResize();
-        }
+        // 🎯 3. 추가 딜레이 후 한번 더 갱신 (레이아웃 완전 안정화 후)
+        setTimeout(() => {
+            if (typeof Background3D !== 'undefined' && Background3D.forceUpdateAllCharacters) {
+                Background3D.forceUpdateAllCharacters();
+            }
+        }, 50);
     },
     
     // ==========================================

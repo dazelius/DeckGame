@@ -604,7 +604,7 @@ const Background3D = {
     handleResize() {
         if (!this.camera || !this.renderer) return;
         
-        // 🎯 arena 캐시 무효화
+        // 🎯 arena 캐시 강제 무효화
         this.cachedArenaRect = null;
         this.arenaRectCacheTime = 0;
         
@@ -636,7 +636,35 @@ const Background3D = {
             this.foreRenderer.setSize(window.innerWidth, window.innerHeight);
         }
         
+        // 🎯 리사이즈 후 캐릭터 위치 강제 갱신 (딜레이 필요 - DOM 레이아웃 완료 후)
+        requestAnimationFrame(() => {
+            // arena 캐시 다시 무효화 (DOM 레이아웃 변경 반영)
+            this.cachedArenaRect = null;
+            this.arenaRectCacheTime = 0;
+            
+            // 캐릭터 위치 강제 갱신
+            this.forceUpdateAllCharacters();
+        });
+        
         console.log('[Background3D] 해상도 변경:', `${Math.round(width)}x${Math.round(height)}`);
+    },
+    
+    /**
+     * 모든 캐릭터 위치 강제 갱신
+     */
+    forceUpdateAllCharacters() {
+        // 플레이어 위치 갱신
+        if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.initialized) {
+            PlayerRenderer.updatePositionFrom3D();
+            PlayerRenderer.syncPlayerUI();
+        }
+        
+        // 적 위치 갱신
+        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.initialized) {
+            EnemyRenderer.updateAllPositions();
+        }
+        
+        console.log('[Background3D] 캐릭터 위치 강제 갱신 완료');
     },
     
     // ==========================================

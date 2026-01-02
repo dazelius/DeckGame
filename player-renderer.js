@@ -181,7 +181,12 @@ const PlayerRenderer = {
                 battleArena.offsetWidth,
                 battleArena.offsetHeight
             );
-            this.updatePosition();
+            
+            // 🎯 딜레이 후 위치 갱신 (DOM 레이아웃 완료 후)
+            requestAnimationFrame(() => {
+                this.updatePosition();
+                this.syncPlayerUI();
+            });
         }
     },
     
