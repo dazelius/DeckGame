@@ -330,9 +330,14 @@ const EnemyRenderer = {
                 data.container.destroy({ children: true });
             }
             
-            // UI 제거
-            if (data.uiElement && data.uiElement.parentNode) {
-                data.uiElement.parentNode.removeChild(data.uiElement);
+            // 상단 UI 제거
+            if (data.topUI && data.topUI.parentNode) {
+                data.topUI.parentNode.removeChild(data.topUI);
+            }
+            
+            // 하단 UI 제거
+            if (data.bottomUI && data.bottomUI.parentNode) {
+                data.bottomUI.parentNode.removeChild(data.bottomUI);
             }
             
             this.sprites.delete(enemyId);
@@ -346,8 +351,13 @@ const EnemyRenderer = {
                 data.container.parent.removeChild(data.container);
                 data.container.destroy({ children: true });
             }
-            if (data.uiElement && data.uiElement.parentNode) {
-                data.uiElement.parentNode.removeChild(data.uiElement);
+            // 상단 UI 제거
+            if (data.topUI && data.topUI.parentNode) {
+                data.topUI.parentNode.removeChild(data.topUI);
+            }
+            // 하단 UI 제거
+            if (data.bottomUI && data.bottomUI.parentNode) {
+                data.bottomUI.parentNode.removeChild(data.bottomUI);
             }
         });
         this.sprites.clear();
@@ -494,32 +504,35 @@ const EnemyRenderer = {
     createEnemyUI(enemyId, enemy, slotIndex) {
         if (!this.uiOverlay) return;
         
-        const uiEl = document.createElement('div');
-        uiEl.className = 'enemy-ui-element';
-        uiEl.dataset.enemyId = enemyId;
-        uiEl.dataset.enemyIndex = slotIndex;
-        uiEl.style.cssText = `
+        // ==========================================
+        // 상단 UI 컨테이너 (인텐트 + 브레이크) - 머리 위
+        // ==========================================
+        const topUI = document.createElement('div');
+        topUI.className = 'enemy-ui-top';
+        topUI.dataset.enemyId = enemyId;
+        topUI.dataset.part = 'top';
+        topUI.style.cssText = `
             position: absolute;
-            pointer-events: auto;
-            transform: translate(-50%, 0);
+            pointer-events: none;
+            transform: translate(-50%, -100%);
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
+            gap: 6px;
+            z-index: 60;
         `;
         
-        // 인텐트 (맨 위) - 크게, 눈에 띄게!
+        // 인텐트 (맨 위)
         const intentEl = document.createElement('div');
         intentEl.className = 'enemy-intent pixi-intent';
         intentEl.style.cssText = `
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-height: 40px;
-            margin-bottom: 8px;
+            min-height: 36px;
         `;
         intentEl.innerHTML = this.getIntentHTML(enemy);
-        uiEl.appendChild(intentEl);
+        topUI.appendChild(intentEl);
         
         // 브레이크 게이지 (인텐트 아래)
         const breakGauge = document.createElement('div');
@@ -528,59 +541,105 @@ const EnemyRenderer = {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
-            margin-bottom: 6px;
+            gap: 3px;
         `;
         breakGauge.innerHTML = this.getBreakGaugeHTML(enemy);
         
-        // 브레이크 가능한 인텐트가 있는지 확인해서 표시 여부 결정
+        // 브레이크 가능한 인텐트가 있는지 확인
         const hasBreakable = typeof BreakSystem !== 'undefined' && 
                             BreakSystem.hasBreakableIntent && 
                             BreakSystem.hasBreakableIntent(enemy);
         if (!hasBreakable && !enemy.breakGauge) {
             breakGauge.style.display = 'none';
         }
-        uiEl.appendChild(breakGauge);
+        topUI.appendChild(breakGauge);
+        
+        this.uiOverlay.appendChild(topUI);
+        
+        // ==========================================
+        // 하단 UI 컨테이너 (HP 바 + 이름) - 발 밑
+        // ==========================================
+        const bottomUI = document.createElement('div');
+        bottomUI.className = 'enemy-ui-bottom';
+        bottomUI.dataset.enemyId = enemyId;
+        bottomUI.dataset.part = 'bottom';
+        bottomUI.style.cssText = `
+            position: absolute;
+            pointer-events: none;
+            transform: translate(-50%, 0);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            z-index: 55;
+        `;
+        
+        // 적 이름
+        const nameEl = document.createElement('div');
+        nameEl.className = 'enemy-name pixi-name';
+        nameEl.style.cssText = `
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 1px 1px 2px #000, 0 0 5px rgba(0,0,0,0.8);
+            white-space: nowrap;
+        `;
+        nameEl.textContent = enemy.name || '???';
+        bottomUI.appendChild(nameEl);
         
         // HP 바
         const hpBar = document.createElement('div');
         hpBar.className = 'enemy-hp-bar pixi-hp';
         hpBar.style.cssText = `
-            width: 120px;
-            height: 16px;
-            background: #333;
-            border: 2px solid #555;
+            width: 100px;
+            height: 14px;
+            background: #1a1a1a;
+            border: 2px solid #444;
             border-radius: 4px;
             position: relative;
             overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
         `;
         const hpPercent = Math.max(0, (enemy.hp / enemy.maxHp) * 100);
         hpBar.innerHTML = `
-            <div class="hp-fill" style="width: ${hpPercent}%; height: 100%; background: linear-gradient(to bottom, #ef4444, #b91c1c); position: absolute; top: 0; left: 0;"></div>
-            <span class="hp-text" style="position: relative; z-index: 1; font-size: 0.75rem; font-weight: bold; color: #fff; text-shadow: 1px 1px 1px #000; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%;">${enemy.hp}/${enemy.maxHp}</span>
+            <div class="hp-fill" style="width: ${hpPercent}%; height: 100%; background: linear-gradient(to bottom, #e53e3e, #c53030); position: absolute; top: 0; left: 0; transition: width 0.3s ease;"></div>
+            <span class="hp-text" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; font-size: 0.7rem; font-weight: bold; color: #fff; text-shadow: 1px 1px 1px #000;">${enemy.hp}/${enemy.maxHp}</span>
         `;
-        uiEl.appendChild(hpBar);
+        bottomUI.appendChild(hpBar);
         
         // 쉴드 표시
-        if (enemy.shield && enemy.shield > 0) {
-            const shieldEl = document.createElement('div');
-            shieldEl.className = 'enemy-shield pixi-shield';
-            shieldEl.innerHTML = `🛡️ ${enemy.shield}`;
-            uiEl.appendChild(shieldEl);
-        }
+        const shieldEl = document.createElement('div');
+        shieldEl.className = 'enemy-shield pixi-shield';
+        shieldEl.style.cssText = `
+            font-size: 0.9rem;
+            color: #60a5fa;
+            text-shadow: 0 0 5px #60a5fa;
+            display: ${enemy.shield && enemy.shield > 0 ? 'block' : 'none'};
+        `;
+        shieldEl.innerHTML = `🛡️ ${enemy.shield || 0}`;
+        bottomUI.appendChild(shieldEl);
         
         // 상태 효과
         const statusEl = document.createElement('div');
         statusEl.className = 'enemy-status-effects pixi-status';
+        statusEl.style.cssText = `
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 120px;
+        `;
         statusEl.innerHTML = this.getStatusEffectsHTML(enemy);
-        uiEl.appendChild(statusEl);
+        bottomUI.appendChild(statusEl);
         
-        this.uiOverlay.appendChild(uiEl);
+        this.uiOverlay.appendChild(bottomUI);
         
         // 위치 동기화
         const data = this.sprites.get(enemyId);
         if (data) {
-            data.uiElement = uiEl;
+            data.topUI = topUI;
+            data.bottomUI = bottomUI;
+            data.uiElement = { topUI, bottomUI };  // 기존 호환성
             this.syncEnemyUI(enemyId);
         }
     },
@@ -752,7 +811,7 @@ const EnemyRenderer = {
     
     syncEnemyUI(enemyId) {
         const data = this.sprites.get(enemyId);
-        if (!data || !data.uiElement || !data.container) return;
+        if (!data || !data.container) return;
         
         // 스프라이트 글로벌 위치 (앵커가 하단 중앙이므로 y는 발 위치)
         const globalPos = data.container.getGlobalPosition();
@@ -763,11 +822,21 @@ const EnemyRenderer = {
             spriteHeight = data.sprite.height * data.container.scale.y;
         }
         
-        // UI 위치 업데이트 (스프라이트 머리 위 - 충분한 여백)
-        data.uiElement.style.left = globalPos.x + 'px';
-        data.uiElement.style.top = (globalPos.y - spriteHeight - 80) + 'px';  // 머리 위 80px
-        data.uiElement.style.display = 'flex';
-        data.uiElement.style.visibility = 'visible';
+        // 상단 UI (인텐트 + 브레이크) - 머리 위
+        if (data.topUI) {
+            data.topUI.style.left = globalPos.x + 'px';
+            data.topUI.style.top = (globalPos.y - spriteHeight - 10) + 'px';  // 머리 바로 위
+            data.topUI.style.display = 'flex';
+            data.topUI.style.visibility = 'visible';
+        }
+        
+        // 하단 UI (이름 + HP바 + 상태) - 발 밑
+        if (data.bottomUI) {
+            data.bottomUI.style.left = globalPos.x + 'px';
+            data.bottomUI.style.top = (globalPos.y + 10) + 'px';  // 발 바로 밑
+            data.bottomUI.style.display = 'flex';
+            data.bottomUI.style.visibility = 'visible';
+        }
     },
     
     syncAllUI() {
@@ -780,9 +849,10 @@ const EnemyRenderer = {
         const enemyId = enemy.pixiId || enemy.id || enemy.name;
         const data = this.sprites.get(enemyId);
         
-        if (data && data.uiElement) {
-            const hpFill = data.uiElement.querySelector('.hp-fill');
-            const hpText = data.uiElement.querySelector('.hp-text');
+        // 하단 UI에서 HP 바 찾기
+        if (data && data.bottomUI) {
+            const hpFill = data.bottomUI.querySelector('.hp-fill');
+            const hpText = data.bottomUI.querySelector('.hp-text');
             
             if (hpFill) {
                 const percent = Math.max(0, (enemy.hp / enemy.maxHp) * 100);
@@ -799,8 +869,9 @@ const EnemyRenderer = {
         const enemyId = enemy.pixiId || enemy.id || enemy.name;
         const data = this.sprites.get(enemyId);
         
-        if (data && data.uiElement) {
-            const intentEl = data.uiElement.querySelector('.pixi-intent');
+        // 상단 UI에서 인텐트 찾기
+        if (data && data.topUI) {
+            const intentEl = data.topUI.querySelector('.pixi-intent');
             if (intentEl) {
                 intentEl.innerHTML = this.getIntentHTML(enemy);
             }
@@ -812,8 +883,9 @@ const EnemyRenderer = {
         const enemyId = enemy.pixiId || enemy.id || enemy.name;
         const data = this.sprites.get(enemyId);
         
-        if (data && data.uiElement) {
-            const breakEl = data.uiElement.querySelector('.pixi-break');
+        // 상단 UI에서 브레이크 게이지 찾기
+        if (data && data.topUI) {
+            const breakEl = data.topUI.querySelector('.pixi-break');
             if (breakEl) {
                 breakEl.innerHTML = this.getBreakGaugeHTML(enemy);
                 
@@ -894,14 +966,20 @@ const EnemyRenderer = {
         const enemyId = enemy.pixiId || enemy.id || enemy.name;
         const data = this.sprites.get(enemyId);
         
-        if (data && data.uiElement) {
-            let shieldEl = data.uiElement.querySelector('.pixi-shield');
+        // 하단 UI에서 쉴드 찾기
+        if (data && data.bottomUI) {
+            let shieldEl = data.bottomUI.querySelector('.pixi-shield');
             
             if (enemy.shield && enemy.shield > 0) {
                 if (!shieldEl) {
                     shieldEl = document.createElement('div');
                     shieldEl.className = 'enemy-shield pixi-shield';
-                    data.uiElement.appendChild(shieldEl);
+                    shieldEl.style.cssText = `
+                        font-size: 0.9rem;
+                        color: #60a5fa;
+                        text-shadow: 0 0 5px #60a5fa;
+                    `;
+                    data.bottomUI.appendChild(shieldEl);
                 }
                 shieldEl.innerHTML = `🛡️ ${enemy.shield}`;
                 shieldEl.style.display = '';
@@ -916,8 +994,9 @@ const EnemyRenderer = {
         const enemyId = enemy.pixiId || enemy.id || enemy.name;
         const data = this.sprites.get(enemyId);
         
-        if (data && data.uiElement) {
-            const statusEl = data.uiElement.querySelector('.pixi-status');
+        // 하단 UI에서 상태 효과 찾기
+        if (data && data.bottomUI) {
+            const statusEl = data.bottomUI.querySelector('.pixi-status');
             if (statusEl) {
                 statusEl.innerHTML = this.getStatusEffectsHTML(enemy);
             }
@@ -949,11 +1028,18 @@ const EnemyRenderer = {
         const enemyId = enemy.pixiId || enemy.id || enemy.name;
         const data = this.sprites.get(enemyId);
         
-        if (data && data.uiElement) {
-            // UI 요소 즉시 숨기기
-            data.uiElement.style.display = 'none';
-            data.uiElement.style.visibility = 'hidden';
-            data.uiElement.style.opacity = '0';
+        // 상단 UI 숨기기
+        if (data && data.topUI) {
+            data.topUI.style.display = 'none';
+            data.topUI.style.visibility = 'hidden';
+            data.topUI.style.opacity = '0';
+        }
+        
+        // 하단 UI 숨기기
+        if (data && data.bottomUI) {
+            data.bottomUI.style.display = 'none';
+            data.bottomUI.style.visibility = 'hidden';
+            data.bottomUI.style.opacity = '0';
         }
         
         console.log('[EnemyRenderer] hideEnemyUI:', enemyId);
@@ -1798,9 +1884,25 @@ enemyRendererStyles.textContent = `
         font-family: 'DungGeunMo', monospace;
     }
     
-    .enemy-ui-element {
+    /* 상단 UI (인텐트 + 브레이크) */
+    .enemy-ui-top {
         text-align: center;
-        min-width: 120px;
+        min-width: 100px;
+    }
+    
+    /* 하단 UI (이름 + HP + 상태) */
+    .enemy-ui-bottom {
+        text-align: center;
+        min-width: 100px;
+    }
+    
+    /* 적 이름 */
+    .enemy-name.pixi-name {
+        font-size: 0.85rem;
+        font-weight: bold;
+        color: #fff;
+        text-shadow: 1px 1px 2px #000, 0 0 5px rgba(0,0,0,0.8);
+        margin-bottom: 2px;
     }
     
     /* HP 바 */
