@@ -22,28 +22,77 @@ const ChainScytheSystem = {
         
         // 끌어오기 연출 실행 (연출 끝나면 위치 교환)
         this.playPullAnimation(targetIndex, targetEnemy, () => {
-            // 위치 교환: 타겟을 첫 번째로 (배열 순서만 바꿈)
-            const firstEnemy = gameState.enemies[0];
-            gameState.enemies[0] = targetEnemy;
-            gameState.enemies[targetIndex] = firstEnemy;
-            
-            console.log(`[ChainScythe] ${targetEnemy.name}을(를) 첫 번째 위치로 끌어옴!`);
-            
-            // 바로 재렌더링 (애니메이션에서 이미 위치 이동 완료됨)
-            if (typeof renderEnemies === 'function') {
-                renderEnemies(false);
-            }
-            
-            // 브레이크 상태 복원
+            // DOM 재생성 없이 자연스럽게 위치 교환
+            this.swapEnemyPositions(targetIndex, targetEnemy, onComplete);
+        });
+    },
+    
+    // DOM 재생성 없이 적 위치 교환 (자연스러운 애니메이션)
+    swapEnemyPositions(targetIndex, targetEnemy, onComplete) {
+        const container = document.getElementById('enemies-container');
+        if (!container) {
+            if (onComplete) onComplete();
+            return;
+        }
+        
+        const enemyEls = Array.from(container.querySelectorAll('.enemy-unit'));
+        const targetEl = enemyEls[targetIndex];
+        const firstEl = enemyEls[0];
+        
+        if (!targetEl || !firstEl) {
+            if (onComplete) onComplete();
+            return;
+        }
+        
+        // 현재 위치 저장
+        const targetRect = targetEl.getBoundingClientRect();
+        const firstRect = firstEl.getBoundingClientRect();
+        
+        // gameState 배열 교환
+        const firstEnemy = gameState.enemies[0];
+        gameState.enemies[0] = targetEnemy;
+        gameState.enemies[targetIndex] = firstEnemy;
+        
+        console.log(`[ChainScythe] ${targetEnemy.name}을(를) 첫 번째 위치로 끌어옴!`);
+        
+        // DOM 순서 변경 (재생성 없이!)
+        container.insertBefore(targetEl, firstEl);
+        
+        // 새 위치 계산
+        const newTargetRect = targetEl.getBoundingClientRect();
+        const newFirstRect = firstEl.getBoundingClientRect();
+        
+        // 위치 차이 계산
+        const targetDiffX = targetRect.left - newTargetRect.left;
+        const firstDiffX = firstRect.left - newFirstRect.left;
+        
+        // FLIP 애니메이션: 이전 위치에서 시작해서 새 위치로 이동
+        gsap.fromTo(targetEl, 
+            { x: targetDiffX },
+            { x: 0, duration: 0.3, ease: 'power2.out' }
+        );
+        
+        gsap.fromTo(firstEl,
+            { x: firstDiffX },
+            { x: 0, duration: 0.3, ease: 'power2.out' }
+        );
+        
+        // data-index 업데이트
+        const newEnemyEls = Array.from(container.querySelectorAll('.enemy-unit'));
+        newEnemyEls.forEach((el, i) => {
+            el.dataset.index = i;
+        });
+        
+        // 브레이크 상태 복원 (0.3초 후)
+        setTimeout(() => {
             this.restoreBreakStates();
             
-            // 전체 UI 업데이트
             if (typeof updateUI === 'function') {
                 updateUI();
             }
             
             if (onComplete) onComplete();
-        });
+        }, 350);
         
         return true;
     },
