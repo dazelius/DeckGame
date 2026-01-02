@@ -223,16 +223,25 @@ const CardDragSystem = {
         });
 
         if (target === 'enemy') {
-            const container = document.getElementById('enemies-container');
-            if (container) {
-                container.querySelectorAll('.enemy-unit').forEach(el => {
-                    if (!el.classList.contains('dead')) {
-                        el.classList.add('drop-target');
+            // ✅ PixiJS EnemyRenderer 사용 시
+            if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                gameState.enemies.forEach(enemy => {
+                    if (enemy.hp > 0) {
+                        EnemyRenderer.highlightAsTarget(enemy, true);
                     }
                 });
             } else {
-                const enemyEl = document.getElementById('enemy');
-                if (enemyEl) enemyEl.classList.add('drop-target');
+                const container = document.getElementById('enemies-container');
+                if (container) {
+                    container.querySelectorAll('.enemy-unit').forEach(el => {
+                        if (!el.classList.contains('dead')) {
+                            el.classList.add('drop-target');
+                        }
+                    });
+                } else {
+                    const enemyEl = document.getElementById('enemy');
+                    if (enemyEl) enemyEl.classList.add('drop-target');
+                }
             }
             // 🔥 기믹도 드롭 타겟으로 표시 (별도 컨테이너)
             const gimmickContainer = document.getElementById('gimmicks-container');
@@ -275,6 +284,15 @@ const CardDragSystem = {
     clearTargetHighlights() {
         const playerEl = document.getElementById('player');
         const container = document.getElementById('enemies-container');
+        
+        // ✅ PixiJS EnemyRenderer 하이라이트 제거
+        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+            gameState.enemies.forEach(enemy => {
+                if (enemy.hp > 0) {
+                    EnemyRenderer.highlightAsTarget(enemy, false);
+                }
+            });
+        }
         
         // ✅ 드래그 종료 후 3D parallax 재활성화
         const arena = document.querySelector('.battle-arena');

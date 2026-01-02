@@ -22,7 +22,7 @@ const EnemyRenderer = {
     
     // 상태
     initialized: false,
-    enabled: false,  // 기본 비활성화, 콘솔에서 EnemyRenderer.enable() 호출하여 테스트
+    enabled: true,  // ✅ 기본 활성화! PixiJS 적 렌더링이 메인!
     
     // ==========================================
     // 초기화
@@ -160,9 +160,20 @@ const EnemyRenderer = {
         return this.config.baseY - (slotIndex * 10);
     },
     
-    getSlotScale(slotIndex) {
+    getSlotScale(slotIndex, enemy = null) {
         // 뒤로 갈수록 작아짐 (원근감)
-        return this.config.baseScale - (slotIndex * 0.05);
+        let scale = this.config.baseScale - (slotIndex * 0.05);
+        
+        // ✅ 보스/엘리트는 더 크게!
+        if (enemy) {
+            if (enemy.isBoss) {
+                scale *= 1.4;  // 보스는 40% 크게
+            } else if (enemy.isElite) {
+                scale *= 1.2;  // 엘리트는 20% 크게
+            }
+        }
+        
+        return scale;
     },
     
     getSlotZIndex(slotIndex) {
@@ -233,12 +244,19 @@ const EnemyRenderer = {
         // 위치 및 스케일
         const x = this.getSlotX(slotIndex);
         const y = this.getSlotY(slotIndex);
-        const scale = this.getSlotScale(slotIndex);
+        const scale = this.getSlotScale(slotIndex, enemy);  // ✅ 보스/엘리트 스케일 적용
         
         enemyContainer.x = x;
         enemyContainer.y = y;
         enemyContainer.scale.set(scale);
         enemyContainer.zIndex = this.getSlotZIndex(slotIndex);
+        
+        // ✅ 보스/엘리트 특별 효과
+        if (enemy.isBoss) {
+            // 보스 글로우 효과
+            enemyContainer.filters = enemyContainer.filters || [];
+            // 나중에 filter 추가 가능
+        }
         
         // 스프라이트를 컨테이너에 추가
         enemyContainer.addChild(sprite);
@@ -433,7 +451,7 @@ const EnemyRenderer = {
     },
     
     // ==========================================
-    // UI 오버레이 (HP바, 인텐트)
+    // UI 오버레이 (HP바, 인텐트, 브레이크 게이지 등)
     // ==========================================
     createEnemyUI(enemyId, enemy, slotIndex) {
         if (!this.uiOverlay) return;
@@ -441,25 +459,52 @@ const EnemyRenderer = {
         const uiEl = document.createElement('div');
         uiEl.className = 'enemy-ui-element';
         uiEl.dataset.enemyId = enemyId;
+        uiEl.dataset.enemyIndex = slotIndex;
         uiEl.style.cssText = `
             position: absolute;
             pointer-events: auto;
             transform: translate(-50%, 0);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
         `;
+        
+        // 인텐트 (맨 위)
+        const intentEl = document.createElement('div');
+        intentEl.className = 'enemy-intent pixi-intent';
+        intentEl.innerHTML = this.getIntentHTML(enemy);
+        uiEl.appendChild(intentEl);
+        
+        // 브레이크 게이지 (인텐트 아래)
+        const breakGauge = document.createElement('div');
+        breakGauge.className = 'break-gauge-container pixi-break';
+        breakGauge.innerHTML = this.getBreakGaugeHTML(enemy);
+        uiEl.appendChild(breakGauge);
         
         // HP 바
         const hpBar = document.createElement('div');
-        hpBar.className = 'enemy-hp-bar';
+        hpBar.className = 'enemy-hp-bar pixi-hp';
+        const hpPercent = Math.max(0, (enemy.hp / enemy.maxHp) * 100);
         hpBar.innerHTML = `
-            <div class="hp-fill" style="width: ${(enemy.hp / enemy.maxHp) * 100}%"></div>
+            <div class="hp-fill" style="width: ${hpPercent}%"></div>
             <span class="hp-text">${enemy.hp}/${enemy.maxHp}</span>
         `;
         uiEl.appendChild(hpBar);
         
-        // 인텐트 (나중에 업데이트)
-        const intentEl = document.createElement('div');
-        intentEl.className = 'enemy-intent';
-        uiEl.appendChild(intentEl);
+        // 쉴드 표시
+        if (enemy.shield && enemy.shield > 0) {
+            const shieldEl = document.createElement('div');
+            shieldEl.className = 'enemy-shield pixi-shield';
+            shieldEl.innerHTML = `🛡️ ${enemy.shield}`;
+            uiEl.appendChild(shieldEl);
+        }
+        
+        // 상태 효과
+        const statusEl = document.createElement('div');
+        statusEl.className = 'enemy-status-effects pixi-status';
+        statusEl.innerHTML = this.getStatusEffectsHTML(enemy);
+        uiEl.appendChild(statusEl);
         
         this.uiOverlay.appendChild(uiEl);
         
@@ -469,6 +514,86 @@ const EnemyRenderer = {
             data.uiElement = uiEl;
             this.syncEnemyUI(enemyId);
         }
+    },
+    
+    // 인텐트 HTML 생성
+    getIntentHTML(enemy) {
+        if (!enemy.currentIntent) return '';
+        
+        const intent = enemy.currentIntent;
+        let icon = '❓';
+        let value = '';
+        let className = 'intent-unknown';
+        
+        switch (intent.type) {
+            case 'attack':
+                icon = '⚔️';
+                value = intent.value || '';
+                className = 'intent-attack';
+                break;
+            case 'defend':
+                icon = '🛡️';
+                value = intent.value || '';
+                className = 'intent-defend';
+                break;
+            case 'buff':
+                icon = '💪';
+                className = 'intent-buff';
+                break;
+            case 'debuff':
+                icon = '💀';
+                className = 'intent-debuff';
+                break;
+            case 'heal':
+                icon = '💚';
+                value = intent.value || '';
+                className = 'intent-heal';
+                break;
+            case 'retreat':
+                icon = '🏃';
+                className = 'intent-retreat';
+                break;
+            case 'advance':
+                icon = '💨';
+                className = 'intent-advance';
+                break;
+            case 'special':
+                icon = '⭐';
+                className = 'intent-special';
+                break;
+        }
+        
+        return `<span class="${className}">${icon}${value}</span>`;
+    },
+    
+    // 브레이크 게이지 HTML
+    getBreakGaugeHTML(enemy) {
+        if (!enemy.breakGauge && enemy.breakGauge !== 0) return '';
+        
+        const maxBreak = enemy.maxBreakGauge || 100;
+        const current = enemy.breakGauge || 0;
+        const percent = Math.min(100, (current / maxBreak) * 100);
+        
+        return `
+            <div class="break-gauge">
+                <div class="break-fill" style="width: ${percent}%"></div>
+            </div>
+        `;
+    },
+    
+    // 상태 효과 HTML
+    getStatusEffectsHTML(enemy) {
+        const effects = [];
+        
+        if (enemy.poison && enemy.poison > 0) effects.push(`☠️${enemy.poison}`);
+        if (enemy.bleed && enemy.bleed > 0) effects.push(`🩸${enemy.bleed}`);
+        if (enemy.burn && enemy.burn > 0) effects.push(`🔥${enemy.burn}`);
+        if (enemy.weak && enemy.weak > 0) effects.push(`😵${enemy.weak}`);
+        if (enemy.vulnerable && enemy.vulnerable > 0) effects.push(`💔${enemy.vulnerable}`);
+        if (enemy.strengthBuff && enemy.strengthBuff > 0) effects.push(`💪${enemy.strengthBuff}`);
+        if (enemy.frenzyStacks && enemy.frenzyStacks > 0) effects.push(`😈${enemy.frenzyStacks}`);
+        
+        return effects.map(e => `<span class="status-icon">${e}</span>`).join('');
     },
     
     syncEnemyUI(enemyId) {
@@ -498,11 +623,159 @@ const EnemyRenderer = {
             const hpText = data.uiElement.querySelector('.hp-text');
             
             if (hpFill) {
-                hpFill.style.width = `${(enemy.hp / enemy.maxHp) * 100}%`;
+                const percent = Math.max(0, (enemy.hp / enemy.maxHp) * 100);
+                hpFill.style.width = `${percent}%`;
             }
             if (hpText) {
                 hpText.textContent = `${enemy.hp}/${enemy.maxHp}`;
             }
+        }
+    },
+    
+    // 인텐트 업데이트
+    updateEnemyIntent(enemy) {
+        const enemyId = enemy.id || enemy.name;
+        const data = this.sprites.get(enemyId);
+        
+        if (data && data.uiElement) {
+            const intentEl = data.uiElement.querySelector('.pixi-intent');
+            if (intentEl) {
+                intentEl.innerHTML = this.getIntentHTML(enemy);
+            }
+        }
+    },
+    
+    // 브레이크 게이지 업데이트
+    updateEnemyBreak(enemy) {
+        const enemyId = enemy.id || enemy.name;
+        const data = this.sprites.get(enemyId);
+        
+        if (data && data.uiElement) {
+            const breakEl = data.uiElement.querySelector('.pixi-break');
+            if (breakEl) {
+                breakEl.innerHTML = this.getBreakGaugeHTML(enemy);
+            }
+        }
+    },
+    
+    // 쉴드 업데이트
+    updateEnemyShield(enemy) {
+        const enemyId = enemy.id || enemy.name;
+        const data = this.sprites.get(enemyId);
+        
+        if (data && data.uiElement) {
+            let shieldEl = data.uiElement.querySelector('.pixi-shield');
+            
+            if (enemy.shield && enemy.shield > 0) {
+                if (!shieldEl) {
+                    shieldEl = document.createElement('div');
+                    shieldEl.className = 'enemy-shield pixi-shield';
+                    data.uiElement.appendChild(shieldEl);
+                }
+                shieldEl.innerHTML = `🛡️ ${enemy.shield}`;
+                shieldEl.style.display = '';
+            } else if (shieldEl) {
+                shieldEl.style.display = 'none';
+            }
+        }
+    },
+    
+    // 상태 효과 업데이트
+    updateEnemyStatus(enemy) {
+        const enemyId = enemy.id || enemy.name;
+        const data = this.sprites.get(enemyId);
+        
+        if (data && data.uiElement) {
+            const statusEl = data.uiElement.querySelector('.pixi-status');
+            if (statusEl) {
+                statusEl.innerHTML = this.getStatusEffectsHTML(enemy);
+            }
+        }
+    },
+    
+    // 전체 UI 업데이트
+    updateEnemyUI(enemy) {
+        this.updateEnemyHP(enemy);
+        this.updateEnemyIntent(enemy);
+        this.updateEnemyBreak(enemy);
+        this.updateEnemyShield(enemy);
+        this.updateEnemyStatus(enemy);
+    },
+    
+    // 모든 적 UI 업데이트
+    updateAllEnemyUI() {
+        if (!gameState || !gameState.enemies) return;
+        
+        gameState.enemies.forEach(enemy => {
+            if (enemy.hp > 0) {
+                this.updateEnemyUI(enemy);
+            }
+        });
+    },
+    
+    // 선택 표시
+    setEnemySelected(enemy, isSelected) {
+        const enemyId = enemy.id || enemy.name;
+        const data = this.sprites.get(enemyId);
+        
+        if (!data || !data.container) return;
+        
+        if (isSelected) {
+            // 선택 효과 - 네온 아웃라인 (PixiJS filter)
+            if (PIXI.filters && PIXI.filters.GlowFilter) {
+                data.container.filters = [new PIXI.filters.GlowFilter({
+                    distance: 15,
+                    outerStrength: 2,
+                    innerStrength: 0,
+                    color: 0x00ffff,
+                    quality: 0.5
+                })];
+            } else {
+                // 폴백: 스케일 업
+                gsap.to(data.container.scale, {
+                    x: this.getSlotScale(data.slotIndex) * 1.1,
+                    y: this.getSlotScale(data.slotIndex) * 1.1,
+                    duration: 0.15
+                });
+            }
+        } else {
+            data.container.filters = [];
+            gsap.to(data.container.scale, {
+                x: this.getSlotScale(data.slotIndex),
+                y: this.getSlotScale(data.slotIndex),
+                duration: 0.15
+            });
+        }
+    },
+    
+    // 타겟 하이라이트 (카드 드래그 시)
+    highlightAsTarget(enemy, isHighlighted) {
+        const enemyId = enemy.id || enemy.name;
+        const data = this.sprites.get(enemyId);
+        
+        if (!data || !data.container) return;
+        
+        if (isHighlighted) {
+            // 붉은 네온 효과
+            gsap.to(data.container, {
+                pixi: { tint: 0xff6666 },
+                duration: 0.2
+            });
+            gsap.to(data.container.scale, {
+                x: this.getSlotScale(data.slotIndex) * 1.15,
+                y: this.getSlotScale(data.slotIndex) * 1.15,
+                duration: 0.2
+            });
+        } else {
+            gsap.to(data.container, {
+                pixi: { tint: 0xffffff },
+                duration: 0.2
+            });
+            gsap.to(data.container.scale, {
+                x: this.getSlotScale(data.slotIndex),
+                y: this.getSlotScale(data.slotIndex),
+                duration: 0.2
+            });
         }
     },
     
@@ -680,23 +953,31 @@ window.EnemyRenderer = EnemyRenderer;
 // 스타일 추가
 const enemyRendererStyles = document.createElement('style');
 enemyRendererStyles.textContent = `
-    .enemy-ui-element {
-        text-align: center;
+    /* 적 UI 오버레이 */
+    #enemy-ui-overlay {
+        font-family: 'DungGeunMo', monospace;
     }
     
-    .enemy-hp-bar {
+    .enemy-ui-element {
+        text-align: center;
+        min-width: 120px;
+    }
+    
+    /* HP 바 */
+    .enemy-hp-bar.pixi-hp {
         width: 100px;
-        height: 12px;
-        background: #333;
-        border: 2px solid #666;
-        border-radius: 6px;
+        height: 14px;
+        background: #1a1a1a;
+        border: 2px solid #444;
+        border-radius: 3px;
         overflow: hidden;
         position: relative;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.5);
     }
     
     .enemy-hp-bar .hp-fill {
         height: 100%;
-        background: linear-gradient(to bottom, #ff6b6b, #c92a2a);
+        background: linear-gradient(to bottom, #e53e3e, #c53030);
         transition: width 0.3s ease;
     }
     
@@ -708,18 +989,87 @@ enemyRendererStyles.textContent = `
         font-size: 10px;
         font-weight: bold;
         color: white;
-        text-shadow: 1px 1px 1px #000;
+        text-shadow: 1px 1px 2px #000;
     }
     
-    .enemy-intent {
-        margin-top: 5px;
+    /* 인텐트 */
+    .pixi-intent {
+        font-size: 20px;
+        margin-bottom: 4px;
+        filter: drop-shadow(0 2px 3px rgba(0,0,0,0.8));
+    }
+    
+    .pixi-intent .intent-attack { color: #ff6b6b; }
+    .pixi-intent .intent-defend { color: #4299e1; }
+    .pixi-intent .intent-buff { color: #48bb78; }
+    .pixi-intent .intent-debuff { color: #9f7aea; }
+    .pixi-intent .intent-heal { color: #68d391; }
+    .pixi-intent .intent-retreat { color: #ed8936; }
+    .pixi-intent .intent-advance { color: #f6e05e; }
+    .pixi-intent .intent-special { color: #ffd700; }
+    
+    /* 브레이크 게이지 */
+    .pixi-break .break-gauge {
+        width: 80px;
+        height: 6px;
+        background: #2d3748;
+        border-radius: 3px;
+        overflow: hidden;
+        border: 1px solid #4a5568;
+    }
+    
+    .pixi-break .break-fill {
+        height: 100%;
+        background: linear-gradient(to right, #f6ad55, #ed8936);
+        transition: width 0.2s ease;
+    }
+    
+    /* 쉴드 */
+    .pixi-shield {
         font-size: 14px;
+        color: #63b3ed;
+        text-shadow: 0 0 5px rgba(99, 179, 237, 0.5);
     }
     
+    /* 상태 효과 */
+    .pixi-status {
+        display: flex;
+        gap: 4px;
+        justify-content: center;
+        flex-wrap: wrap;
+        max-width: 120px;
+    }
+    
+    .pixi-status .status-icon {
+        font-size: 12px;
+        background: rgba(0,0,0,0.6);
+        padding: 2px 4px;
+        border-radius: 3px;
+    }
+    
+    /* 캔버스 컨테이너 */
     #enemy-canvas-container {
         image-rendering: pixelated;
+        image-rendering: crisp-edges;
+    }
+    
+    #enemy-canvas-container canvas {
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
     }
 `;
 document.head.appendChild(enemyRendererStyles);
 
-console.log('[EnemyRenderer] Script loaded');
+// 자동 초기화
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('[EnemyRenderer] DOMContentLoaded - 대기 중...');
+    
+    // 게임 전투 시작 시 초기화 (약간의 딜레이)
+    setTimeout(() => {
+        if (EnemyRenderer.enabled && !EnemyRenderer.initialized) {
+            EnemyRenderer.init();
+        }
+    }, 500);
+});
+
+console.log('[EnemyRenderer] ✅ Script loaded (기본 활성화)');

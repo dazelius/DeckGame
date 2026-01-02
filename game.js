@@ -1151,6 +1151,16 @@ function selectEnemy(index) {
 }
 
 function updateSelectedEnemy() {
+    // ✅ PixiJS EnemyRenderer 사용 시
+    if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+        gameState.enemies.forEach((enemy, i) => {
+            if (enemy.hp > 0) {
+                EnemyRenderer.setEnemySelected(enemy, i === gameState.selectedEnemyIndex);
+            }
+        });
+        return;
+    }
+    
     const container = document.getElementById('enemies-container');
     if (!container) return;
     
@@ -1161,6 +1171,11 @@ function updateSelectedEnemy() {
 
 // 적 UI 업데이트
 function updateEnemiesUI() {
+    // ✅ PixiJS EnemyRenderer 사용 시 UI 업데이트
+    if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+        EnemyRenderer.updateAllEnemyUI();
+    }
+    
     gameState.enemies.forEach((enemy, index) => {
         const container = document.getElementById('enemies-container');
         if (!container) return;
@@ -2547,6 +2562,11 @@ function checkEnemyDefeated() {
         if (enemy.hp <= 0) {
             enemy.processed = true;  // 즉시 플래그 설정
             console.log(`[checkEnemyDefeated] ${enemy.name} 처치됨!`);
+            
+            // ✅ PixiJS EnemyRenderer 사망 애니메이션
+            if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                EnemyRenderer.playDeathAnimation(enemy);
+            }
             
             const enemyEl = document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`);
             
