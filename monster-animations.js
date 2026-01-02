@@ -970,6 +970,743 @@ monsterAnimStyles.textContent = `
 document.head.appendChild(monsterAnimStyles);
 
 // ==========================================
+// 🔮 고블린 샤먼 애니메이션
+// ==========================================
+
+// 마법 화살 (보라색 마법 투사체)
+MonsterAnimations.register('magic_arrow', (context) => {
+    const { enemyEl, targetEl, damage, onHit, onComplete } = context;
+    
+    if (!enemyEl || !targetEl) {
+        if (onHit) onHit();
+        if (onComplete) onComplete();
+        return;
+    }
+    
+    const sprite = enemyEl.querySelector('.enemy-sprite-img');
+    const enemyRect = enemyEl.getBoundingClientRect();
+    const targetRect = targetEl.getBoundingClientRect();
+    
+    if (typeof gsap !== 'undefined' && sprite) {
+        const timeline = gsap.timeline();
+        
+        // 1단계: 마력 충전 (빛나면서 떨림)
+        timeline.to(sprite, {
+            filter: 'brightness(1.5) drop-shadow(0 0 20px #a855f7)',
+            scale: 1.05,
+            duration: 0.3,
+            ease: 'power2.in'
+        });
+        
+        // 마력 충전 VFX
+        timeline.call(() => {
+            if (typeof VFX !== 'undefined') {
+                // 보라색 마법 파티클
+                for (let i = 0; i < 8; i++) {
+                    setTimeout(() => {
+                        VFX.sparks(
+                            enemyRect.left + enemyRect.width / 2 + (Math.random() - 0.5) * 40,
+                            enemyRect.top + enemyRect.height / 2 + (Math.random() - 0.5) * 40,
+                            { color: '#a855f7', count: 3, speed: 50, size: 4 }
+                        );
+                    }, i * 30);
+                }
+            }
+        });
+        
+        // 2단계: 손 내밀기 (발사 자세)
+        timeline.to(sprite, {
+            x: -15,
+            scaleX: 1.1,
+            duration: 0.15,
+            ease: 'power2.out'
+        });
+        
+        // 3단계: 마법 투사체 발사
+        timeline.call(() => {
+            // 마법 화살 투사체 생성
+            const projectile = document.createElement('div');
+            projectile.className = 'magic-projectile';
+            projectile.innerHTML = '🔮';
+            projectile.style.cssText = `
+                position: fixed;
+                left: ${enemyRect.left}px;
+                top: ${enemyRect.top + enemyRect.height / 2}px;
+                font-size: 28px;
+                z-index: 10000;
+                pointer-events: none;
+                filter: drop-shadow(0 0 15px #a855f7) drop-shadow(0 0 30px #7c3aed);
+            `;
+            document.body.appendChild(projectile);
+            
+            // 투사체 이동
+            gsap.to(projectile, {
+                left: targetRect.left + targetRect.width / 2,
+                top: targetRect.top + targetRect.height / 2,
+                scale: 1.5,
+                rotation: 360,
+                duration: 0.25,
+                ease: 'power2.in',
+                onComplete: () => {
+                    projectile.remove();
+                    
+                    // 히트!
+                    if (onHit) onHit();
+                    
+                    // 임팩트 VFX
+                    if (typeof VFX !== 'undefined') {
+                        VFX.sparks(targetRect.left + targetRect.width / 2, targetRect.top + targetRect.height / 2, {
+                            color: '#a855f7', count: 25, speed: 200, size: 6
+                        });
+                        VFX.sparks(targetRect.left + targetRect.width / 2, targetRect.top + targetRect.height / 2, {
+                            color: '#c084fc', count: 15, speed: 150, size: 4
+                        });
+                    }
+                    
+                    // 화면 흔들림
+                    if (typeof EffectSystem !== 'undefined') {
+                        EffectSystem.screenShake(8, 150);
+                    }
+                }
+            });
+            
+            // 트레일 효과
+            let trailCount = 0;
+            const trailInterval = setInterval(() => {
+                if (trailCount++ > 5) {
+                    clearInterval(trailInterval);
+                    return;
+                }
+                const trail = document.createElement('div');
+                trail.innerHTML = '✨';
+                trail.style.cssText = `
+                    position: fixed;
+                    left: ${parseFloat(projectile.style.left)}px;
+                    top: ${parseFloat(projectile.style.top)}px;
+                    font-size: 16px;
+                    z-index: 9999;
+                    pointer-events: none;
+                    opacity: 0.8;
+                `;
+                document.body.appendChild(trail);
+                gsap.to(trail, {
+                    opacity: 0,
+                    scale: 0.3,
+                    duration: 0.3,
+                    onComplete: () => trail.remove()
+                });
+            }, 40);
+        });
+        
+        // 4단계: 복귀
+        timeline.to(sprite, {
+            x: 0,
+            scale: 1,
+            scaleX: 1,
+            filter: 'brightness(1)',
+            duration: 0.3,
+            ease: 'power2.out'
+        }, '+=0.3');
+        
+        // 완료
+        timeline.call(() => {
+            if (onComplete) onComplete();
+        });
+    } else {
+        if (onHit) onHit();
+        setTimeout(() => { if (onComplete) onComplete(); }, 500);
+    }
+});
+
+// 번개 폭풍 (강력한 번개 VFX)
+MonsterAnimations.register('thunder_storm', (context) => {
+    const { enemyEl, targetEl, damage, onHit, onComplete, enemy } = context;
+    
+    if (!enemyEl || !targetEl) {
+        if (onHit) onHit();
+        if (onComplete) onComplete();
+        return;
+    }
+    
+    const sprite = enemyEl.querySelector('.enemy-sprite-img');
+    const enemyRect = enemyEl.getBoundingClientRect();
+    const targetRect = targetEl.getBoundingClientRect();
+    const hits = enemy?.intentHits || 3;
+    
+    if (typeof gsap !== 'undefined' && sprite) {
+        const timeline = gsap.timeline();
+        
+        // 1단계: 마력 집중 (강하게 빛남)
+        timeline.to(sprite, {
+            filter: 'brightness(2) drop-shadow(0 0 30px #facc15) drop-shadow(0 0 50px #fbbf24)',
+            scale: 1.15,
+            y: -10,
+            duration: 0.5,
+            ease: 'power2.in'
+        });
+        
+        // 충전 VFX (노란색 번개 파티클)
+        timeline.call(() => {
+            if (typeof VFX !== 'undefined') {
+                for (let i = 0; i < 15; i++) {
+                    setTimeout(() => {
+                        VFX.sparks(
+                            enemyRect.left + enemyRect.width / 2 + (Math.random() - 0.5) * 60,
+                            enemyRect.top + (Math.random() - 0.5) * 40,
+                            { color: '#facc15', count: 5, speed: 100, size: 3 }
+                        );
+                    }, i * 25);
+                }
+            }
+        });
+        
+        // 2단계: 팔 들기
+        timeline.to(sprite, {
+            y: -20,
+            scaleY: 1.1,
+            duration: 0.2,
+            ease: 'power1.out'
+        });
+        
+        // 3단계: 번개 연속 발사!
+        timeline.call(() => {
+            let hitCount = 0;
+            const strikeLightning = () => {
+                if (hitCount >= hits) return;
+                
+                // 번개 볼트 생성
+                const bolt = document.createElement('div');
+                bolt.className = 'lightning-bolt';
+                bolt.innerHTML = '⚡';
+                const offsetX = (Math.random() - 0.5) * 60;
+                bolt.style.cssText = `
+                    position: fixed;
+                    left: ${targetRect.left + targetRect.width / 2 + offsetX}px;
+                    top: ${targetRect.top - 200}px;
+                    font-size: 80px;
+                    z-index: 10000;
+                    pointer-events: none;
+                    filter: drop-shadow(0 0 20px #facc15) drop-shadow(0 0 40px #fbbf24);
+                    transform: scaleY(2);
+                `;
+                document.body.appendChild(bolt);
+                
+                // 번개 낙하
+                gsap.to(bolt, {
+                    top: targetRect.top + targetRect.height / 2,
+                    scaleY: 1,
+                    duration: 0.08,
+                    ease: 'power4.in',
+                    onComplete: () => {
+                        // 히트!
+                        if (hitCount === 0 && onHit) onHit();
+                        
+                        // 화면 플래시
+                        const flash = document.createElement('div');
+                        flash.style.cssText = `
+                            position: fixed;
+                            inset: 0;
+                            background: rgba(250, 204, 21, 0.4);
+                            z-index: 9999;
+                            pointer-events: none;
+                        `;
+                        document.body.appendChild(flash);
+                        gsap.to(flash, { opacity: 0, duration: 0.15, onComplete: () => flash.remove() });
+                        
+                        // 임팩트 VFX
+                        if (typeof VFX !== 'undefined') {
+                            VFX.sparks(targetRect.left + targetRect.width / 2 + offsetX, targetRect.top + targetRect.height / 2, {
+                                color: '#facc15', count: 30, speed: 250, size: 5
+                            });
+                            VFX.sparks(targetRect.left + targetRect.width / 2 + offsetX, targetRect.top + targetRect.height / 2, {
+                                color: '#ffffff', count: 15, speed: 180, size: 3
+                            });
+                        }
+                        
+                        // 화면 흔들림
+                        if (typeof EffectSystem !== 'undefined') {
+                            EffectSystem.screenShake(15, 200);
+                        }
+                        
+                        // 번개 사라짐
+                        gsap.to(bolt, {
+                            opacity: 0,
+                            scale: 1.5,
+                            duration: 0.2,
+                            onComplete: () => bolt.remove()
+                        });
+                    }
+                });
+                
+                hitCount++;
+                if (hitCount < hits) {
+                    setTimeout(strikeLightning, 250);
+                }
+            };
+            strikeLightning();
+        });
+        
+        // 4단계: 복귀
+        timeline.to(sprite, {
+            y: 0,
+            scale: 1,
+            scaleY: 1,
+            filter: 'brightness(1)',
+            duration: 0.4,
+            ease: 'power2.out'
+        }, `+=${hits * 0.25 + 0.3}`);
+        
+        // 완료
+        timeline.call(() => {
+            if (onComplete) onComplete();
+        });
+    } else {
+        if (onHit) onHit();
+        setTimeout(() => { if (onComplete) onComplete(); }, 800);
+    }
+});
+
+// 치유 주문 (녹색 힐 이펙트 - 타겟에 적용)
+MonsterAnimations.register('heal_spell', (context) => {
+    const { enemyEl, enemy, targetEl, targetEnemy, onComplete } = context;
+    
+    if (!enemyEl) {
+        if (onComplete) onComplete();
+        return;
+    }
+    
+    const sprite = enemyEl.querySelector('.enemy-sprite-img');
+    const casterRect = enemyEl.getBoundingClientRect();
+    // ✅ 타겟이 있으면 타겟 위치, 없으면 시전자 위치
+    const targetRect = targetEl ? targetEl.getBoundingClientRect() : casterRect;
+    
+    if (typeof gsap !== 'undefined' && sprite) {
+        const timeline = gsap.timeline();
+        
+        // 1단계: 캐스팅 포즈 (시전자)
+        timeline.to(sprite, {
+            filter: 'brightness(1.3) drop-shadow(0 0 20px #4ade80)',
+            y: -5,
+            scale: 1.05,
+            duration: 0.3,
+            ease: 'power2.out'
+        });
+        
+        // 시전자 주변 마력 파티클
+        timeline.call(() => {
+            if (typeof VFX !== 'undefined') {
+                for (let i = 0; i < 6; i++) {
+                    setTimeout(() => {
+                        VFX.sparks(
+                            casterRect.left + casterRect.width / 2 + (Math.random() - 0.5) * 30,
+                            casterRect.top + casterRect.height / 2,
+                            { color: '#4ade80', count: 3, speed: 50, size: 4 }
+                        );
+                    }, i * 40);
+                }
+            }
+        });
+        
+        // 2단계: 마력 방출 + 힐 투사체
+        timeline.to(sprite, {
+            filter: 'brightness(1.8) drop-shadow(0 0 40px #4ade80)',
+            scale: 1.1,
+            duration: 0.2,
+            ease: 'power1.in'
+        });
+        
+        // 💚 힐 투사체가 타겟으로 날아감
+        timeline.call(() => {
+            const healOrb = document.createElement('div');
+            healOrb.innerHTML = '💚';
+            healOrb.style.cssText = `
+                position: fixed;
+                left: ${casterRect.left + casterRect.width / 2}px;
+                top: ${casterRect.top + casterRect.height / 2}px;
+                font-size: 32px;
+                z-index: 10000;
+                pointer-events: none;
+                filter: drop-shadow(0 0 15px #4ade80) drop-shadow(0 0 30px #22c55e);
+                transform: translate(-50%, -50%);
+            `;
+            document.body.appendChild(healOrb);
+            
+            // 타겟으로 이동
+            gsap.to(healOrb, {
+                left: targetRect.left + targetRect.width / 2,
+                top: targetRect.top + targetRect.height / 2,
+                scale: 1.5,
+                duration: 0.35,
+                ease: 'power2.in',
+                onComplete: () => {
+                    healOrb.remove();
+                    
+                    // ✅ 타겟에 힐 이펙트!
+                    if (typeof VFX !== 'undefined') {
+                        VFX.heal(targetRect.left + targetRect.width / 2, targetRect.top + targetRect.height / 2, {
+                            color: '#4ade80', count: 20
+                        });
+                    }
+                    
+                    // 타겟에 힐 서클
+                    const circle = document.createElement('div');
+                    circle.style.cssText = `
+                        position: fixed;
+                        left: ${targetRect.left + targetRect.width / 2}px;
+                        top: ${targetRect.top + targetRect.height}px;
+                        width: 10px;
+                        height: 10px;
+                        border-radius: 50%;
+                        border: 3px solid #4ade80;
+                        transform: translate(-50%, -50%);
+                        z-index: 9999;
+                        pointer-events: none;
+                        box-shadow: 0 0 20px #4ade80;
+                    `;
+                    document.body.appendChild(circle);
+                    
+                    gsap.to(circle, {
+                        width: 120,
+                        height: 120,
+                        opacity: 0,
+                        duration: 0.5,
+                        ease: 'power2.out',
+                        onComplete: () => circle.remove()
+                    });
+                    
+                    // 타겟 스프라이트 반짝임
+                    if (targetEl) {
+                        const targetSprite = targetEl.querySelector('.enemy-sprite-img');
+                        if (targetSprite) {
+                            gsap.to(targetSprite, {
+                                filter: 'brightness(1.5) drop-shadow(0 0 20px #4ade80)',
+                                duration: 0.15,
+                                yoyo: true,
+                                repeat: 1
+                            });
+                        }
+                    }
+                }
+            });
+        });
+        
+        // 3단계: 복귀 (시전자)
+        timeline.to(sprite, {
+            filter: 'brightness(1)',
+            y: 0,
+            scale: 1,
+            duration: 0.4,
+            ease: 'power2.out'
+        }, '+=0.3');
+        
+        // 완료
+        timeline.call(() => {
+            if (onComplete) onComplete();
+        });
+    } else {
+        setTimeout(() => { if (onComplete) onComplete(); }, 600);
+    }
+});
+
+// 버프 주문 (빨간색/주황색 파워업 이펙트)
+MonsterAnimations.register('buff_spell', (context) => {
+    const { enemyEl, enemy, onComplete } = context;
+    
+    if (!enemyEl) {
+        if (onComplete) onComplete();
+        return;
+    }
+    
+    const sprite = enemyEl.querySelector('.enemy-sprite-img');
+    const enemyRect = enemyEl.getBoundingClientRect();
+    
+    if (typeof gsap !== 'undefined' && sprite) {
+        const timeline = gsap.timeline();
+        
+        // 1단계: 캐스팅 포즈 (붉은 기운)
+        timeline.to(sprite, {
+            filter: 'brightness(1.3) drop-shadow(0 0 20px #f97316) hue-rotate(-10deg)',
+            y: -5,
+            scale: 1.05,
+            duration: 0.3,
+            ease: 'power2.out'
+        });
+        
+        // 불꽃 파티클 시작
+        timeline.call(() => {
+            if (typeof VFX !== 'undefined') {
+                // 주황색 파워 파티클
+                for (let i = 0; i < 15; i++) {
+                    setTimeout(() => {
+                        VFX.sparks(
+                            enemyRect.left + enemyRect.width / 2 + (Math.random() - 0.5) * 50,
+                            enemyRect.top + enemyRect.height / 2 + (Math.random() - 0.5) * 30,
+                            { color: '#f97316', count: 4, speed: 80, size: 4 }
+                        );
+                    }, i * 40);
+                }
+            }
+            
+            // 파워 링 이펙트
+            const ring = document.createElement('div');
+            ring.innerHTML = '🔥';
+            ring.style.cssText = `
+                position: fixed;
+                left: ${enemyRect.left + enemyRect.width / 2}px;
+                top: ${enemyRect.top + enemyRect.height / 2}px;
+                font-size: 40px;
+                transform: translate(-50%, -50%) scale(0.5);
+                z-index: 9999;
+                pointer-events: none;
+                filter: drop-shadow(0 0 15px #f97316);
+            `;
+            document.body.appendChild(ring);
+            
+            gsap.to(ring, {
+                scale: 2,
+                opacity: 0,
+                y: -50,
+                duration: 0.8,
+                ease: 'power2.out',
+                onComplete: () => ring.remove()
+            });
+        });
+        
+        // 2단계: 마력 방출 (붉은 폭발)
+        timeline.to(sprite, {
+            filter: 'brightness(2) drop-shadow(0 0 50px #ef4444)',
+            scale: 1.15,
+            duration: 0.2,
+            ease: 'power1.in'
+        });
+        
+        // 아군들에게 버프 이펙트 전파
+        timeline.call(() => {
+            // 모든 적(아군)에게 버프 이펙트
+            const allEnemyEls = document.querySelectorAll('.enemy-unit');
+            allEnemyEls.forEach((el, i) => {
+                if (el === enemyEl) return; // 자신 제외
+                
+                setTimeout(() => {
+                    const allyRect = el.getBoundingClientRect();
+                    
+                    // 버프 받는 이펙트
+                    if (typeof VFX !== 'undefined') {
+                        VFX.sparks(allyRect.left + allyRect.width / 2, allyRect.top + allyRect.height / 2, {
+                            color: '#f97316', count: 15, speed: 100, size: 5
+                        });
+                    }
+                    
+                    // 버프 아이콘 팝업
+                    const buffIcon = document.createElement('div');
+                    buffIcon.innerHTML = '⚔️+';
+                    buffIcon.style.cssText = `
+                        position: fixed;
+                        left: ${allyRect.left + allyRect.width / 2}px;
+                        top: ${allyRect.top}px;
+                        font-size: 24px;
+                        font-weight: bold;
+                        color: #f97316;
+                        text-shadow: 0 0 10px #f97316;
+                        transform: translateX(-50%);
+                        z-index: 10000;
+                        pointer-events: none;
+                    `;
+                    document.body.appendChild(buffIcon);
+                    
+                    gsap.to(buffIcon, {
+                        y: -40,
+                        opacity: 0,
+                        duration: 0.8,
+                        ease: 'power2.out',
+                        onComplete: () => buffIcon.remove()
+                    });
+                    
+                    // 아군 반짝임
+                    const allySprite = el.querySelector('.enemy-sprite-img');
+                    if (allySprite) {
+                        gsap.to(allySprite, {
+                            filter: 'brightness(1.5) drop-shadow(0 0 20px #f97316)',
+                            duration: 0.2,
+                            yoyo: true,
+                            repeat: 1
+                        });
+                    }
+                }, i * 100);
+            });
+        });
+        
+        // 3단계: 복귀
+        timeline.to(sprite, {
+            filter: 'brightness(1)',
+            y: 0,
+            scale: 1,
+            duration: 0.4,
+            ease: 'power2.out'
+        }, '+=0.3');
+        
+        // 완료
+        timeline.call(() => {
+            if (onComplete) onComplete();
+        });
+    } else {
+        setTimeout(() => { if (onComplete) onComplete(); }, 600);
+    }
+});
+
+// 보호 주문 (파란색 방어 이펙트 - 아군에게 적용)
+MonsterAnimations.register('shield_spell', (context) => {
+    const { enemyEl, enemy, onComplete } = context;
+    
+    if (!enemyEl) {
+        if (onComplete) onComplete();
+        return;
+    }
+    
+    const sprite = enemyEl.querySelector('.enemy-sprite-img');
+    const casterRect = enemyEl.getBoundingClientRect();
+    
+    if (typeof gsap !== 'undefined' && sprite) {
+        const timeline = gsap.timeline();
+        
+        // 1단계: 캐스팅 포즈 (파란 기운)
+        timeline.to(sprite, {
+            filter: 'brightness(1.3) drop-shadow(0 0 20px #60a5fa)',
+            y: -5,
+            scale: 1.05,
+            duration: 0.3,
+            ease: 'power2.out'
+        });
+        
+        // 시전자 주변 마력 파티클
+        timeline.call(() => {
+            if (typeof VFX !== 'undefined') {
+                for (let i = 0; i < 8; i++) {
+                    setTimeout(() => {
+                        VFX.sparks(
+                            casterRect.left + casterRect.width / 2 + (Math.random() - 0.5) * 40,
+                            casterRect.top + casterRect.height / 2,
+                            { color: '#60a5fa', count: 4, speed: 60, size: 4 }
+                        );
+                    }, i * 30);
+                }
+            }
+        });
+        
+        // 2단계: 마력 방출
+        timeline.to(sprite, {
+            filter: 'brightness(1.8) drop-shadow(0 0 40px #3b82f6)',
+            scale: 1.1,
+            duration: 0.2,
+            ease: 'power1.in'
+        });
+        
+        // 🛡️ 보호막이 아군들에게 날아감
+        timeline.call(() => {
+            const allEnemyEls = document.querySelectorAll('.enemy-unit');
+            let delay = 0;
+            
+            allEnemyEls.forEach((el) => {
+                if (el === enemyEl) return; // 자신 제외
+                
+                const targetRect = el.getBoundingClientRect();
+                
+                setTimeout(() => {
+                    // 보호막 오브 생성
+                    const shieldOrb = document.createElement('div');
+                    shieldOrb.innerHTML = '🛡️';
+                    shieldOrb.style.cssText = `
+                        position: fixed;
+                        left: ${casterRect.left + casterRect.width / 2}px;
+                        top: ${casterRect.top + casterRect.height / 2}px;
+                        font-size: 28px;
+                        z-index: 10000;
+                        pointer-events: none;
+                        filter: drop-shadow(0 0 10px #60a5fa) drop-shadow(0 0 20px #3b82f6);
+                        transform: translate(-50%, -50%);
+                    `;
+                    document.body.appendChild(shieldOrb);
+                    
+                    // 타겟으로 이동
+                    gsap.to(shieldOrb, {
+                        left: targetRect.left + targetRect.width / 2,
+                        top: targetRect.top + targetRect.height / 2,
+                        scale: 1.3,
+                        duration: 0.3,
+                        ease: 'power2.in',
+                        onComplete: () => {
+                            shieldOrb.remove();
+                            
+                            // 방어막 이펙트
+                            if (typeof VFX !== 'undefined') {
+                                VFX.sparks(targetRect.left + targetRect.width / 2, targetRect.top + targetRect.height / 2, {
+                                    color: '#60a5fa', count: 15, speed: 100, size: 5
+                                });
+                            }
+                            
+                            // 방어막 서클
+                            const shield = document.createElement('div');
+                            shield.style.cssText = `
+                                position: fixed;
+                                left: ${targetRect.left + targetRect.width / 2}px;
+                                top: ${targetRect.top + targetRect.height / 2}px;
+                                width: 60px;
+                                height: 60px;
+                                border-radius: 50%;
+                                border: 3px solid #60a5fa;
+                                transform: translate(-50%, -50%);
+                                z-index: 9999;
+                                pointer-events: none;
+                                box-shadow: 0 0 20px #60a5fa, inset 0 0 20px rgba(96, 165, 250, 0.3);
+                            `;
+                            document.body.appendChild(shield);
+                            
+                            gsap.to(shield, {
+                                width: 100,
+                                height: 100,
+                                opacity: 0,
+                                duration: 0.4,
+                                ease: 'power2.out',
+                                onComplete: () => shield.remove()
+                            });
+                            
+                            // 타겟 스프라이트 반짝임
+                            const targetSprite = el.querySelector('.enemy-sprite-img');
+                            if (targetSprite) {
+                                gsap.to(targetSprite, {
+                                    filter: 'brightness(1.4) drop-shadow(0 0 15px #60a5fa)',
+                                    duration: 0.15,
+                                    yoyo: true,
+                                    repeat: 1
+                                });
+                            }
+                        }
+                    });
+                }, delay);
+                
+                delay += 80;
+            });
+        });
+        
+        // 3단계: 복귀 (시전자)
+        timeline.to(sprite, {
+            filter: 'brightness(1)',
+            y: 0,
+            scale: 1,
+            duration: 0.4,
+            ease: 'power2.out'
+        }, '+=0.5');
+        
+        // 완료
+        timeline.call(() => {
+            if (onComplete) onComplete();
+        });
+    } else {
+        setTimeout(() => { if (onComplete) onComplete(); }, 600);
+    }
+});
+
+// ==========================================
 // 전역 등록
 // ==========================================
 window.MonsterAnimations = MonsterAnimations;

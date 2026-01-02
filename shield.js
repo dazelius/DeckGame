@@ -54,6 +54,9 @@ const ShieldSystem = {
             targetEl = document.getElementById('player');
             if (targetEl) {
                 targetEl.classList.add('block-flash', 'has-block');
+                // 🛡️ .player-character에도 추가!
+                const playerChar = targetEl.querySelector('.player-character');
+                if (playerChar) playerChar.classList.add('has-block');
                 setTimeout(() => targetEl.classList.remove('block-flash'), 300);
             }
         } else {
@@ -261,6 +264,9 @@ const ShieldSystem = {
         // 🛡️ 방어도 0이 되면 has-block 클래스 제거!
         if (containerEl) {
             containerEl.classList.remove('has-block');
+            // .player-character에서도 제거
+            const playerChar = containerEl.querySelector('.player-character');
+            if (playerChar) playerChar.classList.remove('has-block');
         }
         
         // 🎬 캔버스 유리창 깨지는 VFX 실행
@@ -335,6 +341,12 @@ const ShieldSystem = {
             let targetEl;
             if (isPlayer) {
                 targetEl = document.getElementById('player');
+                if (targetEl) {
+                    targetEl.classList.remove('has-block');
+                    // 🛡️ .player-character에서도 제거!
+                    const playerChar = targetEl.querySelector('.player-character');
+                    if (playerChar) playerChar.classList.remove('has-block');
+                }
             } else {
                 if (typeof gameState !== 'undefined' && gameState.enemies) {
                     const enemyIndex = gameState.enemies.indexOf(target);
@@ -345,9 +357,9 @@ const ShieldSystem = {
                 if (!targetEl) {
                     targetEl = document.querySelector('.enemy-unit:not(.dead)');
                 }
-            }
-            if (targetEl) {
-                targetEl.classList.remove('has-block');
+                if (targetEl) {
+                    targetEl.classList.remove('has-block');
+                }
             }
             
             console.log(`[Shield] ${this.getTargetName(target)} 방어도 소멸 (${previousBlock} -> 0)`);

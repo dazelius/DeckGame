@@ -88,8 +88,8 @@ const BreakSystem = {
             }
         }
         
-        // 위협 상태 해제
-        this.clearThreatState(enemy);
+        // 위협 상태 해제 (새 인텐트 전에 이전 상태 클리어)
+        this.clearThreatState(enemy, enemyIndex);
         
         // 인텐트에 breakRecipe가 있으면 설정
         if (intentData && intentData.breakRecipe && intentData.breakRecipe.length > 0) {
@@ -129,21 +129,28 @@ const BreakSystem = {
     // ==========================================
     // 위협 상태 해제
     // ==========================================
-    clearThreatState(enemy) {
-        const enemyIndex = gameState.enemies?.indexOf(enemy);
-        if (enemyIndex === -1) return;
+    clearThreatState(enemy, providedIndex = null) {
+        const enemyIndex = providedIndex !== null ? providedIndex : gameState.enemies?.indexOf(enemy);
+        if (enemyIndex === -1 || enemyIndex === undefined) return;
         
         const enemyEl = document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`);
         if (enemyEl) {
-            enemyEl.classList.remove('threat-active');
+            // ✅ 모든 위협 관련 클래스 제거
+            enemyEl.classList.remove('threat-active', 'intent-attack-strong');
             
             // 인텐트 원본 콘텐츠 복원용 속성 제거 (다음 인텐트에서 새로 추출하도록)
             const intentEl = enemyEl.querySelector('.enemy-intent-display');
             if (intentEl) {
                 intentEl.removeAttribute('data-original-text');
-                intentEl.classList.remove('danger-intent');
+                intentEl.classList.remove('danger-intent', 'intent-shattering');
             }
         }
+        
+        // 브레이크 관련 상태 초기화
+        enemy.currentBreakRecipe = null;
+        enemy.breakProgress = null;
+        enemy.breakShield = 0;
+        enemy.maxBreakShield = 0;
     },
     
     // ==========================================

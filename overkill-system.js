@@ -127,6 +127,38 @@ const OverkillSystem = {
             return false;
         }
         
+        // 🔴 즉시 모든 UI 요소 숨기기! (실제 클래스: enemy-hp-wrapper)
+        const hpWrapper = enemyEl.querySelector('.enemy-hp-wrapper');
+        if (hpWrapper) {
+            hpWrapper.style.display = 'none';
+            hpWrapper.style.visibility = 'hidden';
+            hpWrapper.style.opacity = '0';
+        }
+        const hpBarContainer = enemyEl.querySelector('.enemy-hp-bar-container');
+        if (hpBarContainer) {
+            hpBarContainer.style.display = 'none';
+            hpBarContainer.style.visibility = 'hidden';
+            hpBarContainer.style.opacity = '0';
+        }
+        const intentDisplay = enemyEl.querySelector('.enemy-intent-display');
+        if (intentDisplay) {
+            intentDisplay.style.display = 'none';
+            intentDisplay.style.visibility = 'hidden';
+        }
+        const passiveEl = enemyEl.querySelector('.monster-passive-indicator');
+        if (passiveEl) passiveEl.style.display = 'none';
+        const buffEl = enemyEl.querySelector('.enemy-buff-display');
+        if (buffEl) buffEl.style.display = 'none';
+        const statusEl = enemyEl.querySelector('.enemy-status-display');
+        if (statusEl) statusEl.style.display = 'none';
+        const blockEl = enemyEl.querySelector('.enemy-block-container');
+        if (blockEl) blockEl.style.display = 'none';
+        const nameLabel = enemyEl.querySelector('.enemy-name-label');
+        if (nameLabel) nameLabel.style.display = 'none';
+        
+        // dying 클래스 추가
+        enemyEl.classList.add('dying');
+        
         const overkillData = this.pendingOverkills.get(enemyIndex);
         console.log('[Overkill] pendingOverkills:', this.pendingOverkills.size, 'overkillData:', overkillData);
         
