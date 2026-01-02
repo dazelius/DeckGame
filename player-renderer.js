@@ -661,22 +661,57 @@ const PlayerRenderer = {
         }
     },
     
-    // 아웃라인 효과 (흰색 - 플레이어 구분)
-    applyOutlineEffect(sprite, container) {
+    // 아웃라인 + 글로우 효과 (DOM 스타일 재현)
+    applyOutlineEffect(sprite, container, hasBlock = false) {
         if (!sprite || !container) return;
         
         try {
-            // 기존 아웃라인 제거
-            const existingOutlines = container.children.filter(c => c.isOutline);
-            existingOutlines.forEach(o => {
+            // 기존 아웃라인/글로우 제거
+            const existingEffects = container.children.filter(c => c.isOutline || c.isGlow);
+            existingEffects.forEach(o => {
                 container.removeChild(o);
                 o.destroy();
             });
             
             if (!sprite.texture) return;
             
-            const outlineDistance = 3;
-            const outlineColor = 0xffffff;  // 흰색 (플레이어)
+            // 🎯 1. 파란색 글로우 (가장 뒤에 - 큰 범위)
+            const glowColor = hasBlock ? 0x3c96ff : 0x64b4ff;  // 방어막: 진한 파랑 / 기본: 연한 파랑
+            const glowAlpha = hasBlock ? 0.5 : 0.25;
+            const glowDistances = hasBlock ? [10, 15] : [8, 12];
+            
+            glowDistances.forEach(dist => {
+                const glow = new PIXI.Sprite(sprite.texture);
+                glow.anchor.set(sprite.anchor.x, sprite.anchor.y);
+                glow.x = 0;
+                glow.y = 0;
+                glow.tint = glowColor;
+                glow.alpha = glowAlpha;
+                glow.scale.set(1 + dist / 100);  // 살짝 확대
+                glow.zIndex = -3;
+                glow.isGlow = true;
+                container.addChild(glow);
+            });
+            
+            // 🎯 2. 흰색 글로우 (중간 - 밝은 빛)
+            if (!hasBlock) {
+                [5, 8].forEach(dist => {
+                    const whiteGlow = new PIXI.Sprite(sprite.texture);
+                    whiteGlow.anchor.set(sprite.anchor.x, sprite.anchor.y);
+                    whiteGlow.x = 0;
+                    whiteGlow.y = 0;
+                    whiteGlow.tint = 0xffffff;
+                    whiteGlow.alpha = 0.3;
+                    whiteGlow.scale.set(1 + dist / 150);
+                    whiteGlow.zIndex = -2;
+                    whiteGlow.isGlow = true;
+                    container.addChild(whiteGlow);
+                });
+            }
+            
+            // 🎯 3. 외곽선 (선명한 경계)
+            const outlineDistance = hasBlock ? 3 : 2;
+            const outlineColor = hasBlock ? 0x3c96ff : 0xffffff;  // 방어막: 파랑 / 기본: 흰색
             
             const directions = [
                 { x: outlineDistance, y: 0 },
@@ -695,30 +730,37 @@ const PlayerRenderer = {
                 outline.x = dir.x;
                 outline.y = dir.y;
                 outline.tint = outlineColor;
+                outline.alpha = 0.9;
                 outline.zIndex = -1;
                 outline.isOutline = true;
-                
                 container.addChild(outline);
             });
             
+            // 메인 스프라이트가 맨 위
             sprite.zIndex = 10;
             container.sortChildren();
             
-            console.log('[PlayerRenderer] ✅ 아웃라인 적용됨 (흰색)');
+            console.log(`[PlayerRenderer] ✅ 아웃라인+글로우 적용됨 (${hasBlock ? '방어막' : '기본'})`);
         } catch (e) {
             console.log('[PlayerRenderer] 아웃라인 에러:', e);
         }
     },
     
-    // 방어막 효과 (파란색 아웃라인)
+    // 방어막 효과 (파란색 아웃라인 + 강화 글로우)
     setBlockEffect(hasBlock) {
         if (!this.sprite || !this.playerContainer) return;
         
-        // 기존 아웃라인 제거 후 재적용
-        const existingOutlines = this.playerContainer.children.filter(c => c.isOutline);
-        existingOutlines.forEach(o => {
-            o.tint = hasBlock ? 0x3c96ff : 0xffffff;
-        });
+        // 전체 재적용 (글로우 색상도 변경해야 함)
+        this.applyOutlineEffect(this.sprite, this.playerContainer, hasBlock);
+        
+        // 플래시 효과
+        if (hasBlock && this.sprite) {
+            const originalTint = this.sprite.tint;
+            this.sprite.tint = 0x88ccff;
+            gsap.delayedCall(0.15, () => {
+                if (this.sprite) this.sprite.tint = originalTint || 0xffffff;
+            });
+        }
     },
     
     // ==========================================
