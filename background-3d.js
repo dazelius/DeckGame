@@ -164,47 +164,71 @@ const Background3D = {
         console.log('[Background3D] 던전 생성 완료');
     },
     
-    // 전경 레이어 (바닥 앞쪽에 잔해물)
+    // 전경 레이어 (별도 캔버스 - 캐릭터 위에 렌더링)
     addForeground() {
+        // 전경용 별도 씬, 카메라, 렌더러 생성
+        this.foreScene = new THREE.Scene();
+        this.foreCamera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 100);
+        this.foreCamera.position.copy(this.camera.position);
+        this.foreCamera.lookAt(0, 3, 0);
+        
+        // 전경용 렌더러 (별도 캔버스) - game-container 안에 추가
+        // battle-arena(5) < 전경(50) < bottom-area(500)
+        this.foreRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        this.foreRenderer.setSize(window.innerWidth, window.innerHeight);
+        this.foreRenderer.domElement.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+        `;
+        // game-container에 추가 (같은 stacking context)
+        const gameContainer = document.querySelector('.game-container');
+        if (gameContainer) {
+            gameContainer.appendChild(this.foreRenderer.domElement);
+        } else {
+            document.body.appendChild(this.foreRenderer.domElement);
+        }
+        
+        // 텍스처 로드
         const foreImg = new Image();
         foreImg.src = 'texture/dungeon_fore.png';
         
         foreImg.onload = () => {
-            console.log('[Background3D] 전경 텍스처 로드 성공 - 크기:', foreImg.width, 'x', foreImg.height);
+            console.log('[Background3D] 전경 텍스처 로드 성공:', foreImg.width, 'x', foreImg.height);
+            
             const tex = new THREE.CanvasTexture(foreImg);
             tex.magFilter = THREE.NearestFilter;
             tex.minFilter = THREE.NearestFilter;
             
-            // 이미지 비율 계산
+            // 이미지 비율 계산 - 크기 키움
             const aspect = foreImg.width / foreImg.height;
-            const width = 120;
+            const width = 35;  // 크기 키움
             const height = width / aspect;
             
-            const foreMat = new THREE.MeshBasicMaterial({
-                map: tex,
-                transparent: true,
-                side: THREE.DoubleSide,
-                depthWrite: false,
-                fog: false
-            });
-            
-            // 전경 평면 - 바닥에 눕혀서 앞쪽에 배치
-            const foreground = new THREE.Mesh(
+            // 전경 메시 생성
+            const foreMesh = new THREE.Mesh(
                 new THREE.PlaneGeometry(width, height),
-                foreMat
+                new THREE.MeshBasicMaterial({
+                    map: tex,
+                    transparent: true,
+                    side: THREE.DoubleSide
+                })
             );
-            // 바닥처럼 눕히고 바닥 앞쪽(카메라 가까이)에 배치
-            foreground.rotation.x = -Math.PI / 2;
-            foreground.position.set(0, 0.1, 25);  // 바닥 위, 카메라 앞쪽
-            foreground.renderOrder = 999;
-            this.dungeonGroup.add(foreground);
             
-            this.foreground = foreground;
-            console.log('[Background3D] 전경 추가됨 - 바닥에 눕힘, 위치:', foreground.position);
+            // 화면 하단에 배치 - 더 아래로
+            foreMesh.position.set(0, height/2 - 5, 6);
+            
+            this.foreScene.add(foreMesh);
+            this.foreMesh = foreMesh;
+            console.log('[Background3D] 전경 메시 추가됨 (별도 레이어) - 크기:', width, 'x', height);
         };
         
         foreImg.onerror = () => {
-            console.log('[Background3D] 전경 텍스처 없음 (texture/dungeon_fore.png)');
+            console.log('[Background3D] 전경 텍스처 로드 실패 (texture/dungeon_fore.png)');
         };
     },
     
@@ -497,6 +521,14 @@ const Background3D = {
         
         // 렌더링
         this.renderer.render(this.scene, this.camera);
+        
+        // 전경 렌더링 (별도 레이어)
+        if (this.foreRenderer && this.foreScene && this.foreCamera) {
+            // 전경 카메라도 메인 카메라와 동기화
+            this.foreCamera.position.copy(this.camera.position);
+            this.foreCamera.lookAt(this.camera.position.x * 0.5, 3, -5);
+            this.foreRenderer.render(this.foreScene, this.foreCamera);
+        }
     },
     
     // ==========================================
