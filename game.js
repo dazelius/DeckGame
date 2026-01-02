@@ -4282,9 +4282,15 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
                 
                 // 완료 콜백 + 3D 위치 동기화
                 setTimeout(() => {
-                    // ✅ Background3D 3D 배치 재적용 (사슬낫과 통일)
-                    if (typeof Background3D !== 'undefined' && Background3D.updateAllEnemyPositions) {
-                        Background3D.updateAllEnemyPositions(false);
+                    // ✅ 모든 적의 GSAP transform 초기화
+                    const allEnemyEls = document.querySelectorAll('.enemy-unit');
+                    allEnemyEls.forEach(el => {
+                        gsap.set(el, { x: 0, y: 0, scale: 1, opacity: 1, clearProps: 'x,y' });
+                    });
+                    
+                    // ✅ Background3D 전체 재적용 (가장 확실한 방법)
+                    if (typeof Background3D !== 'undefined' && Background3D.applyGameParallax) {
+                        Background3D.applyGameParallax();
                     }
                     updateSelectedEnemy();
                     onRetreatComplete();
@@ -4457,9 +4463,15 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
                 
                 // 완료 콜백 + 3D 위치 동기화
                 setTimeout(() => {
-                    // ✅ Background3D 3D 배치 재적용 (사슬낫과 통일)
-                    if (typeof Background3D !== 'undefined' && Background3D.updateAllEnemyPositions) {
-                        Background3D.updateAllEnemyPositions(false);
+                    // ✅ 모든 적의 GSAP transform 초기화
+                    const allEnemyEls = document.querySelectorAll('.enemy-unit');
+                    allEnemyEls.forEach(el => {
+                        gsap.set(el, { x: 0, y: 0, scale: 1, opacity: 1, clearProps: 'x,y' });
+                    });
+                    
+                    // ✅ Background3D 전체 재적용 (가장 확실한 방법)
+                    if (typeof Background3D !== 'undefined' && Background3D.applyGameParallax) {
+                        Background3D.applyGameParallax();
                     }
                     updateSelectedEnemy();
                     onAdvanceComplete();
