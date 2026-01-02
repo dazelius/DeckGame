@@ -673,7 +673,7 @@ const EnemyRenderer = {
         `;
     },
     
-    // 브레이크 게이지 HTML (기존 스타일)
+    // 브레이크 게이지 HTML (풍부한 UI 복원!)
     getBreakGaugeHTML(enemy) {
         // 브레이크 가능한 인텐트가 있는지 확인
         const hasBreakable = typeof BreakSystem !== 'undefined' && 
@@ -691,7 +691,28 @@ const EnemyRenderer = {
         const current = progress.length;
         const percent = total > 0 ? (current / total) * 100 : 0;
         
+        // 속성 아이콘 매핑
+        const ElementIcons = {
+            physical: '⚔️',
+            fire: '🔥',
+            ice: '❄️',
+            lightning: '⚡',
+            bleed: '🩸',
+            poison: '☠️',
+            magic: '✨',
+            dark: '🌑'
+        };
+        
+        // 레시피 아이콘 생성
+        const recipeIcons = recipe.map((element, i) => {
+            const icon = ElementIcons[element] || '❓';
+            const isHit = i < current;
+            const isCurrent = i === current;
+            return `<span class="recipe-slot ${isHit ? 'hit' : ''} ${isCurrent ? 'current' : ''}">${icon}</span>`;
+        }).join('');
+        
         return `
+            <div class="break-recipe-row">${recipeIcons}</div>
             <div class="break-gauge-bar">
                 <div class="break-gauge-fill" style="width: ${percent}%"></div>
             </div>
@@ -1993,18 +2014,81 @@ enemyRendererStyles.textContent = `
        ======================================== */
     .pixi-break {
         width: 100%;
-        margin-top: -2px;
+        margin-top: 2px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+    }
+    
+    /* 레시피 아이콘 행 */
+    .pixi-break .break-recipe-row {
+        display: flex;
+        gap: 3px;
+        justify-content: center;
+        padding: 3px 6px;
+        background: linear-gradient(180deg, rgba(50, 30, 10, 0.95) 0%, rgba(30, 15, 5, 0.98) 100%);
+        border: 1px solid rgba(251, 191, 36, 0.5);
+        border-radius: 4px;
+        box-shadow: 0 0 8px rgba(251, 191, 36, 0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+    
+    .pixi-break .recipe-slot {
+        font-size: 14px;
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid rgba(100, 100, 100, 0.5);
+        border-radius: 3px;
+        opacity: 0.5;
+        filter: grayscale(0.8);
+        transition: all 0.3s ease;
+    }
+    
+    .pixi-break .recipe-slot.hit {
+        opacity: 1;
+        filter: grayscale(0) brightness(1.2);
+        border-color: #22c55e;
+        background: rgba(34, 197, 94, 0.3);
+        box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+        animation: recipeHit 0.3s ease-out;
+    }
+    
+    .pixi-break .recipe-slot.current {
+        opacity: 1;
+        filter: grayscale(0);
+        border-color: #fbbf24;
+        animation: recipePulse 1s ease-in-out infinite;
+    }
+    
+    @keyframes recipeHit {
+        0% { transform: scale(1.5); }
+        50% { transform: scale(0.9); }
+        100% { transform: scale(1); }
+    }
+    
+    @keyframes recipePulse {
+        0%, 100% { 
+            box-shadow: 0 0 4px rgba(251, 191, 36, 0.5);
+            transform: scale(1);
+        }
+        50% { 
+            box-shadow: 0 0 12px rgba(251, 191, 36, 1);
+            transform: scale(1.1);
+        }
     }
     
     .pixi-break .break-gauge-bar {
         position: relative;
         width: 100%;
-        height: 5px;
+        height: 6px;
         background: rgba(0, 0, 0, 0.9);
-        border-radius: 0 0 4px 4px;
+        border-radius: 3px;
         overflow: hidden;
         border: 1px solid rgba(251, 191, 36, 0.4);
-        border-top: none;
     }
     
     .pixi-break .break-gauge-fill {
