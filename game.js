@@ -755,7 +755,7 @@ function renderEnemies(withEntrance = true) {
     // 오른쪽 미니언 컨테이너
     const rightContainer = document.createElement('div');
     rightContainer.className = 'minions-right';
-    rightMinions.forEach(minion => {
+    rightMinions.forEach((minion) => {
         const index = gameState.enemies.indexOf(minion);
         const enemyEl = createEnemyElement(minion, index);
         applyEntranceAnimation(enemyEl, index, withEntrance, minion);
@@ -1133,11 +1133,16 @@ function updateEnemiesUI() {
                 passiveEl.style.visibility = 'hidden';
             }
             
-            // 버프/디버프 숨기기
-            const buffEl = enemyEl.querySelector('.enemy-buff-display');
+            // 버프/디버프 숨기기 (실제 클래스: buff-container)
+            const buffEl = enemyEl.querySelector('.buff-container');
             if (buffEl) {
                 buffEl.style.display = 'none';
                 buffEl.style.visibility = 'hidden';
+            }
+            const buffEl2 = enemyEl.querySelector('.enemy-buff-display');
+            if (buffEl2) {
+                buffEl2.style.display = 'none';
+                buffEl2.style.visibility = 'hidden';
             }
             
             const statusEl = enemyEl.querySelector('.enemy-status-display');
@@ -2511,6 +2516,12 @@ function checkEnemyDefeated() {
                     passiveEl.style.visibility = 'hidden';
                 }
                 
+                // 버프 컨테이너 숨기기 (실제 클래스: buff-container)
+                const buffContainer = enemyEl.querySelector('.buff-container');
+                if (buffContainer) {
+                    buffContainer.style.display = 'none';
+                    buffContainer.style.visibility = 'hidden';
+                }
                 const buffEl = enemyEl.querySelector('.enemy-buff-display');
                 if (buffEl) {
                     buffEl.style.display = 'none';
@@ -3991,7 +4002,49 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
                 }
             }
         } else {
+            // 🚫 치유 대상 없음 - 실패 연출
             addLog(`${name}: 치유할 대상이 없습니다...`, 'system');
+            
+            // 실패 연출: 캐스팅 후 실패
+            if (enemyEl) {
+                const sprite = enemyEl.querySelector('.enemy-sprite-img');
+                if (sprite) {
+                    // 주문 시전 준비 포즈
+                    sprite.style.transition = 'transform 0.3s, filter 0.3s';
+                    sprite.style.transform = 'scale(1.05)';
+                    sprite.style.filter = 'brightness(1.3) hue-rotate(90deg)';
+                    
+                    setTimeout(() => {
+                        // 실패! 원래대로 + 흔들림
+                        sprite.style.transform = 'scale(1) translateX(-5px)';
+                        sprite.style.filter = 'brightness(0.7) grayscale(0.5)';
+                        
+                        // 실패 텍스트 표시
+                        const failText = document.createElement('div');
+                        failText.className = 'damage-popup heal-fail';
+                        failText.textContent = '실패!';
+                        failText.style.cssText = `
+                            position: absolute;
+                            top: 30%;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            color: #888;
+                            font-size: 1.2rem;
+                            font-weight: bold;
+                            text-shadow: 0 0 5px rgba(0,0,0,0.8);
+                            animation: damagePopup 1s ease-out forwards;
+                            z-index: 100;
+                        `;
+                        enemyEl.appendChild(failText);
+                        setTimeout(() => failText.remove(), 1000);
+                        
+                        setTimeout(() => {
+                            sprite.style.transform = '';
+                            sprite.style.filter = '';
+                        }, 300);
+                    }, 400);
+                }
+            }
         }
     } else if (intent === 'healSelf') {
         // 자기 자신만 회복

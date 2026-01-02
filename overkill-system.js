@@ -147,6 +147,9 @@ const OverkillSystem = {
         }
         const passiveEl = enemyEl.querySelector('.monster-passive-indicator');
         if (passiveEl) passiveEl.style.display = 'none';
+        // 버프 컨테이너 숨기기 (실제 클래스: buff-container)
+        const buffContainer = enemyEl.querySelector('.buff-container');
+        if (buffContainer) buffContainer.style.display = 'none';
         const buffEl = enemyEl.querySelector('.enemy-buff-display');
         if (buffEl) buffEl.style.display = 'none';
         const statusEl = enemyEl.querySelector('.enemy-status-display');

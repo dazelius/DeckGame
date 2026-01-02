@@ -111,6 +111,7 @@ html, body {
     width: 100%;
     scrollbar-width: none;  /* Firefox */
     -ms-overflow-style: none;  /* IE/Edge */
+    background: transparent !important;
 }
 
 html::-webkit-scrollbar,
@@ -120,7 +121,7 @@ body::-webkit-scrollbar {
 
 body {
     font-family: 'Noto Sans KR', sans-serif;
-    background: var(--bg-primary);
+    background: transparent;
     min-height: 100vh;
     color: var(--text-normal);
     user-select: none;
@@ -151,10 +152,8 @@ img {
     position: relative;
     display: flex;
     flex-direction: column;
-    background-image: url('bg.png');
-    background-size: 100%;
-    background-position: center -80%;
-    background-repeat: no-repeat;
+    background: transparent;
+    z-index: 1;
     /* 게임 캔버스 드래그 방지 */
     user-select: none;
     -webkit-user-select: none;
@@ -185,16 +184,21 @@ img {
 }
 
 /* 3-레이어 배경 시스템 */
+/* 2D 배경 비활성화 - 3D 배경 사용 */
 .battle-background {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    overflow: hidden;
+    display: none !important;
 }
 
-/* 공통 배경 레이어 스타일 */
-.bg-layer {
+/* 2D 배경 레이어 비활성화 - 3D 배경 사용 */
+.bg-layer,
+.bg-sky,
+.bg-wall,
+.bg-floor {
+    display: none !important;
+}
+
+/* 공통 배경 레이어 스타일 (비활성화됨) */
+.bg-layer-disabled {
     position: absolute;
     left: 0;
     right: 0;
@@ -412,9 +416,14 @@ img {
     justify-content: center;
     gap: 60px;
     padding: 20px 60px;
-    padding-bottom: 130px; /* 카드 영역과 겹치지 않도록 */
+    padding-bottom: 130px;
     position: relative;
     z-index: 5;
+    /* 3D 좌표계 */
+    transform-style: preserve-3d;
+    perspective: 800px;
+    perspective-origin: 50% 70%;
+    transition: transform 0.15s ease-out;
 }
 
 /* 전투자 공통 스타일 */
@@ -431,15 +440,21 @@ img {
 .player-side {
     justify-content: center;
     align-items: flex-end;
+    /* 3D 좌표계 */
+    transform-style: preserve-3d;
 }
 
 /* 적 영역 - 다중 적 지원 */
 .enemy-area {
     max-width: 600px;
     position: relative;
-    justify-content: center;
-    align-items: flex-end;
-    margin-top: 80px; /* 플레이어와 바닥선 맞춤 */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    margin-top: 80px;
+    /* 3D 좌표계 */
+    transform-style: preserve-3d;
 }
 
 .character-container {
@@ -515,8 +530,11 @@ img {
 
 /* 플레이어 위치 - 바닥선 정렬 (translateY 제거) */
 #player {
-    /* 몬스터와 동일한 바닥선에 정렬 */
-    transform: none;
+    /* 3D 좌표계 */
+    transform-style: preserve-3d;
+    transition: transform 0.2s ease-out;
+    will-change: transform;
+    backface-visibility: hidden;
 }
 
 .player-shadow {
@@ -4290,7 +4308,11 @@ body .card-drag-ghost.can-drop {
     display: flex;
     gap: var(--unit-gap);
     justify-content: center;
-    align-items: flex-end; /* 바닥선 정렬 */
+    align-items: flex-end;
+    position: relative;
+    z-index: 5;
+    /* 3D 좌표계 */
+    transform-style: preserve-3d;
 }
 
 /* 보스 중앙 배치 레이아웃 */
@@ -4331,12 +4353,15 @@ body .card-drag-ghost.can-drop {
     flex-direction: column;
     align-items: center;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: transform 0.2s ease-out, filter 0.3s ease;
     padding: 5px;
     border-radius: 15px;
     position: relative;
     transform-origin: center bottom;
-    /* 스프라이트 + 인텐트 + 정보를 포함한 전체 유닛 */
+    /* 3D 좌표계 */
+    transform-style: preserve-3d;
+    will-change: transform;
+    backface-visibility: hidden;
 }
 
 /* 보스 스타일 */
@@ -4347,6 +4372,149 @@ body .card-drag-ghost.can-drop {
 /* 미니언 스타일 */
 .enemy-unit.minion {
     padding: 2px;
+}
+
+/* ========================================
+   🔥 기믹 컨테이너 스타일 (뒷줄 - 원근감)
+   ======================================== */
+.gimmicks-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 80px;
+    margin-bottom: -100px;
+    padding: 0;
+    z-index: 1;
+    position: relative;
+    pointer-events: auto;
+    transform: scale(0.85);
+    filter: brightness(0.9);
+}
+
+/* ========================================
+   🔥 기믹 유닛 스타일
+   ======================================== */
+.gimmick-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 12px;
+    position: relative;
+    z-index: 1;
+    transition: transform 0.2s ease-out, filter 0.3s ease;
+    /* 3D 좌표계 */
+    transform-style: preserve-3d;
+    will-change: transform;
+    backface-visibility: hidden;
+}
+
+.gimmick-unit:hover {
+    filter: brightness(1.2);
+}
+
+.gimmick-sprite-img {
+    width: 153px;
+    height: 153px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 8px rgba(255, 165, 0, 0.5));
+    transition: all 0.2s ease;
+    image-rendering: pixelated;
+}
+
+.gimmick-unit:hover .gimmick-sprite-img {
+    filter: drop-shadow(0 0 15px rgba(255, 165, 0, 0.8));
+}
+
+.gimmick-unit.drop-target .gimmick-sprite-img,
+.gimmick-unit.drop-target-active .gimmick-sprite-img {
+    filter: drop-shadow(0 0 20px rgba(255, 100, 0, 1));
+    animation: gimmickPulse 0.5s ease-in-out infinite;
+}
+
+@keyframes gimmickPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+}
+
+.gimmick-hp-wrapper {
+    margin-top: 8px;
+    width: 120px;
+}
+
+.gimmick-hp-bar-container {
+    width: 100%;
+    height: 10px;
+    background: #1a1a2e;
+    border: 1px solid #fb923c;
+    border-radius: 5px;
+    overflow: hidden;
+    position: relative;
+}
+
+.gimmick-hp-bar {
+    height: 100%;
+    background: linear-gradient(to right, #fb923c, #f97316);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.gimmick-hp-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.6rem;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 0 2px #000;
+}
+
+.gimmick-name-label {
+    margin-top: 3px;
+    font-size: 0.7rem;
+    color: #fbbf24;
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(0,0,0,0.8);
+}
+
+.gimmick-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(20, 20, 40, 0.95);
+    border: 1px solid #fb923c;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.75rem;
+    color: #fff;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    z-index: 100;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+}
+
+.gimmick-unit.hit-effect .gimmick-sprite-img {
+    animation: gimmickHit 0.2s ease;
+}
+
+@keyframes gimmickHit {
+    0%, 100% { filter: brightness(1) drop-shadow(0 0 8px rgba(255, 165, 0, 0.5)); }
+    50% { filter: brightness(2) drop-shadow(0 0 20px rgba(255, 255, 255, 0.8)); }
+}
+
+.gimmick-unit.gimmick-destroyed .gimmick-sprite-img {
+    animation: gimmickExplode 0.5s ease-out;
+}
+
+@keyframes gimmickExplode {
+    0% { transform: scale(1); filter: brightness(1); }
+    30% { transform: scale(1.3); filter: brightness(3); }
+    100% { transform: scale(0.5); opacity: 0; filter: brightness(5); }
 }
 
 /* 몬스터 호버 효과 제거됨 - 전투 중 불필요 */
@@ -4400,9 +4568,11 @@ body .card-drag-ghost.can-drop {
 .enemy-unit.dying .enemy-hp-wrapper,
 .enemy-unit.dying .enemy-hp-bar-container,
 .enemy-unit.dying .enemy-name-label,
+.enemy-unit.dying .buff-container,
 .enemy-unit.dead .enemy-intent-display,
 .enemy-unit.dead .monster-passive-indicator,
 .enemy-unit.dead .enemy-buff-display,
+.enemy-unit.dead .buff-container,
 .enemy-unit.dead .enemy-status-display,
 .enemy-unit.dead .enemy-block-container,
 .enemy-unit.dead .enemy-hp-wrapper,

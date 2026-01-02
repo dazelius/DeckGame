@@ -21,11 +21,11 @@
     opacity: 0;
 }
 
-/* 배경 */
+/* 배경 - 3D 배경 위에 반투명 오버레이 */
 .title-background {
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, #0a0a12 0%, #1a1a2e 50%, #0d0d1a 100%);
+    background: linear-gradient(180deg, rgba(10, 10, 18, 0.7) 0%, rgba(26, 26, 46, 0.5) 50%, rgba(13, 13, 26, 0.7) 100%);
     overflow: hidden;
 }
 

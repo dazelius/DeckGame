@@ -182,6 +182,11 @@ const TitleSystem = {
         
         // 🖼️ 이미지 프리로드 시작
         this.startImagePreload();
+        
+        // 🎨 3D 배경 초기화
+        if (typeof Background3D !== 'undefined') {
+            Background3D.init();
+        }
     },
     
     // 이미지 프리로드 (LoadingScreen에서 처리)
@@ -951,12 +956,25 @@ const TitleSystem = {
         this.hideTitle();
         
         setTimeout(() => {
-            // MapSystem의 몬스터 테스트 메뉴 표시
-            if (typeof MapSystem !== 'undefined' && MapSystem.showMonsterTestMenu) {
+            // BattleTestSystem 사용 (battle-test.js)
+            if (typeof BattleTestSystem !== 'undefined') {
+                BattleTestSystem.showTestMenu({
+                    hideMap: () => {
+                        // 게임 컨테이너 표시
+                        const gameContainer = document.querySelector('.game-container');
+                        if (gameContainer) {
+                            gameContainer.style.display = 'flex';
+                        }
+                    },
+                    onClose: () => this.show()
+                });
+            } else if (typeof MapSystem !== 'undefined' && MapSystem.showMonsterTestMenu) {
+                // 폴백: MapSystem 사용
                 MapSystem.showMonsterTestMenu();
             } else {
-                // MapSystem이 없으면 직접 구현
-                this.showBattleTestModal();
+                console.error('[Title] BattleTestSystem을 찾을 수 없습니다!');
+                alert('전투 테스트 시스템을 찾을 수 없습니다.');
+                this.show();
             }
         }, 300);
     },
