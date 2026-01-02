@@ -14,7 +14,7 @@ const EnemyRenderer = {
     // 슬롯 설정
     config: {
         slotSpacing: 180,      // 슬롯 간격 (넓게)
-        baseY: 200,            // 기본 Y 위치
+        baseY: 100,            // 기본 Y 위치
         baseScale: 0.35,       // 기본 스케일 (작게!)
         depthScale: 0.85,      // 깊이에 따른 스케일 감소
         maxSlots: 5            // 최대 슬롯 수
@@ -170,7 +170,7 @@ const EnemyRenderer = {
     getSlotY(slotIndex) {
         // ✅ 모든 적 같은 Y 위치 (나란히 배치)
         const appHeight = this.app?.renderer?.height || 600;
-        return appHeight * 0.52;  // 화면 높이의 52% 위치 (HP HUD 공간 확보)
+        return appHeight * 0.62;  // 화면 높이의 62% 위치 (인텐트 공간 확보)
     },
     
     getSlotScale(slotIndex, enemy = null) {
