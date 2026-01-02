@@ -299,11 +299,9 @@ const EnemyRenderer = {
         enemyContainer.buttonMode = true;
         enemyContainer.cursor = 'pointer';
         
-        // 이벤트 연결
+        // 클릭 이벤트만 연결
         const enemyRef = enemy;
         enemyContainer.on('pointerdown', () => this.onEnemyClick(enemyRef));
-        enemyContainer.on('pointerover', () => this.onEnemyHover(enemyRef, true));
-        enemyContainer.on('pointerout', () => this.onEnemyHover(enemyRef, false));
         
         // ✅ 아웃라인 효과 (스프라이트 복제 방식)
         this.applyOutlineEffect(sprite, enemyContainer);
@@ -472,30 +470,6 @@ const EnemyRenderer = {
             if (index !== -1) {
                 selectEnemy(index);
             }
-        }
-    },
-    
-    onEnemyHover(enemy, isOver) {
-        const enemyId = enemy.pixiId || enemy.id || enemy.name;
-        const data = this.sprites.get(enemyId);
-        
-        if (!data) return;
-        
-        if (isOver) {
-            // 호버 효과
-            gsap.to(data.container.scale, {
-                x: data.container.scale.x * 1.05,
-                y: data.container.scale.y * 1.05,
-                duration: 0.1
-            });
-        } else {
-            // 원래 스케일로
-            const targetScale = this.getSlotScale(data.slotIndex);
-            gsap.to(data.container.scale, {
-                x: targetScale,
-                y: targetScale,
-                duration: 0.1
-            });
         }
     },
     
