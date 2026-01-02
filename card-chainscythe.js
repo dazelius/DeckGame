@@ -22,11 +22,6 @@ const ChainScytheSystem = {
         
         // 끌어오기 연출 실행 (연출 끝나면 위치 교환)
         this.playPullAnimation(targetIndex, targetEnemy, () => {
-            const container = document.getElementById('enemies-container');
-            const enemyEls = container ? Array.from(container.querySelectorAll('.enemy-unit')) : [];
-            const targetEl = enemyEls[targetIndex];
-            const firstEl = enemyEls[0];
-            
             // 위치 교환: 타겟을 첫 번째로 (배열 순서만 바꿈)
             const firstEnemy = gameState.enemies[0];
             gameState.enemies[0] = targetEnemy;
@@ -34,54 +29,20 @@ const ChainScytheSystem = {
             
             console.log(`[ChainScythe] ${targetEnemy.name}을(를) 첫 번째 위치로 끌어옴!`);
             
-            // 자연스러운 위치 스왑 애니메이션
-            if (targetEl && firstEl && typeof gsap !== 'undefined') {
-                const targetRect = targetEl.getBoundingClientRect();
-                const firstRect = firstEl.getBoundingClientRect();
-                const swapDist = targetRect.left - firstRect.left;
-                
-                // 첫 번째 적이 타겟 위치로 이동
-                gsap.to(firstEl, {
-                    x: swapDist,
-                    duration: 0.25,
-                    ease: 'power2.out'
-                });
-                
-                // 타겟이 첫 번째 위치로 (이미 거기 있으니 살짝 반동만)
-                gsap.to(targetEl, {
-                    x: -swapDist,
-                    duration: 0.25,
-                    ease: 'power2.out',
-                    onComplete: () => {
-                        // 애니메이션 끝나면 실제 DOM 재렌더링
-                        gsap.set([targetEl, firstEl], { clearProps: 'x' });
-                        
-                        if (typeof renderEnemies === 'function') {
-                            renderEnemies(false);
-                        }
-                        
-                        // 브레이크 상태 복원
-                        this.restoreBreakStates();
-                        
-                        // 전체 UI 업데이트
-                        if (typeof updateUI === 'function') {
-                            updateUI();
-                        }
-                        
-                        if (onComplete) onComplete();
-                    }
-                });
-            } else {
-                // GSAP 없거나 요소 없으면 그냥 진행
-                if (typeof renderEnemies === 'function') {
-                    renderEnemies(false);
-                }
-                this.restoreBreakStates();
-                if (typeof updateUI === 'function') {
-                    updateUI();
-                }
-                if (onComplete) onComplete();
+            // 바로 재렌더링 (애니메이션에서 이미 위치 이동 완료됨)
+            if (typeof renderEnemies === 'function') {
+                renderEnemies(false);
             }
+            
+            // 브레이크 상태 복원
+            this.restoreBreakStates();
+            
+            // 전체 UI 업데이트
+            if (typeof updateUI === 'function') {
+                updateUI();
+            }
+            
+            if (onComplete) onComplete();
         });
         
         return true;
@@ -323,20 +284,20 @@ const ChainScytheSystem = {
                         const dmg = point.isFinal ? 5 : 2;
                         this.showCollisionDamage(point.el, dmg);
                         
-                        // 충돌당한 적 밀림
+                        // 충돌당한 적 밀림 (빠르게 복귀)
                         gsap.to(point.el, {
-                            x: point.isFinal ? -60 : -30,
-                            rotation: point.isFinal ? -10 : -5,
+                            x: point.isFinal ? -40 : -20,
+                            rotation: point.isFinal ? -8 : -4,
                             filter: 'brightness(2)',
-                            duration: 0.08,
+                            duration: 0.06,
                             ease: 'power3.out',
                             onComplete: () => {
                                 gsap.to(point.el, {
                                     x: 0,
                                     rotation: 0,
                                     filter: 'brightness(1)',
-                                    duration: 0.3,
-                                    ease: 'elastic.out(1, 0.5)'
+                                    duration: 0.15,
+                                    ease: 'power2.out'
                                 });
                             }
                         });
@@ -347,13 +308,10 @@ const ChainScytheSystem = {
                 });
                 
                 if (progress >= 1) {
-                    phase = 'done';
-                    progress = 0;
-                    
-                    // 빠르게 사슬 제거
+                    // 완료! 사슬 제거
                     gsap.to(chainContainer, {
                         alpha: 0,
-                        duration: 0.15,
+                        duration: 0.1,
                         onComplete: () => {
                             if (chainContainer.parent) {
                                 pixi.effectsContainer.removeChild(chainContainer);
@@ -362,25 +320,14 @@ const ChainScytheSystem = {
                         }
                     });
                     
-                    // 타겟 탄성 반동!
-                    gsap.to(targetEl, {
-                        x: '+=20', // 살짝 튕김
-                        duration: 0.08,
-                        ease: 'power2.out',
-                        onComplete: () => {
-                            gsap.to(targetEl, {
-                                x: 0,
-                                filter: 'brightness(1)',
-                                duration: 0.15,
-                                ease: 'power2.inOut',
-                                onComplete: () => {
-                                    gsap.set(targetEl, { clearProps: 'all' });
-                                    if (onComplete) onComplete();
-                                }
-                            });
-                        }
+                    // 모든 적 스타일 초기화
+                    gsap.set(targetEl, { clearProps: 'all' });
+                    collisionPoints.forEach(p => {
+                        if (p.el) gsap.set(p.el, { clearProps: 'all' });
                     });
                     
+                    // 바로 콜백
+                    if (onComplete) onComplete();
                     return; // 애니메이션 종료
                 }
             }
