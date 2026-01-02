@@ -1050,6 +1050,174 @@ const EnemyRenderer = {
         }
     },
     
+    // ==========================================
+    // 공격 애니메이션 (PixiJS 전용)
+    // ==========================================
+    playAttackAnimation(enemy, attackType = 'melee', damage = 0) {
+        const enemyId = enemy.pixiId || enemy.id || enemy.name;
+        const data = this.sprites.get(enemyId);
+        
+        if (!data || !data.container) {
+            console.log('[EnemyRenderer] playAttackAnimation: 스프라이트 없음', enemyId);
+            return;
+        }
+        
+        const container = data.container;
+        const sprite = data.sprite;
+        const originalX = container.x;
+        const originalY = container.y;
+        const originalScaleX = container.scale.x;
+        const originalScaleY = container.scale.y;
+        
+        // 숨쉬기 애니메이션 일시 중지
+        if (container.breathingTween) {
+            container.breathingTween.pause();
+        }
+        
+        if (typeof gsap === 'undefined') return;
+        
+        console.log('[EnemyRenderer] playAttackAnimation:', attackType, damage);
+        
+        const tl = gsap.timeline({
+            onComplete: () => {
+                // 복귀 후 숨쉬기 재개
+                setTimeout(() => {
+                    if (container.breathingTween) {
+                        container.breathingTween.resume();
+                    }
+                }, 100);
+            }
+        });
+        
+        // 공격 타입별 애니메이션
+        if (attackType === 'melee') {
+            // 근접 공격: 앞으로 돌진 후 복귀
+            const dashDistance = -150;  // 플레이어 방향 (왼쪽)
+            
+            // 1️⃣ 준비 자세 (뒤로 살짝)
+            tl.to(container, {
+                x: originalX + 30,
+                duration: 0.1,
+                ease: 'power2.in'
+            })
+            .to(container.scale, {
+                x: originalScaleX * 0.9,
+                y: originalScaleY * 1.1,
+                duration: 0.1,
+                ease: 'power2.in'
+            }, '<');
+            
+            // 2️⃣ 돌진!
+            tl.to(container, {
+                x: originalX + dashDistance,
+                duration: 0.12,
+                ease: 'power4.in'
+            })
+            .to(container.scale, {
+                x: originalScaleX * 1.3,
+                y: originalScaleY * 0.8,
+                duration: 0.12,
+                ease: 'power4.in'
+            }, '<');
+            
+            // 3️⃣ 히트스탑 (잠시 멈춤)
+            tl.to(container, {
+                duration: 0.08
+            });
+            
+            // 4️⃣ 복귀 (탄성)
+            tl.to(container, {
+                x: originalX,
+                duration: 0.25,
+                ease: 'elastic.out(1, 0.5)'
+            })
+            .to(container.scale, {
+                x: originalScaleX,
+                y: originalScaleY,
+                duration: 0.25,
+                ease: 'elastic.out(1, 0.5)'
+            }, '<');
+            
+            // Tint 플래시 (공격 강조)
+            if (sprite && sprite.tint !== undefined) {
+                gsap.to(sprite, {
+                    duration: 0.1,
+                    onStart: () => { sprite.tint = 0xffcccc; },
+                    onComplete: () => { sprite.tint = 0xffffff; }
+                });
+            }
+            
+        } else if (attackType === 'ranged') {
+            // 원거리 공격: 손 내밀기
+            tl.to(container, {
+                x: originalX - 20,
+                duration: 0.15,
+                ease: 'power2.out'
+            })
+            .to(container.scale, {
+                x: originalScaleX * 1.1,
+                duration: 0.15,
+                ease: 'power2.out'
+            }, '<');
+            
+            // 발사 후 복귀
+            tl.to(container, {
+                x: originalX,
+                duration: 0.2,
+                ease: 'power2.out'
+            }, '+=0.1')
+            .to(container.scale, {
+                x: originalScaleX,
+                duration: 0.2,
+                ease: 'power2.out'
+            }, '<');
+            
+        } else if (attackType === 'magic') {
+            // 마법 공격: 팽창 + 글로우
+            tl.to(container, {
+                y: originalY - 15,
+                duration: 0.3,
+                ease: 'power2.out'
+            })
+            .to(container.scale, {
+                x: originalScaleX * 1.15,
+                y: originalScaleY * 1.15,
+                duration: 0.3,
+                ease: 'power2.out'
+            }, '<');
+            
+            // 마법 방출
+            tl.to(container.scale, {
+                x: originalScaleX * 0.95,
+                y: originalScaleY * 0.95,
+                duration: 0.1,
+                ease: 'power4.in'
+            });
+            
+            // 복귀
+            tl.to(container, {
+                y: originalY,
+                duration: 0.3,
+                ease: 'power2.out'
+            })
+            .to(container.scale, {
+                x: originalScaleX,
+                y: originalScaleY,
+                duration: 0.3,
+                ease: 'power2.out'
+            }, '<');
+            
+            // Tint 플래시 (마법 색상)
+            if (sprite && sprite.tint !== undefined) {
+                gsap.to(sprite, {
+                    duration: 0.3,
+                    onStart: () => { sprite.tint = 0xaa88ff; },
+                    onComplete: () => { sprite.tint = 0xffffff; }
+                });
+            }
+        }
+    },
+    
     playDeathAnimation(enemy) {
         const enemyId = enemy.pixiId || enemy.id || enemy.name;
         const data = this.sprites.get(enemyId);
