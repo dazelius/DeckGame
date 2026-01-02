@@ -22,6 +22,11 @@ const ChainScytheSystem = {
         
         // 끌어오기 연출 실행 (연출 끝나면 위치 교환)
         this.playPullAnimation(targetIndex, targetEnemy, () => {
+            const container = document.getElementById('enemies-container');
+            const enemyEls = container ? Array.from(container.querySelectorAll('.enemy-unit')) : [];
+            const targetEl = enemyEls[targetIndex];
+            const firstEl = enemyEls[0];
+            
             // 위치 교환: 타겟을 첫 번째로 (배열 순서만 바꿈)
             const firstEnemy = gameState.enemies[0];
             gameState.enemies[0] = targetEnemy;
@@ -29,16 +34,28 @@ const ChainScytheSystem = {
             
             console.log(`[ChainScythe] ${targetEnemy.name}을(를) 첫 번째 위치로 끌어옴!`);
             
-            // 부드러운 전환을 위해 적 컨테이너 페이드
-            const enemyContainer = document.getElementById('enemies-container');
-            if (enemyContainer) {
-                // 빠른 페이드 아웃
-                gsap.to(enemyContainer, {
-                    opacity: 0,
-                    duration: 0.15,
+            // 자연스러운 위치 스왑 애니메이션
+            if (targetEl && firstEl && typeof gsap !== 'undefined') {
+                const targetRect = targetEl.getBoundingClientRect();
+                const firstRect = firstEl.getBoundingClientRect();
+                const swapDist = targetRect.left - firstRect.left;
+                
+                // 첫 번째 적이 타겟 위치로 이동
+                gsap.to(firstEl, {
+                    x: swapDist,
+                    duration: 0.25,
+                    ease: 'power2.out'
+                });
+                
+                // 타겟이 첫 번째 위치로 (이미 거기 있으니 살짝 반동만)
+                gsap.to(targetEl, {
+                    x: -swapDist,
+                    duration: 0.25,
                     ease: 'power2.out',
                     onComplete: () => {
-                        // UI 재렌더링
+                        // 애니메이션 끝나면 실제 DOM 재렌더링
+                        gsap.set([targetEl, firstEl], { clearProps: 'x' });
+                        
                         if (typeof renderEnemies === 'function') {
                             renderEnemies(false);
                         }
@@ -51,20 +68,11 @@ const ChainScytheSystem = {
                             updateUI();
                         }
                         
-                        // 새 컨테이너 페이드 인
-                        const newContainer = document.getElementById('enemies-container');
-                        if (newContainer) {
-                            gsap.fromTo(newContainer, 
-                                { opacity: 0 },
-                                { opacity: 1, duration: 0.2, ease: 'power2.in' }
-                            );
-                        }
-                        
                         if (onComplete) onComplete();
                     }
                 });
             } else {
-                // 컨테이너 없으면 그냥 진행
+                // GSAP 없거나 요소 없으면 그냥 진행
                 if (typeof renderEnemies === 'function') {
                     renderEnemies(false);
                 }
@@ -274,12 +282,12 @@ const ChainScytheSystem = {
                     pullProgress = 0;
                 }
             } else if (phase === 'pull') {
-                // 끌어오기!
-                progress += 0.025; // 부드럽게
+                // 끌어오기! - 쫙 하고 빠르게!
+                progress += 0.06; // 빠르게!
                 pullProgress = progress;
                 
-                // 이징: 처음엔 천천히, 점점 빨라짐
-                const easeProgress = Math.pow(progress, 0.7);
+                // 이징: 처음에 빠르고 끝에서 살짝 감속 (easeOutQuad)
+                const easeProgress = 1 - Math.pow(1 - progress, 2);
                 
                 // 현재 위치 계산
                 const currentX = hookX + (endX - hookX) * easeProgress;
@@ -339,62 +347,39 @@ const ChainScytheSystem = {
                 });
                 
                 if (progress >= 1) {
-                    phase = 'settle';
-                    progress = 0;
-                }
-            } else if (phase === 'settle') {
-                // 정착 단계 - 부드럽게 마무리
-                progress += 0.04;
-                
-                // 훅과 사슬 서서히 사라짐
-                const fadeProgress = Math.min(progress * 2, 1);
-                chainContainer.alpha = 1 - fadeProgress;
-                
-                // 사슬 수축 (플레이어 쪽으로)
-                chainLinks.forEach((link, i) => {
-                    const shrinkT = Math.min(progress * 3, 1);
-                    const currentLinkX = link.x;
-                    link.x = currentLinkX + (startX - currentLinkX) * shrinkT * 0.1;
-                });
-                
-                // 타겟 부드럽게 제자리로
-                const settleEase = 1 - Math.pow(1 - progress, 3);
-                const currentX = parseFloat(gsap.getProperty(targetEl, 'x')) || 0;
-                gsap.set(targetEl, { 
-                    x: currentX * (1 - settleEase * 0.5),
-                    filter: `brightness(${1 + (1 - settleEase) * 0.3})`
-                });
-                
-                if (progress >= 1) {
                     phase = 'done';
                     progress = 0;
-                }
-            } else if (phase === 'done') {
-                // 완료 - 최종 정리
-                progress += 0.05;
-                
-                // 타겟 완전히 제자리로 (부드럽게)
-                const finalEase = Math.min(progress * 2, 1);
-                const remainingX = parseFloat(gsap.getProperty(targetEl, 'x')) || 0;
-                gsap.set(targetEl, {
-                    x: remainingX * (1 - finalEase),
-                    filter: 'brightness(1)'
-                });
-                
-                if (progress >= 1) {
-                    // 최종 정리
-                    gsap.set(targetEl, { x: 0, filter: 'none', clearProps: 'all' });
                     
-                    // 사슬 제거
-                    if (chainContainer.parent) {
-                        pixi.effectsContainer.removeChild(chainContainer);
-                        chainContainer.destroy({ children: true });
-                    }
+                    // 빠르게 사슬 제거
+                    gsap.to(chainContainer, {
+                        alpha: 0,
+                        duration: 0.15,
+                        onComplete: () => {
+                            if (chainContainer.parent) {
+                                pixi.effectsContainer.removeChild(chainContainer);
+                                chainContainer.destroy({ children: true });
+                            }
+                        }
+                    });
                     
-                    // 짧은 딜레이 후 콜백 (DOM 재생성 전 안정화)
-                    setTimeout(() => {
-                        if (onComplete) onComplete();
-                    }, 50);
+                    // 타겟 탄성 반동!
+                    gsap.to(targetEl, {
+                        x: '+=20', // 살짝 튕김
+                        duration: 0.08,
+                        ease: 'power2.out',
+                        onComplete: () => {
+                            gsap.to(targetEl, {
+                                x: 0,
+                                filter: 'brightness(1)',
+                                duration: 0.15,
+                                ease: 'power2.inOut',
+                                onComplete: () => {
+                                    gsap.set(targetEl, { clearProps: 'all' });
+                                    if (onComplete) onComplete();
+                                }
+                            });
+                        }
+                    });
                     
                     return; // 애니메이션 종료
                 }
