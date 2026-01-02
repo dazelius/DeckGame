@@ -4213,7 +4213,11 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
             gameState.enemies[backArrayIndex] = enemy;
             
             // ✅ 슬롯 기반 위치 교환 (DOM 재배치 없음!)
-            if (typeof Background3D !== 'undefined' && Background3D.swapSlots && retreatedEl && swappedEl) {
+            const slotSystemReady = typeof Background3D !== 'undefined' 
+                && Background3D.swapSlots 
+                && Background3D.slotConfig?.initialized;
+            
+            if (slotSystemReady && retreatedEl && swappedEl) {
                 Background3D.swapSlots(retreatedEl, swappedEl, 0.3).then(() => {
                     // 착지 이펙트
                     const sprite = retreatedEl.querySelector('.enemy-sprite-img');
@@ -4234,26 +4238,28 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
                     onRetreatComplete();
                 });
             } else if (typeof gsap !== 'undefined' && retreatedEl && swappedEl) {
-                // Background3D 슬롯 시스템 없으면 기존 방식
+                // 슬롯 시스템 없으면 GSAP으로 직접 교환 (DOM 재배치 없음!)
                 const mySlot = parseInt(retreatedEl.dataset.slot) || myArrayIndex;
                 const backSlot = parseInt(swappedEl.dataset.slot) || backArrayIndex;
                 
-                // 슬롯 교환
                 retreatedEl.dataset.slot = backSlot;
                 swappedEl.dataset.slot = mySlot;
                 
-                // 시각적 위치 교환 (현재 위치 기준)
                 const myRect = retreatedEl.getBoundingClientRect();
                 const backRect = swappedEl.getBoundingClientRect();
                 const diffX = backRect.left - myRect.left;
                 
+                // 현재 X 오프셋 가져오기
+                const myCurrentX = gsap.getProperty(retreatedEl, 'x') || 0;
+                const backCurrentX = gsap.getProperty(swappedEl, 'x') || 0;
+                
                 gsap.to(retreatedEl, {
-                    x: `+=${diffX}`,
+                    x: myCurrentX + diffX,
                     duration: 0.3,
                     ease: 'power2.out'
                 });
                 gsap.to(swappedEl, {
-                    x: `-=${diffX}`,
+                    x: backCurrentX - diffX,
                     duration: 0.3,
                     ease: 'power2.out',
                     onComplete: () => {
@@ -4262,7 +4268,7 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
                     }
                 });
             } else {
-                renderEnemies(false);
+                // 최후의 폴백: DOM만 재정렬하지 않고 gameState만 변경됨
                 updateSelectedEnemy();
                 onRetreatComplete();
             }
@@ -4352,7 +4358,11 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
             gameState.enemies[frontArrayIndex] = enemy;
             
             // ✅ 슬롯 기반 위치 교환 (DOM 재배치 없음!)
-            if (typeof Background3D !== 'undefined' && Background3D.swapSlots && advancedEl && swappedEl) {
+            const slotSystemReady = typeof Background3D !== 'undefined' 
+                && Background3D.swapSlots 
+                && Background3D.slotConfig?.initialized;
+            
+            if (slotSystemReady && advancedEl && swappedEl) {
                 Background3D.swapSlots(advancedEl, swappedEl, 0.3).then(() => {
                     // 착지 이펙트
                     const sprite = advancedEl.querySelector('.enemy-sprite-img');
@@ -4373,26 +4383,28 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
                     onAdvanceComplete();
                 });
             } else if (typeof gsap !== 'undefined' && advancedEl && swappedEl) {
-                // Background3D 슬롯 시스템 없으면 기존 방식
+                // 슬롯 시스템 없으면 GSAP으로 직접 교환 (DOM 재배치 없음!)
                 const mySlot = parseInt(advancedEl.dataset.slot) || myArrayIndex;
                 const frontSlot = parseInt(swappedEl.dataset.slot) || frontArrayIndex;
                 
-                // 슬롯 교환
                 advancedEl.dataset.slot = frontSlot;
                 swappedEl.dataset.slot = mySlot;
                 
-                // 시각적 위치 교환
                 const myRect = advancedEl.getBoundingClientRect();
                 const frontRect = swappedEl.getBoundingClientRect();
                 const diffX = frontRect.left - myRect.left;
                 
+                // 현재 X 오프셋 가져오기
+                const myCurrentX = gsap.getProperty(advancedEl, 'x') || 0;
+                const frontCurrentX = gsap.getProperty(swappedEl, 'x') || 0;
+                
                 gsap.to(advancedEl, {
-                    x: `+=${diffX}`,
+                    x: myCurrentX + diffX,
                     duration: 0.3,
                     ease: 'power2.out'
                 });
                 gsap.to(swappedEl, {
-                    x: `-=${diffX}`,
+                    x: frontCurrentX - diffX,
                     duration: 0.3,
                     ease: 'power2.out',
                     onComplete: () => {
@@ -4401,7 +4413,7 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
                     }
                 });
             } else {
-                renderEnemies(false);
+                // 최후의 폴백: DOM만 재정렬하지 않고 gameState만 변경됨
                 updateSelectedEnemy();
                 onAdvanceComplete();
             }
