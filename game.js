@@ -2647,8 +2647,17 @@ function checkEnemyDefeated() {
             if (typeof OverkillSystem !== 'undefined') {
                 const overkillData = OverkillSystem.pendingOverkills.get(enemyIndex);
                 if (overkillData) {
-                    OverkillSystem.executeOverkill(enemyIndex, enemyEl);
-                    console.log(`[Overkill] ${enemy.name} 조각조각 VFX 실행`);
+                    // PixiJS 환경에서는 가상 요소 또는 위치 정보 사용
+                    if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                        const pixiPos = EnemyRenderer.getEnemyPosition(enemy);
+                        if (pixiPos) {
+                            OverkillSystem.executeOverkillPixi(enemyIndex, enemy, pixiPos);
+                            console.log(`[Overkill] ${enemy.name} PixiJS 조각조각 VFX 실행`);
+                        }
+                    } else if (enemyEl) {
+                        OverkillSystem.executeOverkill(enemyIndex, enemyEl);
+                        console.log(`[Overkill] ${enemy.name} DOM 조각조각 VFX 실행`);
+                    }
                 }
             }
             

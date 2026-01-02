@@ -782,6 +782,21 @@ const EnemyRenderer = {
         });
     },
     
+    // 적 UI 숨기기 (사망 시)
+    hideEnemyUI(enemy) {
+        const enemyId = enemy.pixiId || enemy.id || enemy.name;
+        const data = this.sprites.get(enemyId);
+        
+        if (data && data.uiElement) {
+            // UI 요소 즉시 숨기기
+            data.uiElement.style.display = 'none';
+            data.uiElement.style.visibility = 'hidden';
+            data.uiElement.style.opacity = '0';
+        }
+        
+        console.log('[EnemyRenderer] hideEnemyUI:', enemyId);
+    },
+    
     // 선택 표시
     setEnemySelected(enemy, isSelected) {
         const enemyId = enemy.pixiId || enemy.id || enemy.name;

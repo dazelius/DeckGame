@@ -113,7 +113,7 @@ const OverkillSystem = {
     },
     
     // ==========================================
-    // 오버킬 효과 실행 (적 사망 처리 시 호출)
+    // 오버킬 효과 실행 (적 사망 처리 시 호출) - DOM 버전
     // ==========================================
     executeOverkill(enemyIndex, enemyEl) {
         console.log('[Overkill] executeOverkill 호출:', enemyIndex, enemyEl);
@@ -200,6 +200,85 @@ const OverkillSystem = {
         
         // 티어별 효과 실행 (슬로우 모션 제거됨)
         this.executeEffect(tier, x, y, rect, overkillDamage, enemy, enemyEl);
+        
+        // 로그
+        if (this.config.showLog) {
+            this.showOverkillLog(enemy.name, overkillDamage, tier);
+        }
+        
+        // 정리
+        this.pendingOverkills.delete(enemyIndex);
+        return true;
+    },
+    
+    // ==========================================
+    // 오버킬 효과 실행 - PixiJS 버전
+    // ==========================================
+    executeOverkillPixi(enemyIndex, enemy, pixiPos) {
+        console.log('[Overkill] executeOverkillPixi 호출:', enemyIndex, enemy?.name, pixiPos);
+        
+        if (!this.config.enabled) {
+            console.log('[Overkill] 시스템 비활성화');
+            return false;
+        }
+        if (!pixiPos) {
+            console.log('[Overkill] pixiPos 없음');
+            return false;
+        }
+        
+        const overkillData = this.pendingOverkills.get(enemyIndex);
+        console.log('[Overkill] pendingOverkills:', this.pendingOverkills.size, 'overkillData:', overkillData);
+        
+        if (!overkillData) {
+            console.log('[Overkill] 오버킬 데이터 없음 - 등록되지 않음');
+            return false;
+        }
+        
+        const { overkillDamage, tier } = overkillData;
+        
+        // PixiJS 좌표 사용
+        const x = pixiPos.centerX;
+        const y = pixiPos.centerY;
+        const width = pixiPos.width || 100;
+        const height = pixiPos.height || 150;
+        
+        console.log('[Overkill] PixiJS 실행:', { 
+            enemy: enemy.name, 
+            overkillDamage, 
+            tier, 
+            x, y, 
+            width, height 
+        });
+        
+        // GoreVFX 체크 (VFX 폴백)
+        const hasGore = typeof GoreVFX !== 'undefined';
+        const hasVFX = typeof VFX !== 'undefined';
+        console.log('[Overkill] GoreVFX:', hasGore, 'VFX:', hasVFX);
+        
+        if (!hasGore && !hasVFX) {
+            console.warn('[Overkill] VFX 시스템 없음');
+            this.pendingOverkills.delete(enemyIndex);
+            return false;
+        }
+        
+        // 💀 오버킬 데미지 표시
+        this.showOverkillDamageText(x, y, overkillDamage, tier);
+        
+        // 티어별 효과 실행 (rect 대신 가상 rect 생성)
+        const virtualRect = {
+            left: pixiPos.left,
+            top: pixiPos.top,
+            right: pixiPos.right,
+            bottom: pixiPos.bottom,
+            width: width,
+            height: height
+        };
+        this.executeEffect(tier, x, y, virtualRect, overkillDamage, enemy, null);
+        
+        // PixiJS UI 숨기기
+        if (typeof EnemyRenderer !== 'undefined') {
+            EnemyRenderer.hideEnemyUI(enemy);
+        }
         
         // 로그
         if (this.config.showLog) {
