@@ -790,28 +790,50 @@ const EnemyRenderer = {
         if (!data || !data.container) return;
         
         if (isSelected) {
-            // 선택 효과 - 네온 아웃라인 (PixiJS filter)
-            if (PIXI.filters && PIXI.filters.GlowFilter) {
-                data.container.filters = [new PIXI.filters.GlowFilter({
+            // 선택 효과 - 네온 아웃라인
+            const baseScale = data.container.breathingBaseScale || this.getSlotScale(data.slotIndex, data.enemy);
+            
+            // GlowFilter 시도
+            if (typeof PIXI.GlowFilter !== 'undefined') {
+                data.container.filters = [new PIXI.GlowFilter({
                     distance: 15,
                     outerStrength: 2,
                     innerStrength: 0,
                     color: 0x00ffff,
                     quality: 0.5
                 })];
-            } else {
-                // 폴백: 스케일 업
-                gsap.to(data.container.scale, {
-                    x: this.getSlotScale(data.slotIndex) * 1.1,
-                    y: this.getSlotScale(data.slotIndex) * 1.1,
-                    duration: 0.15
+            } else if (typeof PIXI.DropShadowFilter !== 'undefined') {
+                // 폴백: 여러 DropShadow로 글로우 효과
+                const glowFilters = [];
+                const glowColor = 0x00ffff;
+                [4, 6, 8].forEach(dist => {
+                    [0, 90, 180, 270].forEach(angle => {
+                        const rad = angle * Math.PI / 180;
+                        glowFilters.push(new PIXI.DropShadowFilter({
+                            offset: { x: Math.cos(rad) * dist, y: Math.sin(rad) * dist },
+                            color: glowColor,
+                            alpha: 0.6,
+                            blur: 2,
+                            quality: 1
+                        }));
+                    });
                 });
+                data.container.filters = glowFilters;
             }
+            
+            // 스케일 업 (펄스 효과)
+            gsap.to(data.container.scale, {
+                x: baseScale * 1.08,
+                y: baseScale * 1.08,
+                duration: 0.2,
+                ease: "back.out(2)"
+            });
         } else {
             data.container.filters = [];
+            const baseScale = data.container.breathingBaseScale || this.getSlotScale(data.slotIndex, data.enemy);
             gsap.to(data.container.scale, {
-                x: this.getSlotScale(data.slotIndex),
-                y: this.getSlotScale(data.slotIndex),
+                x: baseScale,
+                y: baseScale,
                 duration: 0.15
             });
         }
@@ -819,33 +841,60 @@ const EnemyRenderer = {
     
     // 타겟 하이라이트 (카드 드래그 시)
     highlightAsTarget(enemy, isHighlighted) {
-        const enemyId = enemy.pixiId || enemy.pixiId || enemy.id || enemy.name;
+        const enemyId = enemy.pixiId || enemy.id || enemy.name;
         const data = this.sprites.get(enemyId);
         
         if (!data || !data.container) return;
         
-        // 스프라이트 찾기
         const sprite = data.sprite;
+        const baseScale = data.container.breathingBaseScale || this.getSlotScale(data.slotIndex, data.enemy);
         
         if (isHighlighted) {
-            // 붉은 틴트 효과 (직접 설정)
+            // 🔴 붉은 네온 효과
             if (sprite && sprite.tint !== undefined) {
-                sprite.tint = 0xff6666;
+                sprite.tint = 0xff8888;  // 밝은 빨강
             }
+            
+            // 확대 + 펄스
             gsap.to(data.container.scale, {
-                x: this.getSlotScale(data.slotIndex) * 1.15,
-                y: this.getSlotScale(data.slotIndex) * 1.15,
-                duration: 0.2
+                x: baseScale * 1.12,
+                y: baseScale * 1.12,
+                duration: 0.15,
+                ease: "back.out(2)"
             });
+            
+            // 글로우 필터 추가 (가능하면)
+            if (typeof PIXI.DropShadowFilter !== 'undefined') {
+                const glowFilters = [];
+                const glowColor = 0xff4444;
+                [3, 5].forEach(dist => {
+                    [0, 90, 180, 270].forEach(angle => {
+                        const rad = angle * Math.PI / 180;
+                        glowFilters.push(new PIXI.DropShadowFilter({
+                            offset: { x: Math.cos(rad) * dist, y: Math.sin(rad) * dist },
+                            color: glowColor,
+                            alpha: 0.7,
+                            blur: 2,
+                            quality: 1
+                        }));
+                    });
+                });
+                data.container.filters = glowFilters;
+            }
         } else {
-            // 원래 색상으로
+            // 원래 상태로 복원
             if (sprite && sprite.tint !== undefined) {
                 sprite.tint = 0xffffff;
             }
+            data.container.filters = [];
+            
+            // 아웃라인 재적용
+            this.applyOutlineEffect(sprite);
+            
             gsap.to(data.container.scale, {
-                x: this.getSlotScale(data.slotIndex),
-                y: this.getSlotScale(data.slotIndex),
-                duration: 0.2
+                x: baseScale,
+                y: baseScale,
+                duration: 0.15
             });
         }
     },
@@ -881,84 +930,99 @@ const EnemyRenderer = {
         console.log(`[EnemyRenderer] 등장 애니메이션 시작, targetScale: ${targetScale}`);
     },
     
-    // ✅ 아웃라인 효과 적용
+    // ✅ 아웃라인 효과 적용 (검은색 두꺼운 외곽선)
     applyOutlineEffect(sprite) {
         if (!sprite) return;
         
-        // PixiJS v8 DropShadow 필터로 아웃라인 효과
         try {
-            // 여러 방향의 그림자로 아웃라인 효과
-            const outlineFilters = [];
-            const outlineColor = 0x000000;
-            const outlineDistance = 2;
-            const outlineAlpha = 0.8;
-            
-            // 8방향 그림자
-            const angles = [0, 45, 90, 135, 180, 225, 270, 315];
-            angles.forEach(angle => {
-                const rad = angle * Math.PI / 180;
-                const filter = new PIXI.DropShadowFilter({
-                    offset: { x: Math.cos(rad) * outlineDistance, y: Math.sin(rad) * outlineDistance },
-                    color: outlineColor,
-                    alpha: outlineAlpha,
-                    blur: 0,
-                    quality: 1
+            // PixiJS v8 필터 확인
+            if (typeof PIXI.DropShadowFilter !== 'undefined') {
+                // 4방향 두꺼운 그림자로 외곽선 효과
+                const outlineFilters = [];
+                const outlineColor = 0x000000;
+                const outlineDistance = 3;  // 더 두껍게
+                const outlineAlpha = 1.0;   // 완전 불투명
+                
+                // 4방향 그림자 (충분히 두꺼운 외곽선)
+                const directions = [
+                    { x: outlineDistance, y: 0 },
+                    { x: -outlineDistance, y: 0 },
+                    { x: 0, y: outlineDistance },
+                    { x: 0, y: -outlineDistance },
+                    { x: outlineDistance, y: outlineDistance },
+                    { x: -outlineDistance, y: outlineDistance },
+                    { x: outlineDistance, y: -outlineDistance },
+                    { x: -outlineDistance, y: -outlineDistance },
+                ];
+                
+                directions.forEach(dir => {
+                    const filter = new PIXI.DropShadowFilter({
+                        offset: dir,
+                        color: outlineColor,
+                        alpha: outlineAlpha,
+                        blur: 0,
+                        quality: 1
+                    });
+                    outlineFilters.push(filter);
                 });
-                outlineFilters.push(filter);
-            });
-            
-            sprite.filters = outlineFilters;
+                
+                sprite.filters = outlineFilters;
+                console.log('[EnemyRenderer] ✅ 아웃라인 필터 적용됨');
+            } else {
+                console.log('[EnemyRenderer] DropShadowFilter 없음, 스킵');
+            }
         } catch (e) {
-            // DropShadowFilter 없으면 스킵
-            console.log('[EnemyRenderer] 아웃라인 필터 사용 불가, 스킵');
+            console.log('[EnemyRenderer] 아웃라인 필터 에러:', e);
         }
     },
     
-    // ✅ 숨쉬는 애니메이션 (Idle Animation)
+    // ✅ 숨쉬는 애니메이션 (GSAP 기반 - DOM 버전과 동일한 느낌)
     startBreathingAnimation(container, baseScale) {
-        if (!container) return;
+        if (!container || typeof gsap === 'undefined') return;
         
-        // 고유 위상 (여러 적이 동시에 같은 타이밍으로 움직이지 않도록)
-        const phase = Math.random() * Math.PI * 2;
-        const speed = 0.02 + Math.random() * 0.01;  // 속도 약간 랜덤
+        // 각 적마다 다른 딜레이로 시작 (동기화 방지)
+        const delay = Math.random() * 1.5;
+        const duration = 1.0 + Math.random() * 0.3;  // 1.0~1.3초 주기
         
-        // 애니메이션 데이터 저장
-        container.breathingData = {
-            baseScale: baseScale,
-            phase: phase,
-            speed: speed,
-            time: 0
-        };
+        // GSAP 타임라인으로 숨쉬기 (반복, yoyo)
+        const tl = gsap.timeline({ 
+            repeat: -1, 
+            yoyo: true, 
+            delay: delay,
+            defaults: { ease: "sine.inOut" }
+        });
         
-        // 애니메이션 틱
-        const breathe = () => {
-            if (!container || container.destroyed) return;
-            
-            const data = container.breathingData;
-            if (!data) return;
-            
-            data.time += data.speed;
-            
-            // 부드러운 사인파로 스케일 변화
-            const breathFactor = Math.sin(data.time + data.phase) * 0.015;  // ±1.5%
-            const newScale = data.baseScale * (1 + breathFactor);
-            
-            // Y 위치도 살짝 변화 (위아래로 숨쉬는 느낌)
-            const yOffset = Math.sin(data.time + data.phase) * 2;
-            
-            container.scale.set(newScale);
-            // container.y 는 건드리지 않음 (위치 시스템과 충돌 방지)
-            
-            requestAnimationFrame(breathe);
-        };
+        // 숨쉬기: 스케일 Y 증가, X 감소 + 위로 살짝 이동
+        tl.to(container.scale, {
+            y: baseScale * 1.03,   // Y 3% 늘어남
+            x: baseScale * 0.98,   // X 2% 줄어듦
+            duration: duration
+        }, 0);
         
-        requestAnimationFrame(breathe);
+        tl.to(container, {
+            y: container.y - 5,    // 위로 5px
+            duration: duration
+        }, 0);
+        
+        // 참조 저장 (나중에 중지용)
+        container.breathingTween = tl;
+        container.breathingBaseScale = baseScale;
+        container.breathingBaseY = container.y;
     },
     
     // 숨쉬기 애니메이션 중지
     stopBreathingAnimation(container) {
-        if (container && container.breathingData) {
-            container.breathingData = null;
+        if (container && container.breathingTween) {
+            container.breathingTween.kill();
+            container.breathingTween = null;
+            
+            // 원래 스케일과 위치로 복원
+            if (container.breathingBaseScale) {
+                container.scale.set(container.breathingBaseScale);
+            }
+            if (container.breathingBaseY !== undefined) {
+                container.y = container.breathingBaseY;
+            }
         }
     },
     
@@ -988,10 +1052,16 @@ const EnemyRenderer = {
         
         if (!data) return;
         
+        // 숨쉬기 애니메이션 일시 중지
+        if (data.container.breathingTween) {
+            data.container.breathingTween.pause();
+        }
+        
         // 🔥 데미지 기반 강도 계산
         const intensity = Math.min(damage / 5, 8);
-        const knockbackX = 15 + intensity * 5;
+        const knockbackX = 20 + intensity * 8;
         const isHeavy = damage >= 12;
+        const baseScale = data.container.breathingBaseScale || this.getSlotScale(data.slotIndex);
         
         // 🎆 PixiJS 이펙트 (글로벌 좌표에서)
         const globalPos = data.container.getGlobalPosition();
@@ -1010,46 +1080,69 @@ const EnemyRenderer = {
             }
         }
         
-        // 🌍 화면 흔들림
+        // 🌍 화면 흔들림 (데미지 비례)
         if (typeof SpriteAnimation !== 'undefined') {
-            SpriteAnimation.screenShake(intensity * 2, 0.1 + intensity * 0.02);
+            SpriteAnimation.screenShake(intensity * 3, 0.1 + intensity * 0.02);
         }
         
-        // ⚡ 스쿼시 & 넉백 애니메이션
+        // 원래 위치 저장
         const originalX = data.container.x;
-        gsap.to(data.container, {
+        const freezeTime = Math.min(0.04 + damage * 0.003, 0.12);  // 히트스탑
+        
+        // 🎬 피격 애니메이션 타임라인
+        const tl = gsap.timeline();
+        
+        // 1️⃣ 순간 넉백 + 스쿼시
+        tl.to(data.container, {
             x: originalX + knockbackX,
             duration: 0.03,
-            ease: "power4.out",
-            onComplete: () => {
-                // 프리즈 후 복귀
-                gsap.to(data.container, {
-                    x: originalX,
-                    duration: 0.15,
-                    ease: "elastic.out(1, 0.5)"
-                });
+            ease: "power4.out"
+        }, 0);
+        
+        tl.to(data.container.scale, {
+            x: baseScale * 0.85,
+            y: baseScale * 1.15,
+            duration: 0.03,
+            ease: "power4.out"
+        }, 0);
+        
+        // 2️⃣ 히트스탑 (프리즈!)
+        tl.to({}, { duration: freezeTime });
+        
+        // 3️⃣ 복귀 (탄성있게)
+        tl.to(data.container, {
+            x: originalX,
+            duration: 0.25,
+            ease: "elastic.out(1, 0.4)"
+        });
+        
+        tl.to(data.container.scale, {
+            x: baseScale,
+            y: baseScale,
+            duration: 0.2,
+            ease: "elastic.out(1, 0.5)"
+        }, "<");
+        
+        // 4️⃣ 숨쉬기 재개
+        tl.add(() => {
+            if (data.container.breathingTween) {
+                data.container.breathingTween.resume();
             }
         });
         
-        // 스쿼시 효과
-        gsap.to(data.container.scale, {
-            x: 0.9,
-            y: 1.1,
-            duration: 0.05,
-            yoyo: true,
-            repeat: 1
-        });
-        
-        // 🔴 빨간 플래시 (틴트)
+        // 🔴 빨간 플래시 (틴트) - 별도 처리
         if (data.sprite && data.sprite.tint !== undefined) {
-            const originalTint = 0xffffff;
             const flashTint = isCritical ? 0xff0000 : 0xff6666;
             const flashDuration = isCritical ? 150 : 100;
             
-            data.sprite.tint = flashTint;
-            setTimeout(() => {
-                data.sprite.tint = originalTint;
-            }, flashDuration);
+            // 흰색 -> 빨간색 -> 원래색
+            data.sprite.tint = 0xffffff;
+            gsap.delayedCall(0.02, () => {
+                data.sprite.tint = flashTint;
+            });
+            gsap.delayedCall(flashDuration / 1000, () => {
+                data.sprite.tint = 0xffffff;
+            });
         }
     },
     
