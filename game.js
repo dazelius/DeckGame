@@ -4215,7 +4215,7 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
                     }
                 }
                 
-                // FLIP - Last & Invert & Play
+                // FLIP - Last & Invert & Play (통일된 3D API 사용)
                 const newEnemyEls = Array.from(container.querySelectorAll('.enemy-unit'));
                 
                 newEnemyEls.forEach((el, newIndex) => {
@@ -4229,8 +4229,10 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
                     // data-index 업데이트
                     el.dataset.index = newIndex;
                     
-                    // 3D 위치 계산
-                    const z3d = -80 - (newIndex * 20);
+                    // 3D 위치는 Background3D API 사용
+                    const z3d = typeof Background3D !== 'undefined' 
+                        ? Background3D.getEnemyZ(newIndex) 
+                        : -80 - (newIndex * 20);
                     
                     if (Math.abs(diffX) > 1) {
                         gsap.fromTo(el, 
@@ -4376,7 +4378,7 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
                     }
                 }
                 
-                // FLIP - Last & Invert & Play
+                // FLIP - Last & Invert & Play (통일된 3D API 사용)
                 const newEnemyEls = Array.from(container.querySelectorAll('.enemy-unit'));
                 
                 newEnemyEls.forEach((el, newIndex) => {
@@ -4390,8 +4392,10 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
                     // data-index 업데이트
                     el.dataset.index = newIndex;
                     
-                    // 3D 위치 계산
-                    const z3d = -80 - (newIndex * 20);
+                    // 3D 위치는 Background3D API 사용
+                    const z3d = typeof Background3D !== 'undefined' 
+                        ? Background3D.getEnemyZ(newIndex) 
+                        : -80 - (newIndex * 20);
                     
                     if (Math.abs(diffX) > 1) {
                         gsap.fromTo(el, 

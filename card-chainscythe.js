@@ -121,9 +121,13 @@ const ChainScytheSystem = {
             // data-index 업데이트 (먼저!)
             el.dataset.index = newIndex;
             
+            // 3D 위치는 Background3D API 사용 (통일된 시스템)
+            const z3d = typeof Background3D !== 'undefined' 
+                ? Background3D.getEnemyZ(newIndex) 
+                : -80 - (newIndex * 20);
+            
             if (Math.abs(diffX) > 1) {
                 // 3D transform 보존하면서 x 애니메이션
-                const z3d = -80 - (newIndex * 20);
                 gsap.fromTo(el, 
                     { x: diffX },
                     { 
@@ -139,7 +143,6 @@ const ChainScytheSystem = {
                 );
             } else {
                 // 이동 없어도 3D 위치 설정
-                const z3d = -80 - (newIndex * 20);
                 el.style.transform = `translateZ(${z3d}px)`;
                 el.style.transformStyle = 'preserve-3d';
             }

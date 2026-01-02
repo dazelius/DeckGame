@@ -532,6 +532,91 @@ const Background3D = {
     },
     
     // ==========================================
+    // 🎯 3D 위치 계산 공통 시스템
+    // ==========================================
+    
+    // 3D 위치 설정값 (통일된 참조점)
+    positions: {
+        player: { z: 60 },
+        enemy: { baseZ: -80, spacing: 20 },  // z = -80 - (index * 20)
+        gimmick: { baseZ: -180, spacing: 30 } // z = -180 - (index * 30)
+    },
+    
+    // 인덱스로 적의 3D Z 위치 계산
+    getEnemyZ(index) {
+        return this.positions.enemy.baseZ - (index * this.positions.enemy.spacing);
+    },
+    
+    // 인덱스로 기믹의 3D Z 위치 계산
+    getGimmickZ(index) {
+        return this.positions.gimmick.baseZ - (index * this.positions.gimmick.spacing);
+    },
+    
+    // 단일 적의 3D 위치 업데이트 (애니메이션 옵션)
+    updateEnemyPosition(el, index, animate = false, duration = 0.3) {
+        if (!el) return;
+        
+        const z = this.getEnemyZ(index);
+        el.style.transformStyle = 'preserve-3d';
+        
+        if (animate && typeof gsap !== 'undefined') {
+            // GSAP으로 부드럽게 애니메이션
+            gsap.to(el, {
+                duration: duration,
+                ease: 'power2.out',
+                onUpdate: function() {
+                    // GSAP은 z 속성 직접 지원 안하므로 transform으로 처리
+                },
+                onComplete: () => {
+                    el.style.transform = `translateZ(${z}px)`;
+                }
+            });
+            // 실제 z 애니메이션은 CSS transition으로
+            el.style.transition = `transform ${duration}s ease-out`;
+            el.style.transform = `translateZ(${z}px)`;
+            setTimeout(() => {
+                el.style.transition = '';
+            }, duration * 1000);
+        } else {
+            el.style.transform = `translateZ(${z}px)`;
+        }
+    },
+    
+    // 모든 적의 3D 위치 업데이트
+    updateAllEnemyPositions(animate = false, duration = 0.3) {
+        const enemies = document.querySelectorAll('.enemy-unit');
+        enemies.forEach((el, i) => {
+            this.updateEnemyPosition(el, i, animate, duration);
+        });
+    },
+    
+    // DOM 순서 기반 3D 위치 동기화 (FLIP 애니메이션 후 호출)
+    syncEnemyPositions(container, oldRects, animate = true) {
+        if (!container) return;
+        
+        const enemyEls = Array.from(container.querySelectorAll('.enemy-unit'));
+        
+        enemyEls.forEach((el, newIndex) => {
+            // data-index 업데이트
+            el.dataset.index = newIndex;
+            
+            // 3D 위치 적용
+            const z = this.getEnemyZ(newIndex);
+            el.style.transformStyle = 'preserve-3d';
+            
+            if (animate) {
+                el.style.transition = 'transform 0.3s ease-out';
+                el.style.transform = `translateZ(${z}px)`;
+                setTimeout(() => {
+                    el.style.transition = '';
+                }, 300);
+            } else {
+                el.style.transform = `translateZ(${z}px)`;
+            }
+        });
+    },
+    
+    // ==========================================
     // 게임 요소 3D 배치
     // ==========================================
     applyGameParallax() {
@@ -551,7 +636,7 @@ const Background3D = {
         // 플레이어 (앞)
         const player = document.querySelector('#player');
         if (player) {
-            player.style.transform = 'translateZ(60px)';
+            player.style.transform = `translateZ(${this.positions.player.z}px)`;
             player.style.transformStyle = 'preserve-3d';
         }
         
@@ -561,13 +646,8 @@ const Background3D = {
             playerSide.style.transformStyle = 'preserve-3d';
         }
         
-        // 몬스터 (중간)
-        const enemies = document.querySelectorAll('.enemy-unit');
-        enemies.forEach((el, i) => {
-            const z = -80 - (i * 20);
-            el.style.transform = `translateZ(${z}px)`;
-            el.style.transformStyle = 'preserve-3d';
-        });
+        // 몬스터 (중간) - 통일된 API 사용
+        this.updateAllEnemyPositions(false);
         
         // 적 영역
         const enemyArea = document.querySelector('.enemy-area');
@@ -583,7 +663,7 @@ const Background3D = {
         // 기믹 (뒤)
         const gimmicks = document.querySelectorAll('.gimmick-unit');
         gimmicks.forEach((el, i) => {
-            const z = -180 - (i * 30);
+            const z = this.getGimmickZ(i);
             el.style.transform = `translateZ(${z}px)`;
             el.style.transformStyle = 'preserve-3d';
         });
