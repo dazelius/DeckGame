@@ -517,7 +517,7 @@ const ChainScytheSystem = {
         });
     },
     
-    // 충돌 대미지 표시
+    // 충돌 대미지 표시 (충돌 대미지로는 죽지 않음 - 최소 1HP 유지)
     showCollisionDamage(enemyEl, damage) {
         const rect = enemyEl.getBoundingClientRect();
         
@@ -553,11 +553,12 @@ const ChainScytheSystem = {
             }
         );
         
-        // 실제 대미지 적용
+        // 실제 대미지 적용 (최소 1HP 유지 - 충돌로 죽지 않음)
         const index = parseInt(enemyEl.dataset.index);
         if (!isNaN(index) && gameState.enemies && gameState.enemies[index]) {
             const enemy = gameState.enemies[index];
-            enemy.hp = Math.max(0, enemy.hp - damage);
+            // 최소 1HP 유지 - 충돌 대미지로 죽지 않도록
+            enemy.hp = Math.max(1, enemy.hp - damage);
             
             const hpFill = enemyEl.querySelector('.enemy-hp-fill');
             if (hpFill) {
