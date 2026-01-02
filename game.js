@@ -829,13 +829,15 @@ async function renderEnemiesWithPixi(withEntrance = true) {
     // 살아있는 적만 렌더링
     const aliveEnemies = gameState.enemies.filter(e => e.hp > 0);
     
-    aliveEnemies.forEach((enemy, slotIndex) => {
+    // 순차적으로 적 추가 (비동기 스프라이트 로딩)
+    for (let slotIndex = 0; slotIndex < aliveEnemies.length; slotIndex++) {
+        const enemy = aliveEnemies[slotIndex];
         // 스프라이트 경로 설정
         enemy.sprite = enemy.sprite || enemy.image || getEnemySpritePath(enemy);
         enemy.id = enemy.id || `${enemy.name}_${slotIndex}`;
         
-        EnemyRenderer.addEnemy(enemy, slotIndex);
-    });
+        await EnemyRenderer.addEnemy(enemy, slotIndex);
+    }
     
     console.log(`[renderEnemiesWithPixi] Rendered ${aliveEnemies.length} enemies`);
     

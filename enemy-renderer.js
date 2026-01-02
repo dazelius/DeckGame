@@ -195,7 +195,7 @@ const EnemyRenderer = {
     // ==========================================
     // 적 추가/제거
     // ==========================================
-    addEnemy(enemy, slotIndex) {
+    async addEnemy(enemy, slotIndex) {
         if (!this.initialized || !enemy) return null;
         
         // 이미 존재하면 스킵
@@ -205,8 +205,8 @@ const EnemyRenderer = {
         
         const enemyId = enemy.id || enemy.name || `enemy_${Date.now()}`;
         
-        // 스프라이트 생성
-        const spriteData = this.createEnemySprite(enemy, slotIndex);
+        // 스프라이트 생성 (비동기)
+        const spriteData = await this.createEnemySprite(enemy, slotIndex);
         if (!spriteData) return null;
         
         // 맵에 저장
@@ -226,7 +226,7 @@ const EnemyRenderer = {
         return spriteData;
     },
     
-    createEnemySprite(enemy, slotIndex) {
+    async createEnemySprite(enemy, slotIndex) {
         console.log(`[EnemyRenderer] createEnemySprite: ${enemy.name}, slot ${slotIndex}`);
         
         // 적 컨테이너 (스프라이트 + 이펙트용)
@@ -241,19 +241,26 @@ const EnemyRenderer = {
         // 스프라이트 생성
         let sprite;
         try {
-            sprite = PIXI.Sprite.from(spritePath);
-            sprite.label = `${enemy.name}_sprite`;
+            // ✅ PIXI.Assets로 비동기 로드 (더 안정적)
+            const texture = await PIXI.Assets.load(spritePath).catch(() => null);
             
-            // 로드 완료 확인
-            if (sprite.texture) {
-                console.log(`[EnemyRenderer] ✅ 스프라이트 로드됨: ${spritePath}`);
+            if (texture) {
+                sprite = new PIXI.Sprite(texture);
+                sprite.label = `${enemy.name}_sprite`;
+                
+                // 픽셀 아트 선명하게
+                sprite.texture.source.scaleMode = 'nearest';
+                
+                console.log(`[EnemyRenderer] ✅ 스프라이트 로드됨: ${spritePath}, 크기: ${sprite.width}x${sprite.height}`);
+            } else {
+                throw new Error('텍스처 로드 실패');
             }
         } catch (e) {
             console.error(`[EnemyRenderer] ❌ 스프라이트 로드 실패: ${spritePath}`, e);
             // 폴백: 플레이스홀더 (PixiJS v8 Graphics API)
             const graphics = new PIXI.Graphics();
-            graphics.rect(-50, -150, 100, 150);  // v8: rect() 사용
-            graphics.fill(0x666666);
+            graphics.rect(-50, -150, 100, 150);
+            graphics.fill({ color: 0x666666 });
             sprite = graphics;
         }
         
@@ -265,7 +272,7 @@ const EnemyRenderer = {
         // 위치 및 스케일 (화면 높이 기준)
         const x = this.getSlotX(slotIndex);
         const appHeight = this.app?.renderer?.height || 600;
-        const y = appHeight * 0.75;  // 화면 높이의 75% 위치
+        const y = appHeight * 0.55;  // 화면 높이의 55% 위치 (더 위로!)
         const scale = this.getSlotScale(slotIndex, enemy);
         
         enemyContainer.x = x;
