@@ -338,11 +338,18 @@ const BreakSystem = {
         
         // 🔥 2단계: 연출 후 UI 업데이트 (500ms 딜레이)
         setTimeout(() => {
+            // ✅ PixiJS EnemyRenderer 환경
+            if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                EnemyRenderer.setEnemyBrokenState(enemy, true);
+                EnemyRenderer.updateEnemyIntent(enemy);
+            }
+            
+            // DOM 환경
             if (enemyEl) {
                 enemyEl.classList.add('enemy-broken');
                 
-                // 🌟 지속적인 3D 별 이펙트 시작!
-                if (typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized) {
+                // 🌟 지속적인 3D 별 이펙트 시작! (DOM용)
+                if (typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized && PixiRenderer.startPersistentStunLoop) {
                     PixiRenderer.startPersistentStunLoop(enemyEl);
                 }
                 
@@ -377,12 +384,18 @@ const BreakSystem = {
             enemy.breakProgress = [];
             console.log(`[BreakSystem] ${enemy.name} 브레이크 해제`);
             
+            // ✅ PixiJS EnemyRenderer 환경
+            if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                EnemyRenderer.setEnemyBrokenState(enemy, false);
+                EnemyRenderer.updateEnemyIntent(enemy);
+            }
+            
             const enemyIndex = gameState.enemies?.indexOf(enemy);
             if (enemyIndex !== -1) {
                 const enemyEl = document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`);
                 if (enemyEl) {
-                    // 🌟 지속 별 이펙트 중지!
-                    if (typeof PixiRenderer !== 'undefined') {
+                    // 🌟 지속 별 이펙트 중지! (DOM용)
+                    if (typeof PixiRenderer !== 'undefined' && PixiRenderer.stopPersistentStunLoop) {
                         PixiRenderer.stopPersistentStunLoop(enemyEl);
                     }
                     
@@ -426,6 +439,13 @@ const BreakSystem = {
         const enemyIndex = gameState.enemies?.indexOf(enemy);
         if (enemyIndex === -1) return;
         
+        // ✅ PixiJS 환경에서는 EnemyRenderer 사용
+        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+            this.updateBreakUIPixi(enemy);
+            return;
+        }
+        
+        // DOM 환경
         const enemyEl = document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`);
         if (!enemyEl) return;
         
@@ -469,6 +489,176 @@ const BreakSystem = {
     },
     
     // ==========================================
+    // PixiJS 브레이크 UI 업데이트
+    // ==========================================
+    updateBreakUIPixi(enemy) {
+        // 인텐트 업데이트
+        EnemyRenderer.updateEnemyIntent(enemy);
+        
+        // 브레이크 게이지 업데이트
+        EnemyRenderer.updateEnemyBreak(enemy);
+        
+        // 브레이크 상태 스프라이트 효과
+        if (enemy.isBroken) {
+            EnemyRenderer.setEnemyBrokenState(enemy, true);
+        } else {
+            EnemyRenderer.setEnemyBrokenState(enemy, false);
+        }
+    },
+    
+    // ==========================================
+    // PixiJS 브레이크 폭발 이펙트
+    // ==========================================
+    showBreakEffectPixi(enemy) {
+        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+            // 🎆 ShieldBreakVFX로 유리 깨지는 이펙트!
+            const enemyId = enemy.pixiId || enemy.id || enemy.name;
+            const data = EnemyRenderer.sprites?.get(enemyId);
+            
+            if (data && data.container && typeof ShieldBreakVFX !== 'undefined') {
+                const globalPos = data.container.getGlobalPosition();
+                const canvas = EnemyRenderer.app?.canvas;
+                
+                if (canvas) {
+                    const canvasRect = canvas.getBoundingClientRect();
+                    const screenX = canvasRect.left + globalPos.x;
+                    const spriteHeight = data.sprite?.texture?.height * (data.container.scale?.y || 1) || 150;
+                    const screenY = canvasRect.top + globalPos.y - spriteHeight / 2;
+                    
+                    // 유리 깨지는 브레이크 이펙트!
+                    ShieldBreakVFX.play(screenX, screenY, 1.5);
+                    console.log('[BreakSystem] 🎆 ShieldBreakVFX 발동!', screenX, screenY);
+                }
+            }
+            
+            // EnemyRenderer의 브레이크 이펙트 사용
+            if (EnemyRenderer.playBreakEffect) {
+                EnemyRenderer.playBreakEffect(enemy);
+            }
+            
+            // 스프라이트 효과 설정
+            EnemyRenderer.setEnemyBrokenState(enemy, true);
+        }
+    },
+    
+    // ==========================================
+    // BREAK 텍스트 표시 (공통)
+    // ==========================================
+    showBreakText(enemy) {
+        // 위치 계산
+        let centerX = window.innerWidth / 2;
+        let centerY = window.innerHeight / 2 - 50;
+        
+        // EnemyRenderer에서 위치 가져오기
+        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+            const enemyId = enemy.pixiId || enemy.id || enemy.name;
+            const data = EnemyRenderer.sprites?.get(enemyId);
+            if (data && data.container) {
+                const globalPos = data.container.getGlobalPosition();
+                const canvas = EnemyRenderer.app?.canvas;
+                if (canvas) {
+                    const canvasRect = canvas.getBoundingClientRect();
+                    centerX = canvasRect.left + globalPos.x;
+                    centerY = canvasRect.top + globalPos.y - 100;
+                }
+            }
+        }
+        
+        // BREAK 텍스트
+        const breakText = document.createElement('div');
+        breakText.className = 'break-effect-text';
+        breakText.textContent = 'BREAK!';
+        breakText.style.cssText = `
+            position: fixed;
+            left: ${centerX}px;
+            top: ${centerY}px;
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 0;
+            z-index: 99999;
+            pointer-events: none;
+            font-family: 'Cinzel', serif;
+            font-size: 4rem;
+            font-weight: 900;
+            color: #fbbf24;
+            text-shadow: 
+                0 0 20px rgba(251, 191, 36, 1),
+                0 0 40px rgba(251, 191, 36, 0.8),
+                3px 3px 0 #000;
+            letter-spacing: 8px;
+        `;
+        document.body.appendChild(breakText);
+        
+        // 취약 텍스트
+        const vulnerableText = document.createElement('div');
+        const vulnTurns = Math.max(1, (enemy.currentBreakRecipe?.length || 2) - 1);
+        vulnerableText.textContent = `💔 취약 +${vulnTurns}`;
+        vulnerableText.style.cssText = `
+            position: fixed;
+            left: ${centerX}px;
+            top: ${centerY + 60}px;
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 0;
+            z-index: 99998;
+            pointer-events: none;
+            font-family: 'Cinzel', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #ef4444;
+            text-shadow: 0 0 10px rgba(239, 68, 68, 0.8), 2px 2px 0 #000;
+        `;
+        document.body.appendChild(vulnerableText);
+        
+        // GSAP 애니메이션
+        if (typeof gsap !== 'undefined') {
+            gsap.timeline()
+                .to(breakText, {
+                    scale: 1.5,
+                    rotation: -5,
+                    opacity: 1,
+                    duration: 0.15,
+                    ease: "back.out(3)"
+                })
+                .to(breakText, { scale: 1.2, rotation: 3, duration: 0.1 })
+                .to(breakText, { scale: 1, rotation: 0, duration: 0.1 })
+                .to(breakText, {
+                    y: -30,
+                    opacity: 0,
+                    duration: 0.5,
+                    delay: 0.5,
+                    ease: "power2.in",
+                    onComplete: () => breakText.remove()
+                });
+            
+            gsap.timeline({ delay: 0.2 })
+                .to(vulnerableText, { scale: 1.2, opacity: 1, duration: 0.2, ease: "back.out(2)" })
+                .to(vulnerableText, { scale: 1, duration: 0.1 })
+                .to(vulnerableText, {
+                    y: -20,
+                    opacity: 0,
+                    duration: 0.4,
+                    delay: 0.8,
+                    ease: "power2.in",
+                    onComplete: () => vulnerableText.remove()
+                });
+        } else {
+            breakText.style.animation = 'breakEffectAnim 1.5s ease-out forwards';
+            setTimeout(() => breakText.remove(), 1500);
+            vulnerableText.style.animation = 'vulnerablePopAnim 1.5s ease-out forwards';
+            setTimeout(() => vulnerableText.remove(), 1500);
+        }
+        
+        // 화면 흔들림
+        if (typeof SpriteAnimation !== 'undefined' && SpriteAnimation.screenShake) {
+            SpriteAnimation.screenShake(20, 0.4);
+        }
+        
+        // 사운드
+        if (typeof SoundSystem !== 'undefined') {
+            SoundSystem.play('break', { volume: 0.8 });
+        }
+    },
+    
+    // ==========================================
     // 인텐트 + 게이지 통합 빌드
     // ==========================================
     rebuildIntentWithGauge(intentEl, enemy, remaining, total) {
@@ -499,6 +689,13 @@ const BreakSystem = {
     // 브레이크 이펙트 (GSAP + PixiJS 업그레이드!)
     // ==========================================
     showBreakEffect(enemy) {
+        // ✅ PixiJS EnemyRenderer 환경이면 전용 이펙트 사용
+        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+            this.showBreakEffectPixi(enemy);
+            this.showBreakText(enemy);  // BREAK 텍스트는 공통
+            return;
+        }
+        
         const enemyIndex = gameState.enemies?.indexOf(enemy);
         if (enemyIndex === -1) return;
         
@@ -509,6 +706,11 @@ const BreakSystem = {
         const rect = enemyEl.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
+        
+        // 🎆 ShieldBreakVFX로 유리 깨지는 이펙트!
+        if (typeof ShieldBreakVFX !== 'undefined') {
+            ShieldBreakVFX.play(centerX, centerY, 1.5);
+        }
         
         // 🔥 1단계: 히트스탑 (GSAP) - 게임이 잠시 멈추는 느낌!
         if (typeof gsap !== 'undefined') {

@@ -187,22 +187,61 @@ const CardDragSystem = {
         return 'none';
     },
 
+    // 드래그 중 슬롯 위치 백업
+    savedSlotTransforms: {},
+    
     // 유효한 타겟 하이라이트
     highlightValidTargets(card) {
         const target = this.getCardTarget(card);
         const playerEl = document.getElementById('player');
+        
+        // ✅ 드래그 중 3D parallax 완전 비활성화 (filter가 3D를 깨트림)
+        if (typeof Background3D !== 'undefined') {
+            Background3D.disableParallax();
+        }
+        
+        const arena = document.querySelector('.battle-arena');
+        if (arena) {
+            arena.classList.add('drag-in-progress');
+            arena.style.transform = 'none';
+            arena.style.perspective = 'none';
+        }
+        
+        // ✅ 적의 슬롯 X 오프셋 저장 후 transform 제거 (3D/filter 충돌 방지)
+        this.savedSlotTransforms = {};
+        document.querySelectorAll('.enemy-unit').forEach(el => {
+            const domIndex = el.dataset.domIndex || el.dataset.index || '0';
+            const currentX = gsap.getProperty(el, 'x') || 0;
+            this.savedSlotTransforms[domIndex] = currentX;
+            el.style.transform = 'none';
+        });
+        
+        // 플레이어와 기믹은 단순 제거
+        if (playerEl) playerEl.style.transform = 'none';
+        document.querySelectorAll('.gimmick-unit').forEach(el => {
+            el.style.transform = 'none';
+        });
 
         if (target === 'enemy') {
-            const container = document.getElementById('enemies-container');
-            if (container) {
-                container.querySelectorAll('.enemy-unit').forEach(el => {
-                    if (!el.classList.contains('dead')) {
-                        el.classList.add('drop-target');
+            // ✅ PixiJS EnemyRenderer 사용 시
+            if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                gameState.enemies.forEach(enemy => {
+                    if (enemy.hp > 0) {
+                        EnemyRenderer.highlightAsTarget(enemy, true);
                     }
                 });
             } else {
-                const enemyEl = document.getElementById('enemy');
-                if (enemyEl) enemyEl.classList.add('drop-target');
+                const container = document.getElementById('enemies-container');
+                if (container) {
+                    container.querySelectorAll('.enemy-unit').forEach(el => {
+                        if (!el.classList.contains('dead')) {
+                            el.classList.add('drop-target');
+                        }
+                    });
+                } else {
+                    const enemyEl = document.getElementById('enemy');
+                    if (enemyEl) enemyEl.classList.add('drop-target');
+                }
             }
             // 🔥 기믹도 드롭 타겟으로 표시 (별도 컨테이너)
             const gimmickContainer = document.getElementById('gimmicks-container');
@@ -246,6 +285,53 @@ const CardDragSystem = {
         const playerEl = document.getElementById('player');
         const container = document.getElementById('enemies-container');
         
+        // ✅ PixiJS EnemyRenderer 하이라이트 제거
+        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+            gameState.enemies.forEach(enemy => {
+                if (enemy.hp > 0) {
+                    EnemyRenderer.highlightAsTarget(enemy, false);
+                }
+            });
+        }
+        
+        // ✅ 드래그 종료 후 3D parallax 재활성화
+        const arena = document.querySelector('.battle-arena');
+        if (arena) {
+            arena.classList.remove('drag-in-progress');
+            arena.style.transform = '';
+            arena.style.perspective = '';
+        }
+        
+        // ✅ 적의 슬롯 위치 복원 (저장된 X 오프셋 + 3D 깊이)
+        document.querySelectorAll('.enemy-unit').forEach(el => {
+            const domIndex = el.dataset.domIndex || el.dataset.index || '0';
+            const slotIndex = parseInt(el.dataset.slot) || parseInt(domIndex);
+            const savedX = this.savedSlotTransforms[domIndex] || 0;
+            const z = typeof Background3D !== 'undefined' 
+                ? Background3D.getEnemyZ(slotIndex) 
+                : -80 - (slotIndex * 20);
+            
+            el.style.transform = `translateX(${savedX}px) translateZ(${z}px)`;
+            el.style.transformStyle = 'preserve-3d';
+            
+            // GSAP 상태도 복원
+            gsap.set(el, { x: savedX });
+        });
+        this.savedSlotTransforms = {};
+        
+        // 플레이어와 기믹 초기화
+        if (playerEl) playerEl.style.transform = '';
+        document.querySelectorAll('.gimmick-unit').forEach(el => {
+            el.style.transform = '';
+        });
+        
+        // ✅ Background3D 재활성화
+        setTimeout(() => {
+            if (typeof Background3D !== 'undefined') {
+                Background3D.enableParallax();
+            }
+        }, 50);
+        
         if (container) {
             container.querySelectorAll('.enemy-unit').forEach(el => {
                 el.classList.remove('drop-target', 'drop-target-active', 'drop-target-all');
@@ -287,30 +373,50 @@ const CardDragSystem = {
         this.checkInvalidTarget(card, target, x, y);
 
         if (target === 'enemy') {
-            const container = document.getElementById('enemies-container');
-            if (container) {
-                let foundTarget = false;
-                
-                // 적 유닛 체크
-                container.querySelectorAll('.enemy-unit').forEach(el => {
-                    if (el.classList.contains('dead')) return;
-
-                    const rect = el.getBoundingClientRect();
-                    const isOver = x >= rect.left && x <= rect.right && 
-                                   y >= rect.top && y <= rect.bottom;
-
-                    if (isOver) {
-                        foundTarget = true;
-                        isOnTarget = true;
-                        el.classList.add('drop-target-active');
-                        this.dragGhost?.classList.add('can-drop');
-                    } else {
-                        el.classList.remove('drop-target-active');
-                    }
-                });
-                
-                if (!foundTarget) {
+            // ✅ PixiJS EnemyRenderer 사용 시
+            if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                const enemyData = EnemyRenderer.getEnemyAtPosition(x, y);
+                if (enemyData) {
+                    isOnTarget = true;
+                    this.dragGhost?.classList.add('can-drop');
+                    this.currentPixiTarget = enemyData;
+                    // PixiJS 하이라이트
+                    EnemyRenderer.highlightAsTarget(enemyData.enemy, true);
+                } else {
                     this.dragGhost?.classList.remove('can-drop');
+                    // 이전 하이라이트 제거
+                    if (this.currentPixiTarget) {
+                        EnemyRenderer.highlightAsTarget(this.currentPixiTarget.enemy, false);
+                        this.currentPixiTarget = null;
+                    }
+                }
+            } else {
+                // 기존 DOM 방식
+                const container = document.getElementById('enemies-container');
+                if (container) {
+                    let foundTarget = false;
+                    
+                    // 적 유닛 체크
+                    container.querySelectorAll('.enemy-unit').forEach(el => {
+                        if (el.classList.contains('dead')) return;
+
+                        const rect = el.getBoundingClientRect();
+                        const isOver = x >= rect.left && x <= rect.right && 
+                                       y >= rect.top && y <= rect.bottom;
+
+                        if (isOver) {
+                            foundTarget = true;
+                            isOnTarget = true;
+                            el.classList.add('drop-target-active');
+                            this.dragGhost?.classList.add('can-drop');
+                        } else {
+                            el.classList.remove('drop-target-active');
+                        }
+                    });
+                    
+                    if (!foundTarget) {
+                        this.dragGhost?.classList.remove('can-drop');
+                    }
                 }
             }
             
@@ -348,37 +454,49 @@ const CardDragSystem = {
                 }
             }
         } else if (target === 'allEnemy') {
-            const container = document.getElementById('enemies-container');
-            if (container) {
-                let foundAny = false;
-                const enemies = container.querySelectorAll('.enemy-unit:not(.dead)');
-                
-                enemies.forEach(el => {
-                    const rect = el.getBoundingClientRect();
-                    if (x >= rect.left && x <= rect.right && 
-                        y >= rect.top && y <= rect.bottom) {
-                        foundAny = true;
-                    }
-                });
-                
-                if (foundAny) {
+            // ✅ PixiJS EnemyRenderer 사용 시
+            if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                const enemyData = EnemyRenderer.getEnemyAtPosition(x, y);
+                if (enemyData) {
                     isOnTarget = true;
                     this.dragGhost?.classList.add('can-drop');
                 } else {
                     this.dragGhost?.classList.remove('can-drop');
                 }
             } else {
-                const enemyEl = document.getElementById('enemy');
-                if (enemyEl) {
-                    const rect = enemyEl.getBoundingClientRect();
-                    const isOver = x >= rect.left && x <= rect.right && 
-                                   y >= rect.top && y <= rect.bottom;
-
-                    if (isOver) {
+                // 기존 DOM 방식
+                const container = document.getElementById('enemies-container');
+                if (container) {
+                    let foundAny = false;
+                    const enemies = container.querySelectorAll('.enemy-unit:not(.dead)');
+                    
+                    enemies.forEach(el => {
+                        const rect = el.getBoundingClientRect();
+                        if (x >= rect.left && x <= rect.right && 
+                            y >= rect.top && y <= rect.bottom) {
+                            foundAny = true;
+                        }
+                    });
+                    
+                    if (foundAny) {
                         isOnTarget = true;
                         this.dragGhost?.classList.add('can-drop');
                     } else {
                         this.dragGhost?.classList.remove('can-drop');
+                    }
+                } else {
+                    const enemyEl = document.getElementById('enemy');
+                    if (enemyEl) {
+                        const rect = enemyEl.getBoundingClientRect();
+                        const isOver = x >= rect.left && x <= rect.right && 
+                                       y >= rect.top && y <= rect.bottom;
+
+                        if (isOver) {
+                            isOnTarget = true;
+                            this.dragGhost?.classList.add('can-drop');
+                        } else {
+                            this.dragGhost?.classList.remove('can-drop');
+                        }
                     }
                 }
             }
@@ -567,6 +685,23 @@ const CardDragSystem = {
                 }
             }
             
+            // ✅ PixiJS EnemyRenderer 사용 시
+            if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                const enemyData = EnemyRenderer.getEnemyAtPosition(x, y);
+                if (enemyData) {
+                    // 적 인덱스 찾기
+                    const enemyIndex = gameState.enemies.indexOf(enemyData.enemy);
+                    if (enemyIndex !== -1) {
+                        selectEnemy(enemyIndex);
+                        // 하이라이트 제거
+                        EnemyRenderer.highlightAsTarget(enemyData.enemy, false);
+                        return true;
+                    }
+                }
+                return false;
+            }
+            
+            // 기존 DOM 방식
             const container = document.getElementById('enemies-container');
             if (container) {
                 const enemyUnits = container.querySelectorAll('.enemy-unit');
@@ -592,7 +727,13 @@ const CardDragSystem = {
                 }
             }
         } else if (target === 'allEnemy') {
-            // 전체 공격: 아무 적 위에 드롭하면 성공
+            // ✅ PixiJS EnemyRenderer 사용 시
+            if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                const enemyData = EnemyRenderer.getEnemyAtPosition(x, y);
+                return enemyData !== null;
+            }
+            
+            // 기존 DOM 방식: 아무 적 위에 드롭하면 성공
             const container = document.getElementById('enemies-container');
             if (container) {
                 const enemyUnits = container.querySelectorAll('.enemy-unit:not(.dead)');
@@ -809,6 +950,18 @@ function clearTargetHighlights() {
 const cardDragStyles = document.createElement('style');
 cardDragStyles.id = 'card-drag-styles';
 cardDragStyles.textContent = `
+    /* ✅ 드래그 중 3D 비활성화 (filter가 3D를 깨트리므로) */
+    .battle-arena.drag-in-progress {
+        transform: none !important;
+        perspective: none !important;
+    }
+    
+    .battle-arena.drag-in-progress .enemy-unit,
+    .battle-arena.drag-in-progress #player,
+    .battle-arena.drag-in-progress .gimmick-unit {
+        transform: none !important;
+    }
+    
     /* 잘못된 대상 - 카드 고스트에 표시 */
     .card-ghost.invalid-target {
         filter: grayscale(0.5) brightness(0.8) !important;

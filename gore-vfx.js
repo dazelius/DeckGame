@@ -537,10 +537,8 @@ const GoreVFX = {
                         ctx.rotate(this.rotation);
                         ctx.globalAlpha = this.alpha;
                         
-                        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-                        ctx.shadowBlur = 15;
-                        ctx.shadowOffsetX = 5;
-                        ctx.shadowOffsetY = 5;
+                        // 외곽 글로우 (스프라이트 외곽선만!)
+                        ctx.filter = 'drop-shadow(0 0 6px #ff4444) drop-shadow(0 0 12px #8b0000)';
                         
                         // 이미지가 유효한지 확인
                         const imgValid = this.hasImage && this.img.complete && this.img.naturalWidth > 0;
@@ -554,28 +552,21 @@ const GoreVFX = {
                                 this.imgWidth, this.height
                             );
                             
-                            ctx.shadowColor = 'transparent';
-                            const gradient = ctx.createLinearGradient(0, this.height/2 - 30, 0, this.height/2);
+                            // 절단면 (빨간 라인)
+                            ctx.filter = 'none';
+                            const gradient = ctx.createLinearGradient(0, this.height/2 - 15, 0, this.height/2);
                             gradient.addColorStop(0, 'rgba(139, 0, 0, 0)');
-                            gradient.addColorStop(0.5, 'rgba(220, 20, 60, 0.9)');
+                            gradient.addColorStop(0.5, 'rgba(220, 20, 60, 0.8)');
                             gradient.addColorStop(1, '#8b0000');
                             ctx.fillStyle = gradient;
-                            ctx.fillRect(-this.imgWidth/2, this.height/2 - 30, this.imgWidth, 30);
+                            ctx.fillRect(-this.imgWidth/2, this.height/2 - 15, this.imgWidth, 15);
                         } else {
-                            // 폴백: 검은 실루엣
-                            ctx.fillStyle = '#1a0000';
-                            ctx.shadowColor = '#8b0000';
-                            ctx.shadowBlur = 20;
+                            // 폴백: 어두운 실루엣
+                            ctx.fillStyle = '#3a2a1a';
                             ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
-                            
-                            // 절단면
-                            const gradient = ctx.createLinearGradient(0, this.height/2 - 20, 0, this.height/2);
-                            gradient.addColorStop(0, 'rgba(220, 20, 60, 0)');
-                            gradient.addColorStop(1, '#dc143c');
-                            ctx.fillStyle = gradient;
-                            ctx.fillRect(-this.width/2, this.height/2 - 20, this.width, 20);
                         }
                         
+                        ctx.filter = 'none';
                         ctx.restore();
                     } catch (e) {
                         console.warn('[GoreVFX] draw 에러:', e);
@@ -639,10 +630,8 @@ const GoreVFX = {
                         ctx.rotate(this.rotation);
                         ctx.globalAlpha = this.alpha;
                         
-                        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-                        ctx.shadowBlur = 15;
-                        ctx.shadowOffsetX = 5;
-                        ctx.shadowOffsetY = 5;
+                        // 외곽 글로우 (스프라이트 외곽선만!)
+                        ctx.filter = 'drop-shadow(0 0 6px #ff4444) drop-shadow(0 0 12px #8b0000)';
                         
                         const imgValid = this.hasImage && this.img.complete && this.img.naturalWidth > 0;
                         
@@ -655,26 +644,20 @@ const GoreVFX = {
                                 this.imgWidth, this.height
                             );
                             
-                            ctx.shadowColor = 'transparent';
-                            const gradient = ctx.createLinearGradient(0, -this.height/2, 0, -this.height/2 + 30);
+                            // 절단면 (빨간 라인)
+                            ctx.filter = 'none';
+                            const gradient = ctx.createLinearGradient(0, -this.height/2, 0, -this.height/2 + 15);
                             gradient.addColorStop(0, '#8b0000');
-                            gradient.addColorStop(0.5, 'rgba(220, 20, 60, 0.9)');
+                            gradient.addColorStop(0.5, 'rgba(220, 20, 60, 0.8)');
                             gradient.addColorStop(1, 'rgba(139, 0, 0, 0)');
                             ctx.fillStyle = gradient;
-                            ctx.fillRect(-this.imgWidth/2, -this.height/2, this.imgWidth, 30);
+                            ctx.fillRect(-this.imgWidth/2, -this.height/2, this.imgWidth, 15);
                         } else {
-                            ctx.fillStyle = '#1a0000';
-                            ctx.shadowColor = '#8b0000';
-                            ctx.shadowBlur = 20;
+                            ctx.fillStyle = '#3a2a1a';
                             ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
-                            
-                            const gradient = ctx.createLinearGradient(0, -this.height/2, 0, -this.height/2 + 20);
-                            gradient.addColorStop(0, '#dc143c');
-                            gradient.addColorStop(1, 'rgba(220, 20, 60, 0)');
-                            ctx.fillStyle = gradient;
-                            ctx.fillRect(-this.width/2, -this.height/2, this.width, 20);
                         }
                         
+                        ctx.filter = 'none';
                         ctx.restore();
                     } catch (e) {
                         console.warn('[GoreVFX] draw 에러:', e);
@@ -831,10 +814,8 @@ const GoreVFX = {
                         ctx.rotate(this.rotation);
                         ctx.globalAlpha = this.alpha;
                         
-                        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-                        ctx.shadowBlur = 15;
-                        ctx.shadowOffsetX = 5;
-                        ctx.shadowOffsetY = 5;
+                        // 외곽 글로우 (스프라이트 외곽선만!)
+                        ctx.filter = 'drop-shadow(0 0 6px #ff4444) drop-shadow(0 0 12px #8b0000)';
                         
                         const imgValid = this.hasImage && this.img.complete && this.img.naturalWidth > 0;
                         
@@ -847,18 +828,20 @@ const GoreVFX = {
                                 this.width, this.height
                             );
                             
-                            ctx.shadowColor = 'transparent';
-                            const gradient = ctx.createLinearGradient(this.width/2 - 25, 0, this.width/2, 0);
+                            // 절단면 (빨간 라인)
+                            ctx.filter = 'none';
+                            const gradient = ctx.createLinearGradient(this.width/2 - 15, 0, this.width/2, 0);
                             gradient.addColorStop(0, 'rgba(139, 0, 0, 0)');
-                            gradient.addColorStop(0.5, 'rgba(220, 20, 60, 0.9)');
+                            gradient.addColorStop(0.5, 'rgba(220, 20, 60, 0.8)');
                             gradient.addColorStop(1, '#8b0000');
                             ctx.fillStyle = gradient;
-                            ctx.fillRect(this.width/2 - 25, -this.height/2, 25, this.height);
+                            ctx.fillRect(this.width/2 - 15, -this.height/2, 15, this.height);
                         } else {
-                            ctx.fillStyle = '#1a0000';
+                            ctx.fillStyle = '#3a2a1a';
                             ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
                         }
                         
+                        ctx.filter = 'none';
                         ctx.restore();
                     } catch (e) {
                         console.warn('[GoreVFX] draw 에러:', e);
@@ -921,10 +904,8 @@ const GoreVFX = {
                         ctx.rotate(this.rotation);
                         ctx.globalAlpha = this.alpha;
                         
-                        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-                        ctx.shadowBlur = 15;
-                        ctx.shadowOffsetX = 5;
-                        ctx.shadowOffsetY = 5;
+                        // 외곽 글로우 (스프라이트 외곽선만!)
+                        ctx.filter = 'drop-shadow(0 0 6px #ff4444) drop-shadow(0 0 12px #8b0000)';
                         
                         const imgValid = this.hasImage && this.img.complete && this.img.naturalWidth > 0;
                         
@@ -937,18 +918,20 @@ const GoreVFX = {
                                 this.width, this.height
                             );
                             
-                            ctx.shadowColor = 'transparent';
-                            const gradient = ctx.createLinearGradient(-this.width/2, 0, -this.width/2 + 25, 0);
+                            // 절단면 (빨간 라인)
+                            ctx.filter = 'none';
+                            const gradient = ctx.createLinearGradient(-this.width/2, 0, -this.width/2 + 15, 0);
                             gradient.addColorStop(0, '#8b0000');
-                            gradient.addColorStop(0.5, 'rgba(220, 20, 60, 0.9)');
+                            gradient.addColorStop(0.5, 'rgba(220, 20, 60, 0.8)');
                             gradient.addColorStop(1, 'rgba(139, 0, 0, 0)');
                             ctx.fillStyle = gradient;
-                            ctx.fillRect(-this.width/2, -this.height/2, 25, this.height);
+                            ctx.fillRect(-this.width/2, -this.height/2, 15, this.height);
                         } else {
-                            ctx.fillStyle = '#1a0000';
+                            ctx.fillStyle = '#3a2a1a';
                             ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
                         }
                         
+                        ctx.filter = 'none';
                         ctx.restore();
                     } catch (e) {
                         console.warn('[GoreVFX] draw 에러:', e);
@@ -1070,10 +1053,8 @@ const GoreVFX = {
                                 ctx.rotate(this.rotation);
                                 ctx.globalAlpha = this.alpha;
                                 
-                                ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-                                ctx.shadowBlur = 20;
-                                ctx.shadowOffsetX = 8;
-                                ctx.shadowOffsetY = 8;
+                                // 외곽 글로우 (스프라이트 외곽선만!)
+                                ctx.filter = 'drop-shadow(0 0 6px #ff4444) drop-shadow(0 0 12px #8b0000)';
                                 
                                 const imgValid = this.hasImage && this.img.complete && this.img.naturalWidth > 0;
                                 
@@ -1087,18 +1068,8 @@ const GoreVFX = {
                                         -this.size/2, -this.size/2,
                                         this.size, this.size
                                     );
-                                    
-                                    ctx.shadowColor = 'transparent';
-                                    ctx.strokeStyle = '#8b0000';
-                                    ctx.lineWidth = 6;
-                                    ctx.shadowColor = '#dc143c';
-                                    ctx.shadowBlur = 15;
-                                    ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
                                 } else {
-                                    ctx.fillStyle = '#1a0000';
-                                    ctx.shadowColor = '#dc143c';
-                                    ctx.shadowBlur = 15;
-                                    
+                                    ctx.fillStyle = '#3a2a1a';
                                     ctx.beginPath();
                                     ctx.moveTo(0, -this.size/2);
                                     ctx.lineTo(this.size/2, 0);
@@ -1109,6 +1080,7 @@ const GoreVFX = {
                                     ctx.fill();
                                 }
                                 
+                                ctx.filter = 'none';
                                 ctx.restore();
                             } catch (e) {
                                 console.warn('[GoreVFX] draw 에러:', e);
@@ -1136,7 +1108,7 @@ const GoreVFX = {
     },
     
     // ==========================================
-    // 🎲 랜덤 절단 (다양한 패턴!)
+    // 🎲 랜덤 절단 (다양한 패턴!) + 항상 meat.png 조각 추가
     // ==========================================
     randomDismember(x, y, options = {}) {
         const rand = Math.random();
@@ -1153,6 +1125,86 @@ const GoreVFX = {
             this.shatterDismember(x, y, options);    // 조각조각
         } else {
             this.explodeDismember(x, y, options);    // 4조각 폭발
+        }
+        
+        // 🥩 항상 meat.png 조각도 추가!
+        this.addMeatChunks(x, y, options);
+    },
+    
+    // ==========================================
+    // 🥩 meat.png 조각 추가 (항상 호출)
+    // ==========================================
+    addMeatChunks(x, y, options = {}) {
+        const { width = 100, height = 150 } = options;
+        
+        if (!this.fallbackLoaded || !this.fallbackImage) return;
+        
+        const chunkCount = 5 + Math.floor(Math.random() * 4);
+        
+        for (let i = 0; i < chunkCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 200 + Math.random() * 300;
+            const size = 20 + Math.random() * 30;
+            
+            setTimeout(() => {
+                VFX.animations.push({
+                    x: x + (Math.random() - 0.5) * 50,
+                    y: y + (Math.random() - 0.5) * 50,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 200,
+                    vr: (Math.random() - 0.5) * 10,
+                    rotation: Math.random() * Math.PI * 2,
+                    size,
+                    alpha: 1,
+                    img: this.fallbackImage,
+                    startTime: Date.now(),
+                    duration: 1200 + Math.random() * 500,
+                    gravity: 500,
+                    groundY: y + height/2 + 150 + Math.random() * 100,
+                    bounceCount: 0,
+                    alive: true,
+                    
+                    update() {
+                        const elapsed = Date.now() - this.startTime;
+                        const dt = 0.016;
+                        
+                        this.vy += this.gravity * dt;
+                        this.x += this.vx * dt;
+                        this.y += this.vy * dt;
+                        this.rotation += this.vr * dt;
+                        
+                        if (this.y > this.groundY && this.bounceCount < 2) {
+                            this.bounceCount++;
+                            this.y = this.groundY;
+                            this.vy = -this.vy * 0.3;
+                            this.vx *= 0.6;
+                        }
+                        
+                        const progress = elapsed / this.duration;
+                        if (progress > 0.7) this.alpha = 1 - (progress - 0.7) / 0.3;
+                        if (progress >= 1) this.alive = false;
+                    },
+                    
+                    draw(ctx) {
+                        ctx.save();
+                        ctx.translate(this.x, this.y);
+                        ctx.rotate(this.rotation);
+                        ctx.globalAlpha = this.alpha;
+                        
+                        // 스프라이트만 그리기 (외곽 글로우는 drop-shadow로)
+                        if (this.img && this.img.complete) {
+                            // 외곽 글로우 효과 (빨간색)
+                            ctx.filter = 'drop-shadow(0 0 4px #ff0000) drop-shadow(0 0 8px #8b0000)';
+                            ctx.drawImage(this.img, -this.size/2, -this.size/2, this.size, this.size);
+                            ctx.filter = 'none';
+                        }
+                        
+                        ctx.restore();
+                    }
+                });
+                
+                VFX.ensureLoop();
+            }, i * 30);
         }
     },
     
@@ -1280,11 +1332,8 @@ const GoreVFX = {
                             ctx.rotate(this.rotation);
                             ctx.globalAlpha = this.alpha;
                             
-                            // 그림자
-                            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-                            ctx.shadowBlur = 15;
-                            ctx.shadowOffsetX = 5;
-                            ctx.shadowOffsetY = 5;
+                            // 외곽 글로우 (스프라이트 외곽선만!)
+                            ctx.filter = 'drop-shadow(0 0 6px #ff4444) drop-shadow(0 0 12px #8b0000)';
                             
                             // 클리핑 경로 (대각선 삼각형)
                             ctx.beginPath();
@@ -1310,10 +1359,10 @@ const GoreVFX = {
                                 ctx.fillRect(-hw, -hh, this.width, this.height);
                             }
                             
-                            // 절단면
-                            ctx.shadowBlur = 0;
+                            // 절단면 (빨간 라인)
+                            ctx.filter = 'none';
                             ctx.strokeStyle = '#dc143c';
-                            ctx.lineWidth = 4;
+                            ctx.lineWidth = 3;
                             ctx.stroke();
                             
                             ctx.restore();
@@ -1476,11 +1525,8 @@ const GoreVFX = {
                             ctx.rotate(this.rotation);
                             ctx.globalAlpha = this.alpha;
                             
-                            // 그림자
-                            ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-                            ctx.shadowBlur = 15;
-                            ctx.shadowOffsetX = 5;
-                            ctx.shadowOffsetY = 5;
+                            // 외곽 글로우 (스프라이트 외곽선만!)
+                            ctx.filter = 'drop-shadow(0 0 6px #ff4444) drop-shadow(0 0 12px #8b0000)';
                             
                             // 불규칙한 조각 형태 (미리 계산된 점 사용)
                             ctx.beginPath();
@@ -1502,7 +1548,7 @@ const GoreVFX = {
                                     -this.size/2, -this.size/2, this.size, this.size
                                 );
                             } else {
-                                // 고기/몬스터 색상 (피 없이)
+                                // 고기/몬스터 색상
                                 const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size/2);
                                 gradient.addColorStop(0, '#5a4a3a');
                                 gradient.addColorStop(0.6, '#4a3a2a');
@@ -1511,12 +1557,7 @@ const GoreVFX = {
                                 ctx.fill();
                             }
                             
-                            // 테두리 (어두운 색)
-                            ctx.shadowBlur = 0;
-                            ctx.strokeStyle = '#2a1a0a';
-                            ctx.lineWidth = 2;
-                            ctx.stroke();
-                            
+                            ctx.filter = 'none';
                             ctx.restore();
                         }
                     });

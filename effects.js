@@ -697,7 +697,7 @@ const EffectSystem = {
     // 적 공격 이펙트
     // ==========================================
     enemyAttack(enemyEl, playerEl, damage, attackType = 'melee') {
-        if (!enemyEl || !playerEl) return;
+        if (!playerEl) return;
         
         const playerRect = playerEl.getBoundingClientRect();
         const playerCenterX = playerRect.left + playerRect.width / 2;
@@ -709,9 +709,32 @@ const EffectSystem = {
             return;
         }
         
-        // 근접 공격 (기본)
-        // 적 돌진 애니메이션
-        enemyEl.classList.add('enemy-attacking');
+        // ✅ PixiJS 환경에서는 EnemyRenderer로 애니메이션 실행
+        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled && enemyEl && enemyEl.isPixiElement) {
+            EnemyRenderer.playAttackAnimation(enemyEl.enemy, 'melee', damage);
+            
+            // 충돌 이펙트
+            setTimeout(() => {
+                if (typeof VFX !== 'undefined') {
+                    VFX.slash(playerCenterX, playerCenterY, { 
+                        color: '#ef4444', 
+                        slashCount: 2,
+                        randomOffset: 50
+                    });
+                    VFX.impact(playerCenterX, playerCenterY, { color: '#ef4444', size: 80 });
+                }
+                
+                this.screenShake(damage > 15 ? 20 : 12, 400);
+                this.showDamageVignette();
+            }, 200);
+            return;
+        }
+        
+        // DOM 폴백: 근접 공격 (기본)
+        // 적 돌진 애니메이션 (DOM 요소 있을 때만)
+        if (enemyEl && !enemyEl.isPixiElement) {
+            enemyEl.classList.add('enemy-attacking');
+        }
         
         // 충돌 이펙트
         setTimeout(() => {
@@ -728,9 +751,11 @@ const EffectSystem = {
             this.showDamageVignette();
         }, 300);
         
-        // 적 원위치
+        // 적 원위치 (DOM 요소 있을 때만)
         setTimeout(() => {
-            enemyEl.classList.remove('enemy-attacking');
+            if (enemyEl && !enemyEl.isPixiElement) {
+                enemyEl.classList.remove('enemy-attacking');
+            }
         }, 600);
     },
     
@@ -738,21 +763,43 @@ const EffectSystem = {
     // 🏹 원거리 공격 이펙트 (화살)
     // ==========================================
     enemyRangedAttack(enemyEl, playerEl, damage) {
-        if (!enemyEl || !playerEl) return;
+        if (!playerEl) return;
         
-        const enemyRect = enemyEl.getBoundingClientRect();
+        // ✅ PixiJS 적 렌더링 사용 시 EnemyRenderer에서 좌표 가져오기
+        let enemyCenterX, enemyCenterY;
+        
+        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled && enemyEl && enemyEl.isPixiElement) {
+            const pos = EnemyRenderer.getEnemyPosition(enemyEl.enemy);
+            if (pos) {
+                enemyCenterX = pos.centerX;
+                enemyCenterY = pos.top + (pos.height * 0.4);
+                
+                // PixiJS 공격 애니메이션
+                EnemyRenderer.playAttackAnimation(enemyEl.enemy, 'ranged', damage);
+            }
+        }
+        
+        // DOM 폴백
+        if (!enemyCenterX && enemyEl && !enemyEl.isPixiElement) {
+            const enemyRect = enemyEl.getBoundingClientRect();
+            enemyCenterX = enemyRect.left + enemyRect.width / 2;
+            enemyCenterY = enemyRect.top + enemyRect.height * 0.4;
+        }
+        
         const playerRect = playerEl.getBoundingClientRect();
-        
-        // 적 위치 (화살 발사 지점)
-        const enemyCenterX = enemyRect.left + enemyRect.width / 2;
-        const enemyCenterY = enemyRect.top + enemyRect.height * 0.4;
-        
-        // 플레이어 위치 (화살 도착 지점)
         const playerCenterX = playerRect.left + playerRect.width / 2;
         const playerCenterY = playerRect.top + playerRect.height / 2;
         
-        // 활 쏘기 애니메이션
-        enemyEl.classList.add('enemy-shooting');
+        // 발사 위치가 없으면 리턴
+        if (!enemyCenterX) {
+            console.warn('[EffectSystem] enemyRangedAttack: 적 위치 없음');
+            return;
+        }
+        
+        // 활 쏘기 애니메이션 (DOM 요소 있을 때만)
+        if (enemyEl) {
+            enemyEl.classList.add('enemy-shooting');
+        }
         
         // 활 당기는 모션 후 발사
         setTimeout(() => {
@@ -779,9 +826,11 @@ const EffectSystem = {
             }
         }, 200);
         
-        // 적 원위치
+        // 적 원위치 (DOM 요소 있을 때만)
         setTimeout(() => {
-            enemyEl.classList.remove('enemy-shooting');
+            if (enemyEl) {
+                enemyEl.classList.remove('enemy-shooting');
+            }
         }, 600);
     },
     

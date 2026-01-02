@@ -43,7 +43,7 @@ const ChainScytheSystem = {
         });
     },
     
-    // DOM과 gameState가 맞지 않을 때 강제로 재렌더링
+    // DOM과 gameState가 맞지 않을 때 (renderEnemies 없이 슬롯 초기화)
     forceSwapWithRender(targetIndex, targetEnemy, onComplete) {
         // gameState 배열 재배치
         const pulled = gameState.enemies.splice(targetIndex, 1)[0];
@@ -51,9 +51,34 @@ const ChainScytheSystem = {
         
         console.log(`[ChainScythe] (강제) ${targetEnemy.name}을(를) 맨 앞으로!`);
         
-        // 재렌더링
-        if (typeof renderEnemies === 'function') {
-            renderEnemies(false);
+        // ✅ renderEnemies 대신 슬롯 초기화 시도
+        // DOM이 이미 있으면 슬롯 시스템 재초기화
+        const container = document.getElementById('enemies-container');
+        if (container && typeof Background3D !== 'undefined') {
+            // 슬롯 캐시 재초기화
+            Background3D.cacheSlotPositions();
+            
+            // gameState 순서대로 슬롯 재배치
+            const enemyEls = Array.from(container.querySelectorAll('.enemy-unit'));
+            gameState.enemies.forEach((enemy, newSlot) => {
+                const el = enemyEls.find(e => e.enemy === enemy);
+                if (el) {
+                    const domIndex = parseInt(el.dataset.domIndex) || 0;
+                    const targetX = Background3D.getSlotOffset(domIndex, newSlot);
+                    const targetZ = Background3D.getEnemyZ(newSlot);
+                    
+                    el.dataset.slot = newSlot;
+                    gsap.to(el, {
+                        x: targetX,
+                        duration: 0.3,
+                        ease: 'power2.out',
+                        onComplete: () => {
+                            el.style.transform = `translateX(${targetX}px) translateZ(${targetZ}px)`;
+                            el.style.transformStyle = 'preserve-3d';
+                        }
+                    });
+                }
+            });
         }
         
         this.restoreBreakStates();
@@ -65,9 +90,22 @@ const ChainScytheSystem = {
         if (onComplete) onComplete();
     },
     
-    // DOM 재생성 없이 적 위치 재배치 (자연스러운 애니메이션)
+    // 슬롯 기반 위치 재배치 (DOM 재배치 없음!)
     // [1,2,3] 에서 3을 당기면 → [3,1,2] (타겟이 맨 앞, 나머지 뒤로 밀림)
     swapEnemyPositions(targetIndex, targetEnemy, onComplete) {
+        // ✅ PixiJS EnemyRenderer 사용 시
+        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+            // gameState 배열 재배치
+            const pulled = gameState.enemies.splice(targetIndex, 1)[0];
+            gameState.enemies.unshift(pulled);
+            
+            // PixiJS로 애니메이션
+            EnemyRenderer.pullToSlotZero(targetEnemy, gameState.enemies, 0.25).then(() => {
+                if (onComplete) onComplete();
+            });
+            return;
+        }
+        
         const container = document.getElementById('enemies-container');
         if (!container) {
             if (onComplete) onComplete();
@@ -76,87 +114,152 @@ const ChainScytheSystem = {
         
         const enemyEls = Array.from(container.querySelectorAll('.enemy-unit'));
         
-        // DOM 요소 수와 gameState 수가 다르면 강제 재렌더링
         if (enemyEls.length !== gameState.enemies.length) {
             console.log('[ChainScythe] DOM/gameState 불일치, 강제 재렌더링');
             this.forceSwapWithRender(targetIndex, targetEnemy, onComplete);
             return;
         }
         
-        const targetEl = enemyEls[targetIndex];
+        // 타겟의 현재 슬롯 찾기
+        const targetEl = enemyEls.find(el => el.enemy === targetEnemy);
+        const targetSlot = targetEl ? parseInt(targetEl.dataset.slot) || targetIndex : targetIndex;
         
-        if (!targetEl || targetIndex === 0) {
+        if (!targetEl || targetSlot === 0) {
             if (onComplete) onComplete();
             return;
         }
         
-        // 모든 요소의 현재 위치 저장 (FLIP의 First)
-        const oldRects = enemyEls.map(el => el.getBoundingClientRect());
-        
-        // gameState 배열 재배치: 타겟을 빼서 맨 앞에 넣기
-        // [1, 2, 3] 에서 index=2를 당기면 → [3, 1, 2]
+        // gameState 배열 재배치 (논리적 순서만!)
         const pulled = gameState.enemies.splice(targetIndex, 1)[0];
         gameState.enemies.unshift(pulled);
         
-        console.log(`[ChainScythe] ${targetEnemy.name}을(를) 맨 앞으로! 새 순서:`, 
-            gameState.enemies.map(e => e.name));
+        console.log(`[ChainScythe] ${targetEnemy.name}을(를) 맨 앞으로! (슬롯 기반)`);
         
-        // DOM 순서 재배치: 타겟을 맨 앞으로
-        container.insertBefore(targetEl, container.firstChild);
-        
-        // 새 순서로 요소 다시 가져오기 (FLIP의 Last)
-        const newEnemyEls = Array.from(container.querySelectorAll('.enemy-unit'));
-        
-        // FLIP 애니메이션: 각 요소가 이전 위치에서 새 위치로 이동 (Invert + Play)
-        newEnemyEls.forEach((el, newIndex) => {
-            // 이 요소가 원래 어디 있었는지 찾기
-            const oldIndex = enemyEls.indexOf(el);
-            if (oldIndex === -1) return;
+        // ✅ 슬롯 기반 이동 (DOM 재배치 없음!)
+        if (typeof Background3D !== 'undefined' && Background3D.pullToSlotZero) {
+            Background3D.pullToSlotZero(targetEl, enemyEls, 0.25).then(() => {
+                // 완료 후 처리
+                setTimeout(() => {
+                    if (onComplete) onComplete();
+                }, 50);
+            });
+        } else {
+            // Background3D 슬롯 시스템 없으면 GSAP으로 직접 처리
+            const rects = enemyEls.map(el => el.getBoundingClientRect());
             
-            const oldRect = oldRects[oldIndex];
-            const newRect = el.getBoundingClientRect();
-            
-            const diffX = oldRect.left - newRect.left;
-            
-            // data-index 업데이트 (먼저!)
-            el.dataset.index = newIndex;
-            
-            if (Math.abs(diffX) > 1) {
-                // 3D transform 보존하면서 x 애니메이션
-                const z3d = -80 - (newIndex * 20);
-                gsap.fromTo(el, 
-                    { x: diffX },
-                    { 
-                        x: 0, 
-                        duration: 0.25, 
-                        ease: 'power2.out',
-                        onComplete: () => {
-                            // 애니메이션 끝나면 3D transform 복원
-                            el.style.transform = `translateZ(${z3d}px)`;
-                            el.style.transformStyle = 'preserve-3d';
-                        }
+            enemyEls.forEach((el, domIndex) => {
+                const currentSlot = parseInt(el.dataset.slot) || domIndex;
+                let newSlot;
+                
+                if (el === targetEl) {
+                    newSlot = 0;
+                } else if (currentSlot < targetSlot) {
+                    newSlot = currentSlot + 1;
+                } else {
+                    return; // 타겟보다 뒤는 그대로
+                }
+                
+                // 새 슬롯의 위치로 이동
+                const targetRect = rects[newSlot] || rects[0];
+                const currentRect = rects[domIndex];
+                const diffX = targetRect.left - currentRect.left;
+                const z3d = typeof Background3D !== 'undefined' 
+                    ? Background3D.getEnemyZ(newSlot) 
+                    : -80 - (newSlot * 20);
+                
+                el.dataset.slot = newSlot;
+                
+                gsap.to(el, {
+                    x: `+=${diffX}`,
+                    duration: 0.25,
+                    ease: 'power2.out',
+                    onComplete: () => {
+                        el.style.transform = `translateX(${gsap.getProperty(el, 'x')}px) translateZ(${z3d}px)`;
+                        el.style.transformStyle = 'preserve-3d';
                     }
-                );
-            } else {
-                // 이동 없어도 3D 위치 설정
-                const z3d = -80 - (newIndex * 20);
-                el.style.transform = `translateZ(${z3d}px)`;
-                el.style.transformStyle = 'preserve-3d';
-            }
-        });
+                });
+            });
+            
+            setTimeout(() => {
+                if (onComplete) onComplete();
+            }, 300);
+        }
         
-        // 브레이크 상태 복원
+        // 브레이크 상태 복원 + 3D 위치 동기화 + 사망 처리
         setTimeout(() => {
             this.restoreBreakStates();
             
+            // ✅ 사망한 적 처리 (충돌 대미지로 죽은 적)
+            this.processDeadEnemies();
+            
+            // ✅ 모든 적의 GSAP transform 초기화 (전진/후퇴와 통일)
+            const allEnemyEls = document.querySelectorAll('.enemy-unit');
+            allEnemyEls.forEach(el => {
+                gsap.set(el, { x: 0, y: 0, scale: 1, opacity: 1, clearProps: 'x,y' });
+            });
+            
+            // ✅ Background3D 전체 재적용 (가장 확실한 방법)
+            if (typeof Background3D !== 'undefined' && Background3D.applyGameParallax) {
+                Background3D.applyGameParallax();
+            }
+            
             if (typeof updateUI === 'function') {
                 updateUI();
+            }
+            
+            // 전투 종료 체크
+            if (typeof checkBattleEnd === 'function') {
+                checkBattleEnd();
             }
             
             if (onComplete) onComplete();
         }, 300);
         
         return true;
+    },
+    
+    // 충돌로 사망한 적 처리
+    processDeadEnemies() {
+        if (!gameState.enemies) return;
+        
+        const deadEnemies = gameState.enemies.filter(e => e.hp <= 0);
+        
+        deadEnemies.forEach(enemy => {
+            const index = gameState.enemies.indexOf(enemy);
+            const enemyEl = document.querySelector(`.enemy-unit[data-index="${index}"]`);
+            
+            if (enemyEl) {
+                // 사망 애니메이션
+                if (typeof gsap !== 'undefined') {
+                    gsap.to(enemyEl, {
+                        opacity: 0,
+                        scale: 0.8,
+                        y: 20,
+                        duration: 0.3,
+                        ease: 'power2.in',
+                        onComplete: () => {
+                            enemyEl.remove();
+                        }
+                    });
+                } else {
+                    enemyEl.remove();
+                }
+            }
+            
+            // 보상 처리
+            if (typeof handleEnemyDeath === 'function') {
+                handleEnemyDeath(enemy);
+            }
+        });
+        
+        // gameState에서 사망한 적 제거
+        gameState.enemies = gameState.enemies.filter(e => e.hp > 0);
+        
+        // DOM의 data-index 재정렬
+        const remainingEls = document.querySelectorAll('.enemy-unit');
+        remainingEls.forEach((el, i) => {
+            el.dataset.index = i;
+        });
     },
     
     // 적 위치 변경 후 브레이크 상태 복원
@@ -431,11 +534,15 @@ const ChainScytheSystem = {
                         }
                     });
                     
-                    // 모든 적 스타일 초기화
-                    gsap.set(targetEl, { clearProps: 'all' });
+                    // ✅ 충돌당한 적들만 원래 위치로 (타겟은 그대로 유지!)
                     collisionPoints.forEach(p => {
-                        if (p.el) gsap.set(p.el, { clearProps: 'all' });
+                        if (p.el && !p.isFinal) {
+                            gsap.set(p.el, { clearProps: 'x,rotation,filter' });
+                        }
                     });
+                    
+                    // ✅ 타겟은 현재 끌어온 위치에 유지 (clearProps 안 함)
+                    // 콜백에서 DOM 재배치 후 자연스럽게 처리
                     
                     // 바로 콜백
                     if (onComplete) onComplete();
@@ -596,12 +703,11 @@ const ChainScytheSystem = {
             }
         );
         
-        // 실제 대미지 적용 (최소 1HP 유지 - 충돌로 죽지 않음)
+        // 실제 대미지 적용 (사망 가능)
         const index = parseInt(enemyEl.dataset.index);
         if (!isNaN(index) && gameState.enemies && gameState.enemies[index]) {
             const enemy = gameState.enemies[index];
-            // 최소 1HP 유지 - 충돌 대미지로 죽지 않도록
-            enemy.hp = Math.max(1, enemy.hp - damage);
+            enemy.hp = Math.max(0, enemy.hp - damage);
             
             const hpFill = enemyEl.querySelector('.enemy-hp-fill');
             if (hpFill) {
@@ -611,6 +717,15 @@ const ChainScytheSystem = {
             
             if (typeof addLog === 'function') {
                 addLog(`충돌! ${enemy.name}에게 ${damage} 피해`, 'damage');
+            }
+            
+            // 사망 시 표시
+            if (enemy.hp <= 0) {
+                enemyEl.classList.add('enemy-dying');
+                enemyEl.style.opacity = '0.5';
+                if (typeof addLog === 'function') {
+                    addLog(`💀 ${enemy.name} 사망!`, 'critical');
+                }
             }
         }
     },

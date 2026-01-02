@@ -244,8 +244,16 @@ function dealDamage(target, amount, card = null) {
             } else if (isEnemy) {
                 console.log('[DealDamage] 🎯 적 피격 애니메이션 시작', { targetEl: !!targetEl, animDamage });
                 try {
-                    SpriteAnimation.enemyHit(targetEl, animDamage);
-                    console.log('[DealDamage] ✅ SpriteAnimation.enemyHit 호출 완료');
+                    // 🎮 PixiJS 적 렌더러 사용 시 - PixiJS 기반 애니메이션
+                    if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                        EnemyRenderer.playHitAnimation(target, animDamage, isCriticalHit);
+                        EnemyRenderer.updateEnemyHP(target);
+                        console.log('[DealDamage] ✅ EnemyRenderer.playHitAnimation 호출 완료');
+                    } else {
+                        // DOM 기반 애니메이션
+                        SpriteAnimation.enemyHit(targetEl, animDamage);
+                        console.log('[DealDamage] ✅ SpriteAnimation.enemyHit 호출 완료');
+                    }
                     
                     // 🔦 3D 광원 효과 - 적 피격
                     if (typeof Background3D !== 'undefined' && Background3D.enemyHit) {
@@ -280,7 +288,8 @@ function dealDamage(target, amount, card = null) {
         
         if (result.actualDamage > 0) {
             setTimeout(() => {
-                showDamagePopup(targetEl, result.actualDamage, isCriticalHit ? 'critical' : 'damage');
+                // ✅ PixiJS 적 렌더링 시 enemy 객체도 전달
+                showDamagePopup(targetEl, result.actualDamage, isCriticalHit ? 'critical' : 'damage', isEnemy ? target : null);
             }, damagePopupDelay);
         }
         
@@ -421,7 +430,7 @@ function dealDamage(target, amount, card = null) {
 // ==========================================
 // 데미지 팝업 표시
 // ==========================================
-function showDamagePopup(element, value, type) {
+function showDamagePopup(element, value, type, enemy = null) {
     const popup = document.createElement('div');
     popup.className = `damage-popup ${type}`;
     
@@ -451,11 +460,29 @@ function showDamagePopup(element, value, type) {
         popup.style.fontSize = `${fontSize}rem`;
     }
     
-    const rect = element.getBoundingClientRect();
+    // 🎮 PixiJS 적 렌더링 사용 시 EnemyRenderer에서 좌표 가져오기
+    let centerX, topY;
     
-    // 위치: 캐릭터 머리 위쪽 중앙
-    const centerX = rect.left + rect.width / 2;
-    const topY = rect.top - 20;
+    if (enemy && typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+        const pos = EnemyRenderer.getEnemyPosition(enemy);
+        if (pos) {
+            centerX = pos.centerX;
+            topY = pos.top - 20;
+        }
+    }
+    
+    // DOM 요소에서 좌표 가져오기 (폴백)
+    if (!centerX && element && element.getBoundingClientRect) {
+        const rect = element.getBoundingClientRect();
+        centerX = rect.left + rect.width / 2;
+        topY = rect.top - 20;
+    }
+    
+    // 좌표가 없으면 리턴
+    if (!centerX) {
+        console.warn('[showDamagePopup] 좌표를 가져올 수 없음');
+        return;
+    }
     
     // 크리티컬은 정중앙, 일반 데미지는 살짝 흩어지게
     if (type === 'critical') {

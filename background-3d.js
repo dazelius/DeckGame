@@ -532,11 +532,334 @@ const Background3D = {
     },
     
     // ==========================================
+    // 🎯 완전한 슬롯 기반 위치 시스템
+    // DOM 순서는 절대 바꾸지 않고, transform으로만 위치 관리
+    // ==========================================
+    
+    // 3D 위치 설정값 (통일된 참조점)
+    positions: {
+        player: { z: 60 },
+        enemy: { baseZ: -80, spacing: 20 },  // z = -80 - (index * 20)
+        gimmick: { baseZ: -180, spacing: 30 } // z = -180 - (index * 30)
+    },
+    
+    // 인덱스로 적의 3D Z 위치 계산
+    getEnemyZ(index) {
+        return this.positions.enemy.baseZ - (index * this.positions.enemy.spacing);
+    },
+    
+    // 인덱스로 기믹의 3D Z 위치 계산
+    getGimmickZ(index) {
+        return this.positions.gimmick.baseZ - (index * this.positions.gimmick.spacing);
+    },
+    
+    // ==========================================
+    // 🎯 고정 간격 슬롯 시스템 (스프라이트 크기 기반)
+    // ==========================================
+    slotConfig: {
+        spacing: 160,        // 슬롯 간격 (스프라이트 충돌 방지)
+        initialized: false,
+        baseX: 0,            // 첫 번째 슬롯의 기준 X 좌표
+        domBasePositions: [] // 각 DOM 요소의 원래 flexbox 위치
+    },
+    
+    /**
+     * 슬롯 시스템 초기화 (renderEnemies 후 호출)
+     * 스프라이트 크기를 고려한 고정 간격으로 펼쳐짐
+     */
+    cacheSlotPositions() {
+        const container = document.getElementById('enemies-container');
+        if (!container) return;
+        
+        const enemyEls = Array.from(container.querySelectorAll('.enemy-unit'));
+        if (enemyEls.length === 0) return;
+        
+        // 모든 transform 초기화
+        enemyEls.forEach(el => {
+            gsap.set(el, { x: 0, y: 0, clearProps: 'x,y' });
+            el.style.transform = '';
+        });
+        
+        // 강제 리플로우
+        container.offsetHeight;
+        
+        // 각 DOM 요소의 원래 flexbox 위치 저장
+        this.slotConfig.domBasePositions = enemyEls.map(el => {
+            const rect = el.getBoundingClientRect();
+            return { left: rect.left, top: rect.top, width: rect.width };
+        });
+        
+        // 첫 번째 요소 기준점 저장
+        if (this.slotConfig.domBasePositions.length > 0) {
+            this.slotConfig.baseX = this.slotConfig.domBasePositions[0].left;
+        }
+        
+        // 스프라이트 크기 기반 간격 자동 계산 (최소 150px)
+        if (enemyEls.length > 1) {
+            const avgWidth = this.slotConfig.domBasePositions.reduce((sum, p) => sum + p.width, 0) 
+                             / this.slotConfig.domBasePositions.length;
+            this.slotConfig.spacing = Math.max(150, avgWidth + 20); // 여유 20px
+        }
+        
+        // 3D 깊이 적용 + 슬롯 초기화
+        enemyEls.forEach((el, i) => {
+            el.dataset.slot = i;
+            el.dataset.domIndex = i;
+            el.style.transform = `translateZ(${this.getEnemyZ(i)}px)`;
+            el.style.transformStyle = 'preserve-3d';
+        });
+        
+        this.slotConfig.initialized = true;
+        console.log(`[Background3D] 슬롯 시스템 초기화: 간격=${this.slotConfig.spacing}px, 적=${enemyEls.length}명`);
+    },
+    
+    /**
+     * 슬롯 위치 계산 (첫 번째 DOM 기준 + 고정 간격)
+     * 슬롯 N의 목표 X = 첫 번째 DOM 위치 + N * spacing
+     */
+    getSlotTargetX(slotIndex) {
+        if (!this.slotConfig.initialized || this.slotConfig.domBasePositions.length === 0) {
+            return slotIndex * this.slotConfig.spacing;
+        }
+        // 첫 번째 DOM 위치 기준
+        const baseX = this.slotConfig.domBasePositions[0].left;
+        return baseX + (slotIndex * this.slotConfig.spacing);
+    },
+    
+    /**
+     * DOM 요소가 특정 슬롯으로 가려면 필요한 X 오프셋
+     */
+    getSlotOffset(domIndex, slotIndex) {
+        if (!this.slotConfig.initialized || domIndex >= this.slotConfig.domBasePositions.length) {
+            return (slotIndex - domIndex) * this.slotConfig.spacing;
+        }
+        
+        // 내 DOM의 원래 위치
+        const myBaseX = this.slotConfig.domBasePositions[domIndex].left;
+        // 목표 슬롯의 위치
+        const slotTargetX = this.getSlotTargetX(slotIndex);
+        
+        // 필요한 이동 거리
+        return slotTargetX - myBaseX;
+    },
+    
+    /**
+     * 🚀 핵심 API: 적의 슬롯 변경 (DOM 재배치 없이!)
+     * 스프라이트 크기만큼 펼쳐진 고정 간격으로 이동
+     */
+    moveToSlot(el, toSlot, duration = 0.3) {
+        return new Promise((resolve) => {
+            if (!el || !this.slotConfig.initialized) {
+                resolve();
+                return;
+            }
+            
+            const domIndex = parseInt(el.dataset.domIndex) || 0;
+            const currentSlot = parseInt(el.dataset.slot) || domIndex;
+            
+            if (currentSlot === toSlot) {
+                resolve();
+                return;
+            }
+            
+            // 고정 간격 기반 X 오프셋 계산 (첫 번째 DOM 기준!)
+            const targetX = this.getSlotOffset(domIndex, toSlot);
+            const targetZ = this.getEnemyZ(toSlot);
+            
+            console.log(`[슬롯] DOM ${domIndex} → 슬롯 ${toSlot}, X=${targetX}px`);
+            
+            // 슬롯 업데이트
+            el.dataset.slot = toSlot;
+            
+            // GSAP 애니메이션
+            gsap.to(el, {
+                x: targetX,
+                duration: duration,
+                ease: 'power2.out',
+                onUpdate: () => {
+                    const currentX = gsap.getProperty(el, 'x');
+                    el.style.transform = `translateX(${currentX}px) translateZ(${targetZ}px)`;
+                },
+                onComplete: () => {
+                    el.style.transform = `translateX(${targetX}px) translateZ(${targetZ}px)`;
+                    el.style.transformStyle = 'preserve-3d';
+                    resolve();
+                }
+            });
+        });
+    },
+    
+    /**
+     * 🚀 핵심 API: 두 적의 슬롯 교환 (DOM 재배치 없이!)
+     * 후퇴/전진에서 사용 - 스프라이트 간격만큼 펼쳐짐
+     */
+    swapSlots(elA, elB, duration = 0.3) {
+        return new Promise((resolve) => {
+            if (!elA || !elB || !this.slotConfig.initialized) {
+                resolve();
+                return;
+            }
+            
+            const slotA = parseInt(elA.dataset.slot);
+            const slotB = parseInt(elB.dataset.slot);
+            
+            // 동시에 이동 (고정 간격으로 펼쳐짐)
+            Promise.all([
+                this.moveToSlot(elA, slotB, duration),
+                this.moveToSlot(elB, slotA, duration)
+            ]).then(resolve);
+        });
+    },
+    
+    /**
+     * 🚀 핵심 API: 사슬낫 스타일 끌어오기
+     * 타겟을 슬롯 0으로, 나머지는 한 칸씩 밀림 (간격 유지)
+     * gameState.enemies 배열은 호출자가 변경해야 함!
+     */
+    async pullToSlotZero(targetEl, allEnemyEls, duration = 0.25) {
+        if (!targetEl || !this.slotConfig.initialized) return;
+        
+        const targetDomIndex = parseInt(targetEl.dataset.domIndex) || 0;
+        const targetCurrentSlot = parseInt(targetEl.dataset.slot) || targetDomIndex;
+        
+        if (targetCurrentSlot === 0) return;
+        
+        // 애니메이션 준비
+        const promises = [];
+        
+        allEnemyEls.forEach(el => {
+            const domIndex = parseInt(el.dataset.domIndex) || 0;
+            const currentSlot = parseInt(el.dataset.slot) || domIndex;
+            
+            let newSlot;
+            
+            if (el === targetEl) {
+                // 타겟 → 슬롯 0
+                newSlot = 0;
+            } else if (currentSlot < targetCurrentSlot) {
+                // 타겟보다 앞에 있던 적 → 한 칸 뒤로
+                newSlot = currentSlot + 1;
+            } else {
+                // 타겟보다 뒤에 있던 적 → 그대로
+                return;
+            }
+            
+            promises.push(this.moveToSlot(el, newSlot, duration));
+        });
+        
+        await Promise.all(promises);
+    },
+    
+    /**
+     * 슬롯 초기화 (renderEnemies 후 호출)
+     * DOM 순서 = 슬롯 순서로 리셋
+     */
+    resetEnemySlots() {
+        const enemyEls = document.querySelectorAll('.enemy-unit');
+        enemyEls.forEach((el, i) => {
+            el.dataset.slot = i;
+            el.dataset.domIndex = i;
+            gsap.set(el, { x: 0, y: 0, clearProps: 'x,y' });
+            el.style.transform = `translateZ(${this.getEnemyZ(i)}px)`;
+            el.style.transformStyle = 'preserve-3d';
+        });
+        
+        // 슬롯 위치도 다시 캐시
+        this.cacheSlotPositions();
+    },
+    
+    /**
+     * 현재 슬롯 상태에서 적 요소 가져오기 (슬롯 순서대로)
+     */
+    getEnemyElsBySlot() {
+        const enemyEls = Array.from(document.querySelectorAll('.enemy-unit'));
+        return enemyEls.sort((a, b) => {
+            const slotA = parseInt(a.dataset.slot) || 0;
+            const slotB = parseInt(b.dataset.slot) || 0;
+            return slotA - slotB;
+        });
+    },
+    
+    // 단일 적의 3D 위치 업데이트 (슬롯 기반!)
+    updateEnemyPosition(el, slotIndex, animate = false, duration = 0.3) {
+        if (!el) return;
+        
+        const z = this.getEnemyZ(slotIndex);
+        el.style.transformStyle = 'preserve-3d';
+        
+        // ✅ 기존 X 오프셋 유지 (슬롯 위치)
+        const currentX = gsap.getProperty(el, 'x') || 0;
+        
+        if (animate && typeof gsap !== 'undefined') {
+            el.style.transition = `transform ${duration}s ease-out`;
+            el.style.transform = `translateX(${currentX}px) translateZ(${z}px)`;
+            setTimeout(() => {
+                el.style.transition = '';
+            }, duration * 1000);
+        } else {
+            el.style.transform = `translateX(${currentX}px) translateZ(${z}px)`;
+        }
+    },
+    
+    // 모든 적의 3D 위치 업데이트 (슬롯 기반!)
+    updateAllEnemyPositions(animate = false, duration = 0.3) {
+        const enemies = document.querySelectorAll('.enemy-unit');
+        enemies.forEach((el) => {
+            // ✅ 슬롯 인덱스 사용 (DOM 인덱스가 아님!)
+            const slotIndex = parseInt(el.dataset.slot) || parseInt(el.dataset.index) || 0;
+            this.updateEnemyPosition(el, slotIndex, animate, duration);
+        });
+    },
+    
+    // DOM 순서 기반 3D 위치 동기화 (FLIP 애니메이션 후 호출)
+    syncEnemyPositions(container, oldRects, animate = true) {
+        if (!container) return;
+        
+        const enemyEls = Array.from(container.querySelectorAll('.enemy-unit'));
+        
+        enemyEls.forEach((el, newIndex) => {
+            // data-index 업데이트
+            el.dataset.index = newIndex;
+            
+            // 3D 위치 적용
+            const z = this.getEnemyZ(newIndex);
+            el.style.transformStyle = 'preserve-3d';
+            
+            if (animate) {
+                el.style.transition = 'transform 0.3s ease-out';
+                el.style.transform = `translateZ(${z}px)`;
+                setTimeout(() => {
+                    el.style.transition = '';
+                }, 300);
+            } else {
+                el.style.transform = `translateZ(${z}px)`;
+            }
+        });
+    },
+    
+    // ==========================================
     // 게임 요소 3D 배치
     // ==========================================
+    parallaxDisabled: false,  // 드래그 중 비활성화 플래그
+    
+    disableParallax() {
+        this.parallaxDisabled = true;
+    },
+    
+    enableParallax() {
+        this.parallaxDisabled = false;
+        // 재활성화 시 즉시 한번 적용
+        this.applyGameParallax();
+    },
+    
     applyGameParallax() {
         const arena = document.querySelector('.battle-arena');
         if (!arena) return;
+        
+        // ✅ 드래그 중이면 3D 배치 건너뛰기 (filter가 3D를 깨트림)
+        if (this.parallaxDisabled || arena.classList.contains('drag-in-progress')) {
+            return;
+        }
         
         // 전투 영역 3D 설정
         arena.style.perspective = '1000px';
@@ -551,7 +874,7 @@ const Background3D = {
         // 플레이어 (앞)
         const player = document.querySelector('#player');
         if (player) {
-            player.style.transform = 'translateZ(60px)';
+            player.style.transform = `translateZ(${this.positions.player.z}px)`;
             player.style.transformStyle = 'preserve-3d';
         }
         
@@ -561,13 +884,8 @@ const Background3D = {
             playerSide.style.transformStyle = 'preserve-3d';
         }
         
-        // 몬스터 (중간)
-        const enemies = document.querySelectorAll('.enemy-unit');
-        enemies.forEach((el, i) => {
-            const z = -80 - (i * 20);
-            el.style.transform = `translateZ(${z}px)`;
-            el.style.transformStyle = 'preserve-3d';
-        });
+        // 몬스터 (중간) - 통일된 API 사용
+        this.updateAllEnemyPositions(false);
         
         // 적 영역
         const enemyArea = document.querySelector('.enemy-area');
@@ -583,7 +901,7 @@ const Background3D = {
         // 기믹 (뒤)
         const gimmicks = document.querySelectorAll('.gimmick-unit');
         gimmicks.forEach((el, i) => {
-            const z = -180 - (i * 30);
+            const z = this.getGimmickZ(i);
             el.style.transform = `translateZ(${z}px)`;
             el.style.transformStyle = 'preserve-3d';
         });
