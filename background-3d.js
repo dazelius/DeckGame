@@ -102,8 +102,8 @@ const Background3D = {
     // Scene 설정 (어두운 던전)
     setupScene() {
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x030305);
-        this.scene.fog = new THREE.FogExp2(0x030305, 0.025);
+        this.scene.background = new THREE.Color(0x050508);
+        this.scene.fog = new THREE.FogExp2(0x050508, 0.022);
         console.log('[Background3D] Scene 생성됨');
     },
     
@@ -139,14 +139,14 @@ const Background3D = {
         this.dungeonGroup = new THREE.Group();
         this.scene.add(this.dungeonGroup);
         
-        // 조명 (어두운 던전)
-        // 환경광 - 아주 약하게
-        const ambient = new THREE.AmbientLight(0x151520, 0.3);
+        // 조명 (어두운 던전 - 벽면 살짝 보임)
+        // 환경광 - 벽면이 보일 정도
+        const ambient = new THREE.AmbientLight(0x202030, 0.35);
         this.scene.add(ambient);
         
-        // 위에서 희미한 빛
-        const topLight = new THREE.DirectionalLight(0x202030, 0.15);
-        topLight.position.set(0, 20, 5);
+        // 약한 상단 조명 (벽면 윤곽용)
+        const topLight = new THREE.DirectionalLight(0x303040, 0.2);
+        topLight.position.set(0, 20, 0);
         this.scene.add(topLight);
         
         // 텍스처 로드 후 던전 요소 생성
@@ -158,115 +158,197 @@ const Background3D = {
         // 횃불
         this.addTorches();
         
+        // 전경 레이어 (잔해물)
+        this.addForeground();
+        
         console.log('[Background3D] 던전 생성 완료');
     },
     
-    // 텍스처 로드 및 적용
-    loadTexturesAndBuild() {
-        // 바닥 텍스처
-        const floorImg = new Image();
-        floorImg.src = 'texture/floor_01.png';
-        floorImg.onload = () => {
-            console.log('[Background3D] 바닥 텍스처 로드 성공');
-            const tex = new THREE.CanvasTexture(floorImg);
-            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-            tex.repeat.set(10, 10);
+    // 전경 레이어 (바닥 앞쪽에 잔해물)
+    addForeground() {
+        const foreImg = new Image();
+        foreImg.src = 'texture/dungeon_fore.png';
+        
+        foreImg.onload = () => {
+            console.log('[Background3D] 전경 텍스처 로드 성공 - 크기:', foreImg.width, 'x', foreImg.height);
+            const tex = new THREE.CanvasTexture(foreImg);
             tex.magFilter = THREE.NearestFilter;
             tex.minFilter = THREE.NearestFilter;
             
-            const floor = new THREE.Mesh(
-                new THREE.PlaneGeometry(80, 80),
-                new THREE.MeshBasicMaterial({ map: tex })
+            // 이미지 비율 계산
+            const aspect = foreImg.width / foreImg.height;
+            const width = 120;
+            const height = width / aspect;
+            
+            const foreMat = new THREE.MeshBasicMaterial({
+                map: tex,
+                transparent: true,
+                side: THREE.DoubleSide,
+                depthWrite: false,
+                fog: false
+            });
+            
+            // 전경 평면 - 바닥에 눕혀서 앞쪽에 배치
+            const foreground = new THREE.Mesh(
+                new THREE.PlaneGeometry(width, height),
+                foreMat
             );
-            floor.rotation.x = -Math.PI / 2;
-            floor.position.y = 0;
-            this.dungeonGroup.add(floor);
-        };
-        floorImg.onerror = () => {
-            console.log('[Background3D] 바닥 텍스처 없음, 단색 사용');
-            const floor = new THREE.Mesh(
-                new THREE.PlaneGeometry(80, 80),
-                new THREE.MeshBasicMaterial({ color: 0x151520 })
-            );
-            floor.rotation.x = -Math.PI / 2;
-            floor.position.y = 0;
-            this.dungeonGroup.add(floor);
+            // 바닥처럼 눕히고 바닥 앞쪽(카메라 가까이)에 배치
+            foreground.rotation.x = -Math.PI / 2;
+            foreground.position.set(0, 0.1, 25);  // 바닥 위, 카메라 앞쪽
+            foreground.renderOrder = 999;
+            this.dungeonGroup.add(foreground);
+            
+            this.foreground = foreground;
+            console.log('[Background3D] 전경 추가됨 - 바닥에 눕힘, 위치:', foreground.position);
         };
         
-        // 벽 텍스처
-        const wallImg = new Image();
-        wallImg.src = 'texture/wall_01.png';
-        wallImg.onload = () => {
-            console.log('[Background3D] 벽 텍스처 로드 성공');
-            const tex = new THREE.CanvasTexture(wallImg);
-            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-            tex.repeat.set(8, 2);
+        foreImg.onerror = () => {
+            console.log('[Background3D] 전경 텍스처 없음 (texture/dungeon_fore.png)');
+        };
+    },
+    
+    // 텍스처 로드 및 적용 (1:1 이미지만)
+    loadTexturesAndBuild() {
+        // 기본 바닥 먼저 깔기 (전체 영역)
+        const baseFloor = new THREE.Mesh(
+            new THREE.PlaneGeometry(200, 200),
+            new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 })
+        );
+        baseFloor.rotation.x = -Math.PI / 2;
+        baseFloor.position.set(0, -0.05, 0);
+        this.dungeonGroup.add(baseFloor);
+        
+        // bg-floor.png - 바닥 텍스처 (2x2 타일링)
+        const bgFloorImg = new Image();
+        bgFloorImg.src = 'bg-floor.png';
+        bgFloorImg.onload = () => {
+            console.log('[Background3D] bg-floor 로드 성공 - 크기:', bgFloorImg.width, 'x', bgFloorImg.height);
+            const tex = new THREE.CanvasTexture(bgFloorImg);
             tex.magFilter = THREE.NearestFilter;
             tex.minFilter = THREE.NearestFilter;
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(2, 2);  // 2x2 타일링
+            
+            const bgFloor = new THREE.Mesh(
+                new THREE.PlaneGeometry(120, 120),
+                new THREE.MeshBasicMaterial({ 
+                    map: tex, 
+                    transparent: true,
+                    fog: false
+                })
+            );
+            bgFloor.rotation.x = -Math.PI / 2;
+            bgFloor.position.set(0, 0.01, 0);
+            this.dungeonGroup.add(bgFloor);
+            console.log('[Background3D] bg-floor 2x2 타일링 적용');
+        };
+        bgFloorImg.onerror = () => {
+            console.log('[Background3D] bg-floor.png 로드 실패');
+        };
+        
+        // bg-wall.png - 벽 (1:1, 뒷벽/좌벽/우벽 모두)
+        const bgWallImg = new Image();
+        bgWallImg.src = 'bg-wall.png';
+        bgWallImg.onload = () => {
+            console.log('[Background3D] bg-wall 로드 성공');
+            const tex = new THREE.CanvasTexture(bgWallImg);
+            tex.magFilter = THREE.NearestFilter;
+            tex.minFilter = THREE.NearestFilter;
+            
+            const aspect = bgWallImg.width / bgWallImg.height;
+            const width = 80;
+            const height = width / aspect;
             
             const wallMat = new THREE.MeshBasicMaterial({ 
                 map: tex, 
-                side: THREE.DoubleSide 
+                transparent: true,
+                side: THREE.DoubleSide,
+                fog: false
             });
             
-            this.buildWalls(wallMat);
+            // 뒷벽
+            const backWall = new THREE.Mesh(
+                new THREE.PlaneGeometry(width, height),
+                wallMat
+            );
+            backWall.position.set(0, height / 2, -30);
+            this.dungeonGroup.add(backWall);
+            
+            // 좌벽 (별도 텍스처 클론)
+            const leftTex = new THREE.CanvasTexture(bgWallImg);
+            leftTex.magFilter = THREE.NearestFilter;
+            leftTex.minFilter = THREE.NearestFilter;
+            const leftWall = new THREE.Mesh(
+                new THREE.PlaneGeometry(60, height),
+                new THREE.MeshBasicMaterial({ 
+                    map: leftTex, 
+                    transparent: true,
+                    side: THREE.DoubleSide,
+                    fog: false
+                })
+            );
+            leftWall.position.set(-40, height / 2, 0);
+            leftWall.rotation.y = Math.PI / 2;
+            this.dungeonGroup.add(leftWall);
+            
+            // 우벽 (별도 텍스처 클론)
+            const rightTex = new THREE.CanvasTexture(bgWallImg);
+            rightTex.magFilter = THREE.NearestFilter;
+            rightTex.minFilter = THREE.NearestFilter;
+            const rightWall = new THREE.Mesh(
+                new THREE.PlaneGeometry(60, height),
+                new THREE.MeshBasicMaterial({ 
+                    map: rightTex, 
+                    transparent: true,
+                    side: THREE.DoubleSide,
+                    fog: false
+                })
+            );
+            rightWall.position.set(40, height / 2, 0);
+            rightWall.rotation.y = -Math.PI / 2;
+            this.dungeonGroup.add(rightWall);
         };
-        wallImg.onerror = () => {
-            console.log('[Background3D] 벽 텍스처 없음, 단색 사용');
-            const wallMat = new THREE.MeshBasicMaterial({ 
+        bgWallImg.onerror = () => {
+            console.log('[Background3D] bg-wall.png 없음, 단색 벽 사용');
+            const wallMat = new THREE.MeshStandardMaterial({ 
                 color: 0x1a1a28, 
-                side: THREE.DoubleSide 
+                side: THREE.DoubleSide,
+                roughness: 0.9
             });
-            this.buildWalls(wallMat);
+            
+            // 뒷벽
+            const backWall = new THREE.Mesh(new THREE.PlaneGeometry(80, 25), wallMat);
+            backWall.position.set(0, 12.5, -30);
+            this.dungeonGroup.add(backWall);
+            
+            // 좌벽
+            const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(60, 25), wallMat);
+            leftWall.position.set(-40, 12.5, 0);
+            leftWall.rotation.y = Math.PI / 2;
+            this.dungeonGroup.add(leftWall);
+            
+            // 우벽
+            const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(60, 25), wallMat);
+            rightWall.position.set(40, 12.5, 0);
+            rightWall.rotation.y = -Math.PI / 2;
+            this.dungeonGroup.add(rightWall);
         };
-        
-        // 그리드
-        const grid = new THREE.GridHelper(80, 40, 0x303040, 0x202030);
-        grid.position.y = 0.02;
-        this.dungeonGroup.add(grid);
         
         // 천장 (단색)
         const ceiling = new THREE.Mesh(
             new THREE.PlaneGeometry(80, 60),
-            new THREE.MeshBasicMaterial({ color: 0x0a0a12, side: THREE.DoubleSide })
+            new THREE.MeshStandardMaterial({ color: 0x050508, side: THREE.DoubleSide, roughness: 1.0 })
         );
         ceiling.rotation.x = Math.PI / 2;
         ceiling.position.set(0, 25, 0);
         this.dungeonGroup.add(ceiling);
     },
     
-    // 벽 생성
-    buildWalls(wallMat) {
-        // 뒷벽
-        const backWall = new THREE.Mesh(
-            new THREE.PlaneGeometry(80, 25),
-            wallMat
-        );
-        backWall.position.set(0, 12.5, -30);
-        this.dungeonGroup.add(backWall);
-        
-        // 좌벽
-        const leftWall = new THREE.Mesh(
-            new THREE.PlaneGeometry(60, 25),
-            wallMat
-        );
-        leftWall.position.set(-40, 12.5, 0);
-        leftWall.rotation.y = Math.PI / 2;
-        this.dungeonGroup.add(leftWall);
-        
-        // 우벽
-        const rightWall = new THREE.Mesh(
-            new THREE.PlaneGeometry(60, 25),
-            wallMat
-        );
-        rightWall.position.set(40, 12.5, 0);
-        rightWall.rotation.y = -Math.PI / 2;
-        this.dungeonGroup.add(rightWall);
-    },
-    
-    // 기둥
+    // 기둥 (조명 반응)
     addPillars() {
-        const pillarMat = new THREE.MeshBasicMaterial({ color: 0x202030 });
+        const pillarMat = new THREE.MeshStandardMaterial({ color: 0x151520, roughness: 0.85 });
         const positions = [
             [-30, 12.5, -20],
             [30, 12.5, -20],
@@ -284,45 +366,43 @@ const Background3D = {
         });
     },
     
-    // 횃불 (강한 조명 - 어둠 속 유일한 빛)
+    // 횃불 (어둠 속 유일한 빛)
     addTorches() {
         const positions = [
-            [-25, 7, -25],
-            [25, 7, -25],
-            [-35, 7, -5],
-            [35, 7, -5],
-            [-20, 7, 10],
-            [20, 7, 10]
+            [-25, 6, -25],
+            [25, 6, -25],
+            [-35, 6, -5],
+            [35, 6, -5]
         ];
         
         positions.forEach((pos, i) => {
-            // 포인트 라이트 (강하게)
-            const light = new THREE.PointLight(0xff5522, 2.5, 35);
+            // 메인 포인트 라이트 (강하게, 좁은 범위)
+            const light = new THREE.PointLight(0xff4400, 3.0, 20);
             light.position.set(pos[0], pos[1], pos[2]);
             this.dungeonGroup.add(light);
             
             // 보조 빛 (더 넓게 퍼지는 약한 빛)
-            const ambientLight = new THREE.PointLight(0xff3300, 0.8, 50);
-            ambientLight.position.set(pos[0], pos[1] + 2, pos[2]);
+            const ambientLight = new THREE.PointLight(0xff2200, 1.0, 35);
+            ambientLight.position.set(pos[0], pos[1] + 1, pos[2]);
             this.dungeonGroup.add(ambientLight);
             
             // 횃불 거치대
-            const holderMat = new THREE.MeshBasicMaterial({ color: 0x2a2a30 });
+            const holderMat = new THREE.MeshBasicMaterial({ color: 0x1a1a20 });
             const holder = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.1, 0.15, 1.2, 6),
+                new THREE.CylinderGeometry(0.08, 0.12, 1.0, 6),
                 holderMat
             );
-            holder.position.set(pos[0], pos[1] - 0.8, pos[2]);
+            holder.position.set(pos[0], pos[1] - 0.7, pos[2]);
             this.dungeonGroup.add(holder);
             
-            // 불꽃 (밝게)
+            // 불꽃 코어
             const flameMat = new THREE.MeshBasicMaterial({ 
-                color: 0xff6600,
+                color: 0xffaa00,
                 transparent: true,
                 opacity: 1.0
             });
             const flame = new THREE.Mesh(
-                new THREE.SphereGeometry(0.35, 8, 8),
+                new THREE.SphereGeometry(0.25, 8, 8),
                 flameMat
             );
             flame.position.set(pos[0], pos[1], pos[2]);
@@ -330,12 +410,12 @@ const Background3D = {
             
             // 불꽃 글로우
             const glowMat = new THREE.MeshBasicMaterial({ 
-                color: 0xff4400,
+                color: 0xff5500,
                 transparent: true,
-                opacity: 0.4
+                opacity: 0.5
             });
             const glow = new THREE.Mesh(
-                new THREE.SphereGeometry(0.6, 8, 8),
+                new THREE.SphereGeometry(0.5, 8, 8),
                 glowMat
             );
             glow.position.set(pos[0], pos[1], pos[2]);
@@ -346,8 +426,8 @@ const Background3D = {
                 ambientLight: ambientLight,
                 flame: flame,
                 glow: glow,
-                baseIntensity: 2.5,
-                phase: i * 1.2
+                baseIntensity: 3.0,
+                phase: i * 1.5
             });
         });
     },
