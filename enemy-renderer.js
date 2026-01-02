@@ -304,8 +304,8 @@ const EnemyRenderer = {
         enemyContainer.on('pointerover', () => this.onEnemyHover(enemyRef, true));
         enemyContainer.on('pointerout', () => this.onEnemyHover(enemyRef, false));
         
-        // ✅ 아웃라인 효과 (DropShadow 필터로 구현)
-        this.applyOutlineEffect(sprite);
+        // ✅ 아웃라인 효과 (스프라이트 복제 방식)
+        this.applyOutlineEffect(sprite, enemyContainer);
         
         // 메인 컨테이너에 추가
         this.container.addChild(enemyContainer);
@@ -889,7 +889,7 @@ const EnemyRenderer = {
             data.container.filters = [];
             
             // 아웃라인 재적용
-            this.applyOutlineEffect(sprite);
+            this.applyOutlineEffect(sprite, data.container);
             
             gsap.to(data.container.scale, {
                 x: baseScale,
@@ -930,49 +930,58 @@ const EnemyRenderer = {
         console.log(`[EnemyRenderer] 등장 애니메이션 시작, targetScale: ${targetScale}`);
     },
     
-    // ✅ 아웃라인 효과 적용 (검은색 두꺼운 외곽선)
-    applyOutlineEffect(sprite) {
-        if (!sprite) return;
+    // ✅ 아웃라인 효과 적용 (검은색 두꺼운 외곽선 - 스프라이트 복제 방식)
+    applyOutlineEffect(sprite, container) {
+        if (!sprite || !container) return;
         
         try {
-            // PixiJS v8 필터 확인
-            if (typeof PIXI.DropShadowFilter !== 'undefined') {
-                // 4방향 두꺼운 그림자로 외곽선 효과
-                const outlineFilters = [];
-                const outlineColor = 0x000000;
-                const outlineDistance = 3;  // 더 두껍게
-                const outlineAlpha = 1.0;   // 완전 불투명
-                
-                // 4방향 그림자 (충분히 두꺼운 외곽선)
-                const directions = [
-                    { x: outlineDistance, y: 0 },
-                    { x: -outlineDistance, y: 0 },
-                    { x: 0, y: outlineDistance },
-                    { x: 0, y: -outlineDistance },
-                    { x: outlineDistance, y: outlineDistance },
-                    { x: -outlineDistance, y: outlineDistance },
-                    { x: outlineDistance, y: -outlineDistance },
-                    { x: -outlineDistance, y: -outlineDistance },
-                ];
-                
-                directions.forEach(dir => {
-                    const filter = new PIXI.DropShadowFilter({
-                        offset: dir,
-                        color: outlineColor,
-                        alpha: outlineAlpha,
-                        blur: 0,
-                        quality: 1
-                    });
-                    outlineFilters.push(filter);
-                });
-                
-                sprite.filters = outlineFilters;
-                console.log('[EnemyRenderer] ✅ 아웃라인 필터 적용됨');
-            } else {
-                console.log('[EnemyRenderer] DropShadowFilter 없음, 스킵');
+            // 기존 아웃라인 제거
+            const existingOutlines = container.children.filter(c => c.isOutline);
+            existingOutlines.forEach(o => {
+                container.removeChild(o);
+                o.destroy();
+            });
+            
+            // 스프라이트의 텍스처가 있어야 함
+            if (!sprite.texture) {
+                console.log('[EnemyRenderer] 스프라이트 텍스처 없음, 아웃라인 스킵');
+                return;
             }
+            
+            const outlineDistance = 3;  // 외곽선 두께
+            const outlineColor = 0x000000;  // 검은색
+            
+            // 8방향으로 검은 스프라이트 복제
+            const directions = [
+                { x: outlineDistance, y: 0 },
+                { x: -outlineDistance, y: 0 },
+                { x: 0, y: outlineDistance },
+                { x: 0, y: -outlineDistance },
+                { x: outlineDistance * 0.7, y: outlineDistance * 0.7 },
+                { x: -outlineDistance * 0.7, y: outlineDistance * 0.7 },
+                { x: outlineDistance * 0.7, y: -outlineDistance * 0.7 },
+                { x: -outlineDistance * 0.7, y: -outlineDistance * 0.7 },
+            ];
+            
+            directions.forEach(dir => {
+                const outline = new PIXI.Sprite(sprite.texture);
+                outline.anchor.set(sprite.anchor.x, sprite.anchor.y);
+                outline.x = dir.x;
+                outline.y = dir.y;
+                outline.tint = outlineColor;
+                outline.zIndex = -1;  // 메인 스프라이트 뒤에
+                outline.isOutline = true;  // 마커
+                
+                container.addChild(outline);
+            });
+            
+            // 메인 스프라이트가 맨 위에 오도록
+            sprite.zIndex = 10;
+            container.sortChildren();
+            
+            console.log('[EnemyRenderer] ✅ 아웃라인 스프라이트 8개 추가됨');
         } catch (e) {
-            console.log('[EnemyRenderer] 아웃라인 필터 에러:', e);
+            console.log('[EnemyRenderer] 아웃라인 에러:', e);
         }
     },
     
