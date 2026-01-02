@@ -187,6 +187,9 @@ const CardDragSystem = {
         return 'none';
     },
 
+    // 드래그 중 슬롯 위치 백업
+    savedSlotTransforms: {},
+    
     // 유효한 타겟 하이라이트
     highlightValidTargets(card) {
         const target = this.getCardTarget(card);
@@ -200,13 +203,22 @@ const CardDragSystem = {
         const arena = document.querySelector('.battle-arena');
         if (arena) {
             arena.classList.add('drag-in-progress');
-            // inline style 직접 제거
             arena.style.transform = 'none';
             arena.style.perspective = 'none';
         }
         
-        // 모든 적과 플레이어의 3D transform 제거
-        document.querySelectorAll('.enemy-unit, #player, .gimmick-unit').forEach(el => {
+        // ✅ 적의 슬롯 X 오프셋 저장 후 transform 제거 (3D/filter 충돌 방지)
+        this.savedSlotTransforms = {};
+        document.querySelectorAll('.enemy-unit').forEach(el => {
+            const domIndex = el.dataset.domIndex || el.dataset.index || '0';
+            const currentX = gsap.getProperty(el, 'x') || 0;
+            this.savedSlotTransforms[domIndex] = currentX;
+            el.style.transform = 'none';
+        });
+        
+        // 플레이어와 기믹은 단순 제거
+        if (playerEl) playerEl.style.transform = 'none';
+        document.querySelectorAll('.gimmick-unit').forEach(el => {
             el.style.transform = 'none';
         });
 
@@ -268,17 +280,34 @@ const CardDragSystem = {
         const arena = document.querySelector('.battle-arena');
         if (arena) {
             arena.classList.remove('drag-in-progress');
-            // inline style 제거 (Background3D가 다시 설정)
             arena.style.transform = '';
             arena.style.perspective = '';
         }
         
-        // 모든 적과 플레이어의 inline style 제거
-        document.querySelectorAll('.enemy-unit, #player, .gimmick-unit').forEach(el => {
+        // ✅ 적의 슬롯 위치 복원 (저장된 X 오프셋 + 3D 깊이)
+        document.querySelectorAll('.enemy-unit').forEach(el => {
+            const domIndex = el.dataset.domIndex || el.dataset.index || '0';
+            const slotIndex = parseInt(el.dataset.slot) || parseInt(domIndex);
+            const savedX = this.savedSlotTransforms[domIndex] || 0;
+            const z = typeof Background3D !== 'undefined' 
+                ? Background3D.getEnemyZ(slotIndex) 
+                : -80 - (slotIndex * 20);
+            
+            el.style.transform = `translateX(${savedX}px) translateZ(${z}px)`;
+            el.style.transformStyle = 'preserve-3d';
+            
+            // GSAP 상태도 복원
+            gsap.set(el, { x: savedX });
+        });
+        this.savedSlotTransforms = {};
+        
+        // 플레이어와 기믹 초기화
+        if (playerEl) playerEl.style.transform = '';
+        document.querySelectorAll('.gimmick-unit').forEach(el => {
             el.style.transform = '';
         });
         
-        // ✅ Background3D 재활성화 (약간 지연)
+        // ✅ Background3D 재활성화
         setTimeout(() => {
             if (typeof Background3D !== 'undefined') {
                 Background3D.enableParallax();
