@@ -496,6 +496,7 @@ const CardDragSystem = {
                             this.dragGhost?.classList.add('can-drop');
                         } else {
                             this.dragGhost?.classList.remove('can-drop');
+                        }
                     }
                 }
             }
