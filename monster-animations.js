@@ -226,7 +226,7 @@ MonsterAnimations.register('arrow_precision', (context) => {
 });
 
 // ==========================================
-// 🚀 통합 이동 애니메이션 (발사체처럼 슝~)
+// ⚡ 산데비스탄 스타일 대시 애니메이션
 // ==========================================
 function executeDashAnimation(context, direction = 'right') {
     const { enemyEl, enemy, onComplete } = context;
@@ -236,151 +236,307 @@ function executeDashAnimation(context, direction = 'right') {
         return;
     }
     
-    // 방향에 따른 설정
-    const isRight = direction === 'right'; // 후퇴 = 오른쪽, 전진 = 왼쪽
+    const isRight = direction === 'right';
     const dirMultiplier = isRight ? 1 : -1;
     
-    // 사운드
     if (typeof SoundSystem !== 'undefined' && SoundSystem.play) {
         SoundSystem.play('dash');
     }
     
     const rect = enemyEl.getBoundingClientRect();
     const spriteImg = enemyEl.querySelector('.enemy-sprite-img');
+    const spriteContainer = enemyEl.querySelector('.enemy-sprite-container');
     
     if (typeof gsap === 'undefined') {
-        // GSAP 없으면 간단히 처리
         if (onComplete) setTimeout(onComplete, 300);
         return;
     }
     
-    // 🎯 목표 거리 (화면 밖으로 발사!)
-    const dashDistance = 400 * dirMultiplier;
+    const dashDistance = 500 * dirMultiplier;
     
     // ==========================================
-    // 🌟 발사 준비 VFX (출발 지점)
+    // 🌀 산데비스탄 시간 왜곡 오버레이
     // ==========================================
-    if (typeof VFX !== 'undefined') {
-        // 발사 충격파
-        VFX.sparks(rect.left + rect.width / 2, rect.bottom, { 
-            color: '#f8fafc', count: 30, speed: 200, size: 4
-        });
-        VFX.sparks(rect.left + rect.width / 2, rect.bottom - 10, { 
-            color: '#60a5fa', count: 15, speed: 150, size: 3
-        });
+    const timeWarpOverlay = document.createElement('div');
+    timeWarpOverlay.className = 'sandevistan-overlay';
+    timeWarpOverlay.innerHTML = `
+        <div class="sandevistan-radial"></div>
+        <div class="sandevistan-lines"></div>
+    `;
+    document.body.appendChild(timeWarpOverlay);
+    
+    // CSS 삽입 (한번만)
+    if (!document.getElementById('sandevistan-styles')) {
+        const style = document.createElement('style');
+        style.id = 'sandevistan-styles';
+        style.textContent = `
+            .sandevistan-overlay {
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                pointer-events: none;
+                z-index: 9999;
+                overflow: hidden;
+            }
+            .sandevistan-radial {
+                position: absolute;
+                top: 50%; left: 50%;
+                width: 200vmax; height: 200vmax;
+                transform: translate(-50%, -50%);
+                background: radial-gradient(ellipse at center, 
+                    transparent 0%, 
+                    transparent 30%,
+                    rgba(0, 200, 255, 0.03) 50%,
+                    rgba(255, 50, 100, 0.05) 70%,
+                    rgba(0, 0, 0, 0.2) 100%
+                );
+                opacity: 0;
+            }
+            .sandevistan-lines {
+                position: absolute;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: repeating-linear-gradient(
+                    90deg,
+                    transparent 0px,
+                    transparent 3px,
+                    rgba(255, 255, 255, 0.02) 3px,
+                    rgba(255, 255, 255, 0.02) 4px
+                );
+                opacity: 0;
+            }
+            .sandevistan-ghost {
+                position: absolute;
+                pointer-events: none;
+                image-rendering: pixelated;
+            }
+            .sandevistan-chromatic {
+                filter: url(#chromatic-aberration) !important;
+            }
+            @keyframes sandevistan-pulse {
+                0%, 100% { opacity: 0.3; }
+                50% { opacity: 0.8; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    // 색수차 SVG 필터
+    if (!document.getElementById('chromatic-aberration')) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.id = 'chromatic-aberration';
+        svg.style.cssText = 'position:absolute;width:0;height:0;';
+        svg.innerHTML = `
+            <defs>
+                <filter id="chromatic-aberration">
+                    <feOffset in="SourceGraphic" dx="-3" dy="0" result="red">
+                        <animate attributeName="dx" values="-3;-5;-3" dur="0.1s" repeatCount="indefinite"/>
+                    </feOffset>
+                    <feOffset in="SourceGraphic" dx="3" dy="0" result="blue">
+                        <animate attributeName="dx" values="3;5;3" dur="0.1s" repeatCount="indefinite"/>
+                    </feOffset>
+                    <feColorMatrix in="red" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="red-only"/>
+                    <feColorMatrix in="blue" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="blue-only"/>
+                    <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="green-only"/>
+                    <feBlend in="red-only" in2="green-only" mode="screen" result="rg"/>
+                    <feBlend in="rg" in2="blue-only" mode="screen"/>
+                </filter>
+            </defs>
+        `;
+        document.body.appendChild(svg);
     }
     
     // ==========================================
-    // 🚀 메인 타임라인
+    // 👻 다중 고스트 생성 함수
+    // ==========================================
+    const ghosts = [];
+    function createGhost(offsetX, opacity, blur, hue) {
+        if (!spriteImg) return;
+        const ghost = spriteImg.cloneNode(true);
+        ghost.className = 'sandevistan-ghost';
+        const imgRect = spriteImg.getBoundingClientRect();
+        ghost.style.cssText = `
+            position: fixed;
+            left: ${imgRect.left + offsetX}px;
+            top: ${imgRect.top}px;
+            width: ${imgRect.width}px;
+            height: ${imgRect.height}px;
+            opacity: ${opacity};
+            filter: blur(${blur}px) brightness(1.5) hue-rotate(${hue}deg) saturate(1.5);
+            transform: scaleX(${1 + Math.abs(offsetX) * 0.002});
+            z-index: 9998;
+            mix-blend-mode: screen;
+        `;
+        document.body.appendChild(ghost);
+        ghosts.push(ghost);
+        return ghost;
+    }
+    
+    // ==========================================
+    // ⚡ 메인 타임라인
     // ==========================================
     const tl = gsap.timeline({
         onComplete: () => {
-            // 원상복구
-            gsap.set(enemyEl, { x: 0, opacity: 1, scale: 1 });
-            gsap.set(spriteImg, { 
-                scaleX: 1, scaleY: 1, skewX: 0, 
-                filter: 'none', x: 0, rotation: 0 
-            });
+            // 클린업
+            gsap.set(enemyEl, { x: 0, opacity: 1, scale: 1, filter: 'none' });
+            if (spriteImg) {
+                gsap.set(spriteImg, { 
+                    scaleX: 1, scaleY: 1, skewX: 0, 
+                    filter: 'none', x: 0, rotation: 0 
+                });
+                spriteImg.classList.remove('sandevistan-chromatic');
+            }
+            timeWarpOverlay.remove();
+            ghosts.forEach(g => g.remove());
             if (onComplete) onComplete();
         }
     });
     
-    // 1️⃣ 준비 동작 (반대 방향으로 웅크림)
+    // 1️⃣ 시간 정지 순간 (산데비스탄 활성화!)
+    tl.to(timeWarpOverlay.querySelector('.sandevistan-radial'), {
+        opacity: 1,
+        scale: 1.2,
+        duration: 0.15,
+        ease: 'power2.out'
+    })
+    .to(timeWarpOverlay.querySelector('.sandevistan-lines'), {
+        opacity: 0.5,
+        duration: 0.1
+    }, '<')
+    .call(() => {
+        // 색수차 활성화
+        if (spriteImg) spriteImg.classList.add('sandevistan-chromatic');
+        
+        // 화면 색조 변화
+        gsap.to('.battle-arena', {
+            filter: 'saturate(0.7) brightness(0.9) contrast(1.1)',
+            duration: 0.1
+        });
+    });
+    
+    // 2️⃣ 준비 자세 (웅크림)
     tl.to(enemyEl, {
-        x: -20 * dirMultiplier,
-        scale: 0.95,
-        duration: 0.08,
+        x: -30 * dirMultiplier,
+        scale: 0.9,
+        duration: 0.1,
         ease: 'power2.in'
     })
     .to(spriteImg, {
-        scaleX: 0.85,
-        scaleY: 1.15,
-        duration: 0.08,
+        scaleX: 0.8,
+        scaleY: 1.2,
+        duration: 0.1,
         ease: 'power2.in'
     }, '<');
     
-    // 2️⃣ 발사! (슝~)
-    tl.to(enemyEl, {
+    // 3️⃣ 산데비스탄 대시! (초고속)
+    tl.call(() => {
+        // 시작 고스트들 (색수차 효과)
+        createGhost(-15 * dirMultiplier, 0.6, 2, -30);  // 빨강 쉬프트
+        createGhost(15 * dirMultiplier, 0.6, 2, 30);    // 파랑 쉬프트
+        
+        // VFX
+        if (typeof VFX !== 'undefined') {
+            VFX.sparks(rect.left + rect.width / 2, rect.bottom, { 
+                color: '#00ffff', count: 40, speed: 300, size: 3
+            });
+        }
+    })
+    .to(enemyEl, {
         x: dashDistance,
-        duration: 0.2,
+        duration: 0.12,  // 초고속!
         ease: 'power4.in',
         onUpdate: function() {
-            // 이동 중 트레일 생성
             const progress = this.progress();
-            if (progress > 0.2 && progress < 0.9 && Math.random() > 0.5) {
-                createProjectileTrail(enemyEl, spriteImg, dirMultiplier, progress);
+            
+            // 이동 중 다중 고스트 생성
+            if (progress > 0.1 && progress < 0.95) {
+                const ghostOffset = (1 - progress) * dashDistance * 0.8;
+                
+                if (Math.random() > 0.3) {
+                    const ghost = createGhost(
+                        -ghostOffset * dirMultiplier,
+                        0.4 + Math.random() * 0.3,
+                        1 + progress * 4,
+                        Math.random() * 60 - 30
+                    );
+                    
+                    if (ghost) {
+                        gsap.to(ghost, {
+                            opacity: 0,
+                            x: -30 * dirMultiplier,
+                            filter: 'blur(10px) brightness(2)',
+                            duration: 0.15,
+                            ease: 'power2.out',
+                            onComplete: () => {
+                                ghost.remove();
+                                const idx = ghosts.indexOf(ghost);
+                                if (idx > -1) ghosts.splice(idx, 1);
+                            }
+                        });
+                    }
+                }
             }
         }
     })
     .to(spriteImg, {
-        scaleX: 1.6,  // 횡방향으로 크게 늘어남 (발사체 느낌)
-        scaleY: 0.7,
-        skewX: 25 * dirMultiplier,
-        filter: 'brightness(1.8) blur(4px) saturate(0.5)',
-        x: 30 * dirMultiplier,
-        duration: 0.2,
+        scaleX: 2.5,  // 극단적 늘어남
+        scaleY: 0.5,
+        skewX: 35 * dirMultiplier,
+        filter: 'brightness(2.5) blur(3px)',
+        x: 50 * dirMultiplier,
+        duration: 0.12,
         ease: 'power4.in'
     }, '<');
     
-    // 3️⃣ 스피드라인 VFX
+    // 4️⃣ 스피드라인 폭발
     tl.call(() => {
         if (typeof VFX !== 'undefined' && VFX.speedLine) {
-            for (let i = 0; i < 12; i++) {
+            for (let i = 0; i < 20; i++) {
                 setTimeout(() => {
                     const lineY = rect.top + rect.height * 0.1 + (Math.random() * rect.height * 0.8);
-                    const startX = isRight ? rect.left : rect.right;
+                    const startX = isRight ? rect.left - 50 : rect.right + 50;
                     VFX.speedLine(startX, lineY, { 
-                        color: i < 4 ? '#ffffff' : '#94a3b8',
-                        length: 100 + Math.random() * 80,
-                        thickness: i < 3 ? 4 : 2,
+                        color: i < 6 ? '#00ffff' : (i < 12 ? '#ffffff' : '#ff0066'),
+                        length: 150 + Math.random() * 100,
+                        thickness: i < 4 ? 5 : (i < 10 ? 3 : 2),
                         angle: isRight ? 0 : 180
                     });
-                }, i * 10);
+                }, i * 8);
             }
         }
-    }, null, '-=0.15');
+        
+        // 도착점 충격파
+        if (typeof VFX !== 'undefined') {
+            const endX = rect.left + dashDistance;
+            VFX.sparks(endX, rect.bottom, { 
+                color: '#ff0066', count: 25, speed: 200, size: 4
+            });
+        }
+    }, null, '-=0.08');
     
-    // 4️⃣ 완전히 사라짐
-    tl.to(enemyEl, {
+    // 5️⃣ 시간 복구 & 페이드아웃
+    tl.to(timeWarpOverlay.querySelector('.sandevistan-radial'), {
+        opacity: 0,
+        scale: 2,
+        duration: 0.15,
+        ease: 'power2.in'
+    })
+    .to(timeWarpOverlay.querySelector('.sandevistan-lines'), {
+        opacity: 0,
+        duration: 0.1
+    }, '<')
+    .to('.battle-arena', {
+        filter: 'none',
+        duration: 0.15
+    }, '<')
+    .to(enemyEl, {
         opacity: 0,
         duration: 0.05,
         ease: 'none'
-    });
+    }, '-=0.1');
 }
 
-// 발사체 트레일 생성 함수
+// 산데비스탄 고스트 트레일 (호환용)
 function createProjectileTrail(enemyEl, spriteImg, dirMultiplier, progress) {
-    if (!spriteImg) return;
-    
-    const spriteContainer = enemyEl.querySelector('.enemy-sprite-container');
-    if (!spriteContainer) return;
-    
-    const trail = spriteImg.cloneNode(true);
-    trail.className = 'projectile-trail';
-    
-    const offsetX = (1 - progress) * 50 * -dirMultiplier;
-    
-    trail.style.cssText = `
-        position: absolute;
-        top: 0; left: 0;
-        width: 100%; height: auto;
-        opacity: 0.6;
-        filter: brightness(2.5) saturate(0) blur(${2 + progress * 6}px);
-        pointer-events: none;
-        z-index: -1;
-        transform: translateX(${offsetX}px) scaleX(${1.2 + progress * 0.5}) scaleY(${0.8 - progress * 0.2});
-    `;
-    spriteContainer.appendChild(trail);
-    
-    // 빠르게 페이드아웃
-    gsap.to(trail, {
-        opacity: 0,
-        x: offsetX - 40 * dirMultiplier,
-        scaleX: 0.5,
-        duration: 0.12,
-        ease: 'power2.out',
-        onComplete: () => trail.remove()
-    });
+    // 기존 호환성 유지
 }
 
 // 후퇴 (뒤로 대시) - 발사체 스타일
