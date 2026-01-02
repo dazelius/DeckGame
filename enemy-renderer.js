@@ -313,7 +313,7 @@ const EnemyRenderer = {
     },
     
     removeEnemy(enemy) {
-        const enemyId = enemy.id || enemy.name;
+        const enemyId = enemy.pixiId || enemy.id || enemy.name;
         const data = this.sprites.get(enemyId);
         
         if (data) {
@@ -351,7 +351,7 @@ const EnemyRenderer = {
     // 슬롯 이동 (핵심!)
     // ==========================================
     moveToSlot(enemy, newSlot, duration = 0.3) {
-        const enemyId = enemy.id || enemy.name;
+        const enemyId = enemy.pixiId || enemy.id || enemy.name;
         const data = this.sprites.get(enemyId);
         
         if (!data) return Promise.resolve();
@@ -422,7 +422,7 @@ const EnemyRenderer = {
         const promises = [];
         
         allEnemies.forEach(enemy => {
-            const id = enemy.id || enemy.name;
+            const id = enemy.pixiId || enemy.id || enemy.name;
             const data = this.sprites.get(id);
             if (!data) return;
             
@@ -458,7 +458,7 @@ const EnemyRenderer = {
     },
     
     onEnemyHover(enemy, isOver) {
-        const enemyId = enemy.id || enemy.name;
+        const enemyId = enemy.pixiId || enemy.id || enemy.name;
         const data = this.sprites.get(enemyId);
         
         if (!data) return;
@@ -646,7 +646,7 @@ const EnemyRenderer = {
     },
     
     updateEnemyHP(enemy) {
-        const enemyId = enemy.id || enemy.name;
+        const enemyId = enemy.pixiId || enemy.id || enemy.name;
         const data = this.sprites.get(enemyId);
         
         if (data && data.uiElement) {
@@ -665,7 +665,7 @@ const EnemyRenderer = {
     
     // 인텐트 업데이트
     updateEnemyIntent(enemy) {
-        const enemyId = enemy.id || enemy.name;
+        const enemyId = enemy.pixiId || enemy.id || enemy.name;
         const data = this.sprites.get(enemyId);
         
         if (data && data.uiElement) {
@@ -678,7 +678,7 @@ const EnemyRenderer = {
     
     // 브레이크 게이지 업데이트
     updateEnemyBreak(enemy) {
-        const enemyId = enemy.id || enemy.name;
+        const enemyId = enemy.pixiId || enemy.id || enemy.name;
         const data = this.sprites.get(enemyId);
         
         if (data && data.uiElement) {
@@ -691,7 +691,7 @@ const EnemyRenderer = {
     
     // 쉴드 업데이트
     updateEnemyShield(enemy) {
-        const enemyId = enemy.id || enemy.name;
+        const enemyId = enemy.pixiId || enemy.id || enemy.name;
         const data = this.sprites.get(enemyId);
         
         if (data && data.uiElement) {
@@ -713,7 +713,7 @@ const EnemyRenderer = {
     
     // 상태 효과 업데이트
     updateEnemyStatus(enemy) {
-        const enemyId = enemy.id || enemy.name;
+        const enemyId = enemy.pixiId || enemy.id || enemy.name;
         const data = this.sprites.get(enemyId);
         
         if (data && data.uiElement) {
@@ -746,7 +746,7 @@ const EnemyRenderer = {
     
     // 선택 표시
     setEnemySelected(enemy, isSelected) {
-        const enemyId = enemy.id || enemy.name;
+        const enemyId = enemy.pixiId || enemy.id || enemy.name;
         const data = this.sprites.get(enemyId);
         
         if (!data || !data.container) return;
@@ -781,27 +781,29 @@ const EnemyRenderer = {
     
     // 타겟 하이라이트 (카드 드래그 시)
     highlightAsTarget(enemy, isHighlighted) {
-        const enemyId = enemy.id || enemy.name;
+        const enemyId = enemy.pixiId || enemy.pixiId || enemy.id || enemy.name;
         const data = this.sprites.get(enemyId);
         
         if (!data || !data.container) return;
         
+        // 스프라이트 찾기
+        const sprite = data.sprite;
+        
         if (isHighlighted) {
-            // 붉은 네온 효과
-            gsap.to(data.container, {
-                pixi: { tint: 0xff6666 },
-                duration: 0.2
-            });
+            // 붉은 틴트 효과 (직접 설정)
+            if (sprite && sprite.tint !== undefined) {
+                sprite.tint = 0xff6666;
+            }
             gsap.to(data.container.scale, {
                 x: this.getSlotScale(data.slotIndex) * 1.15,
                 y: this.getSlotScale(data.slotIndex) * 1.15,
                 duration: 0.2
             });
         } else {
-            gsap.to(data.container, {
-                pixi: { tint: 0xffffff },
-                duration: 0.2
-            });
+            // 원래 색상으로
+            if (sprite && sprite.tint !== undefined) {
+                sprite.tint = 0xffffff;
+            }
             gsap.to(data.container.scale, {
                 x: this.getSlotScale(data.slotIndex),
                 y: this.getSlotScale(data.slotIndex),
@@ -842,7 +844,7 @@ const EnemyRenderer = {
     },
     
     playDeathAnimation(enemy) {
-        const enemyId = enemy.id || enemy.name;
+        const enemyId = enemy.pixiId || enemy.id || enemy.name;
         const data = this.sprites.get(enemyId);
         
         if (!data) return Promise.resolve();
@@ -862,7 +864,7 @@ const EnemyRenderer = {
     },
     
     playHitAnimation(enemy) {
-        const enemyId = enemy.id || enemy.name;
+        const enemyId = enemy.pixiId || enemy.id || enemy.name;
         const data = this.sprites.get(enemyId);
         
         if (!data) return;
@@ -914,7 +916,7 @@ const EnemyRenderer = {
         gameState.enemies.forEach((enemy, index) => {
             if (enemy.hp <= 0) return;
             
-            const enemyId = enemy.id || enemy.name;
+            const enemyId = enemy.pixiId || enemy.id || enemy.name;
             if (!this.sprites.has(enemyId)) {
                 this.addEnemy(enemy, index);
             } else {
