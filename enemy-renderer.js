@@ -717,33 +717,49 @@ const EnemyRenderer = {
         const data = this.sprites.get(enemyId);
         if (!data || !data.container) return;
         
-        // 스프라이트 글로벌 위치 (앵커가 하단 중앙이므로 y는 발 위치)
-        const globalPos = data.container.getGlobalPosition();
+        // ========================================
+        // 캔버스 DOM 위치 보정 (PixiJS 좌표 → HTML 좌표)
+        // ========================================
+        let canvasOffsetX = 0;
+        let canvasOffsetY = 0;
         
-        // 스프라이트 실제 높이 계산
-        // ⚠️ PIXI sprite.height는 이미 scale 적용된 값이므로 다시 곱하면 안됨!
-        let spriteHeight = 150;  // 기본값
-        if (data.sprite && data.sprite.texture && data.sprite.texture.valid) {
-            // sprite.height = texture.height * scale.y (이미 적용됨)
-            spriteHeight = data.sprite.height;
+        // 캔버스의 실제 DOM 위치 가져오기
+        const canvas = this.app?.canvas || this.app?.view;
+        const overlay = this.uiOverlay;
+        
+        if (canvas && overlay) {
+            const canvasRect = canvas.getBoundingClientRect();
+            const overlayRect = overlay.getBoundingClientRect();
+            canvasOffsetX = canvasRect.left - overlayRect.left;
+            canvasOffsetY = canvasRect.top - overlayRect.top;
         }
         
-        // 컨테이너 스케일도 적용 (컨테이너가 스프라이트를 감싸고 있으면)
-        const containerScale = data.container.scale?.y || 1;
-        const totalHeight = spriteHeight * containerScale;
+        // 스프라이트의 PixiJS 내부 좌표
+        const pixiPos = data.container.getGlobalPosition();
+        
+        // HTML 오버레이 좌표로 변환
+        const screenX = pixiPos.x + canvasOffsetX;
+        const screenY = pixiPos.y + canvasOffsetY;
+        
+        // 스프라이트 실제 높이 계산 (컨테이너 스케일 적용)
+        let spriteHeight = 150;
+        if (data.sprite && data.sprite.texture && data.sprite.texture.valid) {
+            // texture의 원본 높이 × 컨테이너 스케일
+            const textureHeight = data.sprite.texture.height || 150;
+            const containerScale = data.container.scale?.y || 1;
+            spriteHeight = textureHeight * containerScale;
+        }
         
         // ========================================
         // 인텐트: 스프라이트 머리 바로 위 (5px 간격)
         // ========================================
         if (data.topUI) {
-            // 머리 위치 = 발 위치(globalPos.y) - 스프라이트 높이
-            const headY = globalPos.y - totalHeight;
-            // 인텐트 하단이 머리에 붙도록
-            const topY = headY - 5;
+            // 머리 위치 = 발 위치 - 스프라이트 높이
+            const headY = screenY - spriteHeight;
             
-            data.topUI.style.left = globalPos.x + 'px';
-            data.topUI.style.top = topY + 'px';
-            data.topUI.style.transform = 'translate(-50%, -100%)';  // 하단 중앙 정렬
+            data.topUI.style.left = screenX + 'px';
+            data.topUI.style.top = (headY - 5) + 'px';
+            data.topUI.style.transform = 'translate(-50%, -100%)';
             data.topUI.style.display = 'flex';
             data.topUI.style.visibility = 'visible';
             data.topUI.style.opacity = '1';
@@ -753,11 +769,9 @@ const EnemyRenderer = {
         // HP바: 스프라이트 발 바로 아래 (5px 간격)
         // ========================================
         if (data.bottomUI) {
-            const bottomY = globalPos.y + 5;
-            
-            data.bottomUI.style.left = globalPos.x + 'px';
-            data.bottomUI.style.top = bottomY + 'px';
-            data.bottomUI.style.transform = 'translateX(-50%)';  // 중앙 정렬
+            data.bottomUI.style.left = screenX + 'px';
+            data.bottomUI.style.top = (screenY + 5) + 'px';
+            data.bottomUI.style.transform = 'translateX(-50%)';
             data.bottomUI.style.display = 'flex';
             data.bottomUI.style.visibility = 'visible';
             data.bottomUI.style.opacity = '1';
