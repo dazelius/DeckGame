@@ -519,37 +519,26 @@ const EnemyRenderer = {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
-            z-index: 60;
+            gap: 0;
+            z-index: 100;
         `;
         
-        // 인텐트
+        // 인텐트 (핵심!)
         const intentEl = document.createElement('div');
         intentEl.className = 'enemy-intent pixi-intent';
-        intentEl.style.cssText = `
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        `;
         intentEl.innerHTML = this.getIntentHTML(enemy);
         topUI.appendChild(intentEl);
         
-        // 브레이크 게이지 (인텐트 아래)
+        // 브레이크 게이지 (인텐트 하단에 붙음)
         const breakGauge = document.createElement('div');
         breakGauge.className = 'break-gauge-container pixi-break';
-        breakGauge.style.cssText = `
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 2px;
-        `;
         breakGauge.innerHTML = this.getBreakGaugeHTML(enemy);
         
         // 브레이크 가능한 인텐트가 있는지 확인
         const hasBreakable = typeof BreakSystem !== 'undefined' && 
                             BreakSystem.hasBreakableIntent && 
                             BreakSystem.hasBreakableIntent(enemy);
-        if (!hasBreakable && !enemy.breakGauge) {
+        if (!hasBreakable) {
             breakGauge.style.display = 'none';
         }
         topUI.appendChild(breakGauge);
@@ -570,54 +559,36 @@ const EnemyRenderer = {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 2px;
-            z-index: 55;
+            gap: 3px;
+            z-index: 90;
         `;
         
-        // HP 바
+        // HP 바 (폴리싱된 디자인)
         const hpBar = document.createElement('div');
         hpBar.className = 'enemy-hp-bar pixi-hp';
-        hpBar.style.cssText = `
-            width: 100px;
-            height: 14px;
-            background: #1a1a1a;
-            border: 2px solid #444;
-            border-radius: 4px;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-        `;
         const hpPercent = Math.max(0, (enemy.hp / enemy.maxHp) * 100);
         hpBar.innerHTML = `
-            <div class="hp-fill" style="width: ${hpPercent}%; height: 100%; background: linear-gradient(to bottom, #e53e3e, #c53030); position: absolute; top: 0; left: 0; transition: width 0.3s ease;"></div>
-            <span class="hp-text" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; font-size: 0.7rem; font-weight: bold; color: #fff; text-shadow: 1px 1px 1px #000;">${enemy.hp}/${enemy.maxHp}</span>
+            <div class="hp-bg"></div>
+            <div class="hp-fill" style="width: ${hpPercent}%;"></div>
+            <span class="hp-text">${enemy.hp}/${enemy.maxHp}</span>
         `;
         bottomUI.appendChild(hpBar);
         
         // 쉴드 표시
-        const shieldEl = document.createElement('div');
-        shieldEl.className = 'enemy-shield pixi-shield';
-        shieldEl.style.cssText = `
-            font-size: 0.9rem;
-            color: #60a5fa;
-            text-shadow: 0 0 5px #60a5fa;
-            display: ${enemy.shield && enemy.shield > 0 ? 'block' : 'none'};
-        `;
-        shieldEl.innerHTML = `🛡️ ${enemy.shield || 0}`;
-        bottomUI.appendChild(shieldEl);
+        if (enemy.shield && enemy.shield > 0) {
+            const shieldEl = document.createElement('div');
+            shieldEl.className = 'enemy-shield pixi-shield';
+            shieldEl.innerHTML = `🛡️ ${enemy.shield}`;
+            bottomUI.appendChild(shieldEl);
+        }
         
         // 상태 효과
         const statusEl = document.createElement('div');
         statusEl.className = 'enemy-status-effects pixi-status';
-        statusEl.style.cssText = `
-            display: flex;
-            gap: 4px;
-            flex-wrap: wrap;
-            justify-content: center;
-            max-width: 120px;
-        `;
         statusEl.innerHTML = this.getStatusEffectsHTML(enemy);
-        bottomUI.appendChild(statusEl);
+        if (this.getStatusEffectsHTML(enemy)) {
+            bottomUI.appendChild(statusEl);
+        }
         
         this.uiOverlay.appendChild(bottomUI);
         
@@ -771,25 +742,29 @@ const EnemyRenderer = {
         const globalPos = data.container.getGlobalPosition();
         
         // 스프라이트 높이 계산 (스케일 적용)
-        let spriteHeight = 200;  // 기본값
+        let spriteHeight = 180;  // 기본값
         if (data.sprite && data.sprite.height) {
             spriteHeight = data.sprite.height * data.container.scale.y;
         }
         
-        // 상단 UI (인텐트 + 브레이크) - 머리 위
+        // 상단 UI (인텐트 + 브레이크) - 머리 위 (더 가깝게)
         if (data.topUI) {
+            const topY = globalPos.y - spriteHeight - 5;
             data.topUI.style.left = globalPos.x + 'px';
-            data.topUI.style.top = (globalPos.y - spriteHeight - 10) + 'px';  // 머리 바로 위
+            data.topUI.style.top = topY + 'px';
             data.topUI.style.display = 'flex';
             data.topUI.style.visibility = 'visible';
+            data.topUI.style.opacity = '1';
         }
         
-        // 하단 UI (이름 + HP바 + 상태) - 발 밑
+        // 하단 UI (HP바) - 발에 딱 붙게
         if (data.bottomUI) {
+            const bottomY = globalPos.y + 5;
             data.bottomUI.style.left = globalPos.x + 'px';
-            data.bottomUI.style.top = (globalPos.y + 10) + 'px';  // 발 바로 밑
+            data.bottomUI.style.top = bottomY + 'px';
             data.bottomUI.style.display = 'flex';
             data.bottomUI.style.visibility = 'visible';
+            data.bottomUI.style.opacity = '1';
         }
     },
     
@@ -1848,38 +1823,56 @@ enemyRendererStyles.textContent = `
         text-align: center;
     }
     
-    /* HP 바 */
+    /* ========================================
+       HP 바 (폴리싱된 디자인)
+       ======================================== */
     .enemy-hp-bar.pixi-hp {
-        width: 100px;
-        height: 14px;
-        background: #1a1a1a;
-        border: 2px solid #444;
-        border-radius: 3px;
-        overflow: hidden;
+        width: 90px;
+        height: 12px;
         position: relative;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        border-radius: 6px;
+        overflow: hidden;
+        background: transparent;
+    }
+    
+    .enemy-hp-bar .hp-bg {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: linear-gradient(to bottom, #1a1a1a 0%, #0d0d0d 100%);
+        border: 1px solid #333;
+        border-radius: 6px;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.8), 0 1px 2px rgba(0,0,0,0.5);
     }
     
     .enemy-hp-bar .hp-fill {
-        height: 100%;
-        background: linear-gradient(to bottom, #e53e3e, #c53030);
+        position: absolute;
+        top: 1px; left: 1px; bottom: 1px;
+        background: linear-gradient(to bottom, #ef4444 0%, #b91c1c 50%, #991b1b 100%);
+        border-radius: 5px;
         transition: width 0.3s ease;
+        box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
     }
     
     .enemy-hp-bar .hp-text {
         position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 10px;
+        top: 0; left: 0; right: 0; bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 9px;
         font-weight: bold;
-        color: white;
+        color: #fff;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.5);
+        z-index: 2;
+        letter-spacing: 0.5px;
         text-shadow: 1px 1px 2px #000;
     }
     
-    /* 인텐트 (기존 스타일) */
+    /* ========================================
+       인텐트 (폴리싱된 디자인)
+       ======================================== */
     .pixi-intent {
-        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.9));
+        filter: drop-shadow(0 2px 6px rgba(0,0,0,0.9));
     }
     
     /* 일반 인텐트 박스 */
@@ -1887,69 +1880,78 @@ enemyRendererStyles.textContent = `
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 3px;
-        padding: 3px 8px;
-        background: rgba(0, 0, 0, 0.8);
-        border: 1px solid #666;
-        border-radius: 4px;
-        font-size: 0.9rem;
+        gap: 4px;
+        padding: 4px 10px;
+        background: linear-gradient(180deg, rgba(40, 40, 45, 0.95) 0%, rgba(25, 25, 30, 0.98) 100%);
+        border: 1px solid rgba(100, 100, 110, 0.6);
+        border-radius: 6px;
+        font-size: 0.95rem;
         color: #fff;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
     }
     
     .pixi-intent .intent-icon {
-        font-size: 1.1rem;
+        font-size: 1.2rem;
     }
     
     .pixi-intent .intent-value {
-        font-size: 1rem;
+        font-size: 1.1rem;
         font-weight: bold;
         color: #fff;
     }
     
     .pixi-intent .intent-hits {
-        font-size: 0.8rem;
-        color: #ffd700;
+        font-size: 0.85rem;
+        color: #fbbf24;
+        font-weight: bold;
     }
     
-    /* 위험 인텐트 (브레이크 가능) */
+    /* 위험 인텐트 (브레이크 가능) - 빨간 강조 */
     .pixi-intent .intent-inner.danger {
-        background: linear-gradient(180deg, rgba(127, 29, 29, 0.95) 0%, rgba(69, 10, 10, 0.98) 100%);
-        border: 1px solid #dc2626;
+        background: linear-gradient(180deg, rgba(153, 27, 27, 0.95) 0%, rgba(69, 10, 10, 0.98) 100%);
+        border: 2px solid #ef4444;
         color: #fef3c7;
-        animation: intentPulse 1.5s ease-in-out infinite;
+        animation: intentPulse 1.2s ease-in-out infinite;
     }
     
     @keyframes intentPulse {
-        0%, 100% { box-shadow: 0 0 4px rgba(220, 38, 38, 0.5); }
-        50% { box-shadow: 0 0 10px rgba(220, 38, 38, 0.9), 0 0 16px rgba(239, 68, 68, 0.5); }
+        0%, 100% { 
+            box-shadow: 0 0 6px rgba(239, 68, 68, 0.6), inset 0 1px 0 rgba(255,255,255,0.15); 
+            transform: scale(1);
+        }
+        50% { 
+            box-shadow: 0 0 14px rgba(239, 68, 68, 1), 0 0 20px rgba(239, 68, 68, 0.4), inset 0 1px 0 rgba(255,255,255,0.15); 
+            transform: scale(1.02);
+        }
     }
     
-    /* 인텐트 타입별 색상 */
-    .pixi-intent .intent-attack .intent-icon { color: #ff6b6b; }
-    .pixi-intent .intent-defend .intent-icon { color: #4299e1; }
-    .pixi-intent .intent-buff .intent-icon { color: #48bb78; }
-    .pixi-intent .intent-debuff .intent-icon { color: #9f7aea; }
-    .pixi-intent .intent-heal .intent-icon { color: #68d391; }
-    .pixi-intent .intent-retreat .intent-icon { color: #ed8936; }
-    .pixi-intent .intent-advance .intent-icon { color: #f6e05e; }
-    .pixi-intent .intent-special .intent-icon { color: #ffd700; }
+    /* 인텐트 타입별 아이콘 색상 */
+    .pixi-intent .intent-attack .intent-icon { color: #f87171; }
+    .pixi-intent .intent-defend .intent-icon { color: #60a5fa; }
+    .pixi-intent .intent-buff .intent-icon { color: #4ade80; }
+    .pixi-intent .intent-debuff .intent-icon { color: #c084fc; }
+    .pixi-intent .intent-heal .intent-icon { color: #34d399; }
+    .pixi-intent .intent-retreat .intent-icon { color: #fb923c; }
+    .pixi-intent .intent-advance .intent-icon { color: #facc15; }
+    .pixi-intent .intent-special .intent-icon { color: #fcd34d; }
     
-    /* 브레이크 상태 표시 */
+    /* 브레이크 상태 표시 (스턴!) */
     .pixi-intent .intent-broken {
         display: flex;
         align-items: center;
-        gap: 4px;
-        padding: 4px 10px;
-        background: linear-gradient(180deg, rgba(59, 130, 246, 0.9) 0%, rgba(30, 64, 175, 0.95) 100%);
-        border-radius: 4px;
-        border: 1px solid #60a5fa;
-        animation: brokenPulse 1s ease-in-out infinite;
+        gap: 5px;
+        padding: 5px 12px;
+        background: linear-gradient(180deg, rgba(59, 130, 246, 0.95) 0%, rgba(30, 58, 138, 0.98) 100%);
+        border-radius: 6px;
+        border: 2px solid #60a5fa;
+        animation: brokenPulse 0.8s ease-in-out infinite;
+        box-shadow: 0 0 12px rgba(96, 165, 250, 0.6);
     }
     
     .pixi-intent .broken-icon {
-        font-size: 1.2rem;
-        animation: spin 2s linear infinite;
+        font-size: 1.3rem;
+        animation: spin 1.5s linear infinite;
     }
     
     @keyframes spin {
@@ -1958,31 +1960,40 @@ enemyRendererStyles.textContent = `
     }
     
     .pixi-intent .broken-text {
-        font-size: 0.9rem;
+        font-size: 1rem;
         font-weight: bold;
         color: #fff;
-        text-shadow: 0 0 6px #3b82f6;
+        text-shadow: 0 0 8px #60a5fa;
+        letter-spacing: 1px;
     }
     
     @keyframes brokenPulse {
-        0%, 100% { opacity: 0.85; box-shadow: 0 0 4px rgba(96, 165, 250, 0.5); }
-        50% { opacity: 1; box-shadow: 0 0 10px rgba(96, 165, 250, 0.9); }
+        0%, 100% { 
+            opacity: 0.9; 
+            box-shadow: 0 0 8px rgba(96, 165, 250, 0.6); 
+        }
+        50% { 
+            opacity: 1; 
+            box-shadow: 0 0 16px rgba(96, 165, 250, 1), 0 0 24px rgba(96, 165, 250, 0.4); 
+        }
     }
     
-    /* 브레이크 게이지 바 (기존 스타일) */
+    /* ========================================
+       브레이크 게이지 (인텐트 하단에 붙음)
+       ======================================== */
     .pixi-break {
         width: 100%;
+        margin-top: -2px;
     }
     
     .pixi-break .break-gauge-bar {
         position: relative;
         width: 100%;
-        height: 4px;
-        background: rgba(0, 0, 0, 0.8);
-        border-radius: 0 0 3px 3px;
+        height: 5px;
+        background: rgba(0, 0, 0, 0.9);
+        border-radius: 0 0 4px 4px;
         overflow: hidden;
-        margin-top: -1px;
-        border: 1px solid rgba(251, 191, 36, 0.5);
+        border: 1px solid rgba(251, 191, 36, 0.4);
         border-top: none;
     }
     
@@ -1990,36 +2001,49 @@ enemyRendererStyles.textContent = `
         height: 100%;
         background: linear-gradient(90deg, #fbbf24 0%, #f59e0b 50%, #fbbf24 100%);
         transition: width 0.3s ease;
-        box-shadow: 0 0 6px rgba(251, 191, 36, 0.8);
-        animation: gaugeGlow 1.5s ease-in-out infinite;
+        box-shadow: 0 0 8px rgba(251, 191, 36, 0.9);
+        animation: gaugeGlow 1s ease-in-out infinite;
     }
     
     @keyframes gaugeGlow {
-        0%, 100% { box-shadow: 0 0 4px rgba(251, 191, 36, 0.6); }
-        50% { box-shadow: 0 0 8px rgba(251, 191, 36, 1); }
+        0%, 100% { box-shadow: 0 0 4px rgba(251, 191, 36, 0.7); }
+        50% { box-shadow: 0 0 10px rgba(251, 191, 36, 1), 0 0 14px rgba(251, 191, 36, 0.5); }
     }
     
-    /* 쉴드 */
+    /* ========================================
+       쉴드 표시
+       ======================================== */
     .pixi-shield {
-        font-size: 14px;
-        color: #63b3ed;
-        text-shadow: 0 0 5px rgba(99, 179, 237, 0.5);
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        font-size: 11px;
+        font-weight: bold;
+        color: #60a5fa;
+        text-shadow: 0 0 6px rgba(96, 165, 250, 0.8);
+        padding: 2px 6px;
+        background: rgba(30, 64, 175, 0.4);
+        border: 1px solid rgba(96, 165, 250, 0.5);
+        border-radius: 4px;
     }
     
-    /* 상태 효과 */
+    /* ========================================
+       상태 효과
+       ======================================== */
     .pixi-status {
         display: flex;
-        gap: 4px;
+        gap: 3px;
         justify-content: center;
         flex-wrap: wrap;
-        max-width: 120px;
+        max-width: 100px;
     }
     
     .pixi-status .status-icon {
-        font-size: 12px;
-        background: rgba(0,0,0,0.6);
+        font-size: 10px;
+        background: rgba(0,0,0,0.7);
         padding: 2px 4px;
         border-radius: 3px;
+        border: 1px solid rgba(255,255,255,0.1);
     }
     
     /* 캔버스 컨테이너 */
