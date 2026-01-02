@@ -993,6 +993,64 @@ const EnemyRenderer = {
         });
     },
     
+    // ✅ 적 화면 좌표 조회 (타겟팅 라인용)
+    getEnemyScreenPositions() {
+        const positions = [];
+        
+        this.sprites.forEach((data, id) => {
+            if (!data.container || !data.enemy) return;
+            if (data.enemy.hp <= 0) return;
+            
+            // 글로벌 위치
+            const globalPos = data.container.getGlobalPosition();
+            
+            // 스프라이트 크기 계산
+            let width = 100, height = 200;
+            if (data.sprite) {
+                width = (data.sprite.width || 100) * data.container.scale.x;
+                height = (data.sprite.height || 200) * data.container.scale.y;
+            }
+            
+            positions.push({
+                enemy: data.enemy,
+                slotIndex: data.slotIndex,
+                // 중심 좌표
+                centerX: globalPos.x,
+                centerY: globalPos.y - height / 2,  // 스프라이트 중앙
+                // 바운딩 박스
+                left: globalPos.x - width / 2,
+                right: globalPos.x + width / 2,
+                top: globalPos.y - height,
+                bottom: globalPos.y,
+                width: width,
+                height: height
+            });
+        });
+        
+        // 슬롯 순서대로 정렬
+        positions.sort((a, b) => a.slotIndex - b.slotIndex);
+        
+        return positions;
+    },
+    
+    // ✅ 좌표로 적 찾기 (타겟팅용)
+    getEnemyAtPosition(x, y) {
+        const positions = this.getEnemyScreenPositions();
+        
+        for (const pos of positions) {
+            if (x >= pos.left && x <= pos.right && y >= pos.top && y <= pos.bottom) {
+                return {
+                    enemy: pos.enemy,
+                    centerX: pos.centerX,
+                    centerY: pos.centerY,
+                    ...pos
+                };
+            }
+        }
+        
+        return null;
+    },
+    
     // gameState와 동기화
     syncWithGameState() {
         if (!gameState || !gameState.enemies) return;
