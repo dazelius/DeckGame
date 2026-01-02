@@ -720,36 +720,44 @@ const EnemyRenderer = {
         // 스프라이트 글로벌 위치 (앵커가 하단 중앙이므로 y는 발 위치)
         const globalPos = data.container.getGlobalPosition();
         
-        // 스프라이트 실제 높이 계산 (스케일 적용)
+        // 스프라이트 실제 높이 계산
+        // ⚠️ PIXI sprite.height는 이미 scale 적용된 값이므로 다시 곱하면 안됨!
         let spriteHeight = 150;  // 기본값
         if (data.sprite && data.sprite.texture && data.sprite.texture.valid) {
-            spriteHeight = data.sprite.height * (data.container.scale?.y || 1);
+            // sprite.height = texture.height * scale.y (이미 적용됨)
+            spriteHeight = data.sprite.height;
         }
         
+        // 컨테이너 스케일도 적용 (컨테이너가 스프라이트를 감싸고 있으면)
+        const containerScale = data.container.scale?.y || 1;
+        const totalHeight = spriteHeight * containerScale;
+        
         // ========================================
-        // 인텐트: 스프라이트 머리 바로 위 (2px 간격)
+        // 인텐트: 스프라이트 머리 바로 위 (5px 간격)
         // ========================================
         if (data.topUI) {
-            const intentHeight = data.topUI.offsetHeight || 40;
-            // 머리 위치 = 발 위치 - 스프라이트 높이
-            // 인텐트 위치 = 머리 위치 - 인텐트 높이 - 간격
-            const topY = globalPos.y - spriteHeight - intentHeight - 2;
+            // 머리 위치 = 발 위치(globalPos.y) - 스프라이트 높이
+            const headY = globalPos.y - totalHeight;
+            // 인텐트 하단이 머리에 붙도록
+            const topY = headY - 5;
             
             data.topUI.style.left = globalPos.x + 'px';
-            data.topUI.style.top = Math.max(5, topY) + 'px';
+            data.topUI.style.top = topY + 'px';
+            data.topUI.style.transform = 'translate(-50%, -100%)';  // 하단 중앙 정렬
             data.topUI.style.display = 'flex';
             data.topUI.style.visibility = 'visible';
             data.topUI.style.opacity = '1';
         }
         
         // ========================================
-        // HP바: 스프라이트 발 바로 아래 (2px 간격)
+        // HP바: 스프라이트 발 바로 아래 (5px 간격)
         // ========================================
         if (data.bottomUI) {
-            const bottomY = globalPos.y + 2;
+            const bottomY = globalPos.y + 5;
             
             data.bottomUI.style.left = globalPos.x + 'px';
             data.bottomUI.style.top = bottomY + 'px';
+            data.bottomUI.style.transform = 'translateX(-50%)';  // 중앙 정렬
             data.bottomUI.style.display = 'flex';
             data.bottomUI.style.visibility = 'visible';
             data.bottomUI.style.opacity = '1';
