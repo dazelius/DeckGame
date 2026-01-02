@@ -511,6 +511,26 @@ const BreakSystem = {
     // ==========================================
     showBreakEffectPixi(enemy) {
         if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+            // 🎆 ShieldBreakVFX로 유리 깨지는 이펙트!
+            const enemyId = enemy.pixiId || enemy.id || enemy.name;
+            const data = EnemyRenderer.sprites?.get(enemyId);
+            
+            if (data && data.container && typeof ShieldBreakVFX !== 'undefined') {
+                const globalPos = data.container.getGlobalPosition();
+                const canvas = EnemyRenderer.app?.canvas;
+                
+                if (canvas) {
+                    const canvasRect = canvas.getBoundingClientRect();
+                    const screenX = canvasRect.left + globalPos.x;
+                    const spriteHeight = data.sprite?.texture?.height * (data.container.scale?.y || 1) || 150;
+                    const screenY = canvasRect.top + globalPos.y - spriteHeight / 2;
+                    
+                    // 유리 깨지는 브레이크 이펙트!
+                    ShieldBreakVFX.play(screenX, screenY, 1.5);
+                    console.log('[BreakSystem] 🎆 ShieldBreakVFX 발동!', screenX, screenY);
+                }
+            }
+            
             // EnemyRenderer의 브레이크 이펙트 사용
             if (EnemyRenderer.playBreakEffect) {
                 EnemyRenderer.playBreakEffect(enemy);
@@ -686,6 +706,11 @@ const BreakSystem = {
         const rect = enemyEl.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
+        
+        // 🎆 ShieldBreakVFX로 유리 깨지는 이펙트!
+        if (typeof ShieldBreakVFX !== 'undefined') {
+            ShieldBreakVFX.play(centerX, centerY, 1.5);
+        }
         
         // 🔥 1단계: 히트스탑 (GSAP) - 게임이 잠시 멈추는 느낌!
         if (typeof gsap !== 'undefined') {
