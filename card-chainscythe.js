@@ -148,9 +148,14 @@ const ChainScytheSystem = {
             }
         });
         
-        // 브레이크 상태 복원
+        // 브레이크 상태 복원 + 3D 위치 동기화
         setTimeout(() => {
             this.restoreBreakStates();
+            
+            // ✅ Background3D 3D 배치 재적용 (전진/후퇴와 통일)
+            if (typeof Background3D !== 'undefined' && Background3D.updateAllEnemyPositions) {
+                Background3D.updateAllEnemyPositions(false);
+            }
             
             if (typeof updateUI === 'function') {
                 updateUI();

@@ -4280,8 +4280,12 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
                     }
                 });
                 
-                // 완료 콜백
+                // 완료 콜백 + 3D 위치 동기화
                 setTimeout(() => {
+                    // ✅ Background3D 3D 배치 재적용 (사슬낫과 통일)
+                    if (typeof Background3D !== 'undefined' && Background3D.updateAllEnemyPositions) {
+                        Background3D.updateAllEnemyPositions(false);
+                    }
                     updateSelectedEnemy();
                     onRetreatComplete();
                 }, 350);
@@ -4451,8 +4455,12 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
                     }
                 });
                 
-                // 완료 콜백
+                // 완료 콜백 + 3D 위치 동기화
                 setTimeout(() => {
+                    // ✅ Background3D 3D 배치 재적용 (사슬낫과 통일)
+                    if (typeof Background3D !== 'undefined' && Background3D.updateAllEnemyPositions) {
+                        Background3D.updateAllEnemyPositions(false);
+                    }
                     updateSelectedEnemy();
                     onAdvanceComplete();
                 }, 350);
