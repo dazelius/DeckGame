@@ -508,20 +508,15 @@ const EnemyRenderer = {
             gap: 4px;
         `;
         
-        // 인텐트 (맨 위)
+        // 인텐트 (맨 위) - 크게, 눈에 띄게!
         const intentEl = document.createElement('div');
         intentEl.className = 'enemy-intent pixi-intent';
         intentEl.style.cssText = `
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 4px;
-            font-size: 1.2rem;
-            color: #fff;
-            text-shadow: 2px 2px 2px #000;
-            padding: 4px 8px;
-            background: rgba(0,0,0,0.5);
-            border-radius: 4px;
-            min-height: 28px;
+            min-height: 40px;
+            margin-bottom: 8px;
         `;
         intentEl.innerHTML = this.getIntentHTML(enemy);
         uiEl.appendChild(intentEl);
@@ -529,7 +524,22 @@ const EnemyRenderer = {
         // 브레이크 게이지 (인텐트 아래)
         const breakGauge = document.createElement('div');
         breakGauge.className = 'break-gauge-container pixi-break';
+        breakGauge.style.cssText = `
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 6px;
+        `;
         breakGauge.innerHTML = this.getBreakGaugeHTML(enemy);
+        
+        // 브레이크 가능한 인텐트가 있는지 확인해서 표시 여부 결정
+        const hasBreakable = typeof BreakSystem !== 'undefined' && 
+                            BreakSystem.hasBreakableIntent && 
+                            BreakSystem.hasBreakableIntent(enemy);
+        if (!hasBreakable && !enemy.breakGauge) {
+            breakGauge.style.display = 'none';
+        }
         uiEl.appendChild(breakGauge);
         
         // HP 바
@@ -575,24 +585,50 @@ const EnemyRenderer = {
         }
     },
     
-    // 인텐트 HTML 생성
+    // 인텐트 HTML 생성 (브레이크 시스템 연동)
     getIntentHTML(enemy) {
+        // 브레이크 상태면 스턴 표시
+        if (enemy.isBroken) {
+            return `
+                <div class="intent-broken">
+                    <span class="broken-icon">💫</span>
+                    <span class="broken-text">BREAK!</span>
+                </div>
+            `;
+        }
+        
         // ✅ currentIntent 또는 intent/intentValue 사용
         let intentType = enemy.currentIntent?.type || enemy.intent;
         let intentValue = enemy.currentIntent?.value || enemy.intentValue;
+        let intentHits = enemy.currentIntent?.hits || enemy.intentHits || 1;
         
         if (!intentType) {
-            return '<span style="color: #888;">❓</span>';
+            return '<span style="color: #888; font-size: 1.5rem;">❓</span>';
         }
         
         let icon = '❓';
         let value = intentValue || '';
         let className = 'intent-unknown';
+        let dangerClass = '';
+        
+        // 브레이크 가능한 위험 인텐트 체크
+        const breakableTypes = ['attack', 'heavy_attack', 'multi_attack', 'special'];
+        if (breakableTypes.includes(intentType) && typeof BreakSystem !== 'undefined' && BreakSystem.hasBreakableIntent && BreakSystem.hasBreakableIntent(enemy)) {
+            dangerClass = 'danger-intent';
+        }
         
         switch (intentType) {
             case 'attack':
                 icon = '⚔️';
                 className = 'intent-attack';
+                break;
+            case 'heavy_attack':
+                icon = '💥';
+                className = 'intent-attack intent-heavy';
+                break;
+            case 'multi_attack':
+                icon = '⚔️';
+                className = 'intent-attack intent-multi';
                 break;
             case 'defend':
                 icon = '🛡️';
@@ -624,22 +660,79 @@ const EnemyRenderer = {
                 break;
         }
         
-        return `<span class="${className}">${icon}${value}</span>`;
-    },
-    
-    // 브레이크 게이지 HTML
-    getBreakGaugeHTML(enemy) {
-        if (!enemy.breakGauge && enemy.breakGauge !== 0) return '';
+        // 히트 수 표시 (멀티 히트)
+        let hitsDisplay = '';
+        if (intentHits > 1) {
+            hitsDisplay = `<span class="intent-hits">x${intentHits}</span>`;
+        }
         
-        const maxBreak = enemy.maxBreakGauge || 100;
-        const current = enemy.breakGauge || 0;
-        const percent = Math.min(100, (current / maxBreak) * 100);
+        // 위험 인텐트 표시 (브레이크 가능)
+        let dangerIcon = '';
+        if (dangerClass) {
+            dangerIcon = '<span class="danger-icon">⚠️</span>';
+        }
         
         return `
+            <div class="intent-display ${className} ${dangerClass}">
+                ${dangerIcon}
+                <span class="intent-icon">${icon}</span>
+                <span class="intent-value">${value}</span>
+                ${hitsDisplay}
+            </div>
+        `;
+    },
+    
+    // 브레이크 게이지 HTML (레시피 진행 표시 포함)
+    getBreakGaugeHTML(enemy) {
+        // 브레이크 가능한 인텐트가 있는지 확인
+        const hasBreakable = typeof BreakSystem !== 'undefined' && 
+                            BreakSystem.hasBreakableIntent && 
+                            BreakSystem.hasBreakableIntent(enemy);
+        
+        if (!hasBreakable && !enemy.breakGauge && enemy.breakGauge !== 0) {
+            return '';
+        }
+        
+        // 레시피 진행 상황
+        const recipe = enemy.currentBreakRecipe || [];
+        const progress = enemy.breakProgress || [];
+        const total = recipe.length;
+        const current = progress.length;
+        const percent = total > 0 ? (current / total) * 100 : 0;
+        
+        // 레시피 아이콘 표시
+        let recipeIcons = '';
+        if (recipe.length > 0) {
+            recipeIcons = '<div class="break-recipe">';
+            recipe.forEach((element, i) => {
+                const completed = i < progress.length;
+                const icon = this.getElementIcon(element);
+                recipeIcons += `<span class="recipe-icon ${completed ? 'completed' : ''}">${icon}</span>`;
+            });
+            recipeIcons += '</div>';
+        }
+        
+        return `
+            ${recipeIcons}
             <div class="break-gauge">
                 <div class="break-fill" style="width: ${percent}%"></div>
             </div>
         `;
+    },
+    
+    // 속성 아이콘 가져오기
+    getElementIcon(element) {
+        const icons = {
+            fire: '🔥',
+            ice: '❄️',
+            lightning: '⚡',
+            physical: '👊',
+            magic: '✨',
+            slash: '🗡️',
+            pierce: '🏹',
+            blunt: '🔨'
+        };
+        return icons[element] || '❓';
     },
     
     // 상태 효과 HTML
@@ -723,6 +816,67 @@ const EnemyRenderer = {
             const breakEl = data.uiElement.querySelector('.pixi-break');
             if (breakEl) {
                 breakEl.innerHTML = this.getBreakGaugeHTML(enemy);
+                
+                // 브레이크 가능 상태면 표시
+                if (typeof BreakSystem !== 'undefined' && 
+                    BreakSystem.hasBreakableIntent && 
+                    BreakSystem.hasBreakableIntent(enemy)) {
+                    breakEl.style.display = '';
+                } else if (!enemy.breakGauge) {
+                    breakEl.style.display = 'none';
+                }
+            }
+        }
+    },
+    
+    // 브레이크 상태 설정 (스프라이트 효과)
+    setEnemyBrokenState(enemy, isBroken) {
+        const enemyId = enemy.pixiId || enemy.id || enemy.name;
+        const data = this.sprites.get(enemyId);
+        
+        if (!data || !data.container) return;
+        
+        const container = data.container;
+        const sprite = data.sprite;
+        
+        if (isBroken) {
+            // 브레이크 상태: 스턴 효과
+            if (sprite && sprite.tint !== undefined) {
+                sprite.tint = 0xaaaaff;  // 파란 빛
+            }
+            
+            // 숨쉬기 애니메이션 멈추기
+            if (container.breathingTween) {
+                container.breathingTween.pause();
+            }
+            
+            // 스턴 흔들림 애니메이션
+            if (typeof gsap !== 'undefined') {
+                gsap.to(container, {
+                    rotation: 0.05,
+                    duration: 0.1,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'sine.inOut'
+                });
+            }
+            
+            console.log('[EnemyRenderer] 브레이크 상태 설정:', enemyId);
+        } else {
+            // 브레이크 해제
+            if (sprite && sprite.tint !== undefined) {
+                sprite.tint = 0xffffff;  // 원래 색상
+            }
+            
+            // 흔들림 멈추기
+            if (typeof gsap !== 'undefined') {
+                gsap.killTweensOf(container);
+                container.rotation = 0;
+            }
+            
+            // 숨쉬기 애니메이션 재개
+            if (container.breathingTween) {
+                container.breathingTween.resume();
             }
         }
     },
@@ -1644,26 +1798,164 @@ enemyRendererStyles.textContent = `
     
     /* 인텐트 */
     .pixi-intent {
-        font-size: 20px;
-        margin-bottom: 4px;
-        filter: drop-shadow(0 2px 3px rgba(0,0,0,0.8));
+        font-size: 24px;
+        margin-bottom: 6px;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.9));
     }
     
-    .pixi-intent .intent-attack { color: #ff6b6b; }
-    .pixi-intent .intent-defend { color: #4299e1; }
-    .pixi-intent .intent-buff { color: #48bb78; }
-    .pixi-intent .intent-debuff { color: #9f7aea; }
-    .pixi-intent .intent-heal { color: #68d391; }
-    .pixi-intent .intent-retreat { color: #ed8936; }
-    .pixi-intent .intent-advance { color: #f6e05e; }
-    .pixi-intent .intent-special { color: #ffd700; }
+    .pixi-intent .intent-display {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 6px 12px;
+        background: rgba(0,0,0,0.7);
+        border-radius: 8px;
+        border: 2px solid transparent;
+    }
+    
+    .pixi-intent .intent-icon {
+        font-size: 1.4rem;
+    }
+    
+    .pixi-intent .intent-value {
+        font-size: 1.3rem;
+        font-weight: bold;
+        color: #fff;
+    }
+    
+    .pixi-intent .intent-hits {
+        font-size: 0.9rem;
+        color: #ffd700;
+        margin-left: 2px;
+    }
+    
+    .pixi-intent .danger-icon {
+        font-size: 1.2rem;
+        animation: dangerPulse 0.5s ease-in-out infinite;
+    }
+    
+    @keyframes dangerPulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.6; transform: scale(1.2); }
+    }
+    
+    .pixi-intent .intent-attack { 
+        color: #ff6b6b;
+        border-color: #ff4444;
+    }
+    .pixi-intent .intent-heavy { 
+        color: #ff4444;
+        border-color: #cc0000;
+        background: rgba(255,0,0,0.2);
+    }
+    .pixi-intent .intent-multi { 
+        border-color: #ff8844;
+    }
+    .pixi-intent .intent-defend { 
+        color: #4299e1; 
+        border-color: #4299e1;
+    }
+    .pixi-intent .intent-buff { 
+        color: #48bb78; 
+        border-color: #48bb78;
+    }
+    .pixi-intent .intent-debuff { 
+        color: #9f7aea; 
+        border-color: #9f7aea;
+    }
+    .pixi-intent .intent-heal { 
+        color: #68d391; 
+        border-color: #68d391;
+    }
+    .pixi-intent .intent-retreat { 
+        color: #ed8936; 
+        border-color: #ed8936;
+    }
+    .pixi-intent .intent-advance { 
+        color: #f6e05e; 
+        border-color: #f6e05e;
+    }
+    .pixi-intent .intent-special { 
+        color: #ffd700; 
+        border-color: #ffd700;
+    }
+    
+    .pixi-intent .danger-intent {
+        border-color: #ff0000 !important;
+        background: rgba(255,0,0,0.3) !important;
+        animation: dangerBorder 0.8s ease-in-out infinite;
+    }
+    
+    @keyframes dangerBorder {
+        0%, 100% { box-shadow: 0 0 5px #ff0000; }
+        50% { box-shadow: 0 0 15px #ff0000, 0 0 25px #ff4444; }
+    }
+    
+    /* 브레이크 상태 표시 */
+    .pixi-intent .intent-broken {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: rgba(100,100,255,0.3);
+        border-radius: 8px;
+        border: 2px solid #6666ff;
+        animation: brokenPulse 1s ease-in-out infinite;
+    }
+    
+    .pixi-intent .broken-icon {
+        font-size: 1.5rem;
+        animation: spin 2s linear infinite;
+    }
+    
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    
+    .pixi-intent .broken-text {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #aaaaff;
+        text-shadow: 0 0 10px #6666ff;
+    }
+    
+    @keyframes brokenPulse {
+        0%, 100% { opacity: 0.8; }
+        50% { opacity: 1; }
+    }
     
     /* 브레이크 게이지 */
+    .pixi-break {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+    }
+    
+    .pixi-break .break-recipe {
+        display: flex;
+        gap: 4px;
+    }
+    
+    .pixi-break .recipe-icon {
+        font-size: 1rem;
+        opacity: 0.4;
+        filter: grayscale(1);
+        transition: all 0.2s ease;
+    }
+    
+    .pixi-break .recipe-icon.completed {
+        opacity: 1;
+        filter: grayscale(0);
+        transform: scale(1.1);
+    }
+    
     .pixi-break .break-gauge {
         width: 80px;
-        height: 6px;
+        height: 8px;
         background: #2d3748;
-        border-radius: 3px;
+        border-radius: 4px;
         overflow: hidden;
         border: 1px solid #4a5568;
     }
@@ -1671,7 +1963,8 @@ enemyRendererStyles.textContent = `
     .pixi-break .break-fill {
         height: 100%;
         background: linear-gradient(to right, #f6ad55, #ed8936);
-        transition: width 0.2s ease;
+        transition: width 0.3s ease;
+        box-shadow: 0 0 5px #f6ad55;
     }
     
     /* 쉴드 */

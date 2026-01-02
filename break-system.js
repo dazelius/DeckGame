@@ -426,6 +426,13 @@ const BreakSystem = {
         const enemyIndex = gameState.enemies?.indexOf(enemy);
         if (enemyIndex === -1) return;
         
+        // ✅ PixiJS 환경에서는 EnemyRenderer 사용
+        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+            this.updateBreakUIPixi(enemy);
+            return;
+        }
+        
+        // DOM 환경
         const enemyEl = document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`);
         if (!enemyEl) return;
         
@@ -465,6 +472,24 @@ const BreakSystem = {
             
             // 인텐트 내부 구조 재구성 (하나의 통합 컨테이너)
             this.rebuildIntentWithGauge(intentEl, enemy, remaining, recipe.length);
+        }
+    },
+    
+    // ==========================================
+    // PixiJS 브레이크 UI 업데이트
+    // ==========================================
+    updateBreakUIPixi(enemy) {
+        // 인텐트 업데이트
+        EnemyRenderer.updateEnemyIntent(enemy);
+        
+        // 브레이크 게이지 업데이트
+        EnemyRenderer.updateEnemyBreak(enemy);
+        
+        // 브레이크 상태 스프라이트 효과
+        if (enemy.isBroken) {
+            EnemyRenderer.setEnemyBrokenState(enemy, true);
+        } else {
+            EnemyRenderer.setEnemyBrokenState(enemy, false);
         }
     },
     
