@@ -158,19 +158,19 @@ const EnemyRenderer = {
     // 슬롯 위치 계산 (2D 나란히 배치)
     // ==========================================
     getSlotX(slotIndex) {
-        // 화면 중앙 기준으로 슬롯 배치
+        // 화면 중앙 기준으로 슬롯 배치 (오른쪽에 배치)
         const centerX = this.app ? this.app.renderer.width / 2 : 600;
         const totalSlots = Math.max(gameState?.enemies?.filter(e => e.hp > 0).length || 1, 1);
         const totalWidth = (totalSlots - 1) * this.config.slotSpacing;
-        const startX = centerX - totalWidth / 2 + 150;  // 오른쪽으로 오프셋
+        const startX = centerX - totalWidth / 2 + 220;  // 오른쪽으로 더 이동
         
         return startX + (slotIndex * this.config.slotSpacing);
     },
     
     getSlotY(slotIndex) {
-        // ✅ 모든 적 같은 Y 위치 (나란히 배치)
+        // ✅ 모든 적 같은 Y 위치 (조금 위로)
         const appHeight = this.app?.renderer?.height || 600;
-        return appHeight * 0.72;  // 화면 높이의 72% 위치 (바닥에 붙게)
+        return appHeight * 0.65;  // 화면 높이의 65% 위치
     },
     
     getSlotScale(slotIndex, enemy = null) {
