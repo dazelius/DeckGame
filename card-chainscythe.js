@@ -43,7 +43,7 @@ const ChainScytheSystem = {
         });
     },
     
-    // DOM과 gameState가 맞지 않을 때 강제로 재렌더링
+    // DOM과 gameState가 맞지 않을 때 (renderEnemies 없이 슬롯 초기화)
     forceSwapWithRender(targetIndex, targetEnemy, onComplete) {
         // gameState 배열 재배치
         const pulled = gameState.enemies.splice(targetIndex, 1)[0];
@@ -51,9 +51,34 @@ const ChainScytheSystem = {
         
         console.log(`[ChainScythe] (강제) ${targetEnemy.name}을(를) 맨 앞으로!`);
         
-        // 재렌더링
-        if (typeof renderEnemies === 'function') {
-            renderEnemies(false);
+        // ✅ renderEnemies 대신 슬롯 초기화 시도
+        // DOM이 이미 있으면 슬롯 시스템 재초기화
+        const container = document.getElementById('enemies-container');
+        if (container && typeof Background3D !== 'undefined') {
+            // 슬롯 캐시 재초기화
+            Background3D.cacheSlotPositions();
+            
+            // gameState 순서대로 슬롯 재배치
+            const enemyEls = Array.from(container.querySelectorAll('.enemy-unit'));
+            gameState.enemies.forEach((enemy, newSlot) => {
+                const el = enemyEls.find(e => e.enemy === enemy);
+                if (el) {
+                    const domIndex = parseInt(el.dataset.domIndex) || 0;
+                    const targetX = Background3D.getSlotOffset(domIndex, newSlot);
+                    const targetZ = Background3D.getEnemyZ(newSlot);
+                    
+                    el.dataset.slot = newSlot;
+                    gsap.to(el, {
+                        x: targetX,
+                        duration: 0.3,
+                        ease: 'power2.out',
+                        onComplete: () => {
+                            el.style.transform = `translateX(${targetX}px) translateZ(${targetZ}px)`;
+                            el.style.transformStyle = 'preserve-3d';
+                        }
+                    });
+                }
+            });
         }
         
         this.restoreBreakStates();
