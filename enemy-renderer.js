@@ -170,7 +170,7 @@ const EnemyRenderer = {
     getSlotY(slotIndex) {
         // ✅ 모든 적 같은 Y 위치 (나란히 배치)
         const appHeight = this.app?.renderer?.height || 600;
-        return appHeight * 0.65;  // 화면 높이의 65% 위치
+        return appHeight * 0.52;  // 화면 높이의 52% 위치 (HP HUD 공간 확보)
     },
     
     getSlotScale(slotIndex, enemy = null) {
