@@ -4164,6 +4164,10 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
         
         // 후퇴 완료 처리
         const executeRetreatWithGSAP = () => {
+            // ✅ DOM 먼저 가져오기 (gameState 교환 전!)
+            const container = document.getElementById('enemies-container');
+            const enemyEls = container ? Array.from(container.querySelectorAll('.enemy-unit')) : [];
+            
             // 살아있는 미니언들만 추출 (보스/엘리트 제외)
             const aliveMinions = gameState.enemies.filter(e => 
                 e.hp > 0 && !e.isBoss && !e.isElite
@@ -4175,25 +4179,17 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
             // 전체 배열에서의 인덱스 (FLIP용으로 미리 계산)
             let myArrayIndex = gameState.enemies.indexOf(enemy);
             let backArrayIndex = -1;
+            let backEnemy = null;
             
             // 1칸 뒤로 이동 (뒤에 적이 있으면 위치 교환)
             if (myMinionIndex < aliveMinions.length - 1) {
-                const backEnemy = aliveMinions[myMinionIndex + 1];
+                backEnemy = aliveMinions[myMinionIndex + 1];
                 backArrayIndex = gameState.enemies.indexOf(backEnemy);
-                
-                // 위치 교환
-                gameState.enemies[myArrayIndex] = backEnemy;
-                gameState.enemies[backArrayIndex] = enemy;
-                
                 console.log(`[후퇴] ${enemy.name}(${myMinionIndex}) ↔ ${backEnemy.name}(${myMinionIndex + 1}) 위치 교환`);
             }
             
             // battlePosition도 업데이트 (1 증가)
             enemy.battlePosition = (enemy.battlePosition || 0) + 1;
-            
-            // ✅ FLIP 애니메이션으로 부드럽게 위치 이동 (DOM 재생성 없음!)
-            const container = document.getElementById('enemies-container');
-            const enemyEls = container ? Array.from(container.querySelectorAll('.enemy-unit')) : [];
             
             // 위치 교환이 없으면 그냥 완료
             if (backArrayIndex === -1) {
@@ -4202,13 +4198,17 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
                 return;
             }
             
-            if (typeof gsap !== 'undefined' && enemyEls.length > 0) {
+            // ✅ DOM 요소 찾기 (gameState 교환 전!)
+            const retreatedEl = enemyEls.find(el => el.enemy === enemy);
+            const swappedEl = enemyEls.find(el => el.enemy === backEnemy);
+            
+            // gameState 배열 교환
+            gameState.enemies[myArrayIndex] = backEnemy;
+            gameState.enemies[backArrayIndex] = enemy;
+            
+            if (typeof gsap !== 'undefined' && retreatedEl && swappedEl) {
                 // FLIP - First: 현재 위치 저장
                 const oldRects = enemyEls.map(el => el.getBoundingClientRect());
-                
-                // DOM 순서 변경 (후퇴한 적을 뒤로)
-                const retreatedEl = enemyEls[myArrayIndex];
-                const swappedEl = enemyEls[backArrayIndex];
                 
                 if (retreatedEl && swappedEl) {
                     // DOM에서 순서 바꾸기
@@ -4335,6 +4335,10 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
         
         // 전진 완료 처리 (GSAP 사용)
         const executeAdvanceWithGSAP = () => {
+            // ✅ DOM 먼저 가져오기 (gameState 교환 전!)
+            const container = document.getElementById('enemies-container');
+            const enemyEls = container ? Array.from(container.querySelectorAll('.enemy-unit')) : [];
+            
             // 살아있는 미니언들만 추출 (보스/엘리트 제외)
             const aliveMinions = gameState.enemies.filter(e => 
                 e.hp > 0 && !e.isBoss && !e.isElite
@@ -4346,25 +4350,17 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
             // 전체 배열에서의 인덱스 (FLIP용으로 미리 계산)
             let myArrayIndex = gameState.enemies.indexOf(enemy);
             let frontArrayIndex = -1;
+            let frontEnemy = null;
             
             // 1칸 앞으로 이동 (앞에 적이 있으면 위치 교환)
             if (myMinionIndex > 0) {
-                const frontEnemy = aliveMinions[myMinionIndex - 1];
+                frontEnemy = aliveMinions[myMinionIndex - 1];
                 frontArrayIndex = gameState.enemies.indexOf(frontEnemy);
-                
-                // 위치 교환
-                gameState.enemies[myArrayIndex] = frontEnemy;
-                gameState.enemies[frontArrayIndex] = enemy;
-                
                 console.log(`[전진] ${enemy.name}(${myMinionIndex}) ↔ ${frontEnemy.name}(${myMinionIndex - 1}) 위치 교환`);
             }
             
             // battlePosition도 업데이트 (1 감소, 최소 0)
             enemy.battlePosition = Math.max(0, (enemy.battlePosition || 0) - 1);
-            
-            // ✅ FLIP 애니메이션으로 부드럽게 위치 이동 (DOM 재생성 없음!)
-            const container = document.getElementById('enemies-container');
-            const enemyEls = container ? Array.from(container.querySelectorAll('.enemy-unit')) : [];
             
             // 위치 교환이 없으면 그냥 완료
             if (frontArrayIndex === -1) {
@@ -4373,13 +4369,17 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
                 return;
             }
             
-            if (typeof gsap !== 'undefined' && enemyEls.length > 0) {
+            // ✅ DOM 요소 찾기 (gameState 교환 전!)
+            const advancedEl = enemyEls.find(el => el.enemy === enemy);
+            const swappedEl = enemyEls.find(el => el.enemy === frontEnemy);
+            
+            // gameState 배열 교환
+            gameState.enemies[myArrayIndex] = frontEnemy;
+            gameState.enemies[frontArrayIndex] = enemy;
+            
+            if (typeof gsap !== 'undefined' && advancedEl && swappedEl) {
                 // FLIP - First: 현재 위치 저장
                 const oldRects = enemyEls.map(el => el.getBoundingClientRect());
-                
-                // DOM 순서 변경 (전진한 적을 앞으로)
-                const advancedEl = enemyEls[myArrayIndex];
-                const swappedEl = enemyEls[frontArrayIndex];
                 
                 if (advancedEl && swappedEl) {
                     // DOM에서 순서 바꾸기
