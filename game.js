@@ -788,6 +788,13 @@ function renderEnemies(withEntrance = true) {
     // 선택된 적 표시
     updateSelectedEnemy();
     
+    // ✅ 슬롯 위치 캐시 초기화 (DOM 재배치 없는 위치 변경을 위해)
+    setTimeout(() => {
+        if (typeof Background3D !== 'undefined' && Background3D.cacheSlotPositions) {
+            Background3D.cacheSlotPositions();
+        }
+    }, withEntrance ? 100 : 50);
+    
     // 몬스터 패시브 표시 업데이트
     if (typeof MonsterPassiveSystem !== 'undefined') {
         setTimeout(() => {
@@ -4162,9 +4169,8 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
             }, 500);
         };
         
-        // 후퇴 완료 처리
+        // 후퇴 완료 처리 (슬롯 기반 - DOM 재배치 없음!)
         const executeRetreatWithGSAP = () => {
-            // ✅ DOM 먼저 가져오기 (gameState 교환 전!)
             const container = document.getElementById('enemies-container');
             const enemyEls = container ? Array.from(container.querySelectorAll('.enemy-unit')) : [];
             
@@ -4176,7 +4182,7 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
             // 미니언들 중 내 인덱스 찾기
             const myMinionIndex = aliveMinions.indexOf(enemy);
             
-            // 전체 배열에서의 인덱스 (FLIP용으로 미리 계산)
+            // 전체 배열에서의 인덱스
             let myArrayIndex = gameState.enemies.indexOf(enemy);
             let backArrayIndex = -1;
             let backEnemy = null;
@@ -4198,7 +4204,7 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
                 return;
             }
             
-            // ✅ DOM 요소 찾기 (gameState 교환 전!)
+            // DOM 요소 찾기
             const retreatedEl = enemyEls.find(el => el.enemy === enemy);
             const swappedEl = enemyEls.find(el => el.enemy === backEnemy);
             
@@ -4206,97 +4212,56 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
             gameState.enemies[myArrayIndex] = backEnemy;
             gameState.enemies[backArrayIndex] = enemy;
             
-            if (typeof gsap !== 'undefined' && retreatedEl && swappedEl) {
-                // FLIP - First: 현재 위치 저장
-                const oldRects = enemyEls.map(el => el.getBoundingClientRect());
-                
-                if (retreatedEl && swappedEl) {
-                    // DOM에서 순서 바꾸기
-                    if (retreatedEl.nextSibling === swappedEl) {
-                        container.insertBefore(swappedEl, retreatedEl);
-                    } else {
-                        const placeholder = document.createElement('div');
-                        container.insertBefore(placeholder, retreatedEl);
-                        container.insertBefore(retreatedEl, swappedEl.nextSibling);
-                        container.insertBefore(swappedEl, placeholder);
-                        placeholder.remove();
+            // ✅ 슬롯 기반 위치 교환 (DOM 재배치 없음!)
+            if (typeof Background3D !== 'undefined' && Background3D.swapSlots && retreatedEl && swappedEl) {
+                Background3D.swapSlots(retreatedEl, swappedEl, 0.3).then(() => {
+                    // 착지 이펙트
+                    const sprite = retreatedEl.querySelector('.enemy-sprite-img');
+                    if (sprite) {
+                        gsap.to(sprite, {
+                            scaleY: 0.92, scaleX: 1.08,
+                            duration: 0.08, yoyo: true, repeat: 1
+                        });
                     }
-                }
-                
-                // FLIP - Last & Invert & Play (통일된 3D API 사용)
-                const newEnemyEls = Array.from(container.querySelectorAll('.enemy-unit'));
-                
-                newEnemyEls.forEach((el, newIndex) => {
-                    const oldIndex = enemyEls.indexOf(el);
-                    if (oldIndex === -1) return;
-                    
-                    const oldRect = oldRects[oldIndex];
-                    const newRect = el.getBoundingClientRect();
-                    const diffX = oldRect.left - newRect.left;
-                    
-                    // data-index 업데이트
-                    el.dataset.index = newIndex;
-                    
-                    // 3D 위치는 Background3D API 사용
-                    const z3d = typeof Background3D !== 'undefined' 
-                        ? Background3D.getEnemyZ(newIndex) 
-                        : -80 - (newIndex * 20);
-                    
-                    if (Math.abs(diffX) > 1) {
-                        gsap.fromTo(el, 
-                            { x: diffX },
-                            { 
-                                x: 0, 
-                                duration: 0.3, 
-                                ease: 'power2.out',
-                                onComplete: () => {
-                                    el.style.transform = `translateZ(${z3d}px)`;
-                                    el.style.transformStyle = 'preserve-3d';
-                                }
-                            }
-                        );
-                        
-                        // 이동하는 적에게 착지 이펙트
-                        if (el === retreatedEl) {
-                            setTimeout(() => {
-                                const sprite = el.querySelector('.enemy-sprite-img');
-                                if (sprite) {
-                                    gsap.to(sprite, {
-                                        scaleY: 0.92, scaleX: 1.08,
-                                        duration: 0.08, yoyo: true, repeat: 1
-                                    });
-                                }
-                                if (typeof VFX !== 'undefined') {
-                                    const rect = el.getBoundingClientRect();
-                                    VFX.sparks(rect.left + rect.width / 2, rect.bottom, {
-                                        color: '#94a3b8', count: 8, speed: 60, size: 3
-                                    });
-                                }
-                            }, 250);
-                        }
-                    } else {
-                        el.style.transform = `translateZ(${z3d}px)`;
-                        el.style.transformStyle = 'preserve-3d';
+                    if (typeof VFX !== 'undefined') {
+                        const rect = retreatedEl.getBoundingClientRect();
+                        VFX.sparks(rect.left + rect.width / 2, rect.bottom, {
+                            color: '#94a3b8', count: 8, speed: 60, size: 3
+                        });
                     }
-                });
-                
-                // 완료 콜백 + 3D 위치 동기화
-                setTimeout(() => {
-                    // ✅ 모든 적의 GSAP transform 초기화
-                    const allEnemyEls = document.querySelectorAll('.enemy-unit');
-                    allEnemyEls.forEach(el => {
-                        gsap.set(el, { x: 0, y: 0, scale: 1, opacity: 1, clearProps: 'x,y' });
-                    });
                     
-                    // ✅ Background3D 전체 재적용 (가장 확실한 방법)
-                    if (typeof Background3D !== 'undefined' && Background3D.applyGameParallax) {
-                        Background3D.applyGameParallax();
-                    }
                     updateSelectedEnemy();
                     onRetreatComplete();
-                }, 350);
+                });
+            } else if (typeof gsap !== 'undefined' && retreatedEl && swappedEl) {
+                // Background3D 슬롯 시스템 없으면 기존 방식
+                const mySlot = parseInt(retreatedEl.dataset.slot) || myArrayIndex;
+                const backSlot = parseInt(swappedEl.dataset.slot) || backArrayIndex;
+                
+                // 슬롯 교환
+                retreatedEl.dataset.slot = backSlot;
+                swappedEl.dataset.slot = mySlot;
+                
+                // 시각적 위치 교환 (현재 위치 기준)
+                const myRect = retreatedEl.getBoundingClientRect();
+                const backRect = swappedEl.getBoundingClientRect();
+                const diffX = backRect.left - myRect.left;
+                
+                gsap.to(retreatedEl, {
+                    x: `+=${diffX}`,
+                    duration: 0.3,
+                    ease: 'power2.out'
+                });
+                gsap.to(swappedEl, {
+                    x: `-=${diffX}`,
+                    duration: 0.3,
+                    ease: 'power2.out',
+                    onComplete: () => {
+                        updateSelectedEnemy();
+                        onRetreatComplete();
+                    }
+                });
             } else {
-                // GSAP 없으면 기본 방식
                 renderEnemies(false);
                 updateSelectedEnemy();
                 onRetreatComplete();
@@ -4343,9 +4308,8 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
             }, 500);
         };
         
-        // 전진 완료 처리 (GSAP 사용)
+        // 전진 완료 처리 (슬롯 기반 - DOM 재배치 없음!)
         const executeAdvanceWithGSAP = () => {
-            // ✅ DOM 먼저 가져오기 (gameState 교환 전!)
             const container = document.getElementById('enemies-container');
             const enemyEls = container ? Array.from(container.querySelectorAll('.enemy-unit')) : [];
             
@@ -4357,7 +4321,7 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
             // 미니언들 중 내 인덱스 찾기
             const myMinionIndex = aliveMinions.indexOf(enemy);
             
-            // 전체 배열에서의 인덱스 (FLIP용으로 미리 계산)
+            // 전체 배열에서의 인덱스
             let myArrayIndex = gameState.enemies.indexOf(enemy);
             let frontArrayIndex = -1;
             let frontEnemy = null;
@@ -4379,7 +4343,7 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
                 return;
             }
             
-            // ✅ DOM 요소 찾기 (gameState 교환 전!)
+            // DOM 요소 찾기
             const advancedEl = enemyEls.find(el => el.enemy === enemy);
             const swappedEl = enemyEls.find(el => el.enemy === frontEnemy);
             
@@ -4387,97 +4351,56 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
             gameState.enemies[myArrayIndex] = frontEnemy;
             gameState.enemies[frontArrayIndex] = enemy;
             
-            if (typeof gsap !== 'undefined' && advancedEl && swappedEl) {
-                // FLIP - First: 현재 위치 저장
-                const oldRects = enemyEls.map(el => el.getBoundingClientRect());
-                
-                if (advancedEl && swappedEl) {
-                    // DOM에서 순서 바꾸기
-                    if (swappedEl.nextSibling === advancedEl) {
-                        container.insertBefore(advancedEl, swappedEl);
-                    } else {
-                        const placeholder = document.createElement('div');
-                        container.insertBefore(placeholder, advancedEl);
-                        container.insertBefore(advancedEl, swappedEl);
-                        container.insertBefore(swappedEl, placeholder);
-                        placeholder.remove();
+            // ✅ 슬롯 기반 위치 교환 (DOM 재배치 없음!)
+            if (typeof Background3D !== 'undefined' && Background3D.swapSlots && advancedEl && swappedEl) {
+                Background3D.swapSlots(advancedEl, swappedEl, 0.3).then(() => {
+                    // 착지 이펙트
+                    const sprite = advancedEl.querySelector('.enemy-sprite-img');
+                    if (sprite) {
+                        gsap.to(sprite, {
+                            scaleY: 0.92, scaleX: 1.08,
+                            duration: 0.08, yoyo: true, repeat: 1
+                        });
                     }
-                }
-                
-                // FLIP - Last & Invert & Play (통일된 3D API 사용)
-                const newEnemyEls = Array.from(container.querySelectorAll('.enemy-unit'));
-                
-                newEnemyEls.forEach((el, newIndex) => {
-                    const oldIndex = enemyEls.indexOf(el);
-                    if (oldIndex === -1) return;
-                    
-                    const oldRect = oldRects[oldIndex];
-                    const newRect = el.getBoundingClientRect();
-                    const diffX = oldRect.left - newRect.left;
-                    
-                    // data-index 업데이트
-                    el.dataset.index = newIndex;
-                    
-                    // 3D 위치는 Background3D API 사용
-                    const z3d = typeof Background3D !== 'undefined' 
-                        ? Background3D.getEnemyZ(newIndex) 
-                        : -80 - (newIndex * 20);
-                    
-                    if (Math.abs(diffX) > 1) {
-                        gsap.fromTo(el, 
-                            { x: diffX },
-                            { 
-                                x: 0, 
-                                duration: 0.3, 
-                                ease: 'power2.out',
-                                onComplete: () => {
-                                    el.style.transform = `translateZ(${z3d}px)`;
-                                    el.style.transformStyle = 'preserve-3d';
-                                }
-                            }
-                        );
-                        
-                        // 이동하는 적에게 착지 이펙트
-                        if (el === advancedEl) {
-                            setTimeout(() => {
-                                const sprite = el.querySelector('.enemy-sprite-img');
-                                if (sprite) {
-                                    gsap.to(sprite, {
-                                        scaleY: 0.92, scaleX: 1.08,
-                                        duration: 0.08, yoyo: true, repeat: 1
-                                    });
-                                }
-                                if (typeof VFX !== 'undefined') {
-                                    const rect = el.getBoundingClientRect();
-                                    VFX.sparks(rect.left + rect.width / 2, rect.bottom, {
-                                        color: '#94a3b8', count: 8, speed: 60, size: 3
-                                    });
-                                }
-                            }, 250);
-                        }
-                    } else {
-                        el.style.transform = `translateZ(${z3d}px)`;
-                        el.style.transformStyle = 'preserve-3d';
+                    if (typeof VFX !== 'undefined') {
+                        const rect = advancedEl.getBoundingClientRect();
+                        VFX.sparks(rect.left + rect.width / 2, rect.bottom, {
+                            color: '#94a3b8', count: 8, speed: 60, size: 3
+                        });
                     }
-                });
-                
-                // 완료 콜백 + 3D 위치 동기화
-                setTimeout(() => {
-                    // ✅ 모든 적의 GSAP transform 초기화
-                    const allEnemyEls = document.querySelectorAll('.enemy-unit');
-                    allEnemyEls.forEach(el => {
-                        gsap.set(el, { x: 0, y: 0, scale: 1, opacity: 1, clearProps: 'x,y' });
-                    });
                     
-                    // ✅ Background3D 전체 재적용 (가장 확실한 방법)
-                    if (typeof Background3D !== 'undefined' && Background3D.applyGameParallax) {
-                        Background3D.applyGameParallax();
-                    }
                     updateSelectedEnemy();
                     onAdvanceComplete();
-                }, 350);
+                });
+            } else if (typeof gsap !== 'undefined' && advancedEl && swappedEl) {
+                // Background3D 슬롯 시스템 없으면 기존 방식
+                const mySlot = parseInt(advancedEl.dataset.slot) || myArrayIndex;
+                const frontSlot = parseInt(swappedEl.dataset.slot) || frontArrayIndex;
+                
+                // 슬롯 교환
+                advancedEl.dataset.slot = frontSlot;
+                swappedEl.dataset.slot = mySlot;
+                
+                // 시각적 위치 교환
+                const myRect = advancedEl.getBoundingClientRect();
+                const frontRect = swappedEl.getBoundingClientRect();
+                const diffX = frontRect.left - myRect.left;
+                
+                gsap.to(advancedEl, {
+                    x: `+=${diffX}`,
+                    duration: 0.3,
+                    ease: 'power2.out'
+                });
+                gsap.to(swappedEl, {
+                    x: `-=${diffX}`,
+                    duration: 0.3,
+                    ease: 'power2.out',
+                    onComplete: () => {
+                        updateSelectedEnemy();
+                        onAdvanceComplete();
+                    }
+                });
             } else {
-                // GSAP 없으면 기본 방식
                 renderEnemies(false);
                 updateSelectedEnemy();
                 onAdvanceComplete();
