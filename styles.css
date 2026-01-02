@@ -492,8 +492,8 @@ img {
     justify-content: center;
 }
 
-/* 플레이어 캐릭터 - 하얀 외곽선 + 생동감 */
-.player-character {
+/* 플레이어 캐릭터 - 하얀 외곽선 + 생동감 (방어막 없을 때) */
+.player-character:not(.has-block) {
     /* 하얀 외곽선 (여러 방향 drop-shadow) */
     filter: 
         drop-shadow(1px 0 0 rgba(255, 255, 255, 0.9))
@@ -502,6 +502,15 @@ img {
         drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.9))
         drop-shadow(0 0 8px rgba(255, 255, 255, 0.5))
         drop-shadow(0 0 20px rgba(100, 180, 255, 0.3));
+}
+
+/* 플레이어 캐릭터 - 방어막 있을 때 파란색 외곽선 (글로우 없음) */
+.player-character.has-block {
+    filter: 
+        drop-shadow(2px 0 0 rgba(60, 150, 255, 0.9))
+        drop-shadow(-2px 0 0 rgba(60, 150, 255, 0.9))
+        drop-shadow(0 2px 0 rgba(60, 150, 255, 0.9))
+        drop-shadow(0 -2px 0 rgba(60, 150, 255, 0.9));
 }
 
 /* 플레이어 위치 - 바닥선 정렬 (translateY 제거) */
@@ -675,6 +684,28 @@ img {
         drop-shadow(-2px 0 0 rgba(60, 150, 255, 0.8))
         drop-shadow(0 2px 0 rgba(60, 150, 255, 0.8))
         drop-shadow(0 -2px 0 rgba(60, 150, 255, 0.8)) !important;
+}
+
+/* 플레이어 - 방어막 있음 (파란색 외곽선만 - 글로우 없음!) */
+#player.has-block .hero-sprite,
+#player.has-block .player-sprite-img,
+.player-character.has-block .hero-sprite,
+body #player.has-block .hero-sprite {
+    filter: 
+        drop-shadow(2px 0 0 rgba(60, 150, 255, 0.9))
+        drop-shadow(-2px 0 0 rgba(60, 150, 255, 0.9))
+        drop-shadow(0 2px 0 rgba(60, 150, 255, 0.9))
+        drop-shadow(0 -2px 0 rgba(60, 150, 255, 0.9)) !important;
+}
+
+/* 플레이어 - 방어막 획득 시 플래시 */
+#player.block-flash .hero-sprite {
+    animation: playerBlockFlash 0.3s ease-out !important;
+}
+
+@keyframes playerBlockFlash {
+    0% { filter: brightness(1.3) drop-shadow(0 0 15px rgba(60, 150, 255, 0.9)); }
+    100% { filter: brightness(1); }
 }
 
 /* 플레이어 - 취약 상태 (붉은 틴트) */
@@ -2331,10 +2362,6 @@ body .card-drag-ghost.can-drop {
 }
 
 /* JRPG 스타일 드래그 고스트 - 드롭 가능 */
-.drag-ghost.can-drop {
-    /* transform은 JS에서 제어 - 애니메이션 대신 글로우만 */
-}
-
 .drag-ghost.can-drop.attack {
     box-shadow: 
         0 10px 30px rgba(0,0,0,0.5),
@@ -4355,32 +4382,35 @@ body .card-drag-ghost.can-drop {
     opacity: 0;
 }
 
+/* 적 사망 - GSAP에서 처리, CSS는 기본 상태만 */
 .enemy-unit.dead {
     pointer-events: none;
-    animation: enemyDeath 0.8s ease-out forwards;
 }
 
-@keyframes enemyDeath {
-    0% {
-        opacity: 1;
-        transform: rotate(0deg) translateY(0);
-        filter: grayscale(0);
-    }
-    30% {
-        opacity: 0.9;
-        transform: rotate(15deg) translateY(0);
-        filter: grayscale(0.3);
-    }
-    60% {
-        opacity: 0.6;
-        transform: rotate(60deg) translateY(20px);
-        filter: grayscale(0.7);
-    }
-    100% {
-        opacity: 0;
-        transform: rotate(90deg) translateY(50px);
-        filter: grayscale(1);
-    }
+.enemy-unit.dying {
+    pointer-events: none;
+}
+
+/* 죽은 적 UI 숨기기 */
+.enemy-unit.dying .enemy-intent-display,
+.enemy-unit.dying .monster-passive-indicator,
+.enemy-unit.dying .enemy-buff-display,
+.enemy-unit.dying .enemy-status-display,
+.enemy-unit.dying .enemy-block-container,
+.enemy-unit.dying .enemy-hp-wrapper,
+.enemy-unit.dying .enemy-hp-bar-container,
+.enemy-unit.dying .enemy-name-label,
+.enemy-unit.dead .enemy-intent-display,
+.enemy-unit.dead .monster-passive-indicator,
+.enemy-unit.dead .enemy-buff-display,
+.enemy-unit.dead .enemy-status-display,
+.enemy-unit.dead .enemy-block-container,
+.enemy-unit.dead .enemy-hp-wrapper,
+.enemy-unit.dead .enemy-hp-bar-container,
+.enemy-unit.dead .enemy-name-label {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
 }
 
 .enemy-unit .enemy-sprite-container {

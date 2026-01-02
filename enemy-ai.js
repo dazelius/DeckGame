@@ -19,6 +19,14 @@ function decideEnemyIntent() {
 function decideEnemyIntentForEnemy(enemy) {
     let intent;
     
+    // ✅ 이전 위협 상태 클리어 (새 인텐트 결정 전)
+    if (typeof BreakSystem !== 'undefined') {
+        const enemyIndex = gameState.enemies.indexOf(enemy);
+        if (enemyIndex >= 0) {
+            BreakSystem.clearThreatState(enemy, enemyIndex);
+        }
+    }
+    
     // 턴 카운트 증가
     enemy.turnCount = (enemy.turnCount || 0) + 1;
     

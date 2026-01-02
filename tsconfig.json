@@ -11,19 +11,8 @@
     "noImplicitAny": false,
     "strictNullChecks": false,
     
-    /* 나중에 활성화할 옵션들 */
-    // "strict": true,
-    // "noImplicitAny": true,
-    // "strictNullChecks": true,
-    // "noUnusedLocals": true,
-    // "noUnusedParameters": true,
-    
-    /* 출력 설정 */
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
+    /* 출력 설정 - 순수 JS 프로젝트이므로 출력 비활성화 */
+    "noEmit": true,
     
     /* 모듈 해결 */
     "esModuleInterop": true,
@@ -31,35 +20,25 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     
-    /* JS 파일 허용 (점진적 마이그레이션용) */
+    /* JS 파일 허용 */
     "allowJs": true,
     "checkJs": false,
     
     /* 기타 */
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    
-    /* 경로 별칭 */
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"],
-      "@types/*": ["src/types/*"],
-      "@systems/*": ["src/systems/*"],
-      "@components/*": ["src/components/*"]
-    }
+    "forceConsistentCasingInFileNames": true
   },
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
-    "src/**/*.js",
-    "*.js",
-    "*.ts"
+    "src/**/*.js"
   ],
   "exclude": [
     "node_modules",
     "dist",
     "dist-electron",
-    "backup_*"
+    "backup_*",
+    "*.js"
   ]
 }
 
