@@ -65,7 +65,7 @@ const ChainScytheSystem = {
         if (onComplete) onComplete();
     },
     
-    // DOM 재생성 없이 적 위치 재배치 (자연스러운 애니메이션)
+    // DOM 재생성 없이 적 위치 재배치 (완벽한 무깜박임 FLIP)
     // [1,2,3] 에서 3을 당기면 → [3,1,2] (타겟이 맨 앞, 나머지 뒤로 밀림)
     swapEnemyPositions(targetIndex, targetEnemy, onComplete) {
         const container = document.getElementById('enemies-container');
@@ -76,7 +76,6 @@ const ChainScytheSystem = {
         
         const enemyEls = Array.from(container.querySelectorAll('.enemy-unit'));
         
-        // DOM 요소 수와 gameState 수가 다르면 강제 재렌더링
         if (enemyEls.length !== gameState.enemies.length) {
             console.log('[ChainScythe] DOM/gameState 불일치, 강제 재렌더링');
             this.forceSwapWithRender(targetIndex, targetEnemy, onComplete);
@@ -90,77 +89,76 @@ const ChainScytheSystem = {
             return;
         }
         
-        // ✅ 타겟 외 다른 요소들의 현재 위치만 저장 (FLIP의 First)
-        // 타겟은 이미 playPixiPullAnimation에서 시각적으로 끌어온 상태!
-        const otherRects = {};
-        enemyEls.forEach((el, i) => {
-            if (i !== targetIndex) {
-                otherRects[i] = el.getBoundingClientRect();
-            }
-        });
+        // ==========================================
+        // ✅ FLIP Phase 1: First - 시각적 위치 + 현재 GSAP 오프셋 저장
+        // (clearProps 없이! 깜박임 방지)
+        // ==========================================
+        const firstData = enemyEls.map(el => ({
+            rect: el.getBoundingClientRect(),
+            gsapX: gsap.getProperty(el, 'x') || 0,
+            gsapY: gsap.getProperty(el, 'y') || 0
+        }));
         
-        // gameState 배열 재배치: 타겟을 빼서 맨 앞에 넣기
-        // [1, 2, 3] 에서 index=2를 당기면 → [3, 1, 2]
+        // gameState 배열 재배치
         const pulled = gameState.enemies.splice(targetIndex, 1)[0];
         gameState.enemies.unshift(pulled);
         
-        console.log(`[ChainScythe] ${targetEnemy.name}을(를) 맨 앞으로! 새 순서:`, 
-            gameState.enemies.map(e => e.name));
+        console.log(`[ChainScythe] ${targetEnemy.name}을(를) 맨 앞으로!`);
         
-        // DOM 순서 재배치: 타겟을 맨 앞으로
+        // ==========================================
+        // ✅ FLIP Phase 2: Last - DOM 재배치 (GSAP 상태 유지!)
+        // ==========================================
         container.insertBefore(targetEl, container.firstChild);
         
-        // 새 순서로 요소 다시 가져오기 (FLIP의 Last)
+        // 새 순서로 요소 다시 가져오기
         const newEnemyEls = Array.from(container.querySelectorAll('.enemy-unit'));
         
-        // ✅ 타겟: 이미 첫 번째 위치에 있으므로 x, filter 정리만
-        gsap.to(targetEl, {
-            x: 0,
-            filter: 'brightness(1)',
-            duration: 0.15,
-            ease: 'power2.out'
-        });
-        targetEl.dataset.index = 0;
-        
-        // ✅ 나머지 적들: FLIP으로 밀림 애니메이션
+        // ==========================================
+        // ✅ FLIP Phase 3: Invert + Play
+        // 핵심: DOM 재배치로 인한 위치 변화를 계산하고, 
+        // 기존 GSAP 오프셋을 고려하여 보정
+        // ==========================================
         newEnemyEls.forEach((el, newIndex) => {
-            if (el === targetEl) return; // 타겟은 이미 처리함
-            
-            // 이 요소가 원래 어디 있었는지 찾기
             const oldIndex = enemyEls.indexOf(el);
-            if (oldIndex === -1 || !otherRects[oldIndex]) return;
+            if (oldIndex === -1) return;
             
-            const oldRect = otherRects[oldIndex];
-            const newRect = el.getBoundingClientRect();
+            const first = firstData[oldIndex];
             
-            const diffX = oldRect.left - newRect.left;
+            // DOM 재배치 후 "기본 위치" 계산 (GSAP 오프셋 제외)
+            // 현재 시각적 위치 = 기본 위치 + GSAP 오프셋
+            // 기본 위치 = 현재 시각적 위치 - GSAP 오프셋
+            const currentRect = el.getBoundingClientRect();
+            const baseX = currentRect.left - first.gsapX;
+            const baseY = currentRect.top - first.gsapY;
+            
+            // 원래 시각적 위치로 돌아가기 위한 새 오프셋
+            // 새 오프셋 = 원래 시각적 위치 - 새 기본 위치
+            const newX = first.rect.left - baseX;
+            const newY = first.rect.top - baseY;
             
             // data-index 업데이트
             el.dataset.index = newIndex;
             
-            // 3D 위치는 Background3D API 사용 (통일된 시스템)
+            // 3D Z 깊이
             const z3d = typeof Background3D !== 'undefined' 
                 ? Background3D.getEnemyZ(newIndex) 
                 : -80 - (newIndex * 20);
             
-            if (Math.abs(diffX) > 1) {
-                // 밀리는 애니메이션
-                gsap.fromTo(el, 
-                    { x: diffX },
-                    { 
-                        x: 0, 
-                        duration: 0.2, 
-                        ease: 'power2.out',
-                        onComplete: () => {
-                            el.style.transform = `translateZ(${z3d}px)`;
-                            el.style.transformStyle = 'preserve-3d';
-                        }
-                    }
-                );
-            } else {
-                el.style.transform = `translateZ(${z3d}px)`;
-                el.style.transformStyle = 'preserve-3d';
-            }
+            // ✅ 즉시 원래 시각적 위치로 설정 (깜박임 없음!)
+            gsap.set(el, { x: newX, y: newY });
+            
+            // ✅ 새 위치(0,0)로 부드럽게 애니메이션
+            gsap.to(el, {
+                x: 0,
+                y: 0,
+                duration: 0.25,
+                ease: 'power2.out',
+                onComplete: () => {
+                    gsap.set(el, { clearProps: 'x,y' });
+                    el.style.transform = `translateZ(${z3d}px)`;
+                    el.style.transformStyle = 'preserve-3d';
+                }
+            });
         });
         
         // 브레이크 상태 복원 + 3D 위치 동기화 + 사망 처리

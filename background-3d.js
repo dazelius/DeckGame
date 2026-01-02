@@ -532,8 +532,20 @@ const Background3D = {
     },
     
     // ==========================================
-    // 🎯 3D 위치 계산 공통 시스템
+    // 🎯 슬롯 기반 위치 시스템 (DOM 재배치 없이 transform만으로 위치 변경)
     // ==========================================
+    
+    // 슬롯 좌표 정의 (X는 flexbox가 처리, Z는 3D 깊이)
+    slots: {
+        // 각 슬롯의 상대 X 오프셋과 Z 깊이
+        // X: flexbox 기준에서의 오프셋 (0이 해당 DOM 위치)
+        // Z: 3D 깊이
+        0: { xOffset: 0, z: -80 },   // 첫 번째 (맨 왼쪽/앞)
+        1: { xOffset: 0, z: -100 },  // 두 번째
+        2: { xOffset: 0, z: -120 },  // 세 번째
+        3: { xOffset: 0, z: -140 },  // 네 번째
+        4: { xOffset: 0, z: -160 },  // 다섯 번째
+    },
     
     // 3D 위치 설정값 (통일된 참조점)
     positions: {
@@ -550,6 +562,167 @@ const Background3D = {
     // 인덱스로 기믹의 3D Z 위치 계산
     getGimmickZ(index) {
         return this.positions.gimmick.baseZ - (index * this.positions.gimmick.spacing);
+    },
+    
+    // ==========================================
+    // 🎯 슬롯 기반 위치 이동 (DOM 재배치 없이!)
+    // ==========================================
+    
+    /**
+     * 적을 특정 슬롯으로 애니메이션 이동
+     * @param {HTMLElement} el - 적 DOM 요소
+     * @param {number} fromSlot - 현재 슬롯 (DOM 인덱스)
+     * @param {number} toSlot - 목표 슬롯
+     * @param {number} duration - 애니메이션 시간
+     * @returns {Promise} 애니메이션 완료 시 resolve
+     */
+    animateToSlot(el, fromSlot, toSlot, duration = 0.25) {
+        return new Promise((resolve) => {
+            if (!el || fromSlot === toSlot) {
+                resolve();
+                return;
+            }
+            
+            const fromZ = this.getEnemyZ(fromSlot);
+            const toZ = this.getEnemyZ(toSlot);
+            
+            // 현재 시각적 위치 저장
+            const rect = el.getBoundingClientRect();
+            
+            // 슬롯 인덱스 업데이트
+            el.dataset.slot = toSlot;
+            
+            // Z 깊이 애니메이션
+            gsap.to(el, {
+                duration: duration,
+                ease: 'power2.out',
+                onComplete: () => {
+                    el.style.transform = `translateZ(${toZ}px)`;
+                    el.style.transformStyle = 'preserve-3d';
+                    resolve();
+                }
+            });
+            
+            // CSS transition으로 Z 변경
+            el.style.transition = `transform ${duration}s ease-out`;
+            el.style.transform = `translateZ(${toZ}px)`;
+            
+            setTimeout(() => {
+                el.style.transition = '';
+            }, duration * 1000);
+        });
+    },
+    
+    /**
+     * 여러 적의 슬롯을 한번에 변경 (DOM 재배치 없이 순수 애니메이션)
+     * @param {Array} changes - [{el, fromSlot, toSlot}, ...]
+     * @param {number} duration - 애니메이션 시간
+     * @returns {Promise} 모든 애니메이션 완료 시 resolve
+     */
+    async animateSlotChanges(changes, duration = 0.25) {
+        const promises = changes.map(({ el, fromSlot, toSlot }) => {
+            return this.animateToSlot(el, fromSlot, toSlot, duration);
+        });
+        await Promise.all(promises);
+    },
+    
+    /**
+     * 사슬낫 스타일 끌어오기: DOM 재배치 없이 시각적으로만 위치 변경
+     * [0,1,2]에서 2를 당기면 시각적으로 [2,0,1]로 보이게
+     * @param {number} targetIndex - 끌어올 적의 현재 인덱스
+     * @param {Function} onComplete - 완료 콜백
+     */
+    pullEnemyToFront(targetIndex, onComplete) {
+        const container = document.getElementById('enemies-container');
+        if (!container) {
+            if (onComplete) onComplete();
+            return;
+        }
+        
+        const enemyEls = Array.from(container.querySelectorAll('.enemy-unit'));
+        if (targetIndex <= 0 || targetIndex >= enemyEls.length) {
+            if (onComplete) onComplete();
+            return;
+        }
+        
+        const targetEl = enemyEls[targetIndex];
+        
+        // 모든 적의 현재 시각적 위치 저장
+        const rects = enemyEls.map(el => el.getBoundingClientRect());
+        
+        // 목표 위치 계산: 타겟 → 0번 슬롯, 나머지는 한 칸씩 밀림
+        // 새 슬롯: [target, 0, 1, ..., target-1]
+        const newSlots = [];
+        newSlots[targetIndex] = 0; // 타겟은 0번 슬롯으로
+        for (let i = 0; i < targetIndex; i++) {
+            newSlots[i] = i + 1; // 앞에 있던 애들은 한 칸씩 뒤로
+        }
+        
+        // 각 적을 새 슬롯 위치로 이동 (DOM 순서는 그대로!)
+        const animations = [];
+        
+        enemyEls.forEach((el, domIndex) => {
+            if (domIndex > targetIndex) return; // 타겟 뒤는 그대로
+            
+            const newSlot = newSlots[domIndex];
+            if (newSlot === undefined) return;
+            
+            // 새 슬롯의 시각적 X 위치 계산 (다른 적의 원래 위치 기준)
+            const targetRect = rects[newSlot] || rects[0];
+            const currentRect = rects[domIndex];
+            const diffX = targetRect.left - currentRect.left;
+            
+            // 새 Z 깊이
+            const newZ = this.getEnemyZ(newSlot);
+            
+            // 슬롯 속성 업데이트
+            el.dataset.slot = newSlot;
+            el.dataset.index = newSlot; // gameState 인덱스와 동기화
+            
+            // GSAP 애니메이션
+            animations.push(
+                gsap.to(el, {
+                    x: diffX,
+                    duration: 0.3,
+                    ease: 'power2.out',
+                    onComplete: () => {
+                        // 애니메이션 후 transform 정리
+                        // X 오프셋은 유지 (DOM 순서가 안 바뀌므로)
+                        el.style.transform = `translateX(${diffX}px) translateZ(${newZ}px)`;
+                        el.style.transformStyle = 'preserve-3d';
+                    }
+                })
+            );
+        });
+        
+        // 모든 애니메이션 완료 후 콜백
+        if (animations.length > 0) {
+            Promise.all(animations.map(a => a.then ? a : Promise.resolve())).then(() => {
+                if (onComplete) onComplete();
+            });
+            // GSAP timeline 완료 대기
+            setTimeout(() => {
+                if (onComplete) onComplete();
+            }, 350);
+        } else {
+            if (onComplete) onComplete();
+        }
+    },
+    
+    /**
+     * 슬롯 기반 위치 초기화 (renderEnemies 후 호출)
+     * DOM 순서 = 슬롯 순서로 리셋
+     */
+    resetEnemySlots() {
+        const enemyEls = document.querySelectorAll('.enemy-unit');
+        enemyEls.forEach((el, i) => {
+            el.dataset.slot = i;
+            el.dataset.index = i;
+            // X 오프셋 제거, Z 깊이만 적용
+            gsap.set(el, { x: 0, y: 0, clearProps: 'x,y' });
+            el.style.transform = `translateZ(${this.getEnemyZ(i)}px)`;
+            el.style.transformStyle = 'preserve-3d';
+        });
     },
     
     // 단일 적의 3D 위치 업데이트 (애니메이션 옵션)
