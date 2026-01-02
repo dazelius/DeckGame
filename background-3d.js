@@ -614,11 +614,33 @@ const Background3D = {
     },
     
     /**
-     * 슬롯 인덱스 → X 오프셋 계산 (고정 간격)
-     * DOM 인덱스에서 슬롯 위치까지의 이동 거리
+     * 슬롯 위치 계산 (첫 번째 DOM 기준 + 고정 간격)
+     * 슬롯 N의 목표 X = 첫 번째 DOM 위치 + N * spacing
+     */
+    getSlotTargetX(slotIndex) {
+        if (!this.slotConfig.initialized || this.slotConfig.domBasePositions.length === 0) {
+            return slotIndex * this.slotConfig.spacing;
+        }
+        // 첫 번째 DOM 위치 기준
+        const baseX = this.slotConfig.domBasePositions[0].left;
+        return baseX + (slotIndex * this.slotConfig.spacing);
+    },
+    
+    /**
+     * DOM 요소가 특정 슬롯으로 가려면 필요한 X 오프셋
      */
     getSlotOffset(domIndex, slotIndex) {
-        return (slotIndex - domIndex) * this.slotConfig.spacing;
+        if (!this.slotConfig.initialized || domIndex >= this.slotConfig.domBasePositions.length) {
+            return (slotIndex - domIndex) * this.slotConfig.spacing;
+        }
+        
+        // 내 DOM의 원래 위치
+        const myBaseX = this.slotConfig.domBasePositions[domIndex].left;
+        // 목표 슬롯의 위치
+        const slotTargetX = this.getSlotTargetX(slotIndex);
+        
+        // 필요한 이동 거리
+        return slotTargetX - myBaseX;
     },
     
     /**
@@ -640,9 +662,11 @@ const Background3D = {
                 return;
             }
             
-            // 고정 간격 기반 X 오프셋 계산
+            // 고정 간격 기반 X 오프셋 계산 (첫 번째 DOM 기준!)
             const targetX = this.getSlotOffset(domIndex, toSlot);
             const targetZ = this.getEnemyZ(toSlot);
+            
+            console.log(`[슬롯] DOM ${domIndex} → 슬롯 ${toSlot}, X=${targetX}px`);
             
             // 슬롯 업데이트
             el.dataset.slot = toSlot;
