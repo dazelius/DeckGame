@@ -130,11 +130,16 @@ const EnemyRenderer = {
                 width: 100%;
                 height: 100%;
                 pointer-events: none;
-                z-index: 200;
+                z-index: 9999;
+                overflow: visible;
             `;
             
             const battleArena = document.querySelector('.battle-arena');
             if (battleArena) {
+                // battle-arena가 position relative여야 함
+                if (getComputedStyle(battleArena).position === 'static') {
+                    battleArena.style.position = 'relative';
+                }
                 battleArena.appendChild(overlay);
             }
         }
@@ -489,12 +494,12 @@ const EnemyRenderer = {
         topUI.style.cssText = `
             position: absolute;
             pointer-events: none;
-            transform: translate(-50%, -100%);
+            transform: translateX(-50%);
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 0;
-            z-index: 300;
+            gap: 2px;
+            z-index: 10000;
         `;
         
         // 인텐트 (핵심!)
@@ -529,12 +534,12 @@ const EnemyRenderer = {
         bottomUI.style.cssText = `
             position: absolute;
             pointer-events: none;
-            transform: translate(-50%, 0);
+            transform: translateX(-50%);
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 3px;
-            z-index: 300;
+            z-index: 10000;
         `;
         
         // HP 바 (폴리싱된 디자인)
@@ -721,26 +726,25 @@ const EnemyRenderer = {
             spriteHeight = data.sprite.height * data.container.scale.y;
         }
         
-        // 상단 UI (인텐트 + 브레이크) - 머리 바로 위
+        // 상단 UI (인텐트 + 브레이크) - 스프라이트 머리 위 (고정 오프셋)
         if (data.topUI) {
-            const topY = globalPos.y - spriteHeight - 8;
+            // 인텐트를 스프라이트 위에 배치 (머리 위 70px)
+            const topY = globalPos.y - spriteHeight - 70;
             data.topUI.style.left = globalPos.x + 'px';
-            data.topUI.style.top = topY + 'px';
+            data.topUI.style.top = Math.max(10, topY) + 'px';  // 최소 10px 마진
             data.topUI.style.display = 'flex';
             data.topUI.style.visibility = 'visible';
             data.topUI.style.opacity = '1';
-            data.topUI.style.zIndex = '300';
         }
         
         // 하단 UI (HP바) - 발 바로 아래
         if (data.bottomUI) {
-            const bottomY = globalPos.y + 8;
+            const bottomY = globalPos.y + 5;
             data.bottomUI.style.left = globalPos.x + 'px';
             data.bottomUI.style.top = bottomY + 'px';
             data.bottomUI.style.display = 'flex';
             data.bottomUI.style.visibility = 'visible';
             data.bottomUI.style.opacity = '1';
-            data.bottomUI.style.zIndex = '300';
         }
     },
     
