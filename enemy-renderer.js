@@ -720,26 +720,34 @@ const EnemyRenderer = {
         // 스프라이트 글로벌 위치 (앵커가 하단 중앙이므로 y는 발 위치)
         const globalPos = data.container.getGlobalPosition();
         
-        // 스프라이트 높이 계산 (스케일 적용)
-        let spriteHeight = 180;  // 기본값
-        if (data.sprite && data.sprite.height) {
-            spriteHeight = data.sprite.height * data.container.scale.y;
+        // 스프라이트 실제 높이 계산 (스케일 적용)
+        let spriteHeight = 150;  // 기본값
+        if (data.sprite && data.sprite.texture && data.sprite.texture.valid) {
+            spriteHeight = data.sprite.height * (data.container.scale?.y || 1);
         }
         
-        // 상단 UI (인텐트 + 브레이크) - 스프라이트 머리 위 (고정 오프셋)
+        // ========================================
+        // 인텐트: 스프라이트 머리 바로 위 (2px 간격)
+        // ========================================
         if (data.topUI) {
-            // 인텐트를 스프라이트 위에 배치 (머리 위 70px)
-            const topY = globalPos.y - spriteHeight - 70;
+            const intentHeight = data.topUI.offsetHeight || 40;
+            // 머리 위치 = 발 위치 - 스프라이트 높이
+            // 인텐트 위치 = 머리 위치 - 인텐트 높이 - 간격
+            const topY = globalPos.y - spriteHeight - intentHeight - 2;
+            
             data.topUI.style.left = globalPos.x + 'px';
-            data.topUI.style.top = Math.max(10, topY) + 'px';  // 최소 10px 마진
+            data.topUI.style.top = Math.max(5, topY) + 'px';
             data.topUI.style.display = 'flex';
             data.topUI.style.visibility = 'visible';
             data.topUI.style.opacity = '1';
         }
         
-        // 하단 UI (HP바) - 발 바로 아래
+        // ========================================
+        // HP바: 스프라이트 발 바로 아래 (2px 간격)
+        // ========================================
         if (data.bottomUI) {
-            const bottomY = globalPos.y + 5;
+            const bottomY = globalPos.y + 2;
+            
             data.bottomUI.style.left = globalPos.x + 'px';
             data.bottomUI.style.top = bottomY + 'px';
             data.bottomUI.style.display = 'flex';
