@@ -191,6 +191,12 @@ const CardDragSystem = {
     highlightValidTargets(card) {
         const target = this.getCardTarget(card);
         const playerEl = document.getElementById('player');
+        
+        // ✅ 드래그 중 3D parallax 비활성화 (filter가 3D를 깨트림)
+        const arena = document.querySelector('.battle-arena');
+        if (arena) {
+            arena.classList.add('drag-in-progress');
+        }
 
         if (target === 'enemy') {
             const container = document.getElementById('enemies-container');
@@ -245,6 +251,17 @@ const CardDragSystem = {
     clearTargetHighlights() {
         const playerEl = document.getElementById('player');
         const container = document.getElementById('enemies-container');
+        
+        // ✅ 드래그 종료 후 3D parallax 재활성화
+        const arena = document.querySelector('.battle-arena');
+        if (arena) {
+            arena.classList.remove('drag-in-progress');
+        }
+        
+        // ✅ Background3D 재적용
+        if (typeof Background3D !== 'undefined' && Background3D.applyGameParallax) {
+            Background3D.applyGameParallax();
+        }
         
         if (container) {
             container.querySelectorAll('.enemy-unit').forEach(el => {
@@ -809,6 +826,18 @@ function clearTargetHighlights() {
 const cardDragStyles = document.createElement('style');
 cardDragStyles.id = 'card-drag-styles';
 cardDragStyles.textContent = `
+    /* ✅ 드래그 중 3D 비활성화 (filter가 3D를 깨트리므로) */
+    .battle-arena.drag-in-progress {
+        transform: none !important;
+        perspective: none !important;
+    }
+    
+    .battle-arena.drag-in-progress .enemy-unit,
+    .battle-arena.drag-in-progress #player,
+    .battle-arena.drag-in-progress .gimmick-unit {
+        transform: none !important;
+    }
+    
     /* 잘못된 대상 - 카드 고스트에 표시 */
     .card-ghost.invalid-target {
         filter: grayscale(0.5) brightness(0.8) !important;
