@@ -130,7 +130,7 @@ const EnemyRenderer = {
                 width: 100%;
                 height: 100%;
                 pointer-events: none;
-                z-index: 50;
+                z-index: 200;
             `;
             
             const battleArena = document.querySelector('.battle-arena');
@@ -170,7 +170,7 @@ const EnemyRenderer = {
     getSlotY(slotIndex) {
         // ✅ 모든 적 같은 Y 위치 (나란히 배치)
         const appHeight = this.app?.renderer?.height || 600;
-        return appHeight * 0.62;  // 화면 높이의 62% 위치 (인텐트 공간 확보)
+        return appHeight * 0.72;  // 화면 높이의 72% 위치 (바닥에 붙게)
     },
     
     getSlotScale(slotIndex, enemy = null) {
