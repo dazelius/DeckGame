@@ -875,24 +875,57 @@ const EnemyRenderer = {
         
         const container = data.container;
         const sprite = data.sprite;
+        const baseScale = container.breathingBaseScale || this.getSlotScale(data.slotIndex);
         
         try {
             if (isBroken) {
                 // 브레이크 상태: 스턴 효과
                 if (sprite && sprite.tint !== undefined) {
-                    sprite.tint = 0xaaaaff;  // 파란 빛
+                    sprite.tint = 0x8888ff;  // 파란 빛 (더 강하게)
                 }
                 
-                // 숨쉬기 애니메이션 멈추기
+                // ✅ 모든 숨쉬기 애니메이션 완전 정지
                 if (container.breathingTween) {
                     container.breathingTween.pause();
                 }
+                if (container.breathingTimelines) {
+                    container.breathingTimelines.forEach(tl => {
+                        if (tl && tl.pause) tl.pause();
+                    });
+                }
+                if (container.breathingInterval) {
+                    clearInterval(container.breathingInterval);
+                }
                 
-                // 스턴 흔들림 애니메이션
-                if (typeof gsap !== 'undefined' && container.rotation !== undefined) {
-                    gsap.to(container, {
-                        rotation: 0.05,
-                        duration: 0.1,
+                // 기존 GSAP 트윈 정리
+                gsap.killTweensOf(container);
+                gsap.killTweensOf(container.scale);
+                
+                // ✅ 부들부들 떨림 애니메이션 (더 강하게!)
+                if (typeof gsap !== 'undefined') {
+                    // X축 떨림
+                    container._stunTweenX = gsap.to(container, {
+                        x: container.x + 3,
+                        duration: 0.04,
+                        yoyo: true,
+                        repeat: -1,
+                        ease: 'none'
+                    });
+                    
+                    // 회전 떨림
+                    container._stunTweenRot = gsap.to(container, {
+                        rotation: 0.03,
+                        duration: 0.06,
+                        yoyo: true,
+                        repeat: -1,
+                        ease: 'sine.inOut'
+                    });
+                    
+                    // 스케일 떨림 (찌그러짐)
+                    container._stunTweenScale = gsap.to(container.scale, {
+                        x: baseScale * 0.97,
+                        y: baseScale * 1.03,
+                        duration: 0.08,
                         yoyo: true,
                         repeat: -1,
                         ease: 'sine.inOut'
@@ -902,28 +935,54 @@ const EnemyRenderer = {
                 // 🌟 스턴 별 이펙트 시작!
                 this.startStunEffect(enemy);
                 
-                console.log('[EnemyRenderer] 브레이크 상태 설정:', enemyId);
+                console.log('[EnemyRenderer] 🔥 브레이크 상태 설정:', enemyId);
             } else {
                 // 브레이크 해제
                 if (sprite && sprite.tint !== undefined) {
                     sprite.tint = 0xffffff;  // 원래 색상
                 }
                 
-                // 흔들림 멈추기
-                if (typeof gsap !== 'undefined') {
-                    gsap.killTweensOf(container);
-                    if (container.rotation !== undefined) {
-                        container.rotation = 0;
-                    }
+                // ✅ 떨림 트윈 정지
+                if (container._stunTweenX) {
+                    container._stunTweenX.kill();
+                    container._stunTweenX = null;
+                }
+                if (container._stunTweenRot) {
+                    container._stunTweenRot.kill();
+                    container._stunTweenRot = null;
+                }
+                if (container._stunTweenScale) {
+                    container._stunTweenScale.kill();
+                    container._stunTweenScale = null;
                 }
                 
-                // 숨쉬기 애니메이션 재개
+                // 원래 상태 복원
+                if (container.breathingBaseRotation !== undefined) {
+                    container.rotation = container.breathingBaseRotation;
+                } else {
+                    container.rotation = 0;
+                }
+                if (container.breathingBaseX !== undefined) {
+                    container.x = container.breathingBaseX;
+                }
+                if (container.scale && baseScale) {
+                    container.scale.set(baseScale);
+                }
+                
+                // ✅ 숨쉬기 애니메이션 재개
                 if (container.breathingTween) {
                     container.breathingTween.resume();
+                }
+                if (container.breathingTimelines) {
+                    container.breathingTimelines.forEach(tl => {
+                        if (tl && tl.resume) tl.resume();
+                    });
                 }
                 
                 // 🌟 스턴 별 이펙트 중지
                 this.stopStunEffect(enemy);
+                
+                console.log('[EnemyRenderer] ✅ 브레이크 해제:', enemyId);
             }
         } catch (e) {
             console.warn('[EnemyRenderer] setEnemyBrokenState error:', e);
@@ -931,7 +990,7 @@ const EnemyRenderer = {
     },
     
     // ==========================================
-    // 🌟 스턴 별 이펙트 (PixiJS)
+    // 🌟 스턴 별 이펙트 (PixiJS) - 더 화려하게!
     // ==========================================
     startStunEffect(enemy) {
         if (!this.app || !this.container) return;
@@ -946,6 +1005,7 @@ const EnemyRenderer = {
         // 스턴 이펙트 컨테이너
         const stunContainer = new PIXI.Container();
         stunContainer.label = 'StunEffect';
+        stunContainer.zIndex = 1000;  // 맨 위에
         data.container.addChild(stunContainer);
         
         // 스프라이트 높이 계산
@@ -954,52 +1014,77 @@ const EnemyRenderer = {
             spriteHeight = data.sprite.texture.height;
         }
         
-        // 별 위치 (머리 위)
-        stunContainer.y = -spriteHeight - 30;
+        // 별 위치 (머리 위) - 더 위로
+        stunContainer.y = -spriteHeight - 40;
         
-        // 별 5개 생성
-        const starCount = 5;
+        // 별 6개 생성 (더 크고 화려하게!)
+        const starCount = 6;
         const stars = [];
-        const radius = 25;
+        const radius = 35;  // 더 넓게
         
         for (let i = 0; i < starCount; i++) {
             const star = new PIXI.Graphics();
             
-            // 별 모양 그리기
+            // 별 모양 그리기 (더 크게!)
             const points = [];
+            const outerR = 12;  // 바깥 반지름
+            const innerR = 5;   // 안쪽 반지름
             for (let j = 0; j < 10; j++) {
-                const r = j % 2 === 0 ? 8 : 4;
+                const r = j % 2 === 0 ? outerR : innerR;
                 const a = (Math.PI * 2 / 10) * j - Math.PI / 2;
                 points.push(Math.cos(a) * r, Math.sin(a) * r);
             }
             star.poly(points);
-            star.fill({ color: 0xffcc00 });
-            star.stroke({ width: 1, color: 0xffffff });
+            star.fill({ color: 0xffdd00 });  // 더 밝은 노랑
+            star.stroke({ width: 2, color: 0xffffff });
             
             const angle = (Math.PI * 2 / starCount) * i;
             star.x = Math.cos(angle) * radius;
             star.y = Math.sin(angle) * radius;
             star._baseAngle = angle;
+            star._pulseOffset = Math.random() * Math.PI * 2;  // 각각 다른 펄스
             
             stunContainer.addChild(star);
             stars.push(star);
         }
         
-        // 회전 애니메이션
+        // 중앙 글로우 효과
+        const glow = new PIXI.Graphics();
+        glow.circle(0, 0, 20);
+        glow.fill({ color: 0xffff00, alpha: 0.3 });
+        stunContainer.addChildAt(glow, 0);
+        
+        // 회전 애니메이션 (더 빠르게!)
         let time = 0;
         const animate = () => {
             if (!stunContainer.parent) return; // 제거됨
             
-            time += 0.03;
-            stunContainer.rotation = time;
+            time += 0.05;  // 더 빠르게
             
-            // 각 별도 개별 회전
+            // 전체 회전
+            stunContainer.rotation = time * 0.8;
+            
+            // 각 별 위치 + 펄스 효과
             stars.forEach((star, i) => {
                 const newAngle = star._baseAngle + time;
-                star.x = Math.cos(newAngle) * radius;
-                star.y = Math.sin(newAngle) * radius;
-                star.rotation = -time * 2; // 반대로 회전
+                // 반지름도 펄스
+                const pulseRadius = radius + Math.sin(time * 3 + star._pulseOffset) * 5;
+                star.x = Math.cos(newAngle) * pulseRadius;
+                star.y = Math.sin(newAngle) * pulseRadius;
+                star.rotation = -time * 2;
+                
+                // 스케일 펄스 (반짝반짝)
+                const scalePulse = 0.8 + Math.sin(time * 4 + star._pulseOffset) * 0.3;
+                star.scale.set(scalePulse);
+                
+                // 알파 펄스
+                star.alpha = 0.7 + Math.sin(time * 5 + star._pulseOffset) * 0.3;
             });
+            
+            // 중앙 글로우 펄스
+            const glowScale = 0.8 + Math.sin(time * 3) * 0.4;
+            glow.scale.set(glowScale);
+            glow.alpha = 0.2 + Math.sin(time * 4) * 0.2;
             
             stunContainer._animFrame = requestAnimationFrame(animate);
         };
@@ -1009,7 +1094,7 @@ const EnemyRenderer = {
         // 저장
         this.stunEffects.set(enemyId, stunContainer);
         
-        console.log('[EnemyRenderer] 스턴 별 이펙트 시작:', enemyId);
+        console.log('[EnemyRenderer] 🌟 스턴 별 이펙트 시작:', enemyId);
     },
     
     stopStunEffect(enemy) {
