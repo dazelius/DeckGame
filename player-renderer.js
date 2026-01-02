@@ -661,67 +661,30 @@ const PlayerRenderer = {
         }
     },
     
-    // 아웃라인 + 글로우 효과 (DOM 스타일 재현)
+    // 픽셀 스타일 하얀 외곽선 (선명하게, 블러 없음!)
     applyOutlineEffect(sprite, container, hasBlock = false) {
         if (!sprite || !container) return;
         
         try {
-            // 기존 아웃라인/글로우 제거
-            const existingEffects = container.children.filter(c => c.isOutline || c.isGlow);
-            existingEffects.forEach(o => {
+            // 기존 아웃라인 제거
+            const existingOutlines = container.children.filter(c => c.isOutline);
+            existingOutlines.forEach(o => {
                 container.removeChild(o);
                 o.destroy();
             });
             
             if (!sprite.texture) return;
             
-            // 🎯 1. 파란색 글로우 (가장 뒤에 - 큰 범위)
-            const glowColor = hasBlock ? 0x3c96ff : 0x64b4ff;  // 방어막: 진한 파랑 / 기본: 연한 파랑
-            const glowAlpha = hasBlock ? 0.5 : 0.25;
-            const glowDistances = hasBlock ? [10, 15] : [8, 12];
-            
-            glowDistances.forEach(dist => {
-                const glow = new PIXI.Sprite(sprite.texture);
-                glow.anchor.set(sprite.anchor.x, sprite.anchor.y);
-                glow.x = 0;
-                glow.y = 0;
-                glow.tint = glowColor;
-                glow.alpha = glowAlpha;
-                glow.scale.set(1 + dist / 100);  // 살짝 확대
-                glow.zIndex = -3;
-                glow.isGlow = true;
-                container.addChild(glow);
-            });
-            
-            // 🎯 2. 흰색 글로우 (중간 - 밝은 빛)
-            if (!hasBlock) {
-                [5, 8].forEach(dist => {
-                    const whiteGlow = new PIXI.Sprite(sprite.texture);
-                    whiteGlow.anchor.set(sprite.anchor.x, sprite.anchor.y);
-                    whiteGlow.x = 0;
-                    whiteGlow.y = 0;
-                    whiteGlow.tint = 0xffffff;
-                    whiteGlow.alpha = 0.3;
-                    whiteGlow.scale.set(1 + dist / 150);
-                    whiteGlow.zIndex = -2;
-                    whiteGlow.isGlow = true;
-                    container.addChild(whiteGlow);
-                });
-            }
-            
-            // 🎯 3. 외곽선 (선명한 경계)
-            const outlineDistance = hasBlock ? 3 : 2;
+            // 🎮 픽셀 게임 스타일: 1~2픽셀 선명한 외곽선!
+            const outlineDistance = 2;  // 픽셀 단위
             const outlineColor = hasBlock ? 0x3c96ff : 0xffffff;  // 방어막: 파랑 / 기본: 흰색
             
+            // 4방향 (상하좌우) - 픽셀 게임 스타일
             const directions = [
                 { x: outlineDistance, y: 0 },
                 { x: -outlineDistance, y: 0 },
                 { x: 0, y: outlineDistance },
                 { x: 0, y: -outlineDistance },
-                { x: outlineDistance * 0.7, y: outlineDistance * 0.7 },
-                { x: -outlineDistance * 0.7, y: outlineDistance * 0.7 },
-                { x: outlineDistance * 0.7, y: -outlineDistance * 0.7 },
-                { x: -outlineDistance * 0.7, y: -outlineDistance * 0.7 },
             ];
             
             directions.forEach(dir => {
@@ -730,7 +693,7 @@ const PlayerRenderer = {
                 outline.x = dir.x;
                 outline.y = dir.y;
                 outline.tint = outlineColor;
-                outline.alpha = 0.9;
+                outline.alpha = 1.0;  // 완전 불투명
                 outline.zIndex = -1;
                 outline.isOutline = true;
                 container.addChild(outline);
@@ -740,17 +703,17 @@ const PlayerRenderer = {
             sprite.zIndex = 10;
             container.sortChildren();
             
-            console.log(`[PlayerRenderer] ✅ 아웃라인+글로우 적용됨 (${hasBlock ? '방어막' : '기본'})`);
+            console.log(`[PlayerRenderer] ✅ 픽셀 외곽선 적용됨 (${hasBlock ? '파랑' : '흰색'})`);
         } catch (e) {
             console.log('[PlayerRenderer] 아웃라인 에러:', e);
         }
     },
     
-    // 방어막 효과 (파란색 아웃라인 + 강화 글로우)
+    // 방어막 효과 (파란색 외곽선)
     setBlockEffect(hasBlock) {
         if (!this.sprite || !this.playerContainer) return;
         
-        // 전체 재적용 (글로우 색상도 변경해야 함)
+        // 외곽선 색상 변경
         this.applyOutlineEffect(this.sprite, this.playerContainer, hasBlock);
         
         // 플래시 효과
