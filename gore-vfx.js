@@ -121,179 +121,340 @@ const GoreVFX = {
         
         this.ensureLoop();
         
-        // 🩸 메인 피 방울들
+        // 🎲 랜덤 유틸리티 함수들
+        const randomBetween = (min, max) => min + Math.random() * (max - min);
+        const randomPow = (min, max, pow) => min + Math.pow(Math.random(), pow) * (max - min); // 편향된 분포
+        const randomSign = () => Math.random() > 0.5 ? 1 : -1;
+        const randomDeviation = (base, deviation) => base + (Math.random() - 0.5) * 2 * deviation;
+        
+        // 🩸 메인 피 방울들 (다양한 타입)
         for (let i = 0; i < count; i++) {
-            // 방향성 있는 스플래터
+            // 🎯 방향: 더 큰 랜덤성
             let angle;
             if (direction !== null) {
-                // 타격 방향으로 편향 (부채꼴)
-                angle = direction + (Math.random() - 0.5) * Math.PI * 0.8;
+                // 타격 방향 기준 + 랜덤 편차
+                const spread = Math.PI * randomBetween(0.4, 1.2);  // 부채꼴 크기 랜덤
+                const bias = randomPow(-0.5, 0.5, 0.7);  // 중앙 편향
+                angle = direction + bias * spread;
             } else {
-                angle = Math.random() * Math.PI * 2;
+                // 완전 랜덤 + 약간의 클러스터링
+                const cluster = Math.floor(Math.random() * 5);  // 5개 클러스터
+                const clusterAngle = (cluster / 5) * Math.PI * 2;
+                angle = clusterAngle + randomBetween(-0.6, 0.6);
             }
             
-            const velocity = speed * (0.4 + Math.random() * 0.6) * intensity;
-            const particleSize = size * (0.3 + Math.random() * 0.7);
+            // 🚀 속도: 파레토 분포 (대부분 빠르고, 일부는 느림)
+            const speedVariance = randomPow(0.2, 1.2, 1.5);  // 큰 변동
+            const velocity = speed * speedVariance * intensity * randomBetween(0.8, 1.3);
+            
+            // 📏 크기: 역 지수 분포 (작은 것 많이, 큰 것 적게)
+            const sizeRoll = Math.random();
+            let particleSize;
+            if (sizeRoll < 0.5) {
+                particleSize = size * randomBetween(0.15, 0.4);  // 50%: 아주 작은 방울
+            } else if (sizeRoll < 0.8) {
+                particleSize = size * randomBetween(0.4, 0.8);   // 30%: 중간 방울
+            } else if (sizeRoll < 0.95) {
+                particleSize = size * randomBetween(0.8, 1.2);   // 15%: 큰 방울
+            } else {
+                particleSize = size * randomBetween(1.2, 2.0);   // 5%: 아주 큰 덩어리
+            }
+            
             const bloodColor = this.getRandomBloodColor();
             
-            // 큰 방울 vs 작은 방울 (7:3 비율)
-            const isBigDrop = Math.random() > 0.3;
+            // 🎭 파티클 타입 결정
+            const typeRoll = Math.random();
+            let particleType, maxTrail;
+            if (typeRoll < 0.4) {
+                particleType = 'spray';     // 40%: 스프레이 (작고 빠름)
+                maxTrail = randomBetween(2, 5) | 0;
+            } else if (typeRoll < 0.75) {
+                particleType = 'drop';      // 35%: 방울 (중간)
+                maxTrail = randomBetween(4, 10) | 0;
+            } else if (typeRoll < 0.9) {
+                particleType = 'glob';      // 15%: 덩어리 (크고 느림)
+                maxTrail = randomBetween(6, 12) | 0;
+            } else {
+                particleType = 'string';    // 10%: 줄기 (늘어짐)
+                maxTrail = randomBetween(10, 18) | 0;
+            }
             
-            VFX.particles.push({
-                x, y,
-                vx: Math.cos(angle) * velocity,
-                vy: Math.sin(angle) * velocity - 150 * intensity,
-                size: isBigDrop ? particleSize : particleSize * 0.4,
-                originalSize: particleSize,
-                alpha: 1,
-                color: bloodColor,
-                gravity: 1200 + Math.random() * 400,  // 무거운 느낌
-                airResistance: 0.97 + Math.random() * 0.02,
-                decay: 0.6 / (duration / 1000),
-                trail: [],
-                maxTrailLength: isBigDrop ? 8 : 4,
-                alive: true,
-                rotation: Math.random() * Math.PI * 2,
-                stretch: 1,  // 속도에 따른 늘어남
-                type: isBigDrop ? 'drop' : 'spray',
-                hasSpawned: false,
-                groundY: y + 200 + Math.random() * 100,  // 바닥 위치
-                
-                update() {
-                    const timeScale = VFX.timeScale || 1;
-                    const dt = 0.016 * timeScale;
+            // ⏱️ 발사 딜레이 (일부는 늦게 발사)
+            const delay = Math.random() < 0.3 ? randomBetween(0, 80) : 0;
+            
+            // 🌀 회전/흔들림 파라미터
+            const spinSpeed = randomDeviation(0, 15) * (particleType === 'glob' ? 0.3 : 1);
+            const wobbleFreq = randomBetween(3, 8);
+            const wobbleAmp = randomBetween(0, 20) * (particleType === 'string' ? 2 : 1);
+            
+            setTimeout(() => {
+                VFX.particles.push({
+                    x: x + randomDeviation(0, 8),  // 시작점도 랜덤
+                    y: y + randomDeviation(0, 8),
+                    vx: Math.cos(angle) * velocity + randomDeviation(0, 30),
+                    vy: Math.sin(angle) * velocity - randomBetween(100, 200) * intensity,
+                    size: particleSize,
+                    originalSize: particleSize,
+                    alpha: randomBetween(0.85, 1),
+                    color: bloodColor,
+                    gravity: randomBetween(800, 1600) * (particleType === 'glob' ? 1.3 : 1),
+                    airResistance: randomBetween(0.94, 0.99),
+                    decay: randomBetween(0.4, 0.9) / (duration / 1000),
+                    trail: [],
+                    maxTrailLength: maxTrail,
+                    alive: true,
+                    rotation: Math.random() * Math.PI * 2,
+                    spinSpeed: spinSpeed,
+                    stretch: 1,
+                    type: particleType,
+                    hasSpawned: false,
+                    groundY: y + randomBetween(150, 300),
+                    wobblePhase: Math.random() * Math.PI * 2,
+                    wobbleFreq: wobbleFreq,
+                    wobbleAmp: wobbleAmp,
+                    time: 0,
                     
-                    // 트레일 저장 (속도 있을 때만)
-                    const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
-                    if (speed > 50) {
-                        this.trail.push({ 
-                            x: this.x, 
-                            y: this.y, 
-                            alpha: this.alpha,
-                            size: this.size * 0.6
-                        });
-                        if (this.trail.length > this.maxTrailLength) {
-                            this.trail.shift();
+                    update() {
+                        const timeScale = VFX.timeScale || 1;
+                        const dt = 0.016 * timeScale;
+                        this.time += dt;
+                        
+                        // 트레일 저장
+                        const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                        if (speed > 30 || this.type === 'string') {
+                            this.trail.push({ 
+                                x: this.x, 
+                                y: this.y, 
+                                alpha: this.alpha,
+                                size: this.size * randomBetween(0.4, 0.7)
+                            });
+                            if (this.trail.length > this.maxTrailLength) {
+                                this.trail.shift();
+                            }
                         }
-                    }
-                    
-                    // 물리 시뮬레이션
-                    this.vy += this.gravity * dt;
-                    this.vx *= this.airResistance;
-                    this.vy *= this.airResistance;
-                    this.x += this.vx * dt;
-                    this.y += this.vy * dt;
-                    
-                    // 속도에 따른 늘어남 효과
-                    this.stretch = 1 + Math.min(speed / 300, 2);
-                    this.rotation = Math.atan2(this.vy, this.vx);
-                    
-                    // 바닥에 닿으면 튀김 효과
-                    if (this.y >= this.groundY && !this.hasSpawned && this.type === 'drop') {
-                        this.hasSpawned = true;
-                        // 작은 방울로 튀김
-                        if (Math.random() > 0.5) {
-                            GoreVFX.spawnSplashDroplets(this.x, this.groundY, this.vx * 0.3);
+                        
+                        // 물리 시뮬레이션
+                        this.vy += this.gravity * dt;
+                        this.vx *= this.airResistance;
+                        this.vy *= this.airResistance;
+                        
+                        // 흔들림 (string, glob)
+                        if (this.wobbleAmp > 0) {
+                            const wobble = Math.sin(this.time * this.wobbleFreq + this.wobblePhase) * this.wobbleAmp * dt;
+                            this.vx += wobble;
                         }
-                        this.vy = -Math.abs(this.vy) * 0.2;  // 약한 바운스
-                        this.vx *= 0.5;
-                        this.gravity *= 2;  // 빠르게 떨어짐
-                    }
-                    
-                    this.alpha -= this.decay * dt;
-                    this.size *= 0.998;
-                    
-                    if (this.alpha <= 0 || this.size < 0.5) this.alive = false;
-                },
+                        
+                        this.x += this.vx * dt;
+                        this.y += this.vy * dt;
+                        
+                        // 스핀
+                        this.rotation += this.spinSpeed * dt;
+                        
+                        // 늘어남 (속도 기반 + 타입별)
+                        const stretchBase = this.type === 'string' ? 1.5 : 1;
+                        this.stretch = stretchBase + Math.min(speed / 250, 2.5);
+                        if (this.type !== 'glob') {
+                            this.rotation = Math.atan2(this.vy, this.vx);
+                        }
+                        
+                        // 바닥 튀김
+                        if (this.y >= this.groundY && !this.hasSpawned) {
+                            this.hasSpawned = true;
+                            if (this.type === 'drop' || this.type === 'glob') {
+                                if (Math.random() > 0.4) {
+                                    GoreVFX.spawnSplashDroplets(this.x, this.groundY, this.vx * 0.4);
+                                }
+                            }
+                            this.vy = -Math.abs(this.vy) * randomBetween(0.1, 0.3);
+                            this.vx *= randomBetween(0.3, 0.6);
+                            this.gravity *= randomBetween(1.5, 2.5);
+                        }
+                        
+                        this.alpha -= this.decay * dt * randomBetween(0.8, 1.2);
+                        this.size *= randomBetween(0.995, 1.001);
+                        
+                        if (this.alpha <= 0 || this.size < 0.3) this.alive = false;
+                    },
                 
                 draw(ctx) {
-                    // 트레일 (피 줄기)
+                    // 🎨 타입별 다른 렌더링
+                    
+                    // 트레일 (피 줄기) - string 타입은 더 굵고 긴 트레일
                     if (this.trail.length > 1) {
                         ctx.beginPath();
                         ctx.moveTo(this.trail[0].x, this.trail[0].y);
-                        for (let i = 1; i < this.trail.length; i++) {
-                            ctx.lineTo(this.trail[i].x, this.trail[i].y);
+                        
+                        // 부드러운 곡선 (string 타입)
+                        if (this.type === 'string' && this.trail.length > 2) {
+                            for (let i = 1; i < this.trail.length - 1; i++) {
+                                const xc = (this.trail[i].x + this.trail[i + 1].x) / 2;
+                                const yc = (this.trail[i].y + this.trail[i + 1].y) / 2;
+                                ctx.quadraticCurveTo(this.trail[i].x, this.trail[i].y, xc, yc);
+                            }
+                            ctx.lineTo(this.x, this.y);
+                        } else {
+                            for (let i = 1; i < this.trail.length; i++) {
+                                ctx.lineTo(this.trail[i].x, this.trail[i].y);
+                            }
+                            ctx.lineTo(this.x, this.y);
                         }
-                        ctx.lineTo(this.x, this.y);
+                        
                         ctx.strokeStyle = this.color;
-                        ctx.lineWidth = this.size * 0.8;
+                        ctx.lineWidth = this.type === 'string' ? this.size * 1.2 : this.size * 0.7;
                         ctx.lineCap = 'round';
-                        ctx.globalAlpha = this.alpha * 0.6;
+                        ctx.lineJoin = 'round';
+                        ctx.globalAlpha = this.alpha * (this.type === 'string' ? 0.8 : 0.5);
                         ctx.stroke();
                     }
                     
-                    // 메인 피 방울 (늘어난 타원형)
                     ctx.save();
                     ctx.translate(this.x, this.y);
                     ctx.rotate(this.rotation);
                     ctx.globalAlpha = this.alpha;
                     
-                    // 그라데이션으로 입체감
-                    const gradient = ctx.createRadialGradient(
-                        -this.size * 0.3, -this.size * 0.3, 0,
-                        0, 0, this.size * this.stretch
-                    );
-                    gradient.addColorStop(0, '#cc2233');  // 밝은 중심 (빛 반사)
-                    gradient.addColorStop(0.3, this.color);
-                    gradient.addColorStop(1, '#330000');  // 어두운 가장자리
-                    
-                    ctx.beginPath();
-                    ctx.ellipse(0, 0, this.size * this.stretch, this.size, 0, 0, Math.PI * 2);
-                    ctx.fillStyle = gradient;
-                    ctx.fill();
-                    
-                    // 하이라이트 (젖은 느낌)
-                    if (this.size > 3) {
+                    // 🩸 타입별 형태
+                    if (this.type === 'spray') {
+                        // 스프레이: 작은 원, 빠르게 사라짐
                         ctx.beginPath();
-                        ctx.ellipse(-this.size * 0.3, -this.size * 0.3, this.size * 0.25, this.size * 0.15, -0.5, 0, Math.PI * 2);
-                        ctx.fillStyle = 'rgba(255, 150, 150, 0.4)';
+                        ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                        ctx.fillStyle = this.color;
                         ctx.fill();
+                        
+                    } else if (this.type === 'glob') {
+                        // 덩어리: 불규칙한 형태
+                        const blobPoints = 6;
+                        ctx.beginPath();
+                        for (let i = 0; i <= blobPoints; i++) {
+                            const angle = (i / blobPoints) * Math.PI * 2;
+                            const wobble = 0.7 + Math.sin(angle * 3 + this.time * 2) * 0.3;
+                            const r = this.size * wobble;
+                            const px = Math.cos(angle) * r;
+                            const py = Math.sin(angle) * r * 0.8;
+                            if (i === 0) ctx.moveTo(px, py);
+                            else ctx.lineTo(px, py);
+                        }
+                        ctx.closePath();
+                        
+                        // 어두운 그라데이션
+                        const globGrad = ctx.createRadialGradient(
+                            -this.size * 0.2, -this.size * 0.2, 0,
+                            0, 0, this.size * 1.2
+                        );
+                        globGrad.addColorStop(0, '#aa2020');
+                        globGrad.addColorStop(0.5, this.color);
+                        globGrad.addColorStop(1, '#220000');
+                        ctx.fillStyle = globGrad;
+                        ctx.fill();
+                        
+                        // 하이라이트
+                        if (this.size > 4) {
+                            ctx.beginPath();
+                            ctx.ellipse(-this.size * 0.25, -this.size * 0.25, 
+                                this.size * 0.3, this.size * 0.2, -0.4, 0, Math.PI * 2);
+                            ctx.fillStyle = 'rgba(255, 120, 120, 0.35)';
+                            ctx.fill();
+                        }
+                        
+                    } else if (this.type === 'string') {
+                        // 줄기: 늘어난 형태
+                        const stringLen = this.size * this.stretch * 1.5;
+                        const gradient = ctx.createLinearGradient(-stringLen/2, 0, stringLen/2, 0);
+                        gradient.addColorStop(0, 'rgba(80, 0, 0, 0.3)');
+                        gradient.addColorStop(0.3, this.color);
+                        gradient.addColorStop(0.7, this.color);
+                        gradient.addColorStop(1, 'rgba(80, 0, 0, 0.3)');
+                        
+                        ctx.beginPath();
+                        ctx.ellipse(0, 0, stringLen, this.size * 0.6, 0, 0, Math.PI * 2);
+                        ctx.fillStyle = gradient;
+                        ctx.fill();
+                        
+                    } else {
+                        // drop: 기본 물방울 형태
+                        const gradient = ctx.createRadialGradient(
+                            -this.size * 0.3, -this.size * 0.3, 0,
+                            0, 0, this.size * this.stretch
+                        );
+                        gradient.addColorStop(0, '#cc2233');
+                        gradient.addColorStop(0.3, this.color);
+                        gradient.addColorStop(1, '#330000');
+                        
+                        ctx.beginPath();
+                        ctx.ellipse(0, 0, this.size * this.stretch, this.size, 0, 0, Math.PI * 2);
+                        ctx.fillStyle = gradient;
+                        ctx.fill();
+                        
+                        // 하이라이트
+                        if (this.size > 2.5) {
+                            ctx.beginPath();
+                            ctx.ellipse(-this.size * 0.25, -this.size * 0.25, 
+                                this.size * 0.22, this.size * 0.13, -0.5, 0, Math.PI * 2);
+                            ctx.fillStyle = 'rgba(255, 150, 150, 0.4)';
+                            ctx.fill();
+                        }
                     }
                     
                     ctx.restore();
                 }
             });
+            }, delay);  // 딜레이 적용
         }
         
-        // 🩸 미세 피 안개 (스프레이)
-        const mistCount = Math.floor(count * 0.3);
+        // 🩸 미세 피 안개 (스프레이) - 더 랜덤하게
+        const mistCount = Math.floor(count * randomBetween(0.2, 0.5));
         for (let i = 0; i < mistCount; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const vel = speed * 0.5 * Math.random();
+            const mistDelay = Math.random() < 0.5 ? randomBetween(0, 100) : 0;
             
-            VFX.particles.push({
-                x: x + (Math.random() - 0.5) * 20,
-                y: y + (Math.random() - 0.5) * 20,
-                vx: Math.cos(angle) * vel,
-                vy: Math.sin(angle) * vel - 50,
-                size: 15 + Math.random() * 25,
-                alpha: 0.3 + Math.random() * 0.2,
-                color: 'rgba(100, 0, 0, 0.15)',
-                gravity: 50,
-                decay: 1.5,
-                alive: true,
+            setTimeout(() => {
+                const angle = Math.random() * Math.PI * 2;
+                const vel = speed * randomBetween(0.2, 0.7) * Math.random();
+                const mistX = x + randomDeviation(0, 30);
+                const mistY = y + randomDeviation(0, 25);
+                const mistSize = randomBetween(10, 45);
+                const mistAlpha = randomBetween(0.15, 0.4);
                 
-                update() {
-                    const dt = 0.016;
-                    this.x += this.vx * dt;
-                    this.y += this.vy * dt;
-                    this.vy += this.gravity * dt;
-                    this.size += 0.5;  // 퍼짐
-                    this.alpha -= this.decay * dt;
-                    if (this.alpha <= 0) this.alive = false;
-                },
-                
-                draw(ctx) {
-                    const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size);
-                    gradient.addColorStop(0, `rgba(80, 0, 0, ${this.alpha})`);
-                    gradient.addColorStop(1, 'rgba(50, 0, 0, 0)');
+                VFX.particles.push({
+                    x: mistX,
+                    y: mistY,
+                    vx: Math.cos(angle) * vel + (Math.random() - 0.5) * 40,
+                    vy: Math.sin(angle) * vel - (30 + Math.random() * 50),
+                    size: mistSize,
+                    alpha: mistAlpha,
+                    baseColor: Math.random() > 0.3 ? [80, 0, 0] : [100, 20, 10],  // 색상 변화
+                    gravity: 30 + Math.random() * 50,
+                    decay: 0.8 + Math.random() * 1.2,
+                    alive: true,
+                    growRate: 0.3 + Math.random() * 0.5,
+                    wobble: Math.random() * Math.PI * 2,
+                    wobbleSpeed: 2 + Math.random() * 3,
                     
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                    ctx.fillStyle = gradient;
-                    ctx.fill();
-                }
-            });
+                    update() {
+                        const dt = 0.016;
+                        this.x += this.vx * dt;
+                        this.y += this.vy * dt;
+                        this.vy += this.gravity * dt;
+                        // 흔들림
+                        this.x += Math.sin(this.wobble) * 0.5;
+                        this.wobble += this.wobbleSpeed * dt;
+                        this.size += this.growRate;
+                        this.alpha -= this.decay * dt;
+                        if (this.alpha <= 0) this.alive = false;
+                    },
+                    
+                    draw(ctx) {
+                        const [r, g, b] = this.baseColor;
+                        const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size);
+                        gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${this.alpha})`);
+                        gradient.addColorStop(0.6, `rgba(${r * 0.7}, ${g}, ${b}, ${this.alpha * 0.5})`);
+                        gradient.addColorStop(1, `rgba(${r * 0.5}, 0, 0, 0)`);
+                        
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                        ctx.fillStyle = gradient;
+                        ctx.fill();
+                    }
+                });
+            }, mistDelay);  // 미스트 딜레이
         }
     },
     
