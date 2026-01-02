@@ -29,20 +29,51 @@ const ChainScytheSystem = {
             
             console.log(`[ChainScythe] ${targetEnemy.name}을(를) 첫 번째 위치로 끌어옴!`);
             
-            // UI 재렌더링
-            if (typeof renderEnemies === 'function') {
-                renderEnemies(false);
+            // 부드러운 전환을 위해 적 컨테이너 페이드
+            const enemyContainer = document.getElementById('enemies-container');
+            if (enemyContainer) {
+                // 빠른 페이드 아웃
+                gsap.to(enemyContainer, {
+                    opacity: 0,
+                    duration: 0.15,
+                    ease: 'power2.out',
+                    onComplete: () => {
+                        // UI 재렌더링
+                        if (typeof renderEnemies === 'function') {
+                            renderEnemies(false);
+                        }
+                        
+                        // 브레이크 상태 복원
+                        this.restoreBreakStates();
+                        
+                        // 전체 UI 업데이트
+                        if (typeof updateUI === 'function') {
+                            updateUI();
+                        }
+                        
+                        // 새 컨테이너 페이드 인
+                        const newContainer = document.getElementById('enemies-container');
+                        if (newContainer) {
+                            gsap.fromTo(newContainer, 
+                                { opacity: 0 },
+                                { opacity: 1, duration: 0.2, ease: 'power2.in' }
+                            );
+                        }
+                        
+                        if (onComplete) onComplete();
+                    }
+                });
+            } else {
+                // 컨테이너 없으면 그냥 진행
+                if (typeof renderEnemies === 'function') {
+                    renderEnemies(false);
+                }
+                this.restoreBreakStates();
+                if (typeof updateUI === 'function') {
+                    updateUI();
+                }
+                if (onComplete) onComplete();
             }
-            
-            // 브레이크 상태 복원
-            this.restoreBreakStates();
-            
-            // 전체 UI 업데이트
-            if (typeof updateUI === 'function') {
-                updateUI();
-            }
-            
-            if (onComplete) onComplete();
         });
         
         return true;
@@ -308,29 +339,65 @@ const ChainScytheSystem = {
                 });
                 
                 if (progress >= 1) {
+                    phase = 'settle';
+                    progress = 0;
+                }
+            } else if (phase === 'settle') {
+                // 정착 단계 - 부드럽게 마무리
+                progress += 0.04;
+                
+                // 훅과 사슬 서서히 사라짐
+                const fadeProgress = Math.min(progress * 2, 1);
+                chainContainer.alpha = 1 - fadeProgress;
+                
+                // 사슬 수축 (플레이어 쪽으로)
+                chainLinks.forEach((link, i) => {
+                    const shrinkT = Math.min(progress * 3, 1);
+                    const currentLinkX = link.x;
+                    link.x = currentLinkX + (startX - currentLinkX) * shrinkT * 0.1;
+                });
+                
+                // 타겟 부드럽게 제자리로
+                const settleEase = 1 - Math.pow(1 - progress, 3);
+                const currentX = parseFloat(gsap.getProperty(targetEl, 'x')) || 0;
+                gsap.set(targetEl, { 
+                    x: currentX * (1 - settleEase * 0.5),
+                    filter: `brightness(${1 + (1 - settleEase) * 0.3})`
+                });
+                
+                if (progress >= 1) {
                     phase = 'done';
+                    progress = 0;
                 }
             } else if (phase === 'done') {
-                // 완료 - 정리
-                gsap.to(targetEl, {
-                    x: 0,
-                    filter: 'brightness(1)',
-                    duration: 0.2,
-                    ease: 'power2.out'
+                // 완료 - 최종 정리
+                progress += 0.05;
+                
+                // 타겟 완전히 제자리로 (부드럽게)
+                const finalEase = Math.min(progress * 2, 1);
+                const remainingX = parseFloat(gsap.getProperty(targetEl, 'x')) || 0;
+                gsap.set(targetEl, {
+                    x: remainingX * (1 - finalEase),
+                    filter: 'brightness(1)'
                 });
                 
-                // 사슬 페이드아웃
-                gsap.to(chainContainer, {
-                    alpha: 0,
-                    duration: 0.3,
-                    onComplete: () => {
+                if (progress >= 1) {
+                    // 최종 정리
+                    gsap.set(targetEl, { x: 0, filter: 'none', clearProps: 'all' });
+                    
+                    // 사슬 제거
+                    if (chainContainer.parent) {
                         pixi.effectsContainer.removeChild(chainContainer);
                         chainContainer.destroy({ children: true });
-                        if (onComplete) onComplete();
                     }
-                });
-                
-                return; // 애니메이션 종료
+                    
+                    // 짧은 딜레이 후 콜백 (DOM 재생성 전 안정화)
+                    setTimeout(() => {
+                        if (onComplete) onComplete();
+                    }, 50);
+                    
+                    return; // 애니메이션 종료
+                }
             }
             
             requestAnimationFrame(animate);
