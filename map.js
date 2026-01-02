@@ -1618,10 +1618,21 @@ const MapSystem = {
     // ==========================================
     // 맵 표시/숨기기
     // ==========================================
-    showMap() {
+    showMap(withTransition = true) {
         const mapScreen = document.getElementById('map-screen');
         const gameContainer = document.querySelector('.game-container');
         
+        // 🎬 전투 종료 트랜지션 (맵으로 돌아올 때)
+        if (withTransition && typeof ScreenTransition !== 'undefined') {
+            ScreenTransition.battleExit(() => {
+                this._showMapInternal(mapScreen, gameContainer);
+            });
+        } else {
+            this._showMapInternal(mapScreen, gameContainer);
+        }
+    },
+    
+    _showMapInternal(mapScreen, gameContainer) {
         if (mapScreen) {
             mapScreen.style.display = 'flex';
             this.isMapVisible = true;

@@ -237,9 +237,24 @@ function dealDamage(target, amount, card = null) {
         if (typeof SpriteAnimation !== 'undefined') {
             if (isPlayer) {
                 SpriteAnimation.playerHit(animDamage);
+                // 🔦 3D 광원 효과 - 플레이어 피격
+                if (typeof Background3D !== 'undefined' && Background3D.playerHit) {
+                    Background3D.playerHit();
+                }
             } else if (isEnemy) {
+                console.log('[DealDamage] 🎯 적 피격 애니메이션 시작', { targetEl: !!targetEl, animDamage });
                 try {
                     SpriteAnimation.enemyHit(targetEl, animDamage);
+                    console.log('[DealDamage] ✅ SpriteAnimation.enemyHit 호출 완료');
+                    
+                    // 🔦 3D 광원 효과 - 적 피격
+                    if (typeof Background3D !== 'undefined' && Background3D.enemyHit) {
+                        const enemyIndex = gameState.enemies ? gameState.enemies.indexOf(target) : 0;
+                        console.log('[DealDamage] 💥 Background3D.enemyHit 호출', { enemyIndex, isCriticalHit });
+                        Background3D.enemyHit(enemyIndex, isCriticalHit);
+                    } else {
+                        console.log('[DealDamage] ⚠️ Background3D 없음 또는 enemyHit 없음');
+                    }
                 } catch (e) {
                     console.error('[DealDamage] ❌ enemyHit 에러:', e);
                 }
