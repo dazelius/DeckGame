@@ -773,21 +773,31 @@ img {
     }
 }
 
-/* 강한 공격 - 기(氣) 이펙트 (발밑에서 올라오는 에너지) */
+/* 강한 공격 - 발밑 타원형 기(氣) 이펙트 */
 .enemy-unit.intent-attack-strong::before {
     content: '';
     position: absolute;
-    bottom: 0;
+    bottom: 5%;
     left: 50%;
-    width: 120%;
-    height: 80%;
+    width: 70%;
+    height: 25%;
     transform: translateX(-50%);
-    background: 
-        radial-gradient(ellipse at bottom, rgba(255, 100, 0, 0.4) 0%, transparent 50%),
-        linear-gradient(to top, rgba(255, 50, 0, 0.3) 0%, transparent 70%);
-    animation: energyRise 0.8s ease-out infinite;
+    background: radial-gradient(ellipse at center, rgba(255, 80, 0, 0.5) 0%, rgba(255, 50, 0, 0.3) 40%, transparent 70%);
+    border-radius: 50%;
+    animation: energyPulse 0.8s ease-in-out infinite;
     pointer-events: none;
     z-index: -1;
+}
+
+@keyframes energyPulse {
+    0%, 100% {
+        opacity: 0.5;
+        transform: translateX(-50%) scale(1);
+    }
+    50% {
+        opacity: 0.9;
+        transform: translateX(-50%) scale(1.2);
+    }
 }
 
 /* 강한 공격 - 충격파 링 */
@@ -806,20 +816,7 @@ img {
     z-index: -1;
 }
 
-@keyframes energyRise {
-    0% {
-        opacity: 0.3;
-        transform: translateX(-50%) scaleY(0.5);
-    }
-    50% {
-        opacity: 0.8;
-        transform: translateX(-50%) scaleY(1);
-    }
-    100% {
-        opacity: 0.3;
-        transform: translateX(-50%) scaleY(0.5);
-    }
-}
+/* energyRise는 energyPulse로 대체됨 */
 
 @keyframes shockwaveRing {
     0% {
@@ -1387,24 +1384,30 @@ img {
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
-/* 플레이어 디버프 컨테이너 */
+/* 플레이어 디버프 컨테이너 - 절대 위치로 스프라이트 위치에 영향 안줌 */
 .player-debuffs {
+    position: absolute;
+    bottom: -35px;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
-    gap: 8px;
+    gap: 6px;
     justify-content: center;
-    margin-top: 5px;
+    z-index: 50;
+    pointer-events: auto;
 }
 
 .player-debuff-icon {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
     background: linear-gradient(145deg, rgba(30, 30, 45, 0.95) 0%, rgba(15, 15, 25, 0.98) 100%);
-    padding: 6px 12px;
-    border-radius: 20px;
+    padding: 4px 8px;
+    border-radius: 15px;
     cursor: pointer;
     transition: all 0.2s ease;
     position: relative;
+    flex-shrink: 0;
 }
 
 .player-debuff-icon.vulnerable {
@@ -1417,6 +1420,17 @@ img {
     border: 2px solid #6b21a8;
     box-shadow: 0 0 10px rgba(107, 33, 168, 0.4);
     animation: debuffPulse 2s infinite;
+}
+
+.player-debuff-icon.taunt {
+    border: 2px solid #f59e0b;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+    animation: tauntPulse 1.5s infinite;
+}
+
+@keyframes tauntPulse {
+    0%, 100% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.4); }
+    50% { box-shadow: 0 0 18px rgba(245, 158, 11, 0.7); }
 }
 
 .player-debuff-icon.bleed-debuff {
@@ -1436,13 +1450,13 @@ img {
 }
 
 .debuff-emoji {
-    font-size: 1.2rem;
+    font-size: 1rem;
 }
 
 .debuff-count,
 .debuff-value {
     font-family: 'Cinzel', serif;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: bold;
     color: #fff;
 }
@@ -4981,6 +4995,17 @@ body .card-drag-ghost.can-drop {
             0 0 40px rgba(239, 68, 68, 0.5);
         transform: scale(1.03);
     }
+}
+
+/* 이동 인텐트 - 회색/청록 */
+.enemy-unit .intent-move {
+    color: #e2e8f0;
+    background: linear-gradient(180deg, rgba(71, 85, 105, 0.9) 0%, rgba(51, 65, 85, 0.95) 100%);
+    border: 1px solid #64748b;
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 2px 8px rgba(100, 116, 139, 0.4);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 /* 디버프 인텐트 - 어두운 보라 */

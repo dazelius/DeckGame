@@ -70,6 +70,7 @@ function decideEnemyIntentForEnemy(enemy) {
         enemy.intentHits = intent.hits || 1;
         enemy.intentBleed = intent.bleed || 0; // 출혈량
         enemy.intentIcon = intent.icon;
+        enemy.intentAnimationKey = intent.animationKey || null; // 🎬 애니메이션 키
         
         if (intent.type === 'attack' && enemy.attackBuff && enemy.attackBuff > 0) {
             enemy.intentValue += enemy.attackBuff;
@@ -178,6 +179,7 @@ function decideEnemyIntentForEnemy(enemy) {
     enemy.intentValue = intent.value || 0;
     enemy.intentHits = intent.hits || 1;
     enemy.intentBleed = intent.bleed || 0;
+    enemy.intentAnimationKey = intent.animationKey || null; // 🎬 애니메이션 키
     
     // 광신도: selfHarm 인텐트의 attackBonus 저장
     if (intent.type === 'selfHarm') {

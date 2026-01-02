@@ -64,9 +64,10 @@ const BreakSystem = {
         enemy.currentBreakRecipe = null;
         enemy.breakProgress = [];
         
+        const enemyIndex = gameState.enemies?.indexOf(enemy);
+        
         // 브레이크 상태였으면 별 이펙트 중지
         if (enemy.isBroken) {
-            const enemyIndex = gameState.enemies?.indexOf(enemy);
             if (enemyIndex !== -1) {
                 const enemyEl = document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`);
                 if (enemyEl && typeof PixiRenderer !== 'undefined') {
@@ -75,6 +76,17 @@ const BreakSystem = {
             }
         }
         enemy.isBroken = false;
+        
+        // 🔧 중요: 새 인텐트 선택 시 data-original-text 초기화 (이전 값이 잘못 사용되는 것 방지)
+        if (enemyIndex !== -1) {
+            const enemyEl = document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`);
+            if (enemyEl) {
+                const intentEl = enemyEl.querySelector('.enemy-intent-display');
+                if (intentEl) {
+                    intentEl.removeAttribute('data-original-text');
+                }
+            }
+        }
         
         // 위협 상태 해제
         this.clearThreatState(enemy);
@@ -125,10 +137,11 @@ const BreakSystem = {
         if (enemyEl) {
             enemyEl.classList.remove('threat-active');
             
-            // 인텐트 원본 콘텐츠 복원용 속성 제거
+            // 인텐트 원본 콘텐츠 복원용 속성 제거 (다음 인텐트에서 새로 추출하도록)
             const intentEl = enemyEl.querySelector('.enemy-intent-display');
             if (intentEl) {
                 intentEl.removeAttribute('data-original-text');
+                intentEl.classList.remove('danger-intent');
             }
         }
     },
@@ -387,9 +400,10 @@ const BreakSystem = {
                         intentEl.style.display = '';
                         intentEl.style.visibility = '';
                         intentEl.style.opacity = '';
-                        intentEl.classList.remove('is-broken');
-                        // innerHTML은 건드리지 않음! game.js에서 updateEnemiesUI가 처리
-                        console.log(`[BreakSystem.onTurnEnd] ${enemy.name} 인텐트 스타일 복구 완료`);
+                        intentEl.classList.remove('is-broken', 'danger-intent', 'intent-shattering');
+                        // 🔧 중요: data-original-text 속성 제거 (다음 인텐트에서 새로 추출하도록)
+                        intentEl.removeAttribute('data-original-text');
+                        console.log(`[BreakSystem.onTurnEnd] ${enemy.name} 인텐트 스타일 복구 완료 (data-original-text 제거됨)`);
                     }
                     enemyEl.classList.remove('enemy-broken');
                 }

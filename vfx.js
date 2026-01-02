@@ -1634,6 +1634,139 @@ const VFX = {
     },
     
     // ==========================================
+    // 🏹 화살 투사체 (궁수 전용)
+    // ==========================================
+    arrow(fromX, fromY, toX, toY, options = {}) {
+        const {
+            color = '#8B4513', // 갈색 화살
+            speed = 25,
+            onHit = null
+        } = options;
+        
+        this.ensureLoop();
+        
+        const dx = toX - fromX;
+        const dy = toY - fromY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const vx = (dx / distance) * speed;
+        const vy = (dy / distance) * speed;
+        const angle = Math.atan2(dy, dx);
+        
+        const arrow = {
+            x: fromX,
+            y: fromY,
+            targetX: toX,
+            targetY: toY,
+            vx, vy,
+            angle,
+            color,
+            trailParticles: [],
+            alive: true,
+            
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                
+                // 화살 궤적 파티클
+                if (Math.random() > 0.5) {
+                    this.trailParticles.push({
+                        x: this.x - Math.cos(this.angle) * 15,
+                        y: this.y - Math.sin(this.angle) * 15,
+                        alpha: 0.8,
+                        size: 3
+                    });
+                }
+                
+                // 트레일 페이드아웃
+                this.trailParticles = this.trailParticles.filter(p => {
+                    p.alpha -= 0.08;
+                    return p.alpha > 0;
+                });
+                
+                // 타겟 도달 체크
+                const distToTarget = Math.sqrt(
+                    Math.pow(this.x - this.targetX, 2) + 
+                    Math.pow(this.y - this.targetY, 2)
+                );
+                
+                if (distToTarget < speed * 2) {
+                    this.alive = false;
+                    if (onHit) onHit();
+                    // 화살 적중 이펙트
+                    VFX.impact(this.targetX, this.targetY, { color: '#ef4444', size: 40 });
+                    VFX.sparks(this.targetX, this.targetY, { color: '#ffd700', count: 6, speed: 100, size: 3 });
+                }
+            },
+            
+            draw(ctx) {
+                ctx.save();
+                
+                // 트레일 그리기
+                this.trailParticles.forEach(p => {
+                    ctx.globalAlpha = p.alpha * 0.4;
+                    ctx.fillStyle = '#f59e0b';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                
+                ctx.globalAlpha = 1;
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                
+                // 화살대 (갈색)
+                ctx.fillStyle = this.color;
+                ctx.fillRect(-25, -2, 30, 4);
+                
+                // 화살촉 (금속색)
+                ctx.fillStyle = '#9ca3af';
+                ctx.beginPath();
+                ctx.moveTo(10, 0);
+                ctx.lineTo(0, -5);
+                ctx.lineTo(0, 5);
+                ctx.closePath();
+                ctx.fill();
+                
+                // 화살촉 빛
+                ctx.fillStyle = '#e5e7eb';
+                ctx.beginPath();
+                ctx.moveTo(10, 0);
+                ctx.lineTo(3, -2);
+                ctx.lineTo(3, 2);
+                ctx.closePath();
+                ctx.fill();
+                
+                // 깃털 (빨간색)
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.moveTo(-25, 0);
+                ctx.lineTo(-30, -6);
+                ctx.lineTo(-22, 0);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.beginPath();
+                ctx.moveTo(-25, 0);
+                ctx.lineTo(-30, 6);
+                ctx.lineTo(-22, 0);
+                ctx.closePath();
+                ctx.fill();
+                
+                // 글로우 효과
+                ctx.shadowColor = '#f59e0b';
+                ctx.shadowBlur = 8;
+                ctx.strokeStyle = '#f59e0b';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(-25, -2, 30, 4);
+                
+                ctx.restore();
+            }
+        };
+        
+        this.animations.push(arrow);
+    },
+    
+    // ==========================================
     // 힐 이펙트
     // ==========================================
     heal(x, y, options = {}) {
@@ -3458,6 +3591,123 @@ const VFX = {
         }
         
         return null;
+    },
+    
+    // ==========================================
+    // 🏃 스피드 라인 (대시 효과)
+    // ==========================================
+    speedLine(x, y, options = {}) {
+        const {
+            color = '#e2e8f0',
+            length = 80,
+            thickness = 2,
+            angle = 0, // 0 = 수평
+            duration = 200
+        } = options;
+        
+        if (!this.ctx) this.init();
+        this.startLoop();
+        
+        const startTime = Date.now();
+        const rad = angle * Math.PI / 180;
+        
+        // 시작점과 끝점 계산
+        const endX = x + Math.cos(rad) * length;
+        const endY = y + Math.sin(rad) * length;
+        
+        this.animations.push({
+            type: 'speedLine',
+            startTime,
+            duration,
+            x, y, endX, endY,
+            color, thickness,
+            render: (ctx, progress) => {
+                const fadeOut = 1 - progress;
+                const stretch = 0.3 + progress * 0.7; // 늘어나는 효과
+                
+                ctx.save();
+                ctx.globalAlpha = fadeOut * 0.8;
+                
+                // 그라데이션 라인
+                const gradient = ctx.createLinearGradient(
+                    x, y, 
+                    x + (endX - x) * stretch, 
+                    y + (endY - y) * stretch
+                );
+                gradient.addColorStop(0, 'transparent');
+                gradient.addColorStop(0.3, color);
+                gradient.addColorStop(1, color);
+                
+                ctx.strokeStyle = gradient;
+                ctx.lineWidth = thickness * (1 - progress * 0.5);
+                ctx.lineCap = 'round';
+                
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(
+                    x + (endX - x) * stretch,
+                    y + (endY - y) * stretch
+                );
+                ctx.stroke();
+                
+                ctx.restore();
+                
+                return progress < 1;
+            }
+        });
+    },
+    
+    // ==========================================
+    // 🌪️ 대시 잔상 (스프라이트 고스트)
+    // ==========================================
+    dashGhost(x, y, options = {}) {
+        const {
+            color = '#94a3b8',
+            size = 100,
+            count = 3,
+            direction = 'right', // 'left' or 'right'
+            duration = 300
+        } = options;
+        
+        if (!this.ctx) this.init();
+        this.startLoop();
+        
+        const dirMult = direction === 'right' ? 1 : -1;
+        
+        for (let i = 0; i < count; i++) {
+            const delay = i * 50;
+            const startX = x - (i * 20 * dirMult);
+            const startTime = Date.now() + delay;
+            const opacity = 0.6 - (i * 0.15);
+            
+            this.animations.push({
+                type: 'dashGhost',
+                startTime,
+                duration,
+                render: (ctx, progress) => {
+                    const fadeOut = 1 - progress;
+                    
+                    ctx.save();
+                    ctx.globalAlpha = opacity * fadeOut;
+                    
+                    // 실루엣 원
+                    ctx.fillStyle = color;
+                    ctx.beginPath();
+                    ctx.ellipse(
+                        startX + (progress * 30 * dirMult), 
+                        y, 
+                        size * 0.4 * (1 - progress * 0.3), 
+                        size * 0.6 * (1 - progress * 0.2), 
+                        0, 0, Math.PI * 2
+                    );
+                    ctx.fill();
+                    
+                    ctx.restore();
+                    
+                    return progress < 1;
+                }
+            });
+        }
     }
 };
 
