@@ -296,6 +296,13 @@ const EnemyRenderer = {
             enemyContainer.filters = enemyContainer.filters || [];
         }
         
+        // 🌑 바닥 그림자 추가 (배경과 블렌딩)
+        const shadow = this.createGroundShadow(sprite);
+        if (shadow) {
+            shadow.zIndex = -10;
+            enemyContainer.addChild(shadow);
+        }
+        
         // 스프라이트를 컨테이너에 추가
         enemyContainer.addChild(sprite);
         
@@ -310,6 +317,9 @@ const EnemyRenderer = {
         
         // ✅ 아웃라인 효과 (스프라이트 복제 방식)
         this.applyOutlineEffect(sprite, enemyContainer);
+        
+        // 🎨 환경광 블렌딩 (스프라이트 색조 보정)
+        this.applyEnvironmentBlending(sprite);
         
         // 메인 컨테이너에 추가
         this.container.addChild(enemyContainer);
@@ -1448,6 +1458,74 @@ const EnemyRenderer = {
         requestAnimationFrame(animate);
         
         console.log(`[EnemyRenderer] 등장 애니메이션 시작, targetScale: ${targetScale}`);
+    },
+    
+    // ==========================================
+    // 🌑 바닥 그림자 생성 (3D 배경과 블렌딩)
+    // ==========================================
+    createGroundShadow(sprite) {
+        if (!sprite || !sprite.texture) return null;
+        
+        try {
+            const shadowGraphics = new PIXI.Graphics();
+            
+            // 스프라이트 크기에 맞는 타원형 그림자
+            const spriteWidth = sprite.texture.width || 100;
+            const shadowWidth = spriteWidth * 0.8;
+            const shadowHeight = shadowWidth * 0.25;  // 납작한 타원
+            
+            // 그라데이션 효과를 위해 여러 겹 그리기
+            const layers = 5;
+            for (let i = layers; i >= 0; i--) {
+                const ratio = i / layers;
+                const alpha = 0.15 * (1 - ratio * 0.7);
+                const w = shadowWidth * (1 + ratio * 0.3);
+                const h = shadowHeight * (1 + ratio * 0.3);
+                
+                shadowGraphics.ellipse(0, 0, w, h);
+                shadowGraphics.fill({ 
+                    color: 0x000000, 
+                    alpha: alpha 
+                });
+            }
+            
+            // 그림자 위치 (스프라이트 발 아래)
+            shadowGraphics.y = -5;  // 발 바로 아래
+            shadowGraphics.alpha = 0.6;
+            
+            return shadowGraphics;
+        } catch (e) {
+            console.warn('[EnemyRenderer] 그림자 생성 실패:', e);
+            return null;
+        }
+    },
+    
+    // ==========================================
+    // 🎨 환경광 블렌딩 (스프라이트 색조 보정)
+    // ==========================================
+    applyEnvironmentBlending(sprite) {
+        if (!sprite) return;
+        
+        try {
+            // ColorMatrixFilter로 색조 보정
+            if (typeof PIXI !== 'undefined' && PIXI.ColorMatrixFilter) {
+                const colorMatrix = new PIXI.ColorMatrixFilter();
+                
+                // 던전 분위기에 맞게 약간 어둡고 푸른 빛
+                colorMatrix.brightness(0.95, false);    // 약간 어둡게
+                colorMatrix.saturate(-0.08, false);     // 채도 약간 낮춤
+                
+                // 기존 필터에 추가
+                sprite.filters = sprite.filters || [];
+                sprite.filters.push(colorMatrix);
+                
+                // 환경광 색조 저장 (나중에 변경 가능)
+                sprite._envFilter = colorMatrix;
+            }
+        } catch (e) {
+            // 필터 지원 안되면 패스
+            console.log('[EnemyRenderer] 환경광 필터 미지원');
+        }
     },
     
     // ✅ 아웃라인 효과 적용 (검은색 두꺼운 외곽선 - 스프라이트 복제 방식)
@@ -2632,6 +2710,55 @@ enemyRendererStyles.textContent = `
     #enemy-canvas-container canvas {
         image-rendering: pixelated;
         image-rendering: crisp-edges;
+    }
+    
+    /* ========================================
+       🎬 CRT/레트로 블렌딩 효과
+       ======================================== */
+    
+    /* 스캔라인 오버레이 */
+    #enemy-canvas-container::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        background: repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 2px,
+            rgba(0, 0, 0, 0.03) 2px,
+            rgba(0, 0, 0, 0.03) 4px
+        );
+        z-index: 10;
+        mix-blend-mode: multiply;
+    }
+    
+    /* 비네팅 효과 (가장자리 어둡게) */
+    #enemy-canvas-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        background: radial-gradient(
+            ellipse at center,
+            transparent 40%,
+            rgba(0, 0, 0, 0.15) 100%
+        );
+        z-index: 9;
+    }
+    
+    /* 스프라이트 부드러운 블렌딩을 위한 필터 */
+    #enemy-canvas-container canvas {
+        filter: 
+            contrast(1.05)
+            saturate(0.95)
+            drop-shadow(0 8px 12px rgba(0, 0, 0, 0.5));
     }
 `;
 document.head.appendChild(enemyRendererStyles);
