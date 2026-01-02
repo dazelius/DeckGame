@@ -518,18 +518,17 @@ const EnemyRenderer = {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
             z-index: 60;
         `;
         
-        // 인텐트 (맨 위)
+        // 인텐트
         const intentEl = document.createElement('div');
         intentEl.className = 'enemy-intent pixi-intent';
         intentEl.style.cssText = `
             display: flex;
-            flex-direction: column;
             align-items: center;
-            min-height: 36px;
+            justify-content: center;
         `;
         intentEl.innerHTML = this.getIntentHTML(enemy);
         topUI.appendChild(intentEl);
@@ -539,9 +538,9 @@ const EnemyRenderer = {
         breakGauge.className = 'break-gauge-container pixi-break';
         breakGauge.style.cssText = `
             display: flex;
-            flex-direction: column;
             align-items: center;
-            gap: 3px;
+            justify-content: center;
+            gap: 2px;
         `;
         breakGauge.innerHTML = this.getBreakGaugeHTML(enemy);
         
@@ -557,7 +556,7 @@ const EnemyRenderer = {
         this.uiOverlay.appendChild(topUI);
         
         // ==========================================
-        // 하단 UI 컨테이너 (HP 바 + 이름) - 발 밑
+        // 하단 UI 컨테이너 (HP 바) - 발 밑
         // ==========================================
         const bottomUI = document.createElement('div');
         bottomUI.className = 'enemy-ui-bottom';
@@ -570,22 +569,9 @@ const EnemyRenderer = {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
+            gap: 2px;
             z-index: 55;
         `;
-        
-        // 적 이름
-        const nameEl = document.createElement('div');
-        nameEl.className = 'enemy-name pixi-name';
-        nameEl.style.cssText = `
-            font-size: 0.85rem;
-            font-weight: bold;
-            color: #fff;
-            text-shadow: 1px 1px 2px #000, 0 0 5px rgba(0,0,0,0.8);
-            white-space: nowrap;
-        `;
-        nameEl.textContent = enemy.name || '???';
-        bottomUI.appendChild(nameEl);
         
         // HP 바
         const hpBar = document.createElement('div');
@@ -1887,22 +1873,11 @@ enemyRendererStyles.textContent = `
     /* 상단 UI (인텐트 + 브레이크) */
     .enemy-ui-top {
         text-align: center;
-        min-width: 100px;
     }
     
-    /* 하단 UI (이름 + HP + 상태) */
+    /* 하단 UI (HP + 상태) */
     .enemy-ui-bottom {
         text-align: center;
-        min-width: 100px;
-    }
-    
-    /* 적 이름 */
-    .enemy-name.pixi-name {
-        font-size: 0.85rem;
-        font-weight: bold;
-        color: #fff;
-        text-shadow: 1px 1px 2px #000, 0 0 5px rgba(0,0,0,0.8);
-        margin-bottom: 2px;
     }
     
     /* HP 바 */
