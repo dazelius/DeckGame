@@ -13,9 +13,9 @@ const EnemyRenderer = {
     
     // 슬롯 설정
     config: {
-        slotSpacing: 160,      // 슬롯 간격
+        slotSpacing: 180,      // 슬롯 간격 (넓게)
         baseY: 200,            // 기본 Y 위치
-        baseScale: 1.0,        // 기본 스케일
+        baseScale: 0.35,       // 기본 스케일 (작게!)
         depthScale: 0.85,      // 깊이에 따른 스케일 감소
         maxSlots: 5            // 최대 슬롯 수
     },
@@ -198,12 +198,14 @@ const EnemyRenderer = {
     async addEnemy(enemy, slotIndex) {
         if (!this.initialized || !enemy) return null;
         
-        // 이미 존재하면 스킵
-        if (this.sprites.has(enemy.id || enemy.name)) {
-            return this.sprites.get(enemy.id || enemy.name);
-        }
+        // PixiJS용 고유 ID 사용 (매번 새로 생성됨)
+        const enemyId = enemy.pixiId || enemy.id || `enemy_${slotIndex}_${Date.now()}`;
         
-        const enemyId = enemy.id || enemy.name || `enemy_${Date.now()}`;
+        // 이미 존재하면 스킵 (pixiId 기반)
+        if (this.sprites.has(enemyId)) {
+            console.log(`[EnemyRenderer] 이미 존재: ${enemyId}`);
+            return this.sprites.get(enemyId);
+        }
         
         // 스프라이트 생성 (비동기)
         const spriteData = await this.createEnemySprite(enemy, slotIndex);
@@ -281,13 +283,6 @@ const EnemyRenderer = {
         enemyContainer.zIndex = this.getSlotZIndex(slotIndex);
         
         console.log(`[EnemyRenderer] 위치: x=${x}, y=${y}, scale=${scale}`);
-        
-        // ✅ 디버그: 빨간 박스로 위치 확인
-        const debugBox = new PIXI.Graphics();
-        debugBox.rect(-30, -100, 60, 100);
-        debugBox.fill({ color: 0xff0000, alpha: 0.5 });
-        enemyContainer.addChild(debugBox);
-        console.log(`[EnemyRenderer] 디버그 박스 추가됨`);
         
         // ✅ 보스/엘리트 특별 효과
         if (enemy.isBoss) {

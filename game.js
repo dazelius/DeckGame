@@ -834,11 +834,15 @@ async function renderEnemiesWithPixi(withEntrance = true) {
         const enemy = aliveEnemies[slotIndex];
         // 스프라이트 경로 설정 (img 필드 사용!)
         enemy.sprite = enemy.sprite || enemy.img || enemy.image || getEnemySpritePath(enemy);
-        enemy.id = enemy.id || `${enemy.name}_${slotIndex}`;
+        // ID는 슬롯 기반으로 항상 새로 생성 (중복 방지)
+        const enemyId = `enemy_slot_${slotIndex}_${Date.now()}`;
+        enemy.pixiId = enemyId;  // PixiJS용 고유 ID
         
-        console.log(`[renderEnemiesWithPixi] 적 추가: ${enemy.name}, 스프라이트: ${enemy.sprite}`);
+        console.log(`[renderEnemiesWithPixi] 적 추가: ${enemy.name}, slot: ${slotIndex}, 스프라이트: ${enemy.sprite}`);
         await EnemyRenderer.addEnemy(enemy, slotIndex);
     }
+    
+    console.log(`[renderEnemiesWithPixi] 총 ${aliveEnemies.length}마리 렌더링 완료`);
     
     console.log(`[renderEnemiesWithPixi] Rendered ${aliveEnemies.length} enemies`);
     
