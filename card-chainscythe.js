@@ -148,9 +148,12 @@ const ChainScytheSystem = {
             }
         });
         
-        // 브레이크 상태 복원 + 3D 위치 동기화
+        // 브레이크 상태 복원 + 3D 위치 동기화 + 사망 처리
         setTimeout(() => {
             this.restoreBreakStates();
+            
+            // ✅ 사망한 적 처리 (충돌 대미지로 죽은 적)
+            this.processDeadEnemies();
             
             // ✅ Background3D 3D 배치 재적용 (전진/후퇴와 통일)
             if (typeof Background3D !== 'undefined' && Background3D.updateAllEnemyPositions) {
@@ -161,10 +164,59 @@ const ChainScytheSystem = {
                 updateUI();
             }
             
+            // 전투 종료 체크
+            if (typeof checkBattleEnd === 'function') {
+                checkBattleEnd();
+            }
+            
             if (onComplete) onComplete();
         }, 300);
         
         return true;
+    },
+    
+    // 충돌로 사망한 적 처리
+    processDeadEnemies() {
+        if (!gameState.enemies) return;
+        
+        const deadEnemies = gameState.enemies.filter(e => e.hp <= 0);
+        
+        deadEnemies.forEach(enemy => {
+            const index = gameState.enemies.indexOf(enemy);
+            const enemyEl = document.querySelector(`.enemy-unit[data-index="${index}"]`);
+            
+            if (enemyEl) {
+                // 사망 애니메이션
+                if (typeof gsap !== 'undefined') {
+                    gsap.to(enemyEl, {
+                        opacity: 0,
+                        scale: 0.8,
+                        y: 20,
+                        duration: 0.3,
+                        ease: 'power2.in',
+                        onComplete: () => {
+                            enemyEl.remove();
+                        }
+                    });
+                } else {
+                    enemyEl.remove();
+                }
+            }
+            
+            // 보상 처리
+            if (typeof handleEnemyDeath === 'function') {
+                handleEnemyDeath(enemy);
+            }
+        });
+        
+        // gameState에서 사망한 적 제거
+        gameState.enemies = gameState.enemies.filter(e => e.hp > 0);
+        
+        // DOM의 data-index 재정렬
+        const remainingEls = document.querySelectorAll('.enemy-unit');
+        remainingEls.forEach((el, i) => {
+            el.dataset.index = i;
+        });
     },
     
     // 적 위치 변경 후 브레이크 상태 복원
@@ -604,12 +656,11 @@ const ChainScytheSystem = {
             }
         );
         
-        // 실제 대미지 적용 (최소 1HP 유지 - 충돌로 죽지 않음)
+        // 실제 대미지 적용 (사망 가능)
         const index = parseInt(enemyEl.dataset.index);
         if (!isNaN(index) && gameState.enemies && gameState.enemies[index]) {
             const enemy = gameState.enemies[index];
-            // 최소 1HP 유지 - 충돌 대미지로 죽지 않도록
-            enemy.hp = Math.max(1, enemy.hp - damage);
+            enemy.hp = Math.max(0, enemy.hp - damage);
             
             const hpFill = enemyEl.querySelector('.enemy-hp-fill');
             if (hpFill) {
@@ -619,6 +670,15 @@ const ChainScytheSystem = {
             
             if (typeof addLog === 'function') {
                 addLog(`충돌! ${enemy.name}에게 ${damage} 피해`, 'damage');
+            }
+            
+            // 사망 시 표시
+            if (enemy.hp <= 0) {
+                enemyEl.classList.add('enemy-dying');
+                enemyEl.style.opacity = '0.5';
+                if (typeof addLog === 'function') {
+                    addLog(`💀 ${enemy.name} 사망!`, 'critical');
+                }
             }
         }
     },
