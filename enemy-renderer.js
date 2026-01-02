@@ -25,9 +25,9 @@ const EnemyRenderer = {
     enabled: true,  // ✅ 기본 활성화! PixiJS 적 렌더링이 메인!
     
     // ==========================================
-    // 초기화
+    // 초기화 (비동기 - PixiJS v8 호환)
     // ==========================================
-    init() {
+    async init() {
         if (this.initialized) return true;
         
         // PixiJS 확인
@@ -36,38 +36,45 @@ const EnemyRenderer = {
             return false;
         }
         
-        // 기존 PixiRenderer 활용 또는 새로 생성
+        console.log('[EnemyRenderer] 초기화 시작...');
+        
+        // 기존 PixiRenderer 활용 (권장)
         if (typeof PixiRenderer !== 'undefined' && PixiRenderer.app) {
             this.app = PixiRenderer.app;
-            console.log('[EnemyRenderer] Using existing PixiRenderer');
+            console.log('[EnemyRenderer] ✅ 기존 PixiRenderer.app 사용');
         } else {
-            // 새 앱 생성
-            this.createApp();
+            // 새 앱 생성 (비동기)
+            await this.createApp();
         }
         
         if (!this.app) {
-            console.error('[EnemyRenderer] Failed to create PixiJS app');
+            console.error('[EnemyRenderer] ❌ Failed to create PixiJS app');
             return false;
         }
         
         // 적 전용 컨테이너 생성
         this.container = new PIXI.Container();
         this.container.sortableChildren = true;  // zIndex 정렬 활성화
+        this.container.label = 'EnemyRenderer';  // 디버깅용
         this.app.stage.addChild(this.container);
         
         // UI 오버레이 컨테이너 (HTML)
         this.createUIOverlay();
         
         this.initialized = true;
-        this.enabled = true;
         
-        console.log('[EnemyRenderer] Initialized');
+        console.log('[EnemyRenderer] ✅ 초기화 완료!');
         return true;
     },
     
-    createApp() {
+    async createApp() {
         const battleArena = document.querySelector('.battle-arena');
-        if (!battleArena) return;
+        if (!battleArena) {
+            console.error('[EnemyRenderer] battle-arena not found');
+            return;
+        }
+        
+        console.log('[EnemyRenderer] 새 PixiJS 앱 생성 중...');
         
         // 캔버스 컨테이너 생성
         const canvasContainer = document.createElement('div');
@@ -83,24 +90,28 @@ const EnemyRenderer = {
         `;
         battleArena.appendChild(canvasContainer);
         
-        // PixiJS 앱 생성
-        this.app = new PIXI.Application({
-            width: battleArena.offsetWidth,
-            height: battleArena.offsetHeight,
-            transparent: true,
+        // PixiJS v8 방식: 먼저 인스턴스 생성 후 init() 호출
+        this.app = new PIXI.Application();
+        
+        await this.app.init({
+            width: battleArena.offsetWidth || 1200,
+            height: battleArena.offsetHeight || 600,
+            backgroundAlpha: 0,  // v8: transparent 대신 backgroundAlpha
             antialias: true,
             resolution: window.devicePixelRatio || 1,
-            autoDensity: true
+            autoDensity: true,
         });
         
-        this.app.view.style.cssText = `
+        this.app.canvas.style.cssText = `
             position: absolute;
             top: 0;
             left: 0;
             pointer-events: auto;
         `;
         
-        canvasContainer.appendChild(this.app.view);
+        canvasContainer.appendChild(this.app.canvas);
+        
+        console.log('[EnemyRenderer] ✅ PixiJS 앱 생성 완료');
         
         // 리사이즈 핸들러
         window.addEventListener('resize', () => this.handleResize());
@@ -216,23 +227,33 @@ const EnemyRenderer = {
     },
     
     createEnemySprite(enemy, slotIndex) {
+        console.log(`[EnemyRenderer] createEnemySprite: ${enemy.name}, slot ${slotIndex}`);
+        
         // 적 컨테이너 (스프라이트 + 이펙트용)
         const enemyContainer = new PIXI.Container();
         enemyContainer.sortableChildren = true;
+        enemyContainer.label = enemy.name;  // 디버깅용
         
         // 스프라이트 이미지 경로
         const spritePath = enemy.sprite || enemy.image || 'goblin.png';
+        console.log(`[EnemyRenderer] 스프라이트 경로: ${spritePath}`);
         
         // 스프라이트 생성
         let sprite;
         try {
             sprite = PIXI.Sprite.from(spritePath);
+            sprite.label = `${enemy.name}_sprite`;
+            
+            // 로드 완료 확인
+            if (sprite.texture) {
+                console.log(`[EnemyRenderer] ✅ 스프라이트 로드됨: ${spritePath}`);
+            }
         } catch (e) {
-            // 폴백: 플레이스홀더
+            console.error(`[EnemyRenderer] ❌ 스프라이트 로드 실패: ${spritePath}`, e);
+            // 폴백: 플레이스홀더 (PixiJS v8 Graphics API)
             const graphics = new PIXI.Graphics();
-            graphics.beginFill(0x666666);
-            graphics.drawRect(-50, -75, 100, 150);
-            graphics.endFill();
+            graphics.rect(-50, -150, 100, 150);  // v8: rect() 사용
+            graphics.fill(0x666666);
             sprite = graphics;
         }
         
@@ -241,21 +262,22 @@ const EnemyRenderer = {
             sprite.anchor.set(0.5, 1);
         }
         
-        // 위치 및 스케일
+        // 위치 및 스케일 (화면 높이 기준)
         const x = this.getSlotX(slotIndex);
-        const y = this.getSlotY(slotIndex);
-        const scale = this.getSlotScale(slotIndex, enemy);  // ✅ 보스/엘리트 스케일 적용
+        const appHeight = this.app?.renderer?.height || 600;
+        const y = appHeight * 0.75;  // 화면 높이의 75% 위치
+        const scale = this.getSlotScale(slotIndex, enemy);
         
         enemyContainer.x = x;
         enemyContainer.y = y;
         enemyContainer.scale.set(scale);
         enemyContainer.zIndex = this.getSlotZIndex(slotIndex);
         
+        console.log(`[EnemyRenderer] 위치: x=${x}, y=${y}, scale=${scale}`);
+        
         // ✅ 보스/엘리트 특별 효과
         if (enemy.isBoss) {
-            // 보스 글로우 효과
             enemyContainer.filters = enemyContainer.filters || [];
-            // 나중에 filter 추가 가능
         }
         
         // 스프라이트를 컨테이너에 추가
@@ -889,9 +911,9 @@ const EnemyRenderer = {
     // ==========================================
     // 활성화/비활성화
     // ==========================================
-    enable() {
+    async enable() {
         if (!this.initialized) {
-            this.init();
+            await this.init();
         }
         this.enabled = true;
         if (this.container) {

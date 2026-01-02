@@ -812,9 +812,9 @@ function renderEnemies(withEntrance = true) {
 // ==========================================
 // PixiJS 기반 적 렌더링 (실험적)
 // ==========================================
-function renderEnemiesWithPixi(withEntrance = true) {
+async function renderEnemiesWithPixi(withEntrance = true) {
     if (!EnemyRenderer.initialized) {
-        EnemyRenderer.init();
+        await EnemyRenderer.init();
     }
     
     // 기존 DOM 적 숨기기
