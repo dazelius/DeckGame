@@ -91,93 +91,258 @@ const GoreVFX = {
     },
     
     // ==========================================
-    // 🩸 피 튀김 효과
+    // 🩸 리얼 피 튀김 효과 (모탈컴뱃 스타일)
     // ==========================================
+    
+    // 피 색상 팔레트 (현실적인 혈액 색상)
+    bloodColors: [
+        '#8B0000', // 다크 레드
+        '#660000', // 더 어두운 레드
+        '#990000', // 진한 빨강
+        '#770011', // 검붉은색
+        '#AA1122', // 밝은 피
+        '#550000', // 거의 검은 피
+        '#881111', // 산소 섞인 피
+    ],
+    
+    getRandomBloodColor() {
+        return this.bloodColors[Math.floor(Math.random() * this.bloodColors.length)];
+    },
+    
     bloodSplatter(x, y, options = {}) {
         const {
             count = 30,
             speed = 300,
             size = 8,
             duration = 1000,
-            color = '#8b0000'
+            direction = null,  // 타격 방향 (라디안)
+            intensity = 1      // 강도 (1 = 보통, 2 = 강함)
         } = options;
         
         this.ensureLoop();
         
+        // 🩸 메인 피 방울들
         for (let i = 0; i < count; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const velocity = speed * (0.3 + Math.random() * 0.7);
-            const particleSize = size * (0.5 + Math.random());
+            // 방향성 있는 스플래터
+            let angle;
+            if (direction !== null) {
+                // 타격 방향으로 편향 (부채꼴)
+                angle = direction + (Math.random() - 0.5) * Math.PI * 0.8;
+            } else {
+                angle = Math.random() * Math.PI * 2;
+            }
+            
+            const velocity = speed * (0.4 + Math.random() * 0.6) * intensity;
+            const particleSize = size * (0.3 + Math.random() * 0.7);
+            const bloodColor = this.getRandomBloodColor();
+            
+            // 큰 방울 vs 작은 방울 (7:3 비율)
+            const isBigDrop = Math.random() > 0.3;
             
             VFX.particles.push({
                 x, y,
                 vx: Math.cos(angle) * velocity,
-                vy: Math.sin(angle) * velocity - 100,
-                size: particleSize,
+                vy: Math.sin(angle) * velocity - 150 * intensity,
+                size: isBigDrop ? particleSize : particleSize * 0.4,
                 originalSize: particleSize,
                 alpha: 1,
-                color,
-                gravity: 800,
-                decay: 0.8 / (duration / 1000),
+                color: bloodColor,
+                gravity: 1200 + Math.random() * 400,  // 무거운 느낌
+                airResistance: 0.97 + Math.random() * 0.02,
+                decay: 0.6 / (duration / 1000),
                 trail: [],
-                maxTrailLength: 5,
+                maxTrailLength: isBigDrop ? 8 : 4,
                 alive: true,
+                rotation: Math.random() * Math.PI * 2,
+                stretch: 1,  // 속도에 따른 늘어남
+                type: isBigDrop ? 'drop' : 'spray',
+                hasSpawned: false,
+                groundY: y + 200 + Math.random() * 100,  // 바닥 위치
                 
                 update() {
                     const timeScale = VFX.timeScale || 1;
                     const dt = 0.016 * timeScale;
                     
-                    // 트레일 저장
-                    this.trail.push({ x: this.x, y: this.y, alpha: this.alpha });
-                    if (this.trail.length > this.maxTrailLength) {
-                        this.trail.shift();
+                    // 트레일 저장 (속도 있을 때만)
+                    const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                    if (speed > 50) {
+                        this.trail.push({ 
+                            x: this.x, 
+                            y: this.y, 
+                            alpha: this.alpha,
+                            size: this.size * 0.6
+                        });
+                        if (this.trail.length > this.maxTrailLength) {
+                            this.trail.shift();
+                        }
                     }
                     
+                    // 물리 시뮬레이션
                     this.vy += this.gravity * dt;
+                    this.vx *= this.airResistance;
+                    this.vy *= this.airResistance;
                     this.x += this.vx * dt;
                     this.y += this.vy * dt;
-                    this.vx *= 0.99;
-                    this.alpha -= this.decay * dt;
-                    this.size *= 0.995;
                     
+                    // 속도에 따른 늘어남 효과
+                    this.stretch = 1 + Math.min(speed / 300, 2);
+                    this.rotation = Math.atan2(this.vy, this.vx);
+                    
+                    // 바닥에 닿으면 튀김 효과
+                    if (this.y >= this.groundY && !this.hasSpawned && this.type === 'drop') {
+                        this.hasSpawned = true;
+                        // 작은 방울로 튀김
+                        if (Math.random() > 0.5) {
+                            GoreVFX.spawnSplashDroplets(this.x, this.groundY, this.vx * 0.3);
+                        }
+                        this.vy = -Math.abs(this.vy) * 0.2;  // 약한 바운스
+                        this.vx *= 0.5;
+                        this.gravity *= 2;  // 빠르게 떨어짐
+                    }
+                    
+                    this.alpha -= this.decay * dt;
+                    this.size *= 0.998;
+                    
+                    if (this.alpha <= 0 || this.size < 0.5) this.alive = false;
+                },
+                
+                draw(ctx) {
+                    // 트레일 (피 줄기)
+                    if (this.trail.length > 1) {
+                        ctx.beginPath();
+                        ctx.moveTo(this.trail[0].x, this.trail[0].y);
+                        for (let i = 1; i < this.trail.length; i++) {
+                            ctx.lineTo(this.trail[i].x, this.trail[i].y);
+                        }
+                        ctx.lineTo(this.x, this.y);
+                        ctx.strokeStyle = this.color;
+                        ctx.lineWidth = this.size * 0.8;
+                        ctx.lineCap = 'round';
+                        ctx.globalAlpha = this.alpha * 0.6;
+                        ctx.stroke();
+                    }
+                    
+                    // 메인 피 방울 (늘어난 타원형)
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+                    ctx.rotate(this.rotation);
+                    ctx.globalAlpha = this.alpha;
+                    
+                    // 그라데이션으로 입체감
+                    const gradient = ctx.createRadialGradient(
+                        -this.size * 0.3, -this.size * 0.3, 0,
+                        0, 0, this.size * this.stretch
+                    );
+                    gradient.addColorStop(0, '#cc2233');  // 밝은 중심 (빛 반사)
+                    gradient.addColorStop(0.3, this.color);
+                    gradient.addColorStop(1, '#330000');  // 어두운 가장자리
+                    
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, this.size * this.stretch, this.size, 0, 0, Math.PI * 2);
+                    ctx.fillStyle = gradient;
+                    ctx.fill();
+                    
+                    // 하이라이트 (젖은 느낌)
+                    if (this.size > 3) {
+                        ctx.beginPath();
+                        ctx.ellipse(-this.size * 0.3, -this.size * 0.3, this.size * 0.25, this.size * 0.15, -0.5, 0, Math.PI * 2);
+                        ctx.fillStyle = 'rgba(255, 150, 150, 0.4)';
+                        ctx.fill();
+                    }
+                    
+                    ctx.restore();
+                }
+            });
+        }
+        
+        // 🩸 미세 피 안개 (스프레이)
+        const mistCount = Math.floor(count * 0.3);
+        for (let i = 0; i < mistCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const vel = speed * 0.5 * Math.random();
+            
+            VFX.particles.push({
+                x: x + (Math.random() - 0.5) * 20,
+                y: y + (Math.random() - 0.5) * 20,
+                vx: Math.cos(angle) * vel,
+                vy: Math.sin(angle) * vel - 50,
+                size: 15 + Math.random() * 25,
+                alpha: 0.3 + Math.random() * 0.2,
+                color: 'rgba(100, 0, 0, 0.15)',
+                gravity: 50,
+                decay: 1.5,
+                alive: true,
+                
+                update() {
+                    const dt = 0.016;
+                    this.x += this.vx * dt;
+                    this.y += this.vy * dt;
+                    this.vy += this.gravity * dt;
+                    this.size += 0.5;  // 퍼짐
+                    this.alpha -= this.decay * dt;
                     if (this.alpha <= 0) this.alive = false;
                 },
                 
                 draw(ctx) {
-                    // 트레일
-                    this.trail.forEach((point, i) => {
-                        const trailAlpha = (i / this.trail.length) * this.alpha * 0.5;
-                        ctx.beginPath();
-                        ctx.arc(point.x, point.y, this.size * 0.5, 0, Math.PI * 2);
-                        ctx.fillStyle = this.color;
-                        ctx.globalAlpha = trailAlpha;
-                        ctx.fill();
-                    });
+                    const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size);
+                    gradient.addColorStop(0, `rgba(80, 0, 0, ${this.alpha})`);
+                    gradient.addColorStop(1, 'rgba(50, 0, 0, 0)');
                     
-                    // 메인 파티클
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fillStyle = gradient;
+                    ctx.fill();
+                }
+            });
+        }
+    },
+    
+    // 바닥에 튀길 때 작은 방울들
+    spawnSplashDroplets(x, y, vx) {
+        const count = 3 + Math.floor(Math.random() * 4);
+        for (let i = 0; i < count; i++) {
+            const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 0.6;
+            const speed = 80 + Math.random() * 120;
+            
+            VFX.particles.push({
+                x, y,
+                vx: Math.cos(angle) * speed + vx,
+                vy: Math.sin(angle) * speed,
+                size: 1 + Math.random() * 2,
+                alpha: 0.9,
+                color: this.getRandomBloodColor(),
+                gravity: 1500,
+                alive: true,
+                
+                update() {
+                    const dt = 0.016;
+                    this.vy += this.gravity * dt;
+                    this.x += this.vx * dt;
+                    this.y += this.vy * dt;
+                    this.alpha -= 2 * dt;
+                    if (this.alpha <= 0) this.alive = false;
+                },
+                
+                draw(ctx) {
                     ctx.globalAlpha = this.alpha;
                     ctx.beginPath();
                     ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
                     ctx.fillStyle = this.color;
-                    ctx.shadowColor = '#ff0000';
-                    ctx.shadowBlur = 10;
                     ctx.fill();
-                    ctx.shadowBlur = 0;
                 }
             });
         }
     },
     
     // ==========================================
-    // 🗡️ 혈흔 슬래시
+    // 🗡️ 리얼 혈흔 슬래시 (베기 자국)
     // ==========================================
     bloodSlash(x, y, options = {}) {
         const {
             angle = -30,
             length = 150,
             width = 20,
-            duration = 400,
-            color = '#dc143c'
+            duration = 500,
         } = options;
         
         this.ensureLoop();
@@ -193,14 +358,34 @@ const GoreVFX = {
             alpha: 1,
             startTime: Date.now(),
             duration,
-            color,
             alive: true,
+            drips: [],  // 피 흘러내림
             
             update() {
                 const elapsed = Date.now() - this.startTime;
-                this.progress = Math.min(1, elapsed / (this.duration * 0.3));
+                this.progress = Math.min(1, elapsed / (this.duration * 0.2));
                 
-                const fadeStart = this.duration * 0.5;
+                // 피 흘러내림 생성
+                if (this.progress > 0.8 && this.drips.length < 5 && Math.random() > 0.7) {
+                    const dripX = this.x + Math.cos(this.angle) * this.length * Math.random();
+                    const dripY = this.y + Math.sin(this.angle) * this.length * Math.random();
+                    this.drips.push({
+                        x: dripX,
+                        y: dripY,
+                        vy: 0,
+                        length: 0,
+                        maxLength: 20 + Math.random() * 40
+                    });
+                }
+                
+                // 드립 업데이트
+                this.drips.forEach(drip => {
+                    drip.vy += 0.5;
+                    drip.y += drip.vy * 0.016 * 60;
+                    drip.length = Math.min(drip.maxLength, drip.length + 2);
+                });
+                
+                const fadeStart = this.duration * 0.6;
                 if (elapsed > fadeStart) {
                     this.alpha = 1 - (elapsed - fadeStart) / (this.duration - fadeStart);
                 }
@@ -241,63 +426,122 @@ const GoreVFX = {
                 ctx.stroke();
                 
                 ctx.restore();
+                
+                // 피 흘러내림 그리기
+                ctx.save();
+                this.drips.forEach(drip => {
+                    const gradient = ctx.createLinearGradient(drip.x, drip.y, drip.x, drip.y + drip.length);
+                    gradient.addColorStop(0, `rgba(100, 0, 0, ${this.alpha})`);
+                    gradient.addColorStop(1, `rgba(60, 0, 0, 0)`);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(drip.x, drip.y);
+                    ctx.lineTo(drip.x, drip.y + drip.length);
+                    ctx.strokeStyle = gradient;
+                    ctx.lineWidth = 2 + Math.random();
+                    ctx.lineCap = 'round';
+                    ctx.stroke();
+                });
+                ctx.restore();
             }
         });
         
         // 피 방울
-        this.bloodSplatter(x, y, { count: 15, speed: 200, size: 5 });
+        this.bloodSplatter(x, y, { count: 15, speed: 200, size: 5, direction: rad });
     },
     
     // ==========================================
-    // 💥 혈흔 충격파
+    // 💥 리얼 혈흔 충격파
     // ==========================================
     bloodImpact(x, y, options = {}) {
         const {
             size = 100,
-            duration = 400,
-            color = '#8b0000'
+            duration = 500
         } = options;
         
         this.ensureLoop();
         
+        // 방사형 피 튀김
+        const sprayCount = 12;
+        for (let i = 0; i < sprayCount; i++) {
+            const angle = (i / sprayCount) * Math.PI * 2;
+            const delay = i * 15;
+            
+            setTimeout(() => {
+                this.bloodSplatter(x, y, {
+                    count: 5,
+                    speed: 200 + Math.random() * 100,
+                    size: 4,
+                    direction: angle,
+                    intensity: 0.8
+                });
+            }, delay);
+        }
+        
+        // 충격파 링
         VFX.animations.push({
             x, y,
             radius: 0,
             maxRadius: size,
-            alpha: 1,
+            alpha: 0.8,
             startTime: Date.now(),
             duration,
-            color,
             alive: true,
+            rings: [
+                { radius: 0, width: 8, alpha: 1 },
+                { radius: 0, width: 4, alpha: 0.7, delay: 50 },
+                { radius: 0, width: 2, alpha: 0.5, delay: 100 }
+            ],
             
             update() {
                 const elapsed = Date.now() - this.startTime;
                 const progress = elapsed / this.duration;
                 
-                this.radius = this.maxRadius * Math.min(1, progress * 1.5);
-                this.alpha = 1 - progress;
+                // 각 링 업데이트
+                this.rings.forEach(ring => {
+                    const ringElapsed = Math.max(0, elapsed - (ring.delay || 0));
+                    const ringProgress = ringElapsed / (this.duration * 0.6);
+                    ring.radius = this.maxRadius * Math.min(1, ringProgress * 1.2);
+                    ring.currentAlpha = ring.alpha * (1 - progress);
+                });
                 
+                this.alpha = 1 - progress;
                 if (progress >= 1) this.alive = false;
             },
             
             draw(ctx) {
                 ctx.save();
+                
+                // 다중 링 그리기
+                this.rings.forEach(ring => {
+                    if (ring.radius > 0 && ring.currentAlpha > 0) {
+                        ctx.globalAlpha = ring.currentAlpha;
+                        
+                        // 피 링
+                        const gradient = ctx.createRadialGradient(
+                            this.x, this.y, ring.radius * 0.8,
+                            this.x, this.y, ring.radius
+                        );
+                        gradient.addColorStop(0, 'rgba(100, 0, 0, 0)');
+                        gradient.addColorStop(0.5, `rgba(120, 10, 10, ${ring.currentAlpha * 0.8})`);
+                        gradient.addColorStop(1, 'rgba(80, 0, 0, 0)');
+                        
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, ring.radius, 0, Math.PI * 2);
+                        ctx.strokeStyle = gradient;
+                        ctx.lineWidth = ring.width;
+                        ctx.stroke();
+                    }
+                });
+                
+                // 중앙 피 웅덩이 느낌
+                const centerGradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.maxRadius * 0.3);
+                centerGradient.addColorStop(0, `rgba(80, 0, 0, ${this.alpha * 0.5})`);
+                centerGradient.addColorStop(1, 'rgba(60, 0, 0, 0)');
                 ctx.globalAlpha = this.alpha;
-                
-                // 외곽 링
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.strokeStyle = this.color;
-                ctx.lineWidth = 8;
-                ctx.shadowColor = '#ff0000';
-                ctx.shadowBlur = 20;
-                ctx.stroke();
-                
-                // 내부 채움
-                const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
-                gradient.addColorStop(0, 'rgba(139, 0, 0, 0.3)');
-                gradient.addColorStop(1, 'rgba(139, 0, 0, 0)');
-                ctx.fillStyle = gradient;
+                ctx.arc(this.x, this.y, this.maxRadius * 0.3, 0, Math.PI * 2);
+                ctx.fillStyle = centerGradient;
                 ctx.fill();
                 
                 ctx.restore();
@@ -320,12 +564,12 @@ const GoreVFX = {
     },
     
     // ==========================================
-    // 🩸 피 웅덩이
+    // 🩸 리얼 피 웅덩이
     // ==========================================
     bloodPool(x, y, options = {}) {
         const {
             size = 80,
-            duration = 3000
+            duration = 4000
         } = options;
         
         this.ensureLoop();
@@ -334,44 +578,123 @@ const GoreVFX = {
             x, y,
             currentSize: 0,
             maxSize: size,
-            alpha: 0.8,
+            alpha: 0.85,
             startTime: Date.now(),
             duration,
             alive: true,
+            edgePoints: null,  // 불규칙한 가장자리 포인트
+            
+            initEdge() {
+                // 불규칙한 웅덩이 가장자리 생성
+                this.edgePoints = [];
+                const numPoints = 16;
+                for (let i = 0; i < numPoints; i++) {
+                    const angle = (i / numPoints) * Math.PI * 2;
+                    const irregularity = 0.7 + Math.random() * 0.6;  // 0.7~1.3 배율
+                    this.edgePoints.push({
+                        angle,
+                        scale: irregularity,
+                        wobble: Math.random() * Math.PI * 2  // 흔들림 오프셋
+                    });
+                }
+            },
             
             update() {
+                if (!this.edgePoints) this.initEdge();
+                
                 const elapsed = Date.now() - this.startTime;
                 const progress = elapsed / this.duration;
                 
-                // 빠르게 커지다가 천천히
-                if (progress < 0.3) {
-                    this.currentSize = this.maxSize * (progress / 0.3);
+                // 유기적으로 퍼지는 효과
+                if (progress < 0.4) {
+                    const growProgress = progress / 0.4;
+                    // 이징 함수로 자연스럽게
+                    this.currentSize = this.maxSize * (1 - Math.pow(1 - growProgress, 3));
                 } else {
                     this.currentSize = this.maxSize;
                 }
                 
-                // 서서히 페이드
-                if (progress > 0.7) {
-                    this.alpha = 0.8 * (1 - (progress - 0.7) / 0.3);
+                // 가장자리 미세하게 움직임 (점성 느낌)
+                this.edgePoints.forEach(point => {
+                    point.currentScale = point.scale + Math.sin(elapsed * 0.002 + point.wobble) * 0.05;
+                });
+                
+                // 서서히 페이드 (더 천천히)
+                if (progress > 0.75) {
+                    this.alpha = 0.85 * (1 - (progress - 0.75) / 0.25);
                 }
                 
                 if (progress >= 1) this.alive = false;
             },
             
             draw(ctx) {
+                if (!this.edgePoints || this.currentSize < 1) return;
+                
                 ctx.save();
                 ctx.globalAlpha = this.alpha;
                 
-                // 타원형 웅덩이
+                // 불규칙한 웅덩이 모양 그리기
                 ctx.beginPath();
-                ctx.ellipse(this.x, this.y, this.currentSize, this.currentSize * 0.4, 0, 0, Math.PI * 2);
                 
-                const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.currentSize);
-                gradient.addColorStop(0, '#4a0000');
-                gradient.addColorStop(0.5, '#8b0000');
-                gradient.addColorStop(1, 'rgba(139, 0, 0, 0)');
+                const firstPoint = this.edgePoints[0];
+                const firstX = this.x + Math.cos(firstPoint.angle) * this.currentSize * firstPoint.currentScale;
+                const firstY = this.y + Math.sin(firstPoint.angle) * this.currentSize * 0.35 * firstPoint.currentScale;
+                ctx.moveTo(firstX, firstY);
+                
+                // 베지어 곡선으로 부드러운 가장자리
+                for (let i = 1; i <= this.edgePoints.length; i++) {
+                    const point = this.edgePoints[i % this.edgePoints.length];
+                    const prevPoint = this.edgePoints[(i - 1) % this.edgePoints.length];
+                    
+                    const px = this.x + Math.cos(point.angle) * this.currentSize * point.currentScale;
+                    const py = this.y + Math.sin(point.angle) * this.currentSize * 0.35 * point.currentScale;
+                    
+                    const cpx = this.x + Math.cos((prevPoint.angle + point.angle) / 2) * this.currentSize * 1.05;
+                    const cpy = this.y + Math.sin((prevPoint.angle + point.angle) / 2) * this.currentSize * 0.35 * 1.05;
+                    
+                    ctx.quadraticCurveTo(cpx, cpy, px, py);
+                }
+                
+                ctx.closePath();
+                
+                // 다층 그라데이션으로 입체감
+                const gradient = ctx.createRadialGradient(
+                    this.x - this.currentSize * 0.2, 
+                    this.y - this.currentSize * 0.1, 
+                    0,
+                    this.x, this.y, this.currentSize
+                );
+                gradient.addColorStop(0, '#220000');    // 깊은 중앙
+                gradient.addColorStop(0.3, '#440000');  // 어두운 피
+                gradient.addColorStop(0.6, '#660000');  // 중간 피
+                gradient.addColorStop(0.85, '#550000'); // 가장자리
+                gradient.addColorStop(1, 'rgba(50, 0, 0, 0)');
                 
                 ctx.fillStyle = gradient;
+                ctx.fill();
+                
+                // 빛 반사 (젖은 느낌)
+                ctx.globalAlpha = this.alpha * 0.4;
+                const highlightGradient = ctx.createRadialGradient(
+                    this.x - this.currentSize * 0.3,
+                    this.y - this.currentSize * 0.15,
+                    0,
+                    this.x - this.currentSize * 0.3,
+                    this.y - this.currentSize * 0.15,
+                    this.currentSize * 0.4
+                );
+                highlightGradient.addColorStop(0, 'rgba(255, 100, 100, 0.3)');
+                highlightGradient.addColorStop(1, 'rgba(255, 50, 50, 0)');
+                
+                ctx.beginPath();
+                ctx.ellipse(
+                    this.x - this.currentSize * 0.2,
+                    this.y - this.currentSize * 0.08,
+                    this.currentSize * 0.35,
+                    this.currentSize * 0.12,
+                    -0.3, 0, Math.PI * 2
+                );
+                ctx.fillStyle = highlightGradient;
                 ctx.fill();
                 
                 ctx.restore();
