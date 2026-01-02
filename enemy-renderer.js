@@ -1831,6 +1831,9 @@ const EnemyRenderer = {
                         PixiRenderer.createHitImpact(effectX, effectY, damage, '#ff6644');
                     }
                 }
+                
+                // 🩸 모탈컴뱃 스타일 피 튀김! (데미지 비례)
+                this.spawnBloodEffect(effectX, effectY, damage, isCritical, knockbackX);
             }
             
             // 🌍 화면 흔들림 (데미지 비례)
@@ -1899,6 +1902,79 @@ const EnemyRenderer = {
             }
         } catch (e) {
             console.warn('[EnemyRenderer] playHitAnimation error:', e);
+        }
+    },
+    
+    // ==========================================
+    // 🩸 모탈컴뱃 스타일 피 튀김 효과
+    // ==========================================
+    spawnBloodEffect(x, y, damage, isCritical = false, knockbackDir = 1) {
+        // GoreVFX 사용 가능하면
+        if (typeof GoreVFX !== 'undefined') {
+            // 기본 피 튀김 (데미지 비례)
+            const bloodCount = Math.min(15 + damage * 2, 60);
+            const bloodSpeed = 200 + damage * 15;
+            const bloodSize = 4 + damage * 0.3;
+            
+            // 메인 피 튀김 (공격 방향으로)
+            GoreVFX.bloodSplatter(x, y, {
+                count: bloodCount,
+                speed: bloodSpeed,
+                size: bloodSize,
+                duration: 800 + damage * 30,
+                color: '#8b0000'
+            });
+            
+            // 크리티컬이면 더 많이!
+            if (isCritical) {
+                // 큰 피 방울
+                GoreVFX.bloodSplatter(x, y, {
+                    count: 40,
+                    speed: 500,
+                    size: 12,
+                    duration: 1200,
+                    color: '#dc143c'
+                });
+                
+                // 피 슬래시 이펙트
+                GoreVFX.bloodSlash(x, y, {
+                    angle: -30 + Math.random() * 60,
+                    length: 120 + damage * 3,
+                    width: 15,
+                    duration: 300
+                });
+                
+                // 피 충격파
+                GoreVFX.bloodImpact(x, y, {
+                    size: 80 + damage * 2,
+                    duration: 350
+                });
+            } else if (damage >= 10) {
+                // 강한 공격이면 추가 이펙트
+                GoreVFX.bloodSplatter(x + knockbackDir * 20, y - 20, {
+                    count: 20,
+                    speed: 300,
+                    size: 6,
+                    duration: 600,
+                    color: '#b22222'
+                });
+            }
+            
+            return;
+        }
+        
+        // GoreVFX 없으면 VFX 사용
+        if (typeof VFX !== 'undefined' && VFX.sparks) {
+            const count = Math.min(10 + damage, 40);
+            VFX.sparks(x, y, { 
+                color: '#cc0000', 
+                count: count,
+                speed: 8 + damage * 0.5
+            });
+            
+            if (isCritical || damage >= 12) {
+                VFX.sparks(x, y, { color: '#ff4444', count: 20, speed: 12 });
+            }
         }
     },
     
