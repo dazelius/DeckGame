@@ -862,6 +862,9 @@ const EnemyRenderer = {
     },
     
     // 브레이크 상태 설정 (스프라이트 효과)
+    // 스턴 이펙트 저장소
+    stunEffects: new Map(),
+    
     setEnemyBrokenState(enemy, isBroken) {
         if (!enemy) return;
         
@@ -885,7 +888,7 @@ const EnemyRenderer = {
                     container.breathingTween.pause();
                 }
                 
-                // 스턴 흔들림 애니메이션 (rotation 속성이 있는지 확인)
+                // 스턴 흔들림 애니메이션
                 if (typeof gsap !== 'undefined' && container.rotation !== undefined) {
                     gsap.to(container, {
                         rotation: 0.05,
@@ -895,6 +898,9 @@ const EnemyRenderer = {
                         ease: 'sine.inOut'
                     });
                 }
+                
+                // 🌟 스턴 별 이펙트 시작!
+                this.startStunEffect(enemy);
                 
                 console.log('[EnemyRenderer] 브레이크 상태 설정:', enemyId);
             } else {
@@ -915,9 +921,186 @@ const EnemyRenderer = {
                 if (container.breathingTween) {
                     container.breathingTween.resume();
                 }
+                
+                // 🌟 스턴 별 이펙트 중지
+                this.stopStunEffect(enemy);
             }
         } catch (e) {
             console.warn('[EnemyRenderer] setEnemyBrokenState error:', e);
+        }
+    },
+    
+    // ==========================================
+    // 🌟 스턴 별 이펙트 (PixiJS)
+    // ==========================================
+    startStunEffect(enemy) {
+        if (!this.app || !this.container) return;
+        
+        const enemyId = enemy.pixiId || enemy.id || enemy.name;
+        const data = this.sprites.get(enemyId);
+        if (!data || !data.container) return;
+        
+        // 이미 있으면 제거
+        this.stopStunEffect(enemy);
+        
+        // 스턴 이펙트 컨테이너
+        const stunContainer = new PIXI.Container();
+        stunContainer.label = 'StunEffect';
+        data.container.addChild(stunContainer);
+        
+        // 스프라이트 높이 계산
+        let spriteHeight = 150;
+        if (data.sprite && data.sprite.texture && data.sprite.texture.valid) {
+            spriteHeight = data.sprite.texture.height;
+        }
+        
+        // 별 위치 (머리 위)
+        stunContainer.y = -spriteHeight - 30;
+        
+        // 별 5개 생성
+        const starCount = 5;
+        const stars = [];
+        const radius = 25;
+        
+        for (let i = 0; i < starCount; i++) {
+            const star = new PIXI.Graphics();
+            
+            // 별 모양 그리기
+            const points = [];
+            for (let j = 0; j < 10; j++) {
+                const r = j % 2 === 0 ? 8 : 4;
+                const a = (Math.PI * 2 / 10) * j - Math.PI / 2;
+                points.push(Math.cos(a) * r, Math.sin(a) * r);
+            }
+            star.poly(points);
+            star.fill({ color: 0xffcc00 });
+            star.stroke({ width: 1, color: 0xffffff });
+            
+            const angle = (Math.PI * 2 / starCount) * i;
+            star.x = Math.cos(angle) * radius;
+            star.y = Math.sin(angle) * radius;
+            star._baseAngle = angle;
+            
+            stunContainer.addChild(star);
+            stars.push(star);
+        }
+        
+        // 회전 애니메이션
+        let time = 0;
+        const animate = () => {
+            if (!stunContainer.parent) return; // 제거됨
+            
+            time += 0.03;
+            stunContainer.rotation = time;
+            
+            // 각 별도 개별 회전
+            stars.forEach((star, i) => {
+                const newAngle = star._baseAngle + time;
+                star.x = Math.cos(newAngle) * radius;
+                star.y = Math.sin(newAngle) * radius;
+                star.rotation = -time * 2; // 반대로 회전
+            });
+            
+            stunContainer._animFrame = requestAnimationFrame(animate);
+        };
+        
+        stunContainer._animFrame = requestAnimationFrame(animate);
+        
+        // 저장
+        this.stunEffects.set(enemyId, stunContainer);
+        
+        console.log('[EnemyRenderer] 스턴 별 이펙트 시작:', enemyId);
+    },
+    
+    stopStunEffect(enemy) {
+        if (!enemy) return;
+        
+        const enemyId = enemy.pixiId || enemy.id || enemy.name;
+        const stunContainer = this.stunEffects.get(enemyId);
+        
+        if (stunContainer) {
+            // 애니메이션 중지
+            if (stunContainer._animFrame) {
+                cancelAnimationFrame(stunContainer._animFrame);
+            }
+            
+            // 컨테이너 제거
+            if (stunContainer.parent) {
+                stunContainer.parent.removeChild(stunContainer);
+            }
+            stunContainer.destroy({ children: true });
+            
+            this.stunEffects.delete(enemyId);
+            console.log('[EnemyRenderer] 스턴 별 이펙트 중지:', enemyId);
+        }
+    },
+    
+    // ==========================================
+    // 💥 브레이크 폭발 이펙트
+    // ==========================================
+    playBreakEffect(enemy) {
+        if (!this.app || !this.container) return;
+        
+        const enemyId = enemy.pixiId || enemy.id || enemy.name;
+        const data = this.sprites.get(enemyId);
+        if (!data || !data.container) return;
+        
+        const globalPos = data.container.getGlobalPosition();
+        
+        // 스프라이트 높이
+        let spriteHeight = 150;
+        if (data.sprite && data.sprite.texture && data.sprite.texture.valid) {
+            spriteHeight = data.sprite.texture.height * (data.container.scale?.y || 1);
+        }
+        
+        const centerX = globalPos.x;
+        const centerY = globalPos.y - spriteHeight / 2;
+        
+        // PixiRenderer의 이펙트 사용
+        if (typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized) {
+            // 스턴 폭발 이펙트
+            if (PixiRenderer.createStunEffect) {
+                PixiRenderer.createStunEffect(centerX, centerY - 20);
+            }
+            
+            // 충격파
+            if (PixiRenderer.createShockwave) {
+                PixiRenderer.createShockwave(centerX, centerY, '#ffcc00');
+            }
+            
+            // 스파크
+            if (typeof VFX !== 'undefined' && VFX.sparks) {
+                VFX.sparks(centerX, centerY, { color: '#ffcc00', count: 30, speed: 15 });
+                VFX.sparks(centerX, centerY, { color: '#ffffff', count: 20, speed: 10 });
+            }
+        }
+        
+        // 화면 플래시
+        this.createBreakFlash();
+        
+        console.log('[EnemyRenderer] 브레이크 폭발 이펙트:', enemyId);
+    },
+    
+    createBreakFlash() {
+        const flash = document.createElement('div');
+        flash.style.cssText = `
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at center, rgba(255, 200, 50, 0.5), transparent 70%);
+            z-index: 99999;
+            pointer-events: none;
+        `;
+        document.body.appendChild(flash);
+        
+        if (typeof gsap !== 'undefined') {
+            gsap.to(flash, {
+                opacity: 0,
+                duration: 0.3,
+                ease: 'power2.out',
+                onComplete: () => flash.remove()
+            });
+        } else {
+            setTimeout(() => flash.remove(), 300);
         }
     },
     
