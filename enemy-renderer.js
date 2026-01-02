@@ -130,7 +130,7 @@ const EnemyRenderer = {
                 width: 100%;
                 height: 100%;
                 pointer-events: none;
-                z-index: 15;
+                z-index: 50;
             `;
             
             const battleArena = document.querySelector('.battle-arena');
@@ -155,32 +155,34 @@ const EnemyRenderer = {
     },
     
     // ==========================================
-    // 슬롯 위치 계산
+    // 슬롯 위치 계산 (2D 나란히 배치)
     // ==========================================
     getSlotX(slotIndex) {
         // 화면 중앙 기준으로 슬롯 배치
         const centerX = this.app ? this.app.renderer.width / 2 : 600;
-        const totalWidth = (this.config.maxSlots - 1) * this.config.slotSpacing;
-        const startX = centerX - totalWidth / 2 + 200;  // 오른쪽으로 오프셋
+        const totalSlots = Math.max(gameState?.enemies?.filter(e => e.hp > 0).length || 1, 1);
+        const totalWidth = (totalSlots - 1) * this.config.slotSpacing;
+        const startX = centerX - totalWidth / 2 + 150;  // 오른쪽으로 오프셋
         
         return startX + (slotIndex * this.config.slotSpacing);
     },
     
     getSlotY(slotIndex) {
-        // 뒤로 갈수록 약간 위로
-        return this.config.baseY - (slotIndex * 10);
+        // ✅ 모든 적 같은 Y 위치 (나란히 배치)
+        const appHeight = this.app?.renderer?.height || 600;
+        return appHeight * 0.65;  // 화면 높이의 65% 위치
     },
     
     getSlotScale(slotIndex, enemy = null) {
-        // 뒤로 갈수록 작아짐 (원근감)
-        let scale = this.config.baseScale - (slotIndex * 0.05);
+        // ✅ 모든 적 같은 스케일 (2D 배치)
+        let scale = this.config.baseScale;
         
-        // ✅ 보스/엘리트는 더 크게!
+        // 보스/엘리트는 더 크게!
         if (enemy) {
             if (enemy.isBoss) {
-                scale *= 1.4;  // 보스는 40% 크게
+                scale *= 1.5;  // 보스는 50% 크게
             } else if (enemy.isElite) {
-                scale *= 1.2;  // 엘리트는 20% 크게
+                scale *= 1.25;  // 엘리트는 25% 크게
             }
         }
         
@@ -188,7 +190,7 @@ const EnemyRenderer = {
     },
     
     getSlotZIndex(slotIndex) {
-        // 앞에 있을수록 위에 그려짐
+        // 앞에 있을수록 위에 그려짐 (왼쪽이 앞)
         return 100 - slotIndex;
     },
     
@@ -271,10 +273,9 @@ const EnemyRenderer = {
             sprite.anchor.set(0.5, 1);
         }
         
-        // 위치 및 스케일 (화면 높이 기준)
+        // 위치 및 스케일 (getSlot 함수 사용)
         const x = this.getSlotX(slotIndex);
-        const appHeight = this.app?.renderer?.height || 600;
-        const y = appHeight * 0.55;  // 화면 높이의 55% 위치 (더 위로!)
+        const y = this.getSlotY(slotIndex);
         const scale = this.getSlotScale(slotIndex, enemy);
         
         enemyContainer.x = x;
@@ -510,6 +511,18 @@ const EnemyRenderer = {
         // 인텐트 (맨 위)
         const intentEl = document.createElement('div');
         intentEl.className = 'enemy-intent pixi-intent';
+        intentEl.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 1.2rem;
+            color: #fff;
+            text-shadow: 2px 2px 2px #000;
+            padding: 4px 8px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 4px;
+            min-height: 28px;
+        `;
         intentEl.innerHTML = this.getIntentHTML(enemy);
         uiEl.appendChild(intentEl);
         
@@ -522,10 +535,19 @@ const EnemyRenderer = {
         // HP 바
         const hpBar = document.createElement('div');
         hpBar.className = 'enemy-hp-bar pixi-hp';
+        hpBar.style.cssText = `
+            width: 120px;
+            height: 16px;
+            background: #333;
+            border: 2px solid #555;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        `;
         const hpPercent = Math.max(0, (enemy.hp / enemy.maxHp) * 100);
         hpBar.innerHTML = `
-            <div class="hp-fill" style="width: ${hpPercent}%"></div>
-            <span class="hp-text">${enemy.hp}/${enemy.maxHp}</span>
+            <div class="hp-fill" style="width: ${hpPercent}%; height: 100%; background: linear-gradient(to bottom, #ef4444, #b91c1c); position: absolute; top: 0; left: 0;"></div>
+            <span class="hp-text" style="position: relative; z-index: 1; font-size: 0.75rem; font-weight: bold; color: #fff; text-shadow: 1px 1px 1px #000; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%;">${enemy.hp}/${enemy.maxHp}</span>
         `;
         uiEl.appendChild(hpBar);
         
@@ -555,22 +577,25 @@ const EnemyRenderer = {
     
     // 인텐트 HTML 생성
     getIntentHTML(enemy) {
-        if (!enemy.currentIntent) return '';
+        // ✅ currentIntent 또는 intent/intentValue 사용
+        let intentType = enemy.currentIntent?.type || enemy.intent;
+        let intentValue = enemy.currentIntent?.value || enemy.intentValue;
         
-        const intent = enemy.currentIntent;
+        if (!intentType) {
+            return '<span style="color: #888;">❓</span>';
+        }
+        
         let icon = '❓';
-        let value = '';
+        let value = intentValue || '';
         let className = 'intent-unknown';
         
-        switch (intent.type) {
+        switch (intentType) {
             case 'attack':
                 icon = '⚔️';
-                value = intent.value || '';
                 className = 'intent-attack';
                 break;
             case 'defend':
                 icon = '🛡️';
-                value = intent.value || '';
                 className = 'intent-defend';
                 break;
             case 'buff':
@@ -583,7 +608,6 @@ const EnemyRenderer = {
                 break;
             case 'heal':
                 icon = '💚';
-                value = intent.value || '';
                 className = 'intent-heal';
                 break;
             case 'retreat':
@@ -637,7 +661,7 @@ const EnemyRenderer = {
         const data = this.sprites.get(enemyId);
         if (!data || !data.uiElement || !data.container) return;
         
-        // 스프라이트 글로벌 위치
+        // 스프라이트 글로벌 위치 (앵커가 하단 중앙이므로 y는 발 위치)
         const globalPos = data.container.getGlobalPosition();
         
         // 스프라이트 높이 계산 (스케일 적용)
@@ -646,9 +670,11 @@ const EnemyRenderer = {
             spriteHeight = data.sprite.height * data.container.scale.y;
         }
         
-        // UI 위치 업데이트 (스프라이트 머리 위)
+        // UI 위치 업데이트 (스프라이트 머리 위 - 충분한 여백)
         data.uiElement.style.left = globalPos.x + 'px';
-        data.uiElement.style.top = (globalPos.y - spriteHeight - 30) + 'px';  // 스프라이트 높이 + 여백
+        data.uiElement.style.top = (globalPos.y - spriteHeight - 80) + 'px';  // 머리 위 80px
+        data.uiElement.style.display = 'flex';
+        data.uiElement.style.visibility = 'visible';
     },
     
     syncAllUI() {
