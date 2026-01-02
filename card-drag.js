@@ -133,6 +133,7 @@ const CardDragSystem = {
         }
 
         if (self.isDragging) {
+            self.droppedOnGimmick = false; // 플래그 초기화
             const dropResult = self.checkDropSuccess(card, self.currentDragX, self.currentDragY);
 
             if (dropResult) {
@@ -143,7 +144,13 @@ const CardDragSystem = {
                         CardAnimation.createParticles(self.currentDragX, self.currentDragY, cardType, 15);
                     }
                     self.removeGhost();
-                    playCard(cardIndex);
+                    
+                    // 🔥 기믹에 드롭했으면 카드만 소비 (기믹 공격은 이미 처리됨)
+                    if (self.droppedOnGimmick) {
+                        self.consumeCardForGimmick(cardIndex, card);
+                    } else {
+                        playCard(cardIndex);
+                    }
                 });
             } else {
                 self.returnGhostToHand(cardEl);
@@ -197,6 +204,13 @@ const CardDragSystem = {
                 const enemyEl = document.getElementById('enemy');
                 if (enemyEl) enemyEl.classList.add('drop-target');
             }
+            // 🔥 기믹도 드롭 타겟으로 표시 (별도 컨테이너)
+            const gimmickContainer = document.getElementById('gimmicks-container');
+            if (gimmickContainer) {
+                gimmickContainer.querySelectorAll('.gimmick-unit').forEach(el => {
+                    el.classList.add('drop-target', 'gimmick-targetable');
+                });
+            }
         } else if (target === 'allEnemy') {
             // 전체 공격: 드래그 시작할 때부터 모든 적 활성화
             const container = document.getElementById('enemies-container');
@@ -237,6 +251,13 @@ const CardDragSystem = {
                 el.classList.remove('drop-target', 'drop-target-active', 'drop-target-all');
             });
         }
+        // 🔥 기믹 하이라이트도 제거 (별도 컨테이너)
+        const gimmickContainer = document.getElementById('gimmicks-container');
+        if (gimmickContainer) {
+            gimmickContainer.querySelectorAll('.gimmick-unit').forEach(el => {
+                el.classList.remove('drop-target', 'drop-target-active', 'gimmick-targetable');
+            });
+        }
 
         const enemyEl = document.getElementById('enemy');
         if (enemyEl) {
@@ -269,6 +290,8 @@ const CardDragSystem = {
             const container = document.getElementById('enemies-container');
             if (container) {
                 let foundTarget = false;
+                
+                // 적 유닛 체크
                 container.querySelectorAll('.enemy-unit').forEach(el => {
                     if (el.classList.contains('dead')) return;
 
@@ -285,10 +308,28 @@ const CardDragSystem = {
                         el.classList.remove('drop-target-active');
                     }
                 });
-
+                
                 if (!foundTarget) {
                     this.dragGhost?.classList.remove('can-drop');
                 }
+            }
+            
+            // 🔥 기믹 유닛 체크 (별도 컨테이너)
+            const gimmickContainer = document.getElementById('gimmicks-container');
+            if (gimmickContainer) {
+                gimmickContainer.querySelectorAll('.gimmick-unit').forEach(el => {
+                    const rect = el.getBoundingClientRect();
+                    const isOver = x >= rect.left && x <= rect.right && 
+                                   y >= rect.top && y <= rect.bottom;
+
+                    if (isOver) {
+                        isOnTarget = true;
+                        el.classList.add('drop-target-active', 'gimmick-targetable');
+                        this.dragGhost?.classList.add('can-drop');
+                    } else {
+                        el.classList.remove('drop-target-active');
+                    }
+                });
             } else {
                 const enemyEl = document.getElementById('enemy');
                 if (enemyEl) {
@@ -504,6 +545,28 @@ const CardDragSystem = {
         const target = this.getCardTarget(card);
 
         if (target === 'enemy') {
+            // 🔥 먼저 기믹 체크 (별도 컨테이너, 기믹이 적보다 우선)
+            const gimmickContainer = document.getElementById('gimmicks-container');
+            if (gimmickContainer) {
+                const gimmickUnits = gimmickContainer.querySelectorAll('.gimmick-unit');
+                for (let i = 0; i < gimmickUnits.length; i++) {
+                    const el = gimmickUnits[i];
+                    const rect = el.getBoundingClientRect();
+                    if (x >= rect.left && x <= rect.right && 
+                        y >= rect.top && y <= rect.bottom) {
+                        const gimmickIndex = parseInt(el.dataset.gimmickIndex);
+                        // 기믹 공격 실행
+                        if (typeof GimmickSystem !== 'undefined') {
+                            const damage = card.damage || card.value || 5;
+                            GimmickSystem.damageGimmick(gimmickIndex, damage);
+                            // 기믹 타겟 시에는 true를 반환하지만 적 선택은 하지 않음
+                            this.droppedOnGimmick = true;
+                            return true;
+                        }
+                    }
+                }
+            }
+            
             const container = document.getElementById('enemies-container');
             if (container) {
                 const enemyUnits = container.querySelectorAll('.enemy-unit');
@@ -846,6 +909,42 @@ cardDragStyles.textContent = `
 if (!document.getElementById('card-drag-styles')) {
     document.head.appendChild(cardDragStyles);
 }
+
+// 🔥 기믹에 카드 사용 시 카드 소비 처리
+CardDragSystem.consumeCardForGimmick = function(cardIndex, card) {
+    // 마나 소비
+    const cost = card.cost || 0;
+    if (gameState.player.energy >= cost) {
+        gameState.player.energy -= cost;
+        
+        // 카드를 손패에서 제거
+        const removedCard = gameState.hand.splice(cardIndex, 1)[0];
+        
+        // 소멸 카드인지 확인
+        const shouldExhaust = removedCard.isEthereal || removedCard.ethereal || removedCard.exhaust === true;
+        if (shouldExhaust) {
+            addLog(`${removedCard.name} 소멸`, 'ethereal');
+            if (!gameState.exhaustPile) gameState.exhaustPile = [];
+            gameState.exhaustPile.push(removedCard);
+        } else {
+            gameState.discardPile.push(removedCard);
+        }
+        
+        // UI 업데이트
+        if (typeof renderHand === 'function') renderHand();
+        if (typeof updateUI === 'function') updateUI();
+        if (typeof updateEnemiesUI === 'function') updateEnemiesUI();
+        
+        // 기믹 파괴 후 적 처치 확인
+        setTimeout(() => {
+            if (typeof checkEnemyDefeated === 'function') {
+                checkEnemyDefeated();
+            }
+        }, 400);
+        
+        console.log(`[GimmickSystem] 카드 "${removedCard.name}" 소비 완료`);
+    }
+};
 
 console.log('[CardDragSystem] 로드 완료');
 

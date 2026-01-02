@@ -383,6 +383,20 @@
         </div>
         
         <div class="test-section">
+            <h3>🔥 Gimmicks</h3>
+            <div class="btn-group">
+                <button class="btn btn-sm" style="background:#c44;" onclick="TestPanel.addGimmick('explosiveBarrel')">💥Barrel</button>
+                <button class="btn btn-sm" style="background:#4a4;" onclick="TestPanel.addGimmick('poisonBarrel')">☠️Poison</button>
+                <button class="btn btn-sm" style="background:#4a8;" onclick="TestPanel.addGimmick('healingCrystal')">💚Crystal</button>
+                <button class="btn btn-sm" style="background:#48a;" onclick="TestPanel.addGimmick('shieldGenerator')">🛡️Gen</button>
+            </div>
+            <div class="test-row" style="margin-top:4px;">
+                <label>Gimmick:</label>
+                <span id="gimmick-status" style="color:#888;">None</span>
+            </div>
+        </div>
+        
+        <div class="test-section">
             <h3>Player</h3>
             <div id="player-status">
                 <div>HP: <span id="stat-hp">--</span>/<span id="stat-maxhp">--</span></div>
@@ -562,6 +576,10 @@
     <script src="status-effects.js"></script>
     <script src="enemy-ai.js"></script>
     <script src="bleed-system.js"></script>
+    <script src="gimmick-system.js"></script>
+    <script src="overkill-system.js"></script>
+    <script src="monster-animations.js"></script>
+    <script src="heal.js"></script>
     
     <script>
         // 테스트 모드 활성화
@@ -573,6 +591,7 @@
     <script>
         const TestPanel = {
             enemies: [],
+            gimmicks: [],  // 🔥 기믹 배열 추가
             
             init() {
                 this.populateMonsterSelect();
@@ -650,6 +669,40 @@
                 
                 this.log('Starting: ' + this.enemies.map(e => e.name).join(', '));
                 startBattle();
+                
+                // 🔥 기믹 추가
+                if (this.gimmicks.length > 0 && typeof GimmickSystem !== 'undefined') {
+                    setTimeout(() => {
+                        GimmickSystem.init();
+                        GimmickSystem.addGimmicksToBattle(this.gimmicks);
+                        this.log('Gimmicks: ' + this.gimmicks.map(g => g.id).join(', '));
+                    }, 500);
+                }
+            },
+            
+            // 🔥 기믹 추가 함수
+            addGimmick(id) {
+                const positions = ['left', 'center', 'right'];
+                const pos = positions[this.gimmicks.length % 3];
+                this.gimmicks.push({ id, position: pos });
+                this.updateGimmickStatus();
+                this.log('+ Gimmick: ' + id);
+            },
+            
+            clearGimmicks() {
+                this.gimmicks = [];
+                this.updateGimmickStatus();
+            },
+            
+            updateGimmickStatus() {
+                const el = document.getElementById('gimmick-status');
+                if (this.gimmicks.length === 0) {
+                    el.textContent = 'None';
+                    el.style.color = '#888';
+                } else {
+                    el.textContent = this.gimmicks.map(g => g.id.replace('Barrel', '').replace('Crystal', '').replace('Generator', '')).join(', ');
+                    el.style.color = '#f84';
+                }
             },
             
             preset(type) {
