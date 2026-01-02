@@ -168,9 +168,9 @@ const EnemyRenderer = {
     },
     
     getSlotY(slotIndex) {
-        // ✅ 모든 적 같은 Y 위치 (조금 위로)
+        // ✅ 모든 적 같은 Y 위치
         const appHeight = this.app?.renderer?.height || 600;
-        return appHeight * 0.65;  // 화면 높이의 65% 위치
+        return appHeight * 0.63;  // 화면 높이의 63% 위치 (10px 위로)
     },
     
     getSlotScale(slotIndex, enemy = null) {
@@ -494,7 +494,7 @@ const EnemyRenderer = {
             flex-direction: column;
             align-items: center;
             gap: 0;
-            z-index: 100;
+            z-index: 300;
         `;
         
         // 인텐트 (핵심!)
@@ -534,7 +534,7 @@ const EnemyRenderer = {
             flex-direction: column;
             align-items: center;
             gap: 3px;
-            z-index: 90;
+            z-index: 300;
         `;
         
         // HP 바 (폴리싱된 디자인)
@@ -721,24 +721,26 @@ const EnemyRenderer = {
             spriteHeight = data.sprite.height * data.container.scale.y;
         }
         
-        // 상단 UI (인텐트 + 브레이크) - 머리 위 (더 가깝게)
+        // 상단 UI (인텐트 + 브레이크) - 머리 바로 위
         if (data.topUI) {
-            const topY = globalPos.y - spriteHeight - 5;
+            const topY = globalPos.y - spriteHeight - 8;
             data.topUI.style.left = globalPos.x + 'px';
             data.topUI.style.top = topY + 'px';
             data.topUI.style.display = 'flex';
             data.topUI.style.visibility = 'visible';
             data.topUI.style.opacity = '1';
+            data.topUI.style.zIndex = '300';
         }
         
-        // 하단 UI (HP바) - 발에 딱 붙게
+        // 하단 UI (HP바) - 발 바로 아래
         if (data.bottomUI) {
-            const bottomY = globalPos.y + 5;
+            const bottomY = globalPos.y + 8;
             data.bottomUI.style.left = globalPos.x + 'px';
             data.bottomUI.style.top = bottomY + 'px';
             data.bottomUI.style.display = 'flex';
             data.bottomUI.style.visibility = 'visible';
             data.bottomUI.style.opacity = '1';
+            data.bottomUI.style.zIndex = '300';
         }
     },
     
