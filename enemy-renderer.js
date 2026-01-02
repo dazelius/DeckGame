@@ -219,7 +219,8 @@ const EnemyRenderer = {
             container: spriteData.container,
             enemy: enemy,
             slotIndex: slotIndex,
-            uiElement: null
+            topUI: null,
+            bottomUI: null
         });
         
         // UI 오버레이 생성
@@ -625,7 +626,6 @@ const EnemyRenderer = {
         if (data) {
             data.topUI = topUI;
             data.bottomUI = bottomUI;
-            data.uiElement = { topUI, bottomUI };  // 기존 호환성
             this.syncEnemyUI(enemyId);
         }
     },
