@@ -80,7 +80,7 @@ const ChainScytheSystem = {
     },
     
     // ==========================================
-    // 🔥 끌어오기 연출 (GSAP)
+    // 🔥 끌어오기 연출 (PixiJS + GSAP)
     // ==========================================
     playPullAnimation(fromIndex, targetEnemy, onComplete) {
         const container = document.getElementById('enemies-container');
@@ -94,273 +94,360 @@ const ChainScytheSystem = {
         const targetEl = enemyEls[fromIndex];
         const firstEl = enemyEls[0];
         
-        console.log(`[ChainScythe] 적 요소들:`, enemyEls.length, '타겟:', targetEl, '첫번째:', firstEl);
-        
         if (!targetEl || !firstEl) {
             console.log('[ChainScythe] 요소 없음');
             if (onComplete) onComplete();
             return;
         }
         
-        // GSAP 없으면 기본 연출
-        if (typeof gsap === 'undefined') {
-            console.log('[ChainScythe] GSAP 없음, 기본 연출');
-            this.playBasicPullAnimation(targetEl, firstEl, enemyEls, fromIndex, onComplete);
-            return;
-        }
-        
-        // 중간 적들 (1번 ~ 타겟 사이)
+        // 중간 적들
         const middleEnemies = [];
         for (let i = 1; i < fromIndex; i++) {
-            if (enemyEls[i]) middleEnemies.push(enemyEls[i]);
+            if (enemyEls[i]) middleEnemies.push({ el: enemyEls[i], index: i });
         }
         
         const targetRect = targetEl.getBoundingClientRect();
         const firstRect = firstEl.getBoundingClientRect();
-        const totalPullDistance = targetRect.left - firstRect.left;
-        
-        console.log(`[ChainScythe] 끌어올 거리: ${totalPullDistance}px, 중간 적: ${middleEnemies.length}마리`);
-        
-        // 타임라인 생성
-        const tl = gsap.timeline({
-            onComplete: () => {
-                console.log('[ChainScythe] 애니메이션 완료');
-                // 모든 요소 초기화
-                gsap.set([targetEl, firstEl, ...middleEnemies], {
-                    x: 0, y: 0, rotation: 0, scale: 1, filter: 'none'
-                });
-                if (onComplete) onComplete();
-            }
-        });
-        
-        // === 1단계: 사슬낫 날아감 + 타겟에 걸림 ===
-        this.showChainThrow(targetEl);
-        
-        tl.to(targetEl, {
-            filter: 'brightness(2.5) drop-shadow(0 0 20px #ff6600)',
-            scale: 1.1,
-            duration: 0.15,
-            ease: 'power2.out'
-        })
-        .to(targetEl, {
-            x: '+=15',
-            duration: 0.04,
-            yoyo: true,
-            repeat: 5,
-            ease: 'power1.inOut'
-        })
-        .to(targetEl, {
-            scale: 1,
-            filter: 'brightness(1.5) drop-shadow(0 0 10px #ff4400)',
-            duration: 0.1
-        });
-        
-        // === 2단계: 끌려오면서 중간 적들과 충돌 ===
-        let currentPullX = 0;
-        
-        middleEnemies.forEach((midEnemy, i) => {
-            const midRect = midEnemy.getBoundingClientRect();
-            const distToMid = targetRect.left - midRect.left;
-            
-            // 중간 적까지 끌려옴 (빠르게)
-            tl.to(targetEl, {
-                x: -distToMid,
-                duration: 0.12,
-                ease: 'power2.in'
-            });
-            
-            // 💥 충돌!
-            tl.call(() => {
-                this.showCollisionImpact(midEnemy, false);
-                // 충돌 대미지 표시
-                this.showCollisionDamage(midEnemy, 2);
-            });
-            
-            // 중간 적 밀려남 + 플래시
-            tl.to(midEnemy, {
-                x: -50,
-                rotation: -10,
-                filter: 'brightness(2)',
-                duration: 0.06,
-                ease: 'power3.out'
-            }, '<');
-            
-            // 타겟 살짝 멈춤 (충격)
-            tl.to(targetEl, {
-                x: -distToMid + 10,
-                duration: 0.04,
-                ease: 'power2.out'
-            });
-            
-            // 중간 적 복귀
-            tl.to(midEnemy, {
-                x: 0,
-                rotation: 0,
-                filter: 'brightness(1)',
-                duration: 0.2,
-                ease: 'elastic.out(1, 0.5)'
-            });
-            
-            currentPullX = distToMid;
-        });
-        
-        // === 3단계: 최종 위치로 (1번 적과 큰 충돌) ===
-        tl.to(targetEl, {
-            x: -totalPullDistance + 30, // 약간 앞에서 멈춤
-            duration: 0.15,
-            ease: 'power3.in'
-        });
-        
-        // 💥💥 최종 충돌!
-        tl.call(() => {
-            this.showCollisionImpact(firstEl, true);
-            this.showCollisionDamage(firstEl, 5);
-            this.screenShake(12, 200);
-        });
-        
-        // 1번 적 크게 밀려남
-        tl.to(firstEl, {
-            x: -80,
-            rotation: -15,
-            scale: 0.9,
-            filter: 'brightness(3) saturate(0)',
-            duration: 0.08,
-            ease: 'power4.out'
-        }, '<');
-        
-        // 타겟 반동
-        tl.to(targetEl, {
-            x: -totalPullDistance + 50,
-            filter: 'brightness(2)',
-            duration: 0.06,
-            ease: 'power2.out'
-        }, '<');
-        
-        // 둘 다 복귀
-        tl.to(firstEl, {
-            x: 0,
-            rotation: 0,
-            scale: 1,
-            filter: 'brightness(1)',
-            duration: 0.25,
-            ease: 'elastic.out(1, 0.4)'
-        })
-        .to(targetEl, {
-            x: 0,
-            filter: 'brightness(1)',
-            duration: 0.2,
-            ease: 'elastic.out(1, 0.5)'
-        }, '<0.05');
-    },
-    
-    // 기본 연출 (GSAP 없을 때)
-    playBasicPullAnimation(targetEl, firstEl, allEnemies, fromIndex, onComplete) {
-        targetEl.style.transition = 'transform 0.3s ease-in, filter 0.1s';
-        targetEl.style.filter = 'brightness(2)';
-        
-        setTimeout(() => {
-            targetEl.style.filter = '';
-            targetEl.style.transition = '';
-            if (onComplete) onComplete();
-        }, 400);
-    },
-    
-    // 사슬낫 던지기 연출
-    showChainThrow(targetEl) {
-        const rect = targetEl.getBoundingClientRect();
         const playerEl = document.getElementById('player');
-        const playerRect = playerEl ? playerEl.getBoundingClientRect() : { left: 100, top: rect.top };
+        const playerRect = playerEl ? playerEl.getBoundingClientRect() : { left: 100, top: targetRect.top, width: 100, height: 100 };
         
-        // 사슬낫 이펙트
-        const scythe = document.createElement('div');
-        scythe.innerHTML = '⚔️';
-        scythe.style.cssText = `
-            position: fixed;
-            left: ${playerRect.left + playerRect.width}px;
-            top: ${playerRect.top + playerRect.height / 2}px;
-            font-size: 40px;
-            z-index: 10002;
-            pointer-events: none;
-            filter: drop-shadow(0 0 10px #ff6600);
-        `;
-        document.body.appendChild(scythe);
+        // 시작/끝 좌표
+        const startX = playerRect.left + playerRect.width;
+        const startY = playerRect.top + playerRect.height / 2;
+        const hookX = targetRect.left + targetRect.width / 2;
+        const hookY = targetRect.top + targetRect.height / 2;
+        const endX = firstRect.left + firstRect.width / 2;
+        const endY = firstRect.top + firstRect.height / 2;
         
-        // 날아가는 애니메이션
-        gsap.to(scythe, {
-            left: rect.left + rect.width / 2,
-            top: rect.top + rect.height / 2,
-            rotation: 720,
-            duration: 0.25,
-            ease: 'power2.in',
-            onComplete: () => {
-                // 걸렸다! 플래시
-                scythe.innerHTML = '🪝';
-                scythe.style.fontSize = '50px';
-                gsap.to(scythe, {
-                    scale: 1.5,
-                    opacity: 0,
-                    duration: 0.2,
-                    onComplete: () => scythe.remove()
-                });
-            }
-        });
+        console.log(`[ChainScythe] 블리츠 훅 시작! ${startX},${startY} → ${hookX},${hookY}`);
+        
+        // PixiJS 사용 가능하면 고급 연출
+        if (typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized) {
+            this.playPixiPullAnimation(
+                startX, startY, hookX, hookY, endX, endY,
+                targetEl, firstEl, middleEnemies, onComplete
+            );
+        } else {
+            // GSAP만 사용
+            this.playGsapPullAnimation(targetEl, firstEl, middleEnemies, onComplete);
+        }
     },
     
-    // 충돌 이펙트
-    showCollisionImpact(enemyEl, isFinal) {
-        const rect = enemyEl.getBoundingClientRect();
-        const x = rect.left + rect.width / 2;
-        const y = rect.top + rect.height / 2;
+    // ==========================================
+    // ⛓️ PixiJS 블리츠크랭크 스타일 훅
+    // ==========================================
+    playPixiPullAnimation(startX, startY, hookX, hookY, endX, endY, targetEl, firstEl, middleEnemies, onComplete) {
+        const pixi = PixiRenderer;
+        
+        // 사슬 컨테이너
+        const chainContainer = new PIXI.Container();
+        pixi.effectsContainer.addChild(chainContainer);
+        
+        // 훅 (낫) 그래픽
+        const hook = new PIXI.Graphics();
+        hook.moveTo(0, -15);
+        hook.lineTo(20, 0);
+        hook.lineTo(0, 15);
+        hook.lineTo(-5, 0);
+        hook.closePath();
+        hook.fill({ color: '#c0c0c0', alpha: 1 });
+        hook.stroke({ width: 2, color: '#808080', alpha: 1 });
+        hook.x = startX;
+        hook.y = startY;
+        chainContainer.addChild(hook);
+        
+        // 훅 글로우
+        const hookGlow = new PIXI.Graphics();
+        hookGlow.circle(0, 0, 25);
+        hookGlow.fill({ color: '#ff6600', alpha: 0.4 });
+        hook.addChild(hookGlow);
+        
+        // 사슬 링크들
+        const chainLinks = [];
+        const linkCount = 20;
+        for (let i = 0; i < linkCount; i++) {
+            const link = new PIXI.Graphics();
+            // 타원형 체인 링크
+            link.ellipse(0, 0, 8, 5);
+            link.stroke({ width: 3, color: '#888888', alpha: 0.9 });
+            link.x = startX;
+            link.y = startY;
+            link.rotation = (i % 2) * Math.PI / 2;
+            chainContainer.addChildAt(link, 0);
+            chainLinks.push(link);
+        }
+        
+        // 애니메이션 상태
+        let phase = 'throw'; // throw -> hook -> pull -> done
+        let progress = 0;
+        let currentTargetX = hookX;
+        let currentTargetY = hookY;
+        let pullProgress = 0;
+        
+        // 중간 충돌 포인트들
+        const collisionPoints = middleEnemies.map(e => {
+            const r = e.el.getBoundingClientRect();
+            return { x: r.left + r.width / 2, y: r.top + r.height / 2, el: e.el, hit: false };
+        });
+        collisionPoints.push({ x: endX, y: endY, el: firstEl, hit: false, isFinal: true });
+        
+        const animate = () => {
+            if (phase === 'throw') {
+                // 훅 날아가기
+                progress += 0.08;
+                
+                const t = Math.min(progress, 1);
+                const easeT = 1 - Math.pow(1 - t, 3); // easeOutCubic
+                
+                hook.x = startX + (hookX - startX) * easeT;
+                hook.y = startY + (hookY - startY) * easeT;
+                hook.rotation = progress * Math.PI * 4; // 회전
+                
+                // 글로우 펄스
+                hookGlow.alpha = 0.3 + Math.sin(progress * 20) * 0.2;
+                hookGlow.scale.set(1 + Math.sin(progress * 15) * 0.2);
+                
+                // 사슬 따라오기 (웨이브)
+                chainLinks.forEach((link, i) => {
+                    const delay = i * 0.03;
+                    const linkT = Math.max(0, Math.min(1, (progress - delay) * 1.2));
+                    link.x = startX + (hook.x - startX) * linkT;
+                    link.y = startY + (hook.y - startY) * linkT + Math.sin((progress - delay) * 30) * 3;
+                    link.alpha = linkT > 0 ? 1 : 0;
+                });
+                
+                if (progress >= 1) {
+                    phase = 'hook';
+                    progress = 0;
+                    
+                    // 훅 걸림 이펙트
+                    this.showHookImpact(hookX, hookY);
+                    
+                    // 타겟 플래시
+                    gsap.to(targetEl, {
+                        filter: 'brightness(2) drop-shadow(0 0 20px #ff6600)',
+                        duration: 0.1
+                    });
+                }
+            } else if (phase === 'hook') {
+                // 훅 걸림 (짧은 딜레이)
+                progress += 0.1;
+                
+                // 훅 흔들림
+                hook.x = hookX + Math.sin(progress * 40) * 5;
+                hook.rotation = Math.sin(progress * 30) * 0.3;
+                
+                if (progress >= 0.3) {
+                    phase = 'pull';
+                    progress = 0;
+                    pullProgress = 0;
+                }
+            } else if (phase === 'pull') {
+                // 끌어오기!
+                progress += 0.025; // 부드럽게
+                pullProgress = progress;
+                
+                // 이징: 처음엔 천천히, 점점 빨라짐
+                const easeProgress = Math.pow(progress, 0.7);
+                
+                // 현재 위치 계산
+                const currentX = hookX + (endX - hookX) * easeProgress;
+                const currentY = hookY + (endY - hookY) * easeProgress;
+                
+                // 훅 위치
+                hook.x = currentX;
+                hook.y = currentY;
+                hook.rotation = 0;
+                
+                // 사슬 (플레이어에서 훅까지)
+                chainLinks.forEach((link, i) => {
+                    const linkT = i / linkCount;
+                    link.x = startX + (currentX - startX) * linkT;
+                    link.y = startY + (currentY - startY) * linkT;
+                    // 팽팽해지는 효과
+                    link.scale.x = 1 + (1 - linkT) * easeProgress * 0.3;
+                });
+                
+                // 타겟 스프라이트 이동 (DOM)
+                const pullDist = (hookX - endX) * easeProgress;
+                gsap.set(targetEl, { x: -pullDist });
+                
+                // 충돌 체크
+                collisionPoints.forEach((point, idx) => {
+                    if (!point.hit && currentX <= point.x + 30) {
+                        point.hit = true;
+                        
+                        // 충돌 이펙트!
+                        this.showPixiCollision(point.x, point.y, point.isFinal);
+                        
+                        // 충돌 대미지
+                        const dmg = point.isFinal ? 5 : 2;
+                        this.showCollisionDamage(point.el, dmg);
+                        
+                        // 충돌당한 적 밀림
+                        gsap.to(point.el, {
+                            x: point.isFinal ? -60 : -30,
+                            rotation: point.isFinal ? -10 : -5,
+                            filter: 'brightness(2)',
+                            duration: 0.08,
+                            ease: 'power3.out',
+                            onComplete: () => {
+                                gsap.to(point.el, {
+                                    x: 0,
+                                    rotation: 0,
+                                    filter: 'brightness(1)',
+                                    duration: 0.3,
+                                    ease: 'elastic.out(1, 0.5)'
+                                });
+                            }
+                        });
+                        
+                        // 화면 흔들림
+                        this.screenShake(point.isFinal ? 10 : 4, point.isFinal ? 150 : 80);
+                    }
+                });
+                
+                if (progress >= 1) {
+                    phase = 'done';
+                }
+            } else if (phase === 'done') {
+                // 완료 - 정리
+                gsap.to(targetEl, {
+                    x: 0,
+                    filter: 'brightness(1)',
+                    duration: 0.2,
+                    ease: 'power2.out'
+                });
+                
+                // 사슬 페이드아웃
+                gsap.to(chainContainer, {
+                    alpha: 0,
+                    duration: 0.3,
+                    onComplete: () => {
+                        pixi.effectsContainer.removeChild(chainContainer);
+                        chainContainer.destroy({ children: true });
+                        if (onComplete) onComplete();
+                    }
+                });
+                
+                return; // 애니메이션 종료
+            }
+            
+            requestAnimationFrame(animate);
+        };
+        
+        animate();
+    },
+    
+    // 훅 걸림 이펙트 (PixiJS)
+    showHookImpact(x, y) {
+        if (typeof PixiRenderer === 'undefined' || !PixiRenderer.initialized) return;
+        
+        const pixi = PixiRenderer;
         
         // 충격파
-        const impact = document.createElement('div');
-        impact.style.cssText = `
-            position: fixed;
-            left: ${x}px;
-            top: ${y}px;
-            transform: translate(-50%, -50%);
-            z-index: 10001;
-            pointer-events: none;
-        `;
+        for (let i = 0; i < 3; i++) {
+            const ring = new PIXI.Graphics();
+            ring.circle(0, 0, 20);
+            ring.stroke({ width: 4 - i, color: i === 0 ? '#ffffff' : '#ff6600', alpha: 0.8 });
+            ring.x = x;
+            ring.y = y;
+            pixi.effectsContainer.addChild(ring);
+            
+            let scale = 1;
+            let alpha = 1;
+            const animateRing = () => {
+                scale += 0.15 - i * 0.02;
+                alpha -= 0.05;
+                ring.scale.set(scale);
+                ring.alpha = alpha;
+                
+                if (alpha <= 0) {
+                    pixi.effectsContainer.removeChild(ring);
+                    ring.destroy();
+                } else {
+                    requestAnimationFrame(animateRing);
+                }
+            };
+            setTimeout(animateRing, i * 40);
+        }
         
-        const size = isFinal ? 80 : 50;
-        const emoji = isFinal ? '💥' : '💢';
+        // 스파크
+        pixi.createHitParticles(x, y, 12, '#ff6600');
+    },
+    
+    // 충돌 이펙트 (PixiJS)
+    showPixiCollision(x, y, isFinal) {
+        if (typeof PixiRenderer === 'undefined' || !PixiRenderer.initialized) return;
         
-        impact.innerHTML = `
-            <div style="
-                font-size: ${size}px;
-                animation: impactBurst 0.4s ease-out forwards;
-            ">${emoji}</div>
-        `;
-        document.body.appendChild(impact);
+        const pixi = PixiRenderer;
+        const color = isFinal ? '#ff4400' : '#ffaa00';
+        const size = isFinal ? 2 : 1;
         
-        // 충격파 원
-        const ring = document.createElement('div');
-        ring.style.cssText = `
-            position: fixed;
-            left: ${x}px;
-            top: ${y}px;
-            width: 20px;
-            height: 20px;
-            border: 3px solid ${isFinal ? '#ff4400' : '#ffaa00'};
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 10000;
-            pointer-events: none;
-        `;
-        document.body.appendChild(ring);
+        // 충격파
+        pixi.createShockwave(x, y, color);
         
-        gsap.to(ring, {
-            width: isFinal ? 200 : 120,
-            height: isFinal ? 200 : 120,
-            opacity: 0,
-            borderWidth: 1,
-            duration: 0.3,
-            ease: 'power2.out',
-            onComplete: () => ring.remove()
+        // 파티클
+        pixi.createHitParticles(x, y, isFinal ? 20 : 10, color);
+        
+        // 플래시
+        if (isFinal) {
+            pixi.screenFlash('#ff4400', 100);
+            
+            // 추가 폭발
+            const burst = new PIXI.Graphics();
+            burst.circle(0, 0, 40);
+            burst.fill({ color: '#ffffff', alpha: 0.8 });
+            burst.x = x;
+            burst.y = y;
+            pixi.effectsContainer.addChild(burst);
+            
+            let burstLife = 15;
+            const animateBurst = () => {
+                burstLife--;
+                burst.alpha = burstLife / 15;
+                burst.scale.set(1 + (1 - burstLife / 15) * 3);
+                
+                if (burstLife <= 0) {
+                    pixi.effectsContainer.removeChild(burst);
+                    burst.destroy();
+                } else {
+                    requestAnimationFrame(animateBurst);
+                }
+            };
+            animateBurst();
+        }
+    },
+    
+    // GSAP 전용 연출 (PixiJS 없을 때)
+    playGsapPullAnimation(targetEl, firstEl, middleEnemies, onComplete) {
+        const targetRect = targetEl.getBoundingClientRect();
+        const firstRect = firstEl.getBoundingClientRect();
+        const totalDist = targetRect.left - firstRect.left;
+        
+        // 타겟 플래시
+        gsap.to(targetEl, {
+            filter: 'brightness(2)',
+            duration: 0.15,
+            yoyo: true,
+            repeat: 1
         });
         
-        setTimeout(() => impact.remove(), 500);
+        // 끌어오기
+        gsap.to(targetEl, {
+            x: -totalDist,
+            duration: 0.5,
+            ease: 'power2.in',
+            onComplete: () => {
+                gsap.to(targetEl, {
+                    x: 0,
+                    filter: 'brightness(1)',
+                    duration: 0.2,
+                    ease: 'power2.out',
+                    onComplete: onComplete
+                });
+            }
+        });
     },
     
     // 충돌 대미지 표시
@@ -374,37 +461,46 @@ const ChainScytheSystem = {
             left: ${rect.left + rect.width / 2}px;
             top: ${rect.top}px;
             transform: translateX(-50%);
-            font-size: 28px;
+            font-size: 32px;
             font-weight: bold;
             color: #ff6600;
-            text-shadow: 2px 2px 0 #000, -1px -1px 0 #000;
+            text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
             z-index: 10002;
             pointer-events: none;
         `;
         document.body.appendChild(dmgText);
         
-        gsap.to(dmgText, {
-            y: -50,
-            opacity: 0,
-            duration: 0.8,
-            ease: 'power2.out',
-            onComplete: () => dmgText.remove()
-        });
+        gsap.fromTo(dmgText, 
+            { scale: 0.5, opacity: 0 },
+            { scale: 1.2, opacity: 1, duration: 0.15, ease: 'back.out(2)',
+                onComplete: () => {
+                    gsap.to(dmgText, {
+                        y: -60,
+                        opacity: 0,
+                        scale: 0.8,
+                        duration: 0.6,
+                        ease: 'power2.out',
+                        onComplete: () => dmgText.remove()
+                    });
+                }
+            }
+        );
         
-        // 실제 대미지 적용 (해당 적 찾아서)
+        // 실제 대미지 적용
         const index = parseInt(enemyEl.dataset.index);
-        if (!isNaN(index) && gameState.enemies[index]) {
+        if (!isNaN(index) && gameState.enemies && gameState.enemies[index]) {
             const enemy = gameState.enemies[index];
             enemy.hp = Math.max(0, enemy.hp - damage);
             
-            // HP바 업데이트
             const hpFill = enemyEl.querySelector('.enemy-hp-fill');
             if (hpFill) {
                 const percent = (enemy.hp / enemy.maxHp) * 100;
                 hpFill.style.width = percent + '%';
             }
             
-            addLog(`충돌 대미지! ${enemy.name}에게 ${damage} 피해`, 'damage');
+            if (typeof addLog === 'function') {
+                addLog(`충돌! ${enemy.name}에게 ${damage} 피해`, 'damage');
+            }
         }
     },
     
