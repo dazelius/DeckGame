@@ -797,6 +797,35 @@ const EnemyRenderer = {
         console.log('[EnemyRenderer] hideEnemyUI:', enemyId);
     },
     
+    // 적 스프라이트 이미지 소스 가져오기 (고어 시스템용)
+    getEnemySpriteSrc(enemy) {
+        if (!enemy) return null;
+        
+        // 먼저 enemy 객체의 이미지 경로 사용
+        const imgPath = enemy.sprite || enemy.img || enemy.image;
+        if (imgPath) {
+            console.log('[EnemyRenderer] getEnemySpriteSrc from enemy:', imgPath);
+            return imgPath;
+        }
+        
+        // PixiJS 스프라이트에서 텍스처 소스 추출 시도
+        const enemyId = enemy.pixiId || enemy.id || enemy.name;
+        const data = this.sprites.get(enemyId);
+        
+        if (data && data.sprite && data.sprite.texture) {
+            // PixiJS 텍스처에서 이미지 소스 추출
+            const texture = data.sprite.texture;
+            if (texture.baseTexture && texture.baseTexture.resource) {
+                const src = texture.baseTexture.resource.src;
+                console.log('[EnemyRenderer] getEnemySpriteSrc from texture:', src);
+                return src;
+            }
+        }
+        
+        console.log('[EnemyRenderer] getEnemySpriteSrc: 이미지 소스 없음');
+        return null;
+    },
+    
     // 선택 표시
     setEnemySelected(enemy, isSelected) {
         const enemyId = enemy.pixiId || enemy.id || enemy.name;
