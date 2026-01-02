@@ -554,16 +554,18 @@ const Background3D = {
     },
     
     // ==========================================
-    // 🎯 슬롯 위치 캐시 (DOM 기본 위치 저장)
+    // 🎯 고정 간격 슬롯 시스템 (스프라이트 크기 기반)
     // ==========================================
-    slotCache: {
-        basePositions: [],  // 각 DOM 요소의 기본 X 위치
-        initialized: false
+    slotConfig: {
+        spacing: 160,        // 슬롯 간격 (스프라이트 충돌 방지)
+        initialized: false,
+        baseX: 0,            // 첫 번째 슬롯의 기준 X 좌표
+        domBasePositions: [] // 각 DOM 요소의 원래 flexbox 위치
     },
     
     /**
-     * 슬롯 기본 위치 캐시 (처음 한 번만)
-     * flexbox가 배치한 기본 위치를 저장해두고, 이를 기준으로 이동
+     * 슬롯 시스템 초기화 (renderEnemies 후 호출)
+     * 스프라이트 크기를 고려한 고정 간격으로 펼쳐짐
      */
     cacheSlotPositions() {
         const container = document.getElementById('enemies-container');
@@ -572,7 +574,7 @@ const Background3D = {
         const enemyEls = Array.from(container.querySelectorAll('.enemy-unit'));
         if (enemyEls.length === 0) return;
         
-        // 모든 transform 초기화 후 기본 위치 저장
+        // 모든 transform 초기화
         enemyEls.forEach(el => {
             gsap.set(el, { x: 0, y: 0, clearProps: 'x,y' });
             el.style.transform = '';
@@ -581,13 +583,25 @@ const Background3D = {
         // 강제 리플로우
         container.offsetHeight;
         
-        // 기본 위치 저장
-        this.slotCache.basePositions = enemyEls.map(el => {
+        // 각 DOM 요소의 원래 flexbox 위치 저장
+        this.slotConfig.domBasePositions = enemyEls.map(el => {
             const rect = el.getBoundingClientRect();
-            return { left: rect.left, top: rect.top };
+            return { left: rect.left, top: rect.top, width: rect.width };
         });
         
-        // 3D 깊이만 다시 적용
+        // 첫 번째 요소 기준점 저장
+        if (this.slotConfig.domBasePositions.length > 0) {
+            this.slotConfig.baseX = this.slotConfig.domBasePositions[0].left;
+        }
+        
+        // 스프라이트 크기 기반 간격 자동 계산 (최소 150px)
+        if (enemyEls.length > 1) {
+            const avgWidth = this.slotConfig.domBasePositions.reduce((sum, p) => sum + p.width, 0) 
+                             / this.slotConfig.domBasePositions.length;
+            this.slotConfig.spacing = Math.max(150, avgWidth + 20); // 여유 20px
+        }
+        
+        // 3D 깊이 적용 + 슬롯 초기화
         enemyEls.forEach((el, i) => {
             el.dataset.slot = i;
             el.dataset.domIndex = i;
@@ -595,30 +609,25 @@ const Background3D = {
             el.style.transformStyle = 'preserve-3d';
         });
         
-        this.slotCache.initialized = true;
-        console.log('[Background3D] 슬롯 위치 캐시됨:', this.slotCache.basePositions.length);
+        this.slotConfig.initialized = true;
+        console.log(`[Background3D] 슬롯 시스템 초기화: 간격=${this.slotConfig.spacing}px, 적=${enemyEls.length}명`);
     },
     
     /**
-     * 특정 슬롯의 X 위치 가져오기 (캐시된 기본 위치 기준)
+     * 슬롯 인덱스 → X 오프셋 계산 (고정 간격)
+     * DOM 인덱스에서 슬롯 위치까지의 이동 거리
      */
-    getSlotX(slotIndex) {
-        if (!this.slotCache.initialized || slotIndex >= this.slotCache.basePositions.length) {
-            return 0;
-        }
-        return this.slotCache.basePositions[slotIndex]?.left || 0;
+    getSlotOffset(domIndex, slotIndex) {
+        return (slotIndex - domIndex) * this.slotConfig.spacing;
     },
     
     /**
      * 🚀 핵심 API: 적의 슬롯 변경 (DOM 재배치 없이!)
-     * @param {HTMLElement} el - 적 DOM 요소
-     * @param {number} toSlot - 목표 슬롯 인덱스
-     * @param {number} duration - 애니메이션 시간
-     * @returns {Promise}
+     * 스프라이트 크기만큼 펼쳐진 고정 간격으로 이동
      */
     moveToSlot(el, toSlot, duration = 0.3) {
         return new Promise((resolve) => {
-            if (!el || !this.slotCache.initialized) {
+            if (!el || !this.slotConfig.initialized) {
                 resolve();
                 return;
             }
@@ -631,18 +640,8 @@ const Background3D = {
                 return;
             }
             
-            // 내 DOM 기본 위치
-            const myBase = this.slotCache.basePositions[domIndex];
-            // 목표 슬롯의 위치
-            const targetBase = this.slotCache.basePositions[toSlot];
-            
-            if (!myBase || !targetBase) {
-                resolve();
-                return;
-            }
-            
-            // 필요한 X 오프셋 계산
-            const targetX = targetBase.left - myBase.left;
+            // 고정 간격 기반 X 오프셋 계산
+            const targetX = this.getSlotOffset(domIndex, toSlot);
             const targetZ = this.getEnemyZ(toSlot);
             
             // 슬롯 업데이트
@@ -654,7 +653,6 @@ const Background3D = {
                 duration: duration,
                 ease: 'power2.out',
                 onUpdate: () => {
-                    // 애니메이션 중에도 3D 깊이 적용
                     const currentX = gsap.getProperty(el, 'x');
                     el.style.transform = `translateX(${currentX}px) translateZ(${targetZ}px)`;
                 },
@@ -669,11 +667,11 @@ const Background3D = {
     
     /**
      * 🚀 핵심 API: 두 적의 슬롯 교환 (DOM 재배치 없이!)
-     * 후퇴/전진에서 사용
+     * 후퇴/전진에서 사용 - 스프라이트 간격만큼 펼쳐짐
      */
     swapSlots(elA, elB, duration = 0.3) {
         return new Promise((resolve) => {
-            if (!elA || !elB || !this.slotCache.initialized) {
+            if (!elA || !elB || !this.slotConfig.initialized) {
                 resolve();
                 return;
             }
@@ -681,7 +679,7 @@ const Background3D = {
             const slotA = parseInt(elA.dataset.slot);
             const slotB = parseInt(elB.dataset.slot);
             
-            // 동시에 이동
+            // 동시에 이동 (고정 간격으로 펼쳐짐)
             Promise.all([
                 this.moveToSlot(elA, slotB, duration),
                 this.moveToSlot(elB, slotA, duration)
@@ -691,11 +689,11 @@ const Background3D = {
     
     /**
      * 🚀 핵심 API: 사슬낫 스타일 끌어오기
-     * 타겟을 슬롯 0으로, 나머지는 한 칸씩 밀림
+     * 타겟을 슬롯 0으로, 나머지는 한 칸씩 밀림 (간격 유지)
      * gameState.enemies 배열은 호출자가 변경해야 함!
      */
     async pullToSlotZero(targetEl, allEnemyEls, duration = 0.25) {
-        if (!targetEl || !this.slotCache.initialized) return;
+        if (!targetEl || !this.slotConfig.initialized) return;
         
         const targetDomIndex = parseInt(targetEl.dataset.domIndex) || 0;
         const targetCurrentSlot = parseInt(targetEl.dataset.slot) || targetDomIndex;
