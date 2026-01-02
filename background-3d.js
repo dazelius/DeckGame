@@ -1815,7 +1815,7 @@ const Background3D = {
     
     /**
      * 특정 적의 3D 월드 좌표 가져오기
-     * 몬스터 타입에 따른 포메이션 + 자연스러운 랜덤 오프셋
+     * 몬스터 타입에 따른 포메이션 (랜덤 오프셋 제거 - 안정적인 위치)
      * @param {number} slotIndex - 살아있는 적들의 슬롯 인덱스
      */
     getEnemyWorldPosition(slotIndex) {
@@ -1829,7 +1829,7 @@ const Background3D = {
         }
         const config = this.worldPositions.enemies;
         
-        // 기본 위치
+        // 기본 위치 (slotIndex 기반 - 안정적!)
         let x = config.baseX + (slotIndex * config.spacingX);
         let y = config.y;
         let z = config.z;
@@ -1841,17 +1841,30 @@ const Background3D = {
             z += formation.offsetZ;
         }
         
-        // 🎲 시드 기반 랜덤 오프셋 (일관성 유지)
-        // 같은 적은 항상 같은 오프셋을 갖도록
-        const seed = enemy ? (enemy.id || enemy.name || '').length + slotIndex : slotIndex;
-        const randomX = this.seededRandom(seed * 1.1) * 2.0 - 1.0;      // -1.0 ~ 1.0 (더 넓게)
-        const randomZ = this.seededRandom(seed * 2.3) * 3.0 - 1.5;      // -1.5 ~ 1.5 (깊이감)
+        // 🎯 고유 ID 기반 미세 오프셋 (pixiId로 안정적인 시드 생성)
+        // slotIndex가 변해도 같은 적은 같은 오프셋 유지!
+        if (enemy && enemy.pixiId) {
+            const seed = this.hashString(enemy.pixiId);
+            const offsetX = this.seededRandom(seed * 1.1) * 0.8 - 0.4;  // -0.4 ~ 0.4 (작게)
+            const offsetZ = this.seededRandom(seed * 2.3) * 0.6 - 0.3;  // -0.3 ~ 0.3 (작게)
+            x += offsetX;
+            z += offsetZ;
+        }
         
-        return {
-            x: x + randomX,
-            y: y,
-            z: z + randomZ
-        };
+        return { x, y, z };
+    },
+    
+    /**
+     * 문자열을 숫자 해시로 변환 (안정적인 시드용)
+     */
+    hashString(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;  // 32bit 정수로 변환
+        }
+        return Math.abs(hash);
     },
     
     /**
