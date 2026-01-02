@@ -1505,7 +1505,7 @@ const EnemyRenderer = {
         }
     },
     
-    // ✅ 스파인 스타일 생동감 있는 Idle 애니메이션
+    // ✅ 자연스러운 숨쉬기 애니메이션 (심플하고 우아하게)
     startBreathingAnimation(container, baseScale) {
         if (!container || !container.scale || typeof gsap === 'undefined') return;
         
@@ -1519,148 +1519,44 @@ const EnemyRenderer = {
         this.stopBreathingAnimation(container);
         
         // 각 적마다 다른 딜레이로 시작 (동기화 방지)
-        const delay = Math.random() * 2;
+        const delay = Math.random() * 1.5;
         const baseY = container.y;
+        const baseX = container.x;
         const baseRotation = container.rotation || 0;
         
-        // 개별 타이밍 (각 적마다 다르게)
-        const breathDuration = 1.2 + Math.random() * 0.4;    // 호흡 1.2~1.6초
-        const swayDuration = 2.5 + Math.random() * 1;        // 흔들림 2.5~3.5초
-        const bounceDuration = 0.8 + Math.random() * 0.3;    // 바운스 0.8~1.1초
-        
-        // 마스터 타임라인
-        const masterTl = gsap.timeline({ delay });
+        // 호흡 주기 (각 적마다 약간 다르게)
+        const breathDuration = 1.3 + Math.random() * 0.3;  // 1.3~1.6초
         
         // ========================================
-        // 1️⃣ 호흡 애니메이션 (스케일 변화 + Y 이동)
+        // 단일 호흡 애니메이션 (심플하게!)
         // ========================================
         const breathTl = gsap.timeline({ 
             repeat: -1, 
             yoyo: true,
+            delay: delay,
             defaults: { ease: "sine.inOut" }
         });
         
-        // 들숨: 몸이 늘어나면서 위로
+        // 들숨: 살짝 늘어나면서 위로 (미세하게!)
         breathTl.to(container.scale, {
-            y: baseScale * 1.04,    // Y 4% 늘어남 (가슴 확장)
-            x: baseScale * 0.97,    // X 3% 줄어듦
+            y: baseScale * 1.02,    // Y 2% 늘어남
+            x: baseScale * 0.99,    // X 1% 줄어듦
             duration: breathDuration
         }, 0);
         
         breathTl.to(container, {
-            y: baseY - 6,           // 위로 6px
+            y: baseY - 3,           // 위로 3px만
             duration: breathDuration
         }, 0);
         
-        // ========================================
-        // 2️⃣ 자연스러운 좌우 흔들림 (Sway)
-        // ========================================
-        const swayTl = gsap.timeline({ 
-            repeat: -1, 
-            yoyo: true,
-            defaults: { ease: "sine.inOut" }
-        });
-        
-        // 몸 전체가 살짝 기울어짐
-        swayTl.to(container, {
-            rotation: baseRotation + 0.015,   // 약 0.9도
-            duration: swayDuration
-        });
-        
-        // ========================================
-        // 3️⃣ 미세한 무게 이동 (Weight Shift)
-        // ========================================
-        const weightTl = gsap.timeline({ 
-            repeat: -1, 
-            yoyo: true,
-            defaults: { ease: "power1.inOut" }
-        });
-        
-        // X축 미세 이동 (무게 이동)
-        weightTl.to(container, {
-            x: container.x + (Math.random() > 0.5 ? 3 : -3),
-            duration: swayDuration * 0.8
-        });
-        
-        // ========================================
-        // 4️⃣ 살아있는 느낌의 마이크로 바운스
-        // ========================================
-        const bounceTl = gsap.timeline({ 
-            repeat: -1, 
-            yoyo: true,
-            defaults: { ease: "elastic.out(1, 0.5)" }
-        });
-        
-        // 미세한 튕김
-        bounceTl.to(container, {
-            y: baseY - 2,
-            duration: bounceDuration
-        });
-        
-        // ========================================
-        // 5️⃣ 스프라이트 피봇 기반 스쿼시 & 스트레치
-        // ========================================
-        const squashTl = gsap.timeline({ 
-            repeat: -1, 
-            yoyo: true,
-            repeatDelay: 3 + Math.random() * 2,  // 3~5초마다
-            defaults: { ease: "power2.out" }
-        });
-        
-        // 빠른 스쿼시 (앉았다 일어서는 느낌)
-        squashTl.to(container.scale, {
-            y: baseScale * 0.95,
-            x: baseScale * 1.03,
-            duration: 0.08
-        })
-        .to(container.scale, {
-            y: baseScale * 1.06,
-            x: baseScale * 0.96,
-            duration: 0.12
-        })
-        .to(container.scale, {
-            y: baseScale,
-            x: baseScale,
-            duration: 0.2,
-            ease: "elastic.out(1, 0.4)"
-        });
-        
-        // ========================================
-        // 6️⃣ 랜덤 깜짝 움직임 (Twitch)
-        // ========================================
-        const twitchInterval = setInterval(() => {
-            if (!container.parent) {
-                clearInterval(twitchInterval);
-                return;
-            }
-            
-            // 20% 확률로 깜짝 움직임
-            if (Math.random() < 0.2) {
-                const twitchDir = Math.random() > 0.5 ? 1 : -1;
-                gsap.timeline()
-                    .to(container, {
-                        rotation: baseRotation + (0.03 * twitchDir),
-                        x: container.x + (5 * twitchDir),
-                        duration: 0.05,
-                        ease: "power2.out"
-                    })
-                    .to(container, {
-                        rotation: baseRotation,
-                        x: container.x,
-                        duration: 0.15,
-                        ease: "elastic.out(1, 0.3)"
-                    });
-            }
-        }, 2000 + Math.random() * 3000);  // 2~5초마다 체크
-        
-        // 참조 저장
-        container.breathingTween = masterTl;
-        container.breathingTimelines = [breathTl, swayTl, weightTl, bounceTl, squashTl];
-        container.breathingInterval = twitchInterval;
+        // 참조 저장 (심플하게)
+        container.breathingTween = breathTl;
+        container.breathingTimelines = [breathTl];
+        container.breathingInterval = null;
         container.breathingBaseScale = baseScale;
         container.breathingBaseY = baseY;
+        container.breathingBaseX = baseX;
         container.breathingBaseRotation = baseRotation;
-        container.breathingBaseX = container.x;
     },
     
     // 숨쉬기 애니메이션 중지
