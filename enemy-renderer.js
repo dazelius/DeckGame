@@ -2275,244 +2275,352 @@ enemyRendererStyles.textContent = `
     }
     
     /* ========================================
-       인텐트 (폴리싱된 디자인)
+       🔥 다크소울 스타일 인텐트
        ======================================== */
     .pixi-intent {
-        filter: drop-shadow(0 2px 6px rgba(0,0,0,0.9));
+        filter: drop-shadow(0 3px 8px rgba(0,0,0,1));
     }
     
-    /* 일반 인텐트 박스 */
+    /* 일반 인텐트 박스 - 다크소울 스타일 */
     .pixi-intent .intent-inner {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 4px;
-        padding: 4px 10px;
-        background: linear-gradient(180deg, rgba(40, 40, 45, 0.95) 0%, rgba(25, 25, 30, 0.98) 100%);
-        border: 1px solid rgba(100, 100, 110, 0.6);
-        border-radius: 6px;
-        font-size: 0.95rem;
-        color: #fff;
-        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+        gap: 6px;
+        padding: 6px 14px;
+        background: linear-gradient(180deg, 
+            rgba(35, 30, 25, 0.97) 0%, 
+            rgba(20, 18, 15, 0.99) 50%,
+            rgba(10, 8, 5, 1) 100%);
+        border: 2px solid;
+        border-image: linear-gradient(180deg, 
+            rgba(180, 150, 100, 0.9) 0%, 
+            rgba(120, 90, 50, 0.7) 50%,
+            rgba(60, 45, 25, 0.5) 100%) 1;
+        font-family: 'Cinzel', 'Times New Roman', serif;
+        font-size: 1rem;
+        color: #d4c4a8;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 1);
+        box-shadow: 
+            0 4px 12px rgba(0,0,0,0.8),
+            inset 0 1px 0 rgba(180, 150, 100, 0.15),
+            inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+        position: relative;
     }
     
+    /* 인텐트 코너 장식 */
+    .pixi-intent .intent-inner::before,
+    .pixi-intent .intent-inner::after {
+        content: '◆';
+        position: absolute;
+        font-size: 6px;
+        color: rgba(180, 150, 100, 0.6);
+        text-shadow: 0 0 4px rgba(180, 150, 100, 0.4);
+    }
+    .pixi-intent .intent-inner::before { top: -1px; left: 4px; }
+    .pixi-intent .intent-inner::after { top: -1px; right: 4px; }
+    
     .pixi-intent .intent-icon {
-        font-size: 1.2rem;
+        font-size: 1.3rem;
+        filter: drop-shadow(0 0 3px currentColor);
     }
     
     .pixi-intent .intent-value {
-        font-size: 1.1rem;
+        font-size: 1.2rem;
         font-weight: bold;
-        color: #fff;
-    }
-    
-    .pixi-intent .intent-hits {
-        font-size: 0.85rem;
-        color: #fbbf24;
-        font-weight: bold;
-    }
-    
-    /* 위험 인텐트 (브레이크 가능) - 빨간 강조 */
-    .pixi-intent .intent-inner.danger {
-        background: linear-gradient(180deg, rgba(153, 27, 27, 0.95) 0%, rgba(69, 10, 10, 0.98) 100%);
-        border: 2px solid #ef4444;
-        color: #fef3c7;
-        animation: intentPulse 1.2s ease-in-out infinite;
-    }
-    
-    @keyframes intentPulse {
-        0%, 100% { 
-            box-shadow: 0 0 6px rgba(239, 68, 68, 0.6), inset 0 1px 0 rgba(255,255,255,0.15); 
-            transform: scale(1);
-        }
-        50% { 
-            box-shadow: 0 0 14px rgba(239, 68, 68, 1), 0 0 20px rgba(239, 68, 68, 0.4), inset 0 1px 0 rgba(255,255,255,0.15); 
-            transform: scale(1.02);
-        }
-    }
-    
-    /* 인텐트 타입별 아이콘 색상 */
-    .pixi-intent .intent-attack .intent-icon { color: #f87171; }
-    .pixi-intent .intent-defend .intent-icon { color: #60a5fa; }
-    .pixi-intent .intent-buff .intent-icon { color: #4ade80; }
-    .pixi-intent .intent-debuff .intent-icon { color: #c084fc; }
-    .pixi-intent .intent-heal .intent-icon { color: #34d399; }
-    .pixi-intent .intent-retreat .intent-icon { color: #fb923c; }
-    .pixi-intent .intent-advance .intent-icon { color: #facc15; }
-    .pixi-intent .intent-special .intent-icon { color: #fcd34d; }
-    
-    /* 브레이크 상태 표시 (스턴!) */
-    .pixi-intent .intent-broken {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        padding: 5px 12px;
-        background: linear-gradient(180deg, rgba(59, 130, 246, 0.95) 0%, rgba(30, 58, 138, 0.98) 100%);
-        border-radius: 6px;
-        border: 2px solid #60a5fa;
-        animation: brokenPulse 0.8s ease-in-out infinite;
-        box-shadow: 0 0 12px rgba(96, 165, 250, 0.6);
-    }
-    
-    .pixi-intent .broken-icon {
-        font-size: 1.3rem;
-        animation: spin 1.5s linear infinite;
-    }
-    
-    @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-    }
-    
-    .pixi-intent .broken-text {
-        font-size: 1rem;
-        font-weight: bold;
-        color: #fff;
-        text-shadow: 0 0 8px #60a5fa;
+        color: #e8dcc8;
+        font-family: 'Cinzel', serif;
         letter-spacing: 1px;
     }
     
-    @keyframes brokenPulse {
+    .pixi-intent .intent-hits {
+        font-size: 0.8rem;
+        color: #c9a227;
+        font-weight: bold;
+        text-shadow: 0 0 6px rgba(201, 162, 39, 0.5);
+    }
+    
+    /* 🔥 위험 인텐트 (브레이크 가능) - 어둠의 화염 */
+    .pixi-intent .intent-inner.danger {
+        background: linear-gradient(180deg, 
+            rgba(80, 20, 15, 0.98) 0%, 
+            rgba(50, 10, 5, 0.99) 50%,
+            rgba(25, 5, 0, 1) 100%);
+        border: 2px solid;
+        border-image: linear-gradient(180deg, 
+            rgba(255, 100, 50, 0.9) 0%, 
+            rgba(180, 50, 20, 0.8) 50%,
+            rgba(100, 30, 10, 0.6) 100%) 1;
+        color: #ffccaa;
+        animation: darkSoulsDanger 2s ease-in-out infinite;
+    }
+    
+    .pixi-intent .intent-inner.danger::before,
+    .pixi-intent .intent-inner.danger::after {
+        color: rgba(255, 100, 50, 0.8);
+        animation: emberGlow 1.5s ease-in-out infinite;
+    }
+    
+    @keyframes darkSoulsDanger {
         0%, 100% { 
-            opacity: 0.9; 
-            box-shadow: 0 0 8px rgba(96, 165, 250, 0.6); 
+            box-shadow: 
+                0 4px 12px rgba(0,0,0,0.9),
+                0 0 15px rgba(180, 50, 20, 0.4),
+                inset 0 0 20px rgba(100, 30, 10, 0.3);
         }
         50% { 
-            opacity: 1; 
-            box-shadow: 0 0 16px rgba(96, 165, 250, 1), 0 0 24px rgba(96, 165, 250, 0.4); 
+            box-shadow: 
+                0 4px 12px rgba(0,0,0,0.9),
+                0 0 25px rgba(255, 80, 30, 0.6),
+                inset 0 0 30px rgba(150, 50, 20, 0.4);
+        }
+    }
+    
+    @keyframes emberGlow {
+        0%, 100% { opacity: 0.6; text-shadow: 0 0 4px rgba(255, 100, 50, 0.4); }
+        50% { opacity: 1; text-shadow: 0 0 8px rgba(255, 100, 50, 0.8); }
+    }
+    
+    /* 인텐트 타입별 아이콘 색상 - 다크소울 팔레트 */
+    .pixi-intent .intent-attack .intent-icon { color: #cc4444; }
+    .pixi-intent .intent-defend .intent-icon { color: #7799bb; }
+    .pixi-intent .intent-buff .intent-icon { color: #88aa66; }
+    .pixi-intent .intent-debuff .intent-icon { color: #9966aa; }
+    .pixi-intent .intent-heal .intent-icon { color: #66aa88; }
+    .pixi-intent .intent-retreat .intent-icon { color: #aa7744; }
+    .pixi-intent .intent-advance .intent-icon { color: #bbaa44; }
+    .pixi-intent .intent-special .intent-icon { color: #c9a227; }
+    
+    /* ⚡ 브레이크 상태 표시 - 다크소울 스턴 */
+    .pixi-intent .intent-broken {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        background: linear-gradient(180deg, 
+            rgba(60, 50, 35, 0.98) 0%, 
+            rgba(35, 30, 20, 0.99) 50%,
+            rgba(15, 12, 8, 1) 100%);
+        border: 2px solid;
+        border-image: linear-gradient(180deg, 
+            rgba(200, 170, 80, 0.9) 0%, 
+            rgba(150, 120, 50, 0.7) 50%,
+            rgba(80, 60, 30, 0.5) 100%) 1;
+        animation: soulsBroken 1.5s ease-in-out infinite;
+        box-shadow: 
+            0 4px 12px rgba(0,0,0,0.9),
+            0 0 20px rgba(200, 170, 80, 0.3);
+        font-family: 'Cinzel', serif;
+    }
+    
+    .pixi-intent .broken-icon {
+        font-size: 1.4rem;
+        color: #c9a227;
+        animation: brokenSpin 3s linear infinite;
+        filter: drop-shadow(0 0 6px rgba(200, 170, 80, 0.6));
+    }
+    
+    @keyframes brokenSpin {
+        0% { transform: rotate(0deg); }
+        25% { transform: rotate(10deg); }
+        50% { transform: rotate(0deg); }
+        75% { transform: rotate(-10deg); }
+        100% { transform: rotate(0deg); }
+    }
+    
+    .pixi-intent .broken-text {
+        font-size: 1.1rem;
+        font-weight: bold;
+        color: #c9a227;
+        text-shadow: 
+            0 0 10px rgba(200, 170, 80, 0.8),
+            0 2px 4px rgba(0, 0, 0, 1);
+        letter-spacing: 3px;
+        text-transform: uppercase;
+    }
+    
+    @keyframes soulsBroken {
+        0%, 100% { 
+            box-shadow: 
+                0 4px 12px rgba(0,0,0,0.9),
+                0 0 15px rgba(200, 170, 80, 0.2);
+        }
+        50% { 
+            box-shadow: 
+                0 4px 12px rgba(0,0,0,0.9),
+                0 0 30px rgba(200, 170, 80, 0.5),
+                0 0 50px rgba(200, 170, 80, 0.2);
         }
     }
     
     /* ========================================
        브레이크 게이지 (인텐트 하단에 붙음)
        ======================================== */
+    /* ========================================
+       🔥 다크소울 스타일 브레이크 게이지
+       ======================================== */
     .pixi-break {
         width: 100%;
-        margin-top: 2px;
+        margin-top: 3px;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 2px;
+        gap: 3px;
     }
     
-    /* 레시피 아이콘 행 */
+    /* 레시피 아이콘 행 - 고대 룬 스타일 */
     .pixi-break .break-recipe-row {
         display: flex;
-        gap: 3px;
+        gap: 4px;
         justify-content: center;
-        padding: 3px 6px;
-        background: linear-gradient(180deg, rgba(50, 30, 10, 0.95) 0%, rgba(30, 15, 5, 0.98) 100%);
-        border: 1px solid rgba(251, 191, 36, 0.5);
-        border-radius: 4px;
-        box-shadow: 0 0 8px rgba(251, 191, 36, 0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+        padding: 4px 8px;
+        background: linear-gradient(180deg, 
+            rgba(30, 25, 18, 0.97) 0%, 
+            rgba(18, 15, 10, 0.99) 100%);
+        border: 1px solid rgba(150, 120, 70, 0.5);
+        box-shadow: 
+            0 3px 10px rgba(0,0,0,0.8),
+            inset 0 1px 0 rgba(150, 120, 70, 0.15);
     }
     
     .pixi-break .recipe-slot {
         font-size: 14px;
-        width: 22px;
-        height: 22px;
+        width: 24px;
+        height: 24px;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: rgba(0, 0, 0, 0.6);
-        border: 1px solid rgba(100, 100, 100, 0.5);
-        border-radius: 3px;
-        opacity: 0.5;
-        filter: grayscale(0.8);
+        background: rgba(10, 8, 5, 0.9);
+        border: 1px solid rgba(80, 65, 40, 0.6);
+        opacity: 0.4;
+        filter: grayscale(0.9) brightness(0.6);
         transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    /* 슬롯 장식 */
+    .pixi-break .recipe-slot::before {
+        content: '';
+        position: absolute;
+        inset: 2px;
+        border: 1px solid rgba(150, 120, 70, 0.2);
     }
     
     .pixi-break .recipe-slot.hit {
         opacity: 1;
-        filter: grayscale(0) brightness(1.2);
-        border-color: #22c55e;
-        background: rgba(34, 197, 94, 0.3);
-        box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
-        animation: recipeHit 0.3s ease-out;
+        filter: grayscale(0) brightness(1.3);
+        border-color: rgba(200, 170, 80, 0.9);
+        background: rgba(40, 35, 20, 0.9);
+        box-shadow: 
+            0 0 12px rgba(200, 170, 80, 0.6),
+            inset 0 0 8px rgba(200, 170, 80, 0.3);
+        animation: runeActivate 0.4s ease-out;
     }
     
     .pixi-break .recipe-slot.current {
-        opacity: 1;
-        filter: grayscale(0);
-        border-color: #fbbf24;
-        animation: recipePulse 1s ease-in-out infinite;
+        opacity: 0.9;
+        filter: grayscale(0) brightness(1.1);
+        border-color: rgba(180, 140, 60, 0.8);
+        animation: runePulse 1.5s ease-in-out infinite;
     }
     
-    @keyframes recipeHit {
-        0% { transform: scale(1.5); }
-        50% { transform: scale(0.9); }
+    @keyframes runeActivate {
+        0% { transform: scale(1.3); box-shadow: 0 0 25px rgba(200, 170, 80, 1); }
+        50% { transform: scale(0.95); }
         100% { transform: scale(1); }
     }
     
-    @keyframes recipePulse {
+    @keyframes runePulse {
         0%, 100% { 
-            box-shadow: 0 0 4px rgba(251, 191, 36, 0.5);
-            transform: scale(1);
+            box-shadow: 0 0 5px rgba(180, 140, 60, 0.3);
+            border-color: rgba(180, 140, 60, 0.5);
         }
         50% { 
-            box-shadow: 0 0 12px rgba(251, 191, 36, 1);
-            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(180, 140, 60, 0.6);
+            border-color: rgba(200, 170, 80, 0.8);
         }
     }
     
+    /* 브레이크 게이지 바 - 에스투스 스타일 */
     .pixi-break .break-gauge-bar {
         position: relative;
         width: 100%;
-        height: 6px;
-        background: rgba(0, 0, 0, 0.9);
-        border-radius: 3px;
+        height: 5px;
+        background: rgba(10, 8, 5, 0.95);
         overflow: hidden;
-        border: 1px solid rgba(251, 191, 36, 0.4);
+        border: 1px solid rgba(100, 80, 50, 0.5);
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.8);
     }
     
     .pixi-break .break-gauge-fill {
         height: 100%;
-        background: linear-gradient(90deg, #fbbf24 0%, #f59e0b 50%, #fbbf24 100%);
+        background: linear-gradient(90deg, 
+            rgba(180, 100, 20, 0.9) 0%, 
+            rgba(220, 150, 50, 1) 50%, 
+            rgba(180, 100, 20, 0.9) 100%);
         transition: width 0.3s ease;
-        box-shadow: 0 0 8px rgba(251, 191, 36, 0.9);
-        animation: gaugeGlow 1s ease-in-out infinite;
+        box-shadow: 0 0 8px rgba(200, 130, 40, 0.8);
+        animation: estusGlow 2s ease-in-out infinite;
     }
     
-    @keyframes gaugeGlow {
-        0%, 100% { box-shadow: 0 0 4px rgba(251, 191, 36, 0.7); }
-        50% { box-shadow: 0 0 10px rgba(251, 191, 36, 1), 0 0 14px rgba(251, 191, 36, 0.5); }
+    @keyframes estusGlow {
+        0%, 100% { 
+            box-shadow: 0 0 5px rgba(200, 130, 40, 0.6);
+            filter: brightness(1);
+        }
+        50% { 
+            box-shadow: 0 0 12px rgba(220, 150, 50, 0.9);
+            filter: brightness(1.2);
+        }
     }
     
     /* ========================================
-       쉴드 표시
+       🛡️ 다크소울 스타일 쉴드
        ======================================== */
     .pixi-shield {
         display: flex;
         align-items: center;
-        gap: 2px;
+        gap: 3px;
         font-size: 11px;
         font-weight: bold;
-        color: #60a5fa;
-        text-shadow: 0 0 6px rgba(96, 165, 250, 0.8);
-        padding: 2px 6px;
-        background: rgba(30, 64, 175, 0.4);
-        border: 1px solid rgba(96, 165, 250, 0.5);
-        border-radius: 4px;
+        font-family: 'Cinzel', serif;
+        color: #8bb8d0;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+        padding: 3px 8px;
+        background: linear-gradient(180deg, 
+            rgba(40, 50, 60, 0.9) 0%, 
+            rgba(25, 35, 45, 0.95) 100%);
+        border: 1px solid rgba(100, 130, 160, 0.5);
+        box-shadow: 
+            0 2px 6px rgba(0,0,0,0.7),
+            inset 0 1px 0 rgba(150, 180, 200, 0.15);
     }
     
     /* ========================================
-       상태 효과
+       ☠️ 다크소울 스타일 상태 효과
        ======================================== */
     .pixi-status {
         display: flex;
-        gap: 3px;
+        gap: 4px;
         justify-content: center;
         flex-wrap: wrap;
-        max-width: 100px;
+        max-width: 110px;
     }
     
     .pixi-status .status-icon {
-        font-size: 10px;
-        background: rgba(0,0,0,0.7);
-        padding: 2px 4px;
-        border-radius: 3px;
-        border: 1px solid rgba(255,255,255,0.1);
+        font-size: 11px;
+        background: linear-gradient(180deg, 
+            rgba(30, 25, 20, 0.95) 0%, 
+            rgba(15, 12, 8, 0.98) 100%);
+        padding: 3px 5px;
+        border: 1px solid rgba(100, 80, 50, 0.5);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.6);
+        transition: all 0.2s ease;
+    }
+    
+    .pixi-status .status-icon:hover {
+        border-color: rgba(150, 120, 70, 0.7);
+        box-shadow: 0 0 8px rgba(150, 120, 70, 0.4);
     }
     
     /* 캔버스 컨테이너 */
