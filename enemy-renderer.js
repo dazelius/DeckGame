@@ -1164,6 +1164,11 @@ const EnemyRenderer = {
                 if (sprite) {
                     sprite.x = 0;
                     sprite.rotation = 0;
+                    
+                    // 🎨 환경광 필터 재적용 (멀티블랜딩 복원!)
+                    if (!sprite._envFilter) {
+                        this.applyEnvironmentBlending(sprite);
+                    }
                 }
                 
                 // 컨테이너 회전 복원
@@ -1173,6 +1178,9 @@ const EnemyRenderer = {
                 if (container.scale && baseScale) {
                     container.scale.set(baseScale);
                 }
+                
+                // ✅ 아웃라인 재적용 (외곽선 복원)
+                this.applyOutlineEffect(sprite, container);
                 
                 // ✅ 숨쉬기 애니메이션 재개
                 if (container.breathingTween) {
