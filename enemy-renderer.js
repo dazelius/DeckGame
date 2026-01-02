@@ -22,7 +22,7 @@ const EnemyRenderer = {
     
     // 상태
     initialized: false,
-    enabled: false,  // DOM 렌더링과 선택적 사용
+    enabled: false,  // 기본 비활성화, 콘솔에서 EnemyRenderer.enable() 호출하여 테스트
     
     // ==========================================
     // 초기화
@@ -617,6 +617,9 @@ const EnemyRenderer = {
     // 활성화/비활성화
     // ==========================================
     enable() {
+        if (!this.initialized) {
+            this.init();
+        }
         this.enabled = true;
         if (this.container) {
             this.container.visible = true;
@@ -624,6 +627,20 @@ const EnemyRenderer = {
         if (this.uiOverlay) {
             this.uiOverlay.style.display = '';
         }
+        
+        // DOM 적 숨기기
+        const existingContainer = document.getElementById('enemies-container');
+        if (existingContainer) {
+            existingContainer.style.opacity = '0';
+            existingContainer.style.pointerEvents = 'none';
+        }
+        
+        // 현재 적 렌더링
+        if (typeof gameState !== 'undefined' && gameState.enemies) {
+            this.syncWithGameState();
+        }
+        
+        console.log('[EnemyRenderer] ✅ Enabled - PixiJS 적 렌더링 활성화');
     },
     
     disable() {
@@ -633,6 +650,26 @@ const EnemyRenderer = {
         }
         if (this.uiOverlay) {
             this.uiOverlay.style.display = 'none';
+        }
+        
+        // DOM 적 복원
+        const existingContainer = document.getElementById('enemies-container');
+        if (existingContainer) {
+            existingContainer.style.opacity = '1';
+            existingContainer.style.pointerEvents = 'auto';
+        }
+        
+        this.clearAllEnemies();
+        
+        console.log('[EnemyRenderer] ❌ Disabled - DOM 적 렌더링으로 복귀');
+    },
+    
+    // 테스트용 토글
+    toggle() {
+        if (this.enabled) {
+            this.disable();
+        } else {
+            this.enable();
         }
     }
 };

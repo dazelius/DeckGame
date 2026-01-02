@@ -725,6 +725,12 @@ function renderEnemies(withEntrance = true) {
     const enemyArea = document.querySelector('.enemy-area');
     if (!enemyArea) return;
     
+    // ✅ PixiJS EnemyRenderer 사용 시 (실험적)
+    if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+        renderEnemiesWithPixi(withEntrance);
+        return;
+    }
+    
     // 기존 적 컨테이너 제거
     const existingContainer = document.getElementById('enemies-container');
     if (existingContainer) existingContainer.remove();
@@ -801,6 +807,49 @@ function renderEnemies(withEntrance = true) {
             MonsterPassiveSystem.updateAllEnemiesDisplay(gameState.enemies);
         }, withEntrance ? 600 : 100);
     }
+}
+
+// ==========================================
+// PixiJS 기반 적 렌더링 (실험적)
+// ==========================================
+function renderEnemiesWithPixi(withEntrance = true) {
+    if (!EnemyRenderer.initialized) {
+        EnemyRenderer.init();
+    }
+    
+    // 기존 DOM 적 숨기기
+    const existingContainer = document.getElementById('enemies-container');
+    if (existingContainer) {
+        existingContainer.style.display = 'none';
+    }
+    
+    // 기존 스프라이트 클리어
+    EnemyRenderer.clearAllEnemies();
+    
+    // 살아있는 적만 렌더링
+    const aliveEnemies = gameState.enemies.filter(e => e.hp > 0);
+    
+    aliveEnemies.forEach((enemy, slotIndex) => {
+        // 스프라이트 경로 설정
+        enemy.sprite = enemy.sprite || enemy.image || getEnemySpritePath(enemy);
+        enemy.id = enemy.id || `${enemy.name}_${slotIndex}`;
+        
+        EnemyRenderer.addEnemy(enemy, slotIndex);
+    });
+    
+    console.log(`[renderEnemiesWithPixi] Rendered ${aliveEnemies.length} enemies`);
+    
+    // 인텐트 업데이트
+    if (typeof updateAllIntents === 'function') {
+        setTimeout(() => updateAllIntents(), 100);
+    }
+}
+
+// 적 스프라이트 경로 헬퍼
+function getEnemySpritePath(enemy) {
+    const name = enemy.name || 'goblin';
+    const baseName = name.toLowerCase().replace(/\s+/g, '');
+    return `${baseName}.png`;
 }
 
 // 등장 애니메이션 적용 헬퍼
@@ -4171,6 +4220,30 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
         
         // 후퇴 완료 처리 (슬롯 기반 - DOM 재배치 없음!)
         const executeRetreatWithGSAP = () => {
+            // ✅ PixiJS EnemyRenderer 사용 시
+            if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                const aliveMinions = gameState.enemies.filter(e => e.hp > 0 && !e.isBoss && !e.isElite);
+                const myMinionIndex = aliveMinions.indexOf(enemy);
+                
+                if (myMinionIndex < aliveMinions.length - 1) {
+                    const backEnemy = aliveMinions[myMinionIndex + 1];
+                    const myArrayIndex = gameState.enemies.indexOf(enemy);
+                    const backArrayIndex = gameState.enemies.indexOf(backEnemy);
+                    
+                    // gameState 배열 교환
+                    gameState.enemies[myArrayIndex] = backEnemy;
+                    gameState.enemies[backArrayIndex] = enemy;
+                    
+                    // PixiJS 슬롯 교환
+                    EnemyRenderer.swapSlots(enemy, backEnemy, 0.25);
+                }
+                
+                enemy.battlePosition = (enemy.battlePosition || 0) + 1;
+                updateSelectedEnemy();
+                onRetreatComplete();
+                return;
+            }
+            
             const container = document.getElementById('enemies-container');
             const enemyEls = container ? Array.from(container.querySelectorAll('.enemy-unit')) : [];
             
@@ -4316,6 +4389,30 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
         
         // 전진 완료 처리 (슬롯 기반 - DOM 재배치 없음!)
         const executeAdvanceWithGSAP = () => {
+            // ✅ PixiJS EnemyRenderer 사용 시
+            if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                const aliveMinions = gameState.enemies.filter(e => e.hp > 0 && !e.isBoss && !e.isElite);
+                const myMinionIndex = aliveMinions.indexOf(enemy);
+                
+                if (myMinionIndex > 0) {
+                    const frontEnemy = aliveMinions[myMinionIndex - 1];
+                    const myArrayIndex = gameState.enemies.indexOf(enemy);
+                    const frontArrayIndex = gameState.enemies.indexOf(frontEnemy);
+                    
+                    // gameState 배열 교환
+                    gameState.enemies[myArrayIndex] = frontEnemy;
+                    gameState.enemies[frontArrayIndex] = enemy;
+                    
+                    // PixiJS 슬롯 교환
+                    EnemyRenderer.swapSlots(enemy, frontEnemy, 0.25);
+                }
+                
+                enemy.battlePosition = Math.max(0, (enemy.battlePosition || 0) - 1);
+                updateSelectedEnemy();
+                onAdvanceComplete();
+                return;
+            }
+            
             const container = document.getElementById('enemies-container');
             const enemyEls = container ? Array.from(container.querySelectorAll('.enemy-unit')) : [];
             

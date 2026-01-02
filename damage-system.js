@@ -255,6 +255,12 @@ function dealDamage(target, amount, card = null) {
                     } else {
                         console.log('[DealDamage] ⚠️ Background3D 없음 또는 enemyHit 없음');
                     }
+                    
+                    // 🎮 PixiJS 적 렌더러 피격 애니메이션
+                    if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                        EnemyRenderer.playHitAnimation(target);
+                        EnemyRenderer.updateEnemyHP(target);
+                    }
                 } catch (e) {
                     console.error('[DealDamage] ❌ enemyHit 에러:', e);
                 }
