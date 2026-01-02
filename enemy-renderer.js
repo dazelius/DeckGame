@@ -275,6 +275,13 @@ const EnemyRenderer = {
         
         console.log(`[EnemyRenderer] 위치: x=${x}, y=${y}, scale=${scale}`);
         
+        // ✅ 디버그: 빨간 박스로 위치 확인
+        const debugBox = new PIXI.Graphics();
+        debugBox.rect(-30, -100, 60, 100);
+        debugBox.fill({ color: 0xff0000, alpha: 0.5 });
+        enemyContainer.addChild(debugBox);
+        console.log(`[EnemyRenderer] 디버그 박스 추가됨`);
+        
         // ✅ 보스/엘리트 특별 효과
         if (enemy.isBoss) {
             enemyContainer.filters = enemyContainer.filters || [];
@@ -805,21 +812,31 @@ const EnemyRenderer = {
     // 애니메이션
     // ==========================================
     playEntranceAnimation(container) {
+        // ✅ GSAP PixiPlugin 없이도 동작하도록 수동 애니메이션
         container.alpha = 0;
-        container.scale.set(0.5);
+        const targetScale = container.scale.x;  // 이미 설정된 스케일 저장
+        container.scale.set(targetScale * 0.5);
         
-        gsap.to(container, {
-            alpha: 1,
-            duration: 0.3,
-            ease: 'power2.out'
-        });
+        // 직접 틱 애니메이션
+        let progress = 0;
+        const animate = () => {
+            progress += 0.05;
+            if (progress >= 1) {
+                container.alpha = 1;
+                container.scale.set(targetScale);
+                return;
+            }
+            
+            // 이징 적용
+            const eased = 1 - Math.pow(1 - progress, 3);
+            container.alpha = eased;
+            container.scale.set(targetScale * (0.5 + 0.5 * eased));
+            
+            requestAnimationFrame(animate);
+        };
+        requestAnimationFrame(animate);
         
-        gsap.to(container.scale, {
-            x: this.getSlotScale(0),
-            y: this.getSlotScale(0),
-            duration: 0.4,
-            ease: 'back.out(1.5)'
-        });
+        console.log(`[EnemyRenderer] 등장 애니메이션 시작, targetScale: ${targetScale}`);
     },
     
     playDeathAnimation(enemy) {
