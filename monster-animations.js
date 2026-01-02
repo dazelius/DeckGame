@@ -114,6 +114,69 @@ MonsterAnimations.register('arrow_shot', (context) => {
     }, 400);
 });
 
+// 독화살 (독/출혈 효과)
+MonsterAnimations.register('arrow_poison', (context) => {
+    const { enemyEl, targetEl, damage, onHit, onComplete } = context;
+    
+    if (!enemyEl || !targetEl) {
+        if (onHit) onHit();
+        if (onComplete) onComplete();
+        return;
+    }
+    
+    const spriteImg = enemyEl.querySelector('.enemy-sprite-img');
+    
+    // 독 기운 이펙트 (초록색 글로우)
+    if (spriteImg && typeof gsap !== 'undefined') {
+        gsap.to(spriteImg, {
+            filter: 'brightness(1.2) hue-rotate(-40deg) drop-shadow(0 0 15px #22c55e)',
+            duration: 0.15,
+            yoyo: true,
+            repeat: 1
+        });
+    }
+    
+    // 활 쏘기 애니메이션
+    enemyEl.classList.add('enemy-shooting');
+    
+    setTimeout(() => {
+        const enemyRect = enemyEl.getBoundingClientRect();
+        const targetRect = targetEl.getBoundingClientRect();
+        
+        const fromX = enemyRect.left + enemyRect.width / 2;
+        const fromY = enemyRect.top + enemyRect.height * 0.4;
+        const toX = targetRect.left + targetRect.width / 2;
+        const toY = targetRect.top + targetRect.height / 2;
+        
+        // 독화살 발사 (초록색)
+        if (typeof VFX !== 'undefined' && VFX.arrow) {
+            VFX.arrow(fromX, fromY, toX, toY, {
+                speed: 45,
+                color: '#22c55e', // 독 초록색
+                onHit: () => {
+                    if (typeof EffectSystem !== 'undefined') {
+                        EffectSystem.screenShake(12, 300);
+                        EffectSystem.showDamageVignette();
+                    }
+                    // 독 스플래시 이펙트
+                    if (typeof VFX !== 'undefined') {
+                        VFX.impact(toX, toY, { color: '#22c55e', size: 60 });
+                        VFX.sparks(toX, toY, { color: '#4ade80', count: 15, speed: 100 });
+                    }
+                    if (onHit) onHit();
+                }
+            });
+        } else {
+            if (onHit) setTimeout(onHit, 100);
+        }
+    }, 180);
+    
+    setTimeout(() => {
+        enemyEl.classList.remove('enemy-shooting');
+        if (onComplete) onComplete();
+    }, 450);
+});
+
 // 급소 조준 (강화된 화살 - 스피디)
 MonsterAnimations.register('arrow_precision', (context) => {
     const { enemyEl, targetEl, damage, onHit, onComplete } = context;
@@ -162,8 +225,10 @@ MonsterAnimations.register('arrow_precision', (context) => {
     }, 450);
 });
 
-// 후퇴 (뒤로 대시) - GSAP 활용
-MonsterAnimations.register('retreat_back', (context) => {
+// ==========================================
+// 🚀 통합 이동 애니메이션 (발사체처럼 슝~)
+// ==========================================
+function executeDashAnimation(context, direction = 'right') {
     const { enemyEl, enemy, onComplete } = context;
     
     if (!enemyEl) {
@@ -171,135 +236,256 @@ MonsterAnimations.register('retreat_back', (context) => {
         return;
     }
     
-    // 후퇴 사운드
+    // 방향에 따른 설정
+    const isRight = direction === 'right'; // 후퇴 = 오른쪽, 전진 = 왼쪽
+    const dirMultiplier = isRight ? 1 : -1;
+    
+    // 사운드
     if (typeof SoundSystem !== 'undefined' && SoundSystem.play) {
         SoundSystem.play('dash');
     }
     
     const rect = enemyEl.getBoundingClientRect();
     const spriteImg = enemyEl.querySelector('.enemy-sprite-img');
-    const spriteContainer = enemyEl.querySelector('.enemy-sprite-container');
     
-    // ✨ GSAP 트레일 효과
-    const createGSAPTrail = (delay, startOpacity) => {
-        setTimeout(() => {
-            if (!spriteImg || !spriteContainer) return;
-            const trail = spriteImg.cloneNode(true);
-            trail.className = 'dash-trail';
-            trail.style.cssText = `
-                position: absolute;
-                top: 0; left: 0;
-                width: 100%; height: auto;
-                opacity: ${startOpacity};
-                filter: brightness(1.5) saturate(0.3) blur(2px);
-                pointer-events: none;
-                z-index: 0;
-            `;
-            spriteContainer.appendChild(trail);
-            
-            if (typeof gsap !== 'undefined') {
-                gsap.to(trail, {
-                    opacity: 0,
-                    x: -40,
-                    scale: 0.9,
-                    duration: 0.2,
-                    ease: 'power1.out',
-                    onComplete: () => trail.remove()
-                });
-            } else {
-                setTimeout(() => trail.remove(), 200);
-            }
-        }, delay);
-    };
-    
-    // 트레일 생성
-    createGSAPTrail(20, 0.7);
-    createGSAPTrail(50, 0.5);
-    createGSAPTrail(80, 0.35);
-    createGSAPTrail(110, 0.2);
-    
-    // 🌪️ VFX 이펙트
-    if (typeof VFX !== 'undefined') {
-        VFX.sparks(rect.left + rect.width / 2, rect.bottom - 10, { 
-            color: '#94a3b8', count: 15, speed: 100, size: 4
-        });
-        
-        for (let i = 0; i < 5; i++) {
-            setTimeout(() => {
-                const lineY = rect.top + rect.height * 0.3 + (Math.random() * rect.height * 0.4);
-                if (typeof VFX.speedLine === 'function') {
-                    VFX.speedLine(rect.left + rect.width * 0.4, lineY, { 
-                        color: '#cbd5e1', length: 60 + Math.random() * 40 
-                    });
-                }
-            }, 40 + i * 20);
-        }
+    if (typeof gsap === 'undefined') {
+        // GSAP 없으면 간단히 처리
+        if (onComplete) setTimeout(onComplete, 300);
+        return;
     }
     
-    // 🏃 GSAP 대시 애니메이션
-    if (typeof gsap !== 'undefined') {
-        const tl = gsap.timeline({
-            onComplete: () => {
-                if (onComplete) onComplete();
+    // 🎯 목표 거리 (화면 밖으로 발사!)
+    const dashDistance = 400 * dirMultiplier;
+    
+    // ==========================================
+    // 🌟 발사 준비 VFX (출발 지점)
+    // ==========================================
+    if (typeof VFX !== 'undefined') {
+        // 발사 충격파
+        VFX.sparks(rect.left + rect.width / 2, rect.bottom, { 
+            color: '#f8fafc', count: 30, speed: 200, size: 4
+        });
+        VFX.sparks(rect.left + rect.width / 2, rect.bottom - 10, { 
+            color: '#60a5fa', count: 15, speed: 150, size: 3
+        });
+    }
+    
+    // ==========================================
+    // 🚀 메인 타임라인
+    // ==========================================
+    const tl = gsap.timeline({
+        onComplete: () => {
+            // 원상복구
+            gsap.set(enemyEl, { x: 0, opacity: 1, scale: 1 });
+            gsap.set(spriteImg, { 
+                scaleX: 1, scaleY: 1, skewX: 0, 
+                filter: 'none', x: 0, rotation: 0 
+            });
+            if (onComplete) onComplete();
+        }
+    });
+    
+    // 1️⃣ 준비 동작 (반대 방향으로 웅크림)
+    tl.to(enemyEl, {
+        x: -20 * dirMultiplier,
+        scale: 0.95,
+        duration: 0.08,
+        ease: 'power2.in'
+    })
+    .to(spriteImg, {
+        scaleX: 0.85,
+        scaleY: 1.15,
+        duration: 0.08,
+        ease: 'power2.in'
+    }, '<');
+    
+    // 2️⃣ 발사! (슝~)
+    tl.to(enemyEl, {
+        x: dashDistance,
+        duration: 0.2,
+        ease: 'power4.in',
+        onUpdate: function() {
+            // 이동 중 트레일 생성
+            const progress = this.progress();
+            if (progress > 0.2 && progress < 0.9 && Math.random() > 0.5) {
+                createProjectileTrail(enemyEl, spriteImg, dirMultiplier, progress);
+            }
+        }
+    })
+    .to(spriteImg, {
+        scaleX: 1.6,  // 횡방향으로 크게 늘어남 (발사체 느낌)
+        scaleY: 0.7,
+        skewX: 25 * dirMultiplier,
+        filter: 'brightness(1.8) blur(4px) saturate(0.5)',
+        x: 30 * dirMultiplier,
+        duration: 0.2,
+        ease: 'power4.in'
+    }, '<');
+    
+    // 3️⃣ 스피드라인 VFX
+    tl.call(() => {
+        if (typeof VFX !== 'undefined' && VFX.speedLine) {
+            for (let i = 0; i < 12; i++) {
+                setTimeout(() => {
+                    const lineY = rect.top + rect.height * 0.1 + (Math.random() * rect.height * 0.8);
+                    const startX = isRight ? rect.left : rect.right;
+                    VFX.speedLine(startX, lineY, { 
+                        color: i < 4 ? '#ffffff' : '#94a3b8',
+                        length: 100 + Math.random() * 80,
+                        thickness: i < 3 ? 4 : 2,
+                        angle: isRight ? 0 : 180
+                    });
+                }, i * 10);
+            }
+        }
+    }, null, '-=0.15');
+    
+    // 4️⃣ 완전히 사라짐
+    tl.to(enemyEl, {
+        opacity: 0,
+        duration: 0.05,
+        ease: 'none'
+    });
+}
+
+// 발사체 트레일 생성 함수
+function createProjectileTrail(enemyEl, spriteImg, dirMultiplier, progress) {
+    if (!spriteImg) return;
+    
+    const spriteContainer = enemyEl.querySelector('.enemy-sprite-container');
+    if (!spriteContainer) return;
+    
+    const trail = spriteImg.cloneNode(true);
+    trail.className = 'projectile-trail';
+    
+    const offsetX = (1 - progress) * 50 * -dirMultiplier;
+    
+    trail.style.cssText = `
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: auto;
+        opacity: 0.6;
+        filter: brightness(2.5) saturate(0) blur(${2 + progress * 6}px);
+        pointer-events: none;
+        z-index: -1;
+        transform: translateX(${offsetX}px) scaleX(${1.2 + progress * 0.5}) scaleY(${0.8 - progress * 0.2});
+    `;
+    spriteContainer.appendChild(trail);
+    
+    // 빠르게 페이드아웃
+    gsap.to(trail, {
+        opacity: 0,
+        x: offsetX - 40 * dirMultiplier,
+        scaleX: 0.5,
+        duration: 0.12,
+        ease: 'power2.out',
+        onComplete: () => trail.remove()
+    });
+}
+
+// 후퇴 (뒤로 대시) - 발사체 스타일
+MonsterAnimations.register('retreat_back', (context) => {
+    executeDashAnimation(context, 'right');  // 오른쪽으로 발사
+});
+
+// 전진 (앞으로 대시) - 발사체 스타일
+MonsterAnimations.register('advance_forward', (context) => {
+    executeDashAnimation(context, 'left');  // 왼쪽으로 발사
+});
+
+// 급소 찌르기 (강력한 근접 공격)
+MonsterAnimations.register('critical_strike', (context) => {
+    const { enemyEl, targetEl, damage, onHit, onComplete } = context;
+    
+    if (!enemyEl || !targetEl) {
+        if (onHit) onHit();
+        if (onComplete) onComplete();
+        return;
+    }
+    
+    const sprite = enemyEl.querySelector('.enemy-sprite-img');
+    const targetRect = targetEl.getBoundingClientRect();
+    const enemyRect = enemyEl.getBoundingClientRect();
+    
+    if (typeof gsap !== 'undefined' && sprite) {
+        const timeline = gsap.timeline();
+        
+        // 1단계: 긴장 자세 (살짝 뒤로 + 낮게)
+        timeline.to(sprite, {
+            x: 20,
+            y: 5,
+            scaleY: 0.95,
+            scaleX: 1.05,
+            duration: 0.15,
+            ease: 'power1.in'
+        });
+        
+        // 2단계: 빠른 대시! (왼쪽으로)
+        timeline.to(sprite, {
+            x: -(enemyRect.left - targetRect.right + 30),
+            y: 0,
+            scaleX: 1.2,
+            skewX: -10,
+            filter: 'brightness(1.5)',
+            duration: 0.12,
+            ease: 'power4.in'
+        });
+        
+        // 3단계: 찌르기 (멈추면서 임팩트)
+        timeline.call(() => {
+            // 히트!
+            if (onHit) onHit();
+            
+            // 임팩트 이펙트
+            if (typeof VFX !== 'undefined') {
+                VFX.sparks(targetRect.left + targetRect.width / 2, targetRect.top + targetRect.height / 2, {
+                    color: '#ef4444',
+                    count: 20,
+                    speed: 180,
+                    size: 5
+                });
+                VFX.sparks(targetRect.left + targetRect.width / 2, targetRect.top + targetRect.height / 2, {
+                    color: '#fbbf24',
+                    count: 15,
+                    speed: 120,
+                    size: 3
+                });
+            }
+            
+            // 화면 흔들림
+            if (typeof EffectSystem !== 'undefined') {
+                EffectSystem.screenShake(12, 200);
             }
         });
         
-        // 스프라이트 대시 모션
-        tl.to(spriteImg, {
-            scaleX: 1.15,
-            skewX: 12,
-            filter: 'brightness(1.3)',
-            duration: 0.08,
-            ease: 'power1.in'
-        })
-        .to(enemyEl, {
-            x: 100,
-            duration: 0.22,
-            ease: 'power2.in'
-        }, '<')
-        .to(spriteImg, {
-            scaleX: 1,
-            skewX: 0,
-            filter: 'brightness(1)',
+        // 4단계: 히트스탑 (잠시 멈춤)
+        timeline.to(sprite, {
             duration: 0.1,
-            ease: 'power1.out'
-        }, '-=0.1')
-        .to(enemyEl, {
-            opacity: 0,
-            duration: 0.08,
-            ease: 'power1.in'
-        }, '-=0.05');
+            ease: 'none'
+        });
         
-        // 다른 적들 이동 (동시에)
-        if (typeof gameState !== 'undefined' && gameState.enemies) {
-            const currentPos = enemy.battlePosition || 0;
-            const container = document.getElementById('enemies-container');
-            
-            gameState.enemies.forEach((otherEnemy, idx) => {
-                if (otherEnemy === enemy || otherEnemy.isBoss || otherEnemy.isElite) return;
-                if (otherEnemy.hp <= 0) return;
-                
-                const otherPos = otherEnemy.battlePosition || 0;
-                if (otherPos > currentPos) {
-                    const otherEl = container?.querySelector(`[data-index="${idx}"]`);
-                    if (otherEl) {
-                        gsap.to(otherEl, {
-                            x: -25,
-                            duration: 0.2,
-                            ease: 'power1.out',
-                            delay: 0.05
-                        });
-                    }
-                }
-            });
-        }
-    } else {
-        // GSAP 없으면 CSS 애니메이션
-        enemyEl.classList.add('enemy-dashing');
-        setTimeout(() => {
-            enemyEl.classList.remove('enemy-dashing');
+        // 5단계: 복귀
+        timeline.to(sprite, {
+            x: 0,
+            y: 0,
+            scaleX: 1,
+            scaleY: 1,
+            skewX: 0,
+            filter: 'none',
+            duration: 0.2,
+            ease: 'power2.out'
+        });
+        
+        // 완료
+        timeline.call(() => {
             if (onComplete) onComplete();
-        }, 300);
+        });
+    } else {
+        // GSAP 없으면 기본 처리
+        if (onHit) onHit();
+        setTimeout(() => {
+            if (onComplete) onComplete();
+        }, 400);
     }
 });
 

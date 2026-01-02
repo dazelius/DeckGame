@@ -46,8 +46,10 @@ function startIntentSafetyCheck() {
                     intentEl.innerHTML = getIntentIcon(
                         enemy.intent, 
                         enemy.intentValue, 
-                        enemy.intentHits || 1, 
-                        enemy.intentBleed || 0
+                        enemy.intentHits || 1,
+                        enemy.intentBleed || 0,
+                        enemy.intentName,
+                        enemy.intentIcon
                     );
                 }
             }
@@ -564,12 +566,14 @@ function startBattle() {
         );
     }
     
-    // 적 의도 결정 (인텐트 숨김 상태로)
+    // 인텐트 숨김 상태로 시작 (배틀스타트 씬 동안)
     gameState.intentsHidden = true;
-    decideEnemyIntent();
     
-    // 연출 후 카드 뽑기 (지연)
+    // 연출 후 인텐트 결정 및 카드 뽑기 (지연)
     setTimeout(() => {
+        // ✅ 배틀스타트 씬이 끝난 후 인텐트 결정
+        decideEnemyIntent();
+        
         // 인텐트 공개 애니메이션
         revealEnemyIntents();
         
@@ -884,11 +888,11 @@ function createEnemyElement(enemy, index) {
     
     enemyEl.innerHTML = `
         <div class="enemy-intent-display">
-            ${enemy.intent ? getIntentIcon(enemy.intent, enemy.intentValue, enemy.intentHits || 1, enemy.intentBleed || 0) : ''}
+            ${enemy.intent ? getIntentIcon(enemy.intent, enemy.intentValue, enemy.intentHits || 1, enemy.intentBleed || 0, enemy.intentName, enemy.intentIcon) : ''}
         </div>
         <div class="enemy-sprite-container">
             <div class="enemy-shadow"></div>
-            <img src="${enemy.img}" alt="${enemy.name}" class="enemy-sprite-img" 
+            <img src="${enemy.img}" alt="" title="" class="enemy-sprite-img" 
                  style="width: ${scale.width}px; max-height: ${scale.maxHeight}px;">
         </div>
         <div class="enemy-info">
@@ -1013,8 +1017,26 @@ function hideDoppelCardTooltip() {
     if (existing) existing.remove();
 }
 
-function getIntentIcon(intent, value, hits = 1, bleed = 0) {
+function getIntentIcon(intent, value, hits = 1, bleed = 0, intentName = null, intentIcon = null) {
     if (intent === 'attack') {
+        // 상세 정보 (툴팁용)
+        let detailText = '';
+        if (hits > 1) {
+            detailText = `데미지 ${value}×${hits}`;
+        } else {
+            detailText = `데미지 ${value}`;
+        }
+        if (bleed > 0) {
+            detailText += `, 출혈 ${bleed}`;
+        }
+        
+        // 특수 공격 (이름이 있는 경우): 이름 표시 + 툴팁
+        if (intentName && intentName !== '공격') {
+            const icon = intentIcon || '⚔️';
+            return `<span class="intent-attack intent-special" data-tooltip="${detailText}">${icon} ${intentName}</span>`;
+        }
+        
+        // 일반 공격
         let attackText = '';
         if (hits > 1) {
             attackText = `공격 ${value}×${hits}`;
@@ -1049,7 +1071,9 @@ function getIntentIcon(intent, value, hits = 1, bleed = 0) {
     } else if (intent === 'taunt') {
         return `<span class="intent-debuff">도발</span>`;
     } else if (intent === 'retreat') {
-        return `<span class="intent-move">💨 이동</span>`;
+        return `<span class="intent-move">💨 후퇴</span>`;
+    } else if (intent === 'advance') {
+        return `<span class="intent-move">💨 전진</span>`;
     } else if (intent === 'prepare') {
         return `<span class="intent-danger">처형 준비</span>`;
     } else if (intent === 'selfHarm') {
@@ -1142,7 +1166,7 @@ function updateEnemiesUI() {
                 if (enemy.isDoppelganger && enemy.plannedCards && enemy.plannedCards.length > 0) {
                     intentDisplay.innerHTML = getDoppelgangerIntentDisplay(enemy.plannedCards);
                 } else {
-                    intentDisplay.innerHTML = enemy.intent ? getIntentIcon(enemy.intent, enemy.intentValue, enemy.intentHits || 1, enemy.intentBleed || 0) : '';
+                    intentDisplay.innerHTML = enemy.intent ? getIntentIcon(enemy.intent, enemy.intentValue, enemy.intentHits || 1, enemy.intentBleed || 0, enemy.intentName, enemy.intentIcon) : '';
                 }
             }
             
@@ -3735,134 +3759,281 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
         updateUI();
     } else if (intent === 'retreat') {
         // ==========================================
-        // 후퇴: 가장 뒤로 이동 (GSAP 애니메이션)
+        // 후퇴: 1칸 뒤로 이동 (GSAP 애니메이션)
         // ==========================================
         
-        // 현재 가장 높은 battlePosition 계산
-        const maxPosition = Math.max(...gameState.enemies.map(e => e.battlePosition || 0));
-        const currentPosition = enemy.battlePosition || 0;
+        addLog(`💨 ${name}: 후퇴! 뒤로 이동!`, 'system');
         
-        // 이미 가장 뒤에 있으면 이동 안함
-        if (currentPosition < maxPosition || gameState.enemies.length > 1) {
-            addLog(`💨 ${name}: 후퇴! 뒤로 이동!`, 'system');
+        // 후퇴 완료 처리
+        const executeRetreatWithGSAP = () => {
+            // 살아있는 미니언들만 추출 (보스/엘리트 제외)
+            const aliveMinions = gameState.enemies.filter(e => 
+                e.hp > 0 && !e.isBoss && !e.isElite
+            );
             
-            // 후퇴 완료 처리 (GSAP 사용)
-            const executeRetreatWithGSAP = () => {
-                // battlePosition 업데이트
-                enemy.battlePosition = maxPosition + 1;
+            // 미니언들 중 내 인덱스 찾기
+            const myMinionIndex = aliveMinions.indexOf(enemy);
+            
+            // 1칸 뒤로 이동 (뒤에 적이 있으면 위치 교환)
+            if (myMinionIndex < aliveMinions.length - 1) {
+                const backEnemy = aliveMinions[myMinionIndex + 1];
                 
-                // 현재 모든 적의 위치 계산
-                const container = document.getElementById('enemies-container');
-                if (!container) {
-                    renderEnemies(false);
-                    updateSelectedEnemy();
-                    return;
-                }
+                // 전체 배열에서의 인덱스
+                const myArrayIndex = gameState.enemies.indexOf(enemy);
+                const backArrayIndex = gameState.enemies.indexOf(backEnemy);
                 
-                // 미니언들만 추출하여 새 순서 계산
-                const minions = gameState.enemies.filter(e => !e.isBoss && !e.isElite && e.hp > 0);
-                const frontMinions = minions.filter(m => (m.battlePosition || 0) === 0);
-                const rearMinions = minions.filter(m => (m.battlePosition || 0) > 0)
-                    .sort((a, b) => (a.battlePosition || 0) - (b.battlePosition || 0));
+                // 위치 교환
+                gameState.enemies[myArrayIndex] = backEnemy;
+                gameState.enemies[backArrayIndex] = enemy;
                 
-                // 새로운 왼쪽/오른쪽 배치 계산
-                const leftMinions = [];
-                const rightMinions = [];
-                frontMinions.forEach((m, i) => {
-                    if (i % 2 === 0) leftMinions.push(m);
-                    else rightMinions.push(m);
-                });
-                rearMinions.forEach(m => rightMinions.push(m));
-                
-                // GSAP으로 부드럽게 위치 이동
-                if (typeof gsap !== 'undefined') {
-                    const timeline = gsap.timeline();
-                    
-                    // 후퇴하는 적: 오른쪽으로 이동
-                    if (enemyEl) {
-                        timeline.to(enemyEl, {
-                            x: 80,
-                            opacity: 0.3,
-                            scale: 0.95,
-                            duration: 0.25,
-                            ease: 'power2.in'
-                        });
-                    }
-                    
-                    // 다른 미니언들: 앞으로 당기기
-                    gameState.enemies.forEach((otherEnemy, idx) => {
-                        if (otherEnemy === enemy || otherEnemy.isBoss || otherEnemy.isElite) return;
-                        if (otherEnemy.hp <= 0) return;
+                console.log(`[후퇴] ${enemy.name}(${myMinionIndex}) ↔ ${backEnemy.name}(${myMinionIndex + 1}) 위치 교환`);
+            }
+            
+            // battlePosition도 업데이트 (1 증가)
+            enemy.battlePosition = (enemy.battlePosition || 0) + 1;
+            
+            // GSAP으로 부드럽게 위치 이동
+            if (typeof gsap !== 'undefined') {
+                // 모든 적 빠르게 페이드아웃
+                gsap.to('.enemy-unit', {
+                    opacity: 0,
+                    scale: 0.95,
+                    duration: 0.08,
+                    onComplete: () => {
+                        // DOM 갱신
+                        renderEnemies(false);
+                        updateSelectedEnemy();
                         
-                        const otherEl = container.querySelector(`[data-index="${idx}"]`);
-                        if (otherEl && (otherEnemy.battlePosition || 0) < (enemy.battlePosition || 999)) {
-                            timeline.to(otherEl, {
-                                x: -30,
-                                duration: 0.2,
-                                ease: 'power1.out'
-                            }, '<0.05');
-                        }
-                    });
-                    
-                    // 페이드아웃 완료 후 DOM 갱신
-                    timeline.call(() => {
-                        // 모든 적 페이드아웃
-                        gsap.to('.enemy-unit', {
-                            opacity: 0,
-                            duration: 0.1,
-                            onComplete: () => {
-                                // DOM 갱신
-                                renderEnemies(false);
-                                updateSelectedEnemy();
-                                
-                                // 새 요소들 페이드인
-                                gsap.fromTo('.enemy-unit', 
-                                    { opacity: 0, x: 20 },
+                        // 🎬 다이나믹 페이드인
+                        const newEnemyEls = document.querySelectorAll('.enemy-unit');
+                        newEnemyEls.forEach((el, i) => {
+                            const elEnemy = gameState.enemies[parseInt(el.dataset.index)];
+                            const isRetreated = elEnemy === enemy;
+                            
+                            // 후퇴한 적: 오른쪽에서 슬라이드인 + 착지
+                            if (isRetreated) {
+                                gsap.fromTo(el, 
+                                    { opacity: 0, x: 60, scale: 0.9 },
                                     { 
                                         opacity: 1, 
                                         x: 0, 
+                                        scale: 1,
+                                        duration: 0.3,
+                                        delay: 0.05,
+                                        ease: 'back.out(1.2)',
+                                        onComplete: () => {
+                                            // 착지 이펙트
+                                            const sprite = el.querySelector('.enemy-sprite-img');
+                                            if (sprite) {
+                                                gsap.to(sprite, {
+                                                    scaleY: 0.92,
+                                                    scaleX: 1.08,
+                                                    duration: 0.08,
+                                                    yoyo: true,
+                                                    repeat: 1,
+                                                    ease: 'power1.inOut'
+                                                });
+                                            }
+                                            // 먼지 이펙트
+                                            if (typeof VFX !== 'undefined') {
+                                                const rect = el.getBoundingClientRect();
+                                                VFX.sparks(rect.left + rect.width / 2, rect.bottom, {
+                                                    color: '#94a3b8', count: 8, speed: 60, size: 3
+                                                });
+                                            }
+                                        }
+                                    }
+                                );
+                            } else {
+                                // 다른 적: 왼쪽에서 슬라이드인
+                                gsap.fromTo(el, 
+                                    { opacity: 0, x: -30, scale: 0.95 },
+                                    { 
+                                        opacity: 1, 
+                                        x: 0, 
+                                        scale: 1,
                                         duration: 0.25, 
-                                        stagger: 0.03,
+                                        delay: i * 0.04,
                                         ease: 'power2.out'
                                     }
                                 );
                             }
                         });
-                    }, null, '+=0.05');
-                } else {
-                    // GSAP 없으면 기본 방식
-                    renderEnemies(false);
-                    updateSelectedEnemy();
-                }
-            };
-            
-            if (enemy.intentAnimationKey && typeof MonsterAnimations !== 'undefined') {
-                MonsterAnimations.execute(enemy.intentAnimationKey, {
-                    enemyEl,
-                    enemy,
+                    }
+                });
+            } else {
+                // GSAP 없으면 기본 방식
+                renderEnemies(false);
+                updateSelectedEnemy();
+            }
+        };
+        
+        // 애니메이션 실행
+        if (enemy.intentAnimationKey && typeof MonsterAnimations !== 'undefined') {
+            MonsterAnimations.execute(enemy.intentAnimationKey, {
+                enemyEl,
+                enemy,
+                onComplete: executeRetreatWithGSAP
+            });
+        } else {
+            // 기본 후퇴 애니메이션
+            if (typeof gsap !== 'undefined' && enemyEl) {
+                gsap.to(enemyEl, {
+                    x: 100,
+                    opacity: 0,
+                    duration: 0.35,
+                    ease: 'power2.in',
                     onComplete: executeRetreatWithGSAP
                 });
             } else {
-                // 기본 후퇴 애니메이션 (GSAP)
-                if (typeof gsap !== 'undefined' && enemyEl) {
-                    gsap.to(enemyEl, {
-                        x: 100,
-                        opacity: 0,
-                        duration: 0.35,
-                        ease: 'power2.in',
-                        onComplete: executeRetreatWithGSAP
-                    });
-                } else if (enemyEl) {
-                    enemyEl.style.transition = 'transform 0.35s ease-out, opacity 0.2s';
-                    enemyEl.style.transform = 'translateX(100px)';
-                    enemyEl.style.opacity = '0';
-                    setTimeout(executeRetreatWithGSAP, 350);
-                } else {
-                    executeRetreatWithGSAP();
-                }
+                executeRetreatWithGSAP();
             }
+        }
+        
+        updateUI();
+    } else if (intent === 'advance') {
+        // ==========================================
+        // 전진: 1칸 앞으로 이동 (GSAP 애니메이션)
+        // ==========================================
+        
+        addLog(`💨 ${name}: 전진! 앞으로 이동!`, 'system');
+        
+        // 전진 완료 처리 (GSAP 사용)
+        const executeAdvanceWithGSAP = () => {
+            // 살아있는 미니언들만 추출 (보스/엘리트 제외)
+            const aliveMinions = gameState.enemies.filter(e => 
+                e.hp > 0 && !e.isBoss && !e.isElite
+            );
+            
+            // 미니언들 중 내 인덱스 찾기
+            const myMinionIndex = aliveMinions.indexOf(enemy);
+            
+            // 1칸 앞으로 이동 (앞에 적이 있으면 위치 교환)
+            if (myMinionIndex > 0) {
+                const frontEnemy = aliveMinions[myMinionIndex - 1];
+                
+                // 전체 배열에서의 인덱스
+                const myArrayIndex = gameState.enemies.indexOf(enemy);
+                const frontArrayIndex = gameState.enemies.indexOf(frontEnemy);
+                
+                // 위치 교환
+                gameState.enemies[myArrayIndex] = frontEnemy;
+                gameState.enemies[frontArrayIndex] = enemy;
+                
+                console.log(`[전진] ${enemy.name}(${myMinionIndex}) ↔ ${frontEnemy.name}(${myMinionIndex - 1}) 위치 교환`);
+            }
+            
+            // battlePosition도 업데이트 (1 감소, 최소 0)
+            enemy.battlePosition = Math.max(0, (enemy.battlePosition || 0) - 1);
+            
+            // 현재 모든 적의 위치 계산
+            const container = document.getElementById('enemies-container');
+            if (!container) {
+                renderEnemies(false);
+                updateSelectedEnemy();
+                return;
+            }
+            
+            // GSAP으로 부드럽게 위치 이동
+            if (typeof gsap !== 'undefined') {
+                // 모든 적 빠르게 페이드아웃
+                gsap.to('.enemy-unit', {
+                    opacity: 0,
+                    scale: 0.95,
+                    duration: 0.08,
+                    onComplete: () => {
+                        // DOM 갱신
+                        renderEnemies(false);
+                        updateSelectedEnemy();
+                        
+                        // 🎬 다이나믹 페이드인
+                        const newEnemyEls = document.querySelectorAll('.enemy-unit');
+                        newEnemyEls.forEach((el, i) => {
+                            const elEnemy = gameState.enemies[parseInt(el.dataset.index)];
+                            const isAdvanced = elEnemy === enemy;
+                            
+                            // 전진한 적: 왼쪽에서 슬라이드인 + 착지
+                            if (isAdvanced) {
+                                gsap.fromTo(el, 
+                                    { opacity: 0, x: -60, scale: 0.9 },
+                                    { 
+                                        opacity: 1, 
+                                        x: 0, 
+                                        scale: 1,
+                                        duration: 0.3,
+                                        delay: 0.05,
+                                        ease: 'back.out(1.2)',
+                                        onComplete: () => {
+                                            // 착지 이펙트
+                                            const sprite = el.querySelector('.enemy-sprite-img');
+                                            if (sprite && typeof gsap !== 'undefined') {
+                                                gsap.to(sprite, {
+                                                    scaleY: 0.92,
+                                                    scaleX: 1.08,
+                                                    duration: 0.08,
+                                                    yoyo: true,
+                                                    repeat: 1,
+                                                    ease: 'power1.inOut'
+                                                });
+                                            }
+                                            // 먼지 이펙트
+                                            if (typeof VFX !== 'undefined') {
+                                                const rect = el.getBoundingClientRect();
+                                                VFX.sparks(rect.left + rect.width / 2, rect.bottom, {
+                                                    color: '#94a3b8', count: 8, speed: 60, size: 3
+                                                });
+                                            }
+                                        }
+                                    }
+                                );
+                            } else {
+                                // 다른 적: 오른쪽에서 슬라이드인
+                                gsap.fromTo(el, 
+                                    { opacity: 0, x: 30, scale: 0.95 },
+                                    { 
+                                        opacity: 1, 
+                                        x: 0, 
+                                        scale: 1,
+                                        duration: 0.25, 
+                                        delay: i * 0.04,
+                                        ease: 'power2.out'
+                                    }
+                                );
+                            }
+                        });
+                    }
+                });
+            } else {
+                // GSAP 없으면 기본 방식
+                renderEnemies(false);
+                updateSelectedEnemy();
+            }
+        };
+        
+        if (enemy.intentAnimationKey && typeof MonsterAnimations !== 'undefined') {
+            MonsterAnimations.execute(enemy.intentAnimationKey, {
+                enemyEl,
+                enemy,
+                onComplete: executeAdvanceWithGSAP
+            });
         } else {
-            addLog(`${name}: 이미 최후방!`, 'system');
+            // 기본 전진 애니메이션 (GSAP)
+            if (typeof gsap !== 'undefined' && enemyEl) {
+                gsap.to(enemyEl, {
+                    x: -100,
+                    opacity: 0,
+                    duration: 0.35,
+                    ease: 'power2.in',
+                    onComplete: executeAdvanceWithGSAP
+                });
+            } else if (enemyEl) {
+                enemyEl.style.transition = 'transform 0.35s ease-out, opacity 0.2s';
+                enemyEl.style.transform = 'translateX(-100px)';
+                enemyEl.style.opacity = '0';
+                setTimeout(executeAdvanceWithGSAP, 350);
+            } else {
+                executeAdvanceWithGSAP();
+            }
         }
         
         updateUI();

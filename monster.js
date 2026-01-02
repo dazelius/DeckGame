@@ -4,64 +4,124 @@
 
 // 일반 몬스터 데이터베이스
 const enemyDatabase = [
-    // 고블린 도적 (패턴 기반 - 도발 후 강화 공격)
+    // 고블린 도적 (조건부 인텐트 - 위치 기반 전략)
     {
         id: 'goblinRogue',
         name: "고블린 도적",
         maxHp: 35,
         img: 'goblin.png',
-        // 패턴 시스템: 공격 → 도발 → 강화 공격 (반복)
-        usePattern: true,
-        pattern: [
-            { type: 'attack', value: 5, icon: '🗡️' },
-            { type: 'taunt', value: 2, icon: '😤', name: '도발' }, // 2턴간 방어도 생성량 감소
+        usePattern: false,
+        intents: [
             { 
                 type: 'attack', 
-                value: 8,
+                value: 5, 
+                icon: '🗡️',
+                weight: 40 // 40% 확률
+            },
+            { 
+                type: 'attack', 
+                value: 7, 
+                icon: '⚔️',
+                name: '베기',
+                weight: 30 // 30% 확률
+            },
+            { 
+                type: 'advance', 
+                value: 0, 
+                icon: '💨', 
+                name: '전진',
+                animationKey: 'advance_forward',
+                weight: 50, // 50% 확률 (조건 만족 시)
+                // ✅ 조건: 1번 자리가 아닐 때만 (앞으로 갈 자리가 있을 때)
+                condition: (enemy, gameState) => {
+                    // 살아있는 미니언들 가져오기
+                    const aliveMinions = gameState.enemies.filter(e => 
+                        e.hp > 0 && !e.isBoss && !e.isElite
+                    );
+                    if (aliveMinions.length <= 1) return false; // 혼자면 전진 불필요
+                    // 미니언들 중 내 위치 확인
+                    const myIndex = aliveMinions.indexOf(enemy);
+                    console.log(`[도적 전진 체크] 내 위치: ${myIndex}, 미니언 수: ${aliveMinions.length}`);
+                    // 0번이 아니면 전진 가능 (앞에 자리가 있음)
+                    return myIndex > 0;
+                }
+            },
+            { 
+                type: 'attack', 
+                value: 12,
                 icon: '💀',
                 name: '급소 찌르기',
-                // 브레이크 가능 (물리 3번)
-                breakRecipe: ['physical', 'physical', 'physical']
+                animationKey: 'critical_strike',
+                breakRecipe: ['physical', 'physical', 'physical'],
+                cooldown: 3, // 🔥 사용 후 3턴 쿨타임
+                weight: 50, // 50% 확률 (조건 만족 시)
+                // ✅ 조건: 1번 자리(맨 앞)에 있을 때만 사용 가능
+                condition: (enemy, gameState) => {
+                    // 살아있는 미니언들 가져오기
+                    const aliveMinions = gameState.enemies.filter(e => 
+                        e.hp > 0 && !e.isBoss && !e.isElite
+                    );
+                    // 혼자면 항상 1번 자리
+                    if (aliveMinions.length <= 1) return true;
+                    // 미니언들 중 내 위치 확인
+                    const myIndex = aliveMinions.indexOf(enemy);
+                    console.log(`[도적 급소 체크] 내 위치: ${myIndex}`);
+                    // 0번 인덱스(맨 앞)일 때만 급소 찌르기 가능
+                    return myIndex === 0;
+                }
             }
-        ],
-        intents: [
-            { type: 'attack', value: 5, icon: '🗡️' }
         ]
     },
-    // 고블린 궁수 (패턴 기반 - 뒤로 이동 후 강화 공격)
+    // 고블린 궁수 (조건부 인텐트)
     {
         id: 'goblinArcher',
         name: "고블린 궁수",
         maxHp: 28,
         img: 'goblinarcher.png',
-        attackType: 'ranged', // 🏹 원거리 공격 (기본 화살)
-        // 패턴 시스템: 뒤로 이동 → 강화 공격 (반복)
-        usePattern: true,
-        pattern: [
-            { 
-                type: 'retreat', 
-                value: 0, 
-                icon: '💨', 
-                name: '이동',
-                animationKey: 'retreat_back' // 🎬 뒤로 도망가는 애니메이션
-            },
-            { 
-                type: 'attack', 
-                value: 9,
-                icon: '🎯',
-                name: '급소 조준',
-                animationKey: 'arrow_precision', // 🎬 정밀 사격 애니메이션
-                // 브레이크 가능 (물리 2번)
-                breakRecipe: ['physical', 'physical']
-            }
-        ],
+        attackType: 'ranged', // 🏹 원거리 공격
+        usePattern: false,
         intents: [
             { 
                 type: 'attack', 
                 value: 3, 
                 hits: 2, 
                 icon: '🏹',
-                animationKey: 'arrow_shot' // 🎬 일반 화살 애니메이션
+                name: '연사',
+                animationKey: 'arrow_shot',
+                weight: 40 // 40% 확률
+            },
+            { 
+                type: 'attack', 
+                value: 8,
+                bleed: 2,
+                icon: '☠️',
+                name: '독화살',
+                animationKey: 'arrow_poison',
+                breakRecipe: ['physical', 'physical'],
+                cooldown: 2, // 🔥 사용 후 2턴 쿨타임
+                weight: 35 // 35% 확률
+            },
+            { 
+                type: 'retreat', 
+                value: 0, 
+                icon: '💨', 
+                name: '후퇴',
+                animationKey: 'retreat_back',
+                weight: 40, // 40% 확률 (조건 만족 시)
+                // ✅ 조건: 맨 뒤가 아니면 후퇴 가능 (궁수는 뒤에서 쏘고 싶어함)
+                condition: (enemy, gameState) => {
+                    // 살아있는 미니언들만 가져오기
+                    const aliveMinions = gameState.enemies.filter(e => 
+                        e.hp > 0 && !e.isBoss && !e.isElite
+                    );
+                    // 혼자면 후퇴 불필요
+                    if (aliveMinions.length <= 1) return false;
+                    // 미니언들 중 내 위치 확인
+                    const myIndex = aliveMinions.indexOf(enemy);
+                    console.log(`[궁수 후퇴 체크] 내 위치: ${myIndex}, 미니언 수: ${aliveMinions.length}, 맨뒤: ${aliveMinions.length - 1}`);
+                    // 맨 뒤가 아니면 후퇴 가능
+                    return myIndex < aliveMinions.length - 1;
+                }
             }
         ]
     },

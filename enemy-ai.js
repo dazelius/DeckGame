@@ -34,6 +34,14 @@ function decideEnemyIntentForEnemy(enemy) {
             enemy.intentHits = intent.hits || 1;
             enemy.intentBleed = intent.bleed || 0;
             enemy.intentIcon = intent.icon;
+            enemy.intentName = intent.name || null; // 🏷️ 특수 공격 이름
+            enemy.intentAnimationKey = intent.animationKey || null; // 🎬 애니메이션 키
+            
+            // 🔨 브레이크 시스템: breakRecipe가 있으면 설정
+            if (typeof BreakSystem !== 'undefined') {
+                BreakSystem.onIntentSelected(enemy, intent);
+            }
+            
             enemy.currentIntentData = null; // 사용 후 초기화
             return;
         }
@@ -70,6 +78,7 @@ function decideEnemyIntentForEnemy(enemy) {
         enemy.intentHits = intent.hits || 1;
         enemy.intentBleed = intent.bleed || 0; // 출혈량
         enemy.intentIcon = intent.icon;
+        enemy.intentName = intent.name || null; // 🏷️ 특수 공격 이름
         enemy.intentAnimationKey = intent.animationKey || null; // 🎬 애니메이션 키
         
         if (intent.type === 'attack' && enemy.attackBuff && enemy.attackBuff > 0) {
@@ -154,19 +163,88 @@ function decideEnemyIntentForEnemy(enemy) {
         }
     }
     
+    // ✅ 쿨타임 감소 (턴 시작 시)
+    if (!enemy.intentCooldowns) {
+        enemy.intentCooldowns = {};
+    }
+    Object.keys(enemy.intentCooldowns).forEach(key => {
+        if (enemy.intentCooldowns[key] > 0) {
+            enemy.intentCooldowns[key]--;
+        }
+    });
+    
     if (!intent) {
         // intents 배열이 없거나 비어있는 경우 기본 공격 인텐트 생성
         if (!intents || intents.length === 0) {
             console.warn(`[EnemyAI] ${enemy.name}의 intents가 비어있습니다. 기본 공격 사용.`);
             intent = { type: 'attack', value: 5, hits: 1 };
         } else {
-            const normalIntents = intents.filter(i => i.type !== 'blind');
-            if (normalIntents.length > 0) {
-                intent = normalIntents[Math.floor(Math.random() * normalIntents.length)];
+            // ✅ 조건(condition)과 쿨타임을 만족하는 인텐트만 필터링
+            let validIntents = intents.filter(i => {
+                if (i.type === 'blind') return false; // blind는 별도 처리
+                
+                // 🚫 첫 턴에는 브레이크 가능한 필살기 사용 금지
+                if (i.breakRecipe && enemy.turnCount === 1) {
+                    console.log(`[EnemyAI] ${enemy.name}: "${i.name || '필살기'}" 첫 턴 사용 불가`);
+                    return false;
+                }
+                
+                // 🔥 쿨타임 체크: breakRecipe가 있는 인텐트는 쿨타임 적용
+                if (i.breakRecipe && i.name) {
+                    const cooldownKey = i.name;
+                    const currentCooldown = enemy.intentCooldowns[cooldownKey] || 0;
+                    if (currentCooldown > 0) {
+                        console.log(`[EnemyAI] ${enemy.name}: "${i.name}" 쿨타임 ${currentCooldown}턴 남음`);
+                        return false;
+                    }
+                }
+                
+                // 조건 함수 체크
+                if (typeof i.condition === 'function') {
+                    return i.condition(enemy, gameState);
+                }
+                return true;
+            });
+            
+            if (validIntents.length === 0) {
+                // 조건을 만족하는 인텐트가 없으면 공격 인텐트만 선택 (쿨타임 없는 것만)
+                validIntents = intents.filter(i => i.type === 'attack' && !i.breakRecipe);
+                if (validIntents.length === 0) {
+                    // 그래도 없으면 아무 공격이나
+                    validIntents = intents.filter(i => i.type === 'attack');
+                }
+            }
+            
+            if (validIntents.length > 0) {
+                // ✅ weight 기반 가중치 랜덤 선택
+                const hasWeights = validIntents.some(i => i.weight);
+                if (hasWeights) {
+                    const totalWeight = validIntents.reduce((sum, i) => sum + (i.weight || 10), 0);
+                    let random = Math.random() * totalWeight;
+                    for (const i of validIntents) {
+                        random -= (i.weight || 10);
+                        if (random <= 0) {
+                            intent = i;
+                            break;
+                        }
+                    }
+                    if (!intent) intent = validIntents[0];
+                } else {
+                    // weight 없으면 균등 랜덤
+                    intent = validIntents[Math.floor(Math.random() * validIntents.length)];
+                }
             } else {
                 intent = intents[0]; // 첫 번째 인텐트 사용 (폴백)
             }
         }
+    }
+    
+    // ✅ 선택된 인텐트가 브레이크 가능하면 쿨타임 설정
+    if (intent && intent.breakRecipe && intent.name) {
+        const cooldownKey = intent.name;
+        const cooldownTurns = intent.cooldown || 2; // 기본 쿨타임 2턴
+        enemy.intentCooldowns[cooldownKey] = cooldownTurns;
+        console.log(`[EnemyAI] ${enemy.name}: "${intent.name}" 사용! 쿨타임 ${cooldownTurns}턴 설정`);
     }
     
     // 인텐트가 여전히 없으면 기본값 설정
@@ -179,6 +257,8 @@ function decideEnemyIntentForEnemy(enemy) {
     enemy.intentValue = intent.value || 0;
     enemy.intentHits = intent.hits || 1;
     enemy.intentBleed = intent.bleed || 0;
+    enemy.intentName = intent.name || null; // 🏷️ 특수 공격 이름
+    enemy.intentIcon = intent.icon || null;
     enemy.intentAnimationKey = intent.animationKey || null; // 🎬 애니메이션 키
     
     // 광신도: selfHarm 인텐트의 attackBonus 저장
