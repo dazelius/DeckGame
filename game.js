@@ -832,10 +832,11 @@ async function renderEnemiesWithPixi(withEntrance = true) {
     // 순차적으로 적 추가 (비동기 스프라이트 로딩)
     for (let slotIndex = 0; slotIndex < aliveEnemies.length; slotIndex++) {
         const enemy = aliveEnemies[slotIndex];
-        // 스프라이트 경로 설정
-        enemy.sprite = enemy.sprite || enemy.image || getEnemySpritePath(enemy);
+        // 스프라이트 경로 설정 (img 필드 사용!)
+        enemy.sprite = enemy.sprite || enemy.img || enemy.image || getEnemySpritePath(enemy);
         enemy.id = enemy.id || `${enemy.name}_${slotIndex}`;
         
+        console.log(`[renderEnemiesWithPixi] 적 추가: ${enemy.name}, 스프라이트: ${enemy.sprite}`);
         await EnemyRenderer.addEnemy(enemy, slotIndex);
     }
     

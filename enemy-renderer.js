@@ -234,8 +234,8 @@ const EnemyRenderer = {
         enemyContainer.sortableChildren = true;
         enemyContainer.label = enemy.name;  // 디버깅용
         
-        // 스프라이트 이미지 경로
-        const spritePath = enemy.sprite || enemy.image || 'goblin.png';
+        // 스프라이트 이미지 경로 (img 필드 우선!)
+        const spritePath = enemy.sprite || enemy.img || enemy.image || 'goblin.png';
         console.log(`[EnemyRenderer] 스프라이트 경로: ${spritePath}`);
         
         // 스프라이트 생성
