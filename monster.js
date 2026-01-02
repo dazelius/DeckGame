@@ -16,14 +16,21 @@ const enemyDatabase = [
                 type: 'attack', 
                 value: 5, 
                 icon: '🗡️',
-                weight: 40 // 40% 확률
+                weight: 35 // 35% 확률
             },
             { 
                 type: 'attack', 
                 value: 7, 
                 icon: '⚔️',
                 name: '베기',
-                weight: 30 // 30% 확률
+                weight: 25 // 25% 확률
+            },
+            { 
+                type: 'defend', 
+                value: 6, 
+                icon: '🛡️',
+                name: '회피',
+                weight: 20 // 20% 확률
             },
             { 
                 type: 'advance', 
@@ -88,7 +95,7 @@ const enemyDatabase = [
                 icon: '🏹',
                 name: '연사',
                 animationKey: 'arrow_shot',
-                weight: 40 // 40% 확률
+                weight: 30 // 30% 확률 (기본 공격)
             },
             { 
                 type: 'attack', 
@@ -99,7 +106,27 @@ const enemyDatabase = [
                 animationKey: 'arrow_poison',
                 breakRecipe: ['physical', 'physical'],
                 cooldown: 2, // 🔥 사용 후 2턴 쿨타임
-                weight: 35 // 35% 확률
+                weight: 60, // 60% 확률 (조건 만족 시)
+                // ✅ 조건: 내가 배열의 맨 마지막 미니언일 때만 독화살 사용 가능
+                condition: (enemy, gameState) => {
+                    // 살아있는 미니언들만 (보스/엘리트 제외)
+                    const aliveMinions = gameState.enemies.filter(e => 
+                        e.hp > 0 && !e.isBoss && !e.isElite
+                    );
+                    
+                    // 미니언이 1명 이하면 사용 가능
+                    if (aliveMinions.length <= 1) {
+                        console.log(`[궁수 독화살] 미니언 1명 이하 → 사용 가능`);
+                        return true;
+                    }
+                    
+                    // 내가 배열의 마지막 미니언인지 확인 (객체 참조 비교)
+                    const lastMinion = aliveMinions[aliveMinions.length - 1];
+                    const isLast = lastMinion === enemy;
+                    
+                    console.log(`[궁수 독화살] 미니언 ${aliveMinions.length}명, 마지막: ${lastMinion.name}, 나: ${enemy.name}, 맨뒤: ${isLast}`);
+                    return isLast;
+                }
             },
             { 
                 type: 'retreat', 
@@ -107,20 +134,26 @@ const enemyDatabase = [
                 icon: '💨', 
                 name: '후퇴',
                 animationKey: 'retreat_back',
-                weight: 40, // 40% 확률 (조건 만족 시)
-                // ✅ 조건: 맨 뒤가 아니면 후퇴 가능 (궁수는 뒤에서 쏘고 싶어함)
+                weight: 100, // 100% 확률 (조건 만족 시 - 최우선!)
+                // ✅ 조건: 내가 배열의 맨 마지막이 아니면 후퇴 가능
                 condition: (enemy, gameState) => {
-                    // 살아있는 미니언들만 가져오기
+                    // 살아있는 미니언들만 (보스/엘리트 제외)
                     const aliveMinions = gameState.enemies.filter(e => 
                         e.hp > 0 && !e.isBoss && !e.isElite
                     );
-                    // 혼자면 후퇴 불필요
-                    if (aliveMinions.length <= 1) return false;
-                    // 미니언들 중 내 위치 확인
-                    const myIndex = aliveMinions.indexOf(enemy);
-                    console.log(`[궁수 후퇴 체크] 내 위치: ${myIndex}, 미니언 수: ${aliveMinions.length}, 맨뒤: ${aliveMinions.length - 1}`);
-                    // 맨 뒤가 아니면 후퇴 가능
-                    return myIndex < aliveMinions.length - 1;
+                    
+                    // 미니언이 1명 이하면 후퇴 불필요
+                    if (aliveMinions.length <= 1) {
+                        console.log(`[궁수 후퇴] 미니언 1명 이하 → 후퇴 불필요`);
+                        return false;
+                    }
+                    
+                    // 내가 배열의 마지막 미니언이 아닌지 확인 (객체 참조 비교)
+                    const lastMinion = aliveMinions[aliveMinions.length - 1];
+                    const canRetreat = lastMinion !== enemy;
+                    
+                    console.log(`[궁수 후퇴] 미니언 ${aliveMinions.length}명, 마지막: ${lastMinion.name}, 나: ${enemy.name}, 후퇴가능: ${canRetreat}`);
+                    return canRetreat;
                 }
             }
         ]
@@ -207,30 +240,124 @@ const enemyDatabase = [
 
         ]
     },
-    // 고블린 샤먼 (패턴 기반 - 주기적 위험 공격)
+    // 고블린 샤먼 (조건부 인텐트 - 후방 서포터)
+    // 뒤에서 아군 힐/버프/보호, 가끔 마법 공격
     {
         id: 'goblinShaman',
         name: "고블린 샤먼",
         maxHp: 32,
         img: 'goblinshaman.png',
         passives: ['healer', 'magicUser'],
-        // 패턴: 마법 화살 → 힐 → 💀번개 폭풍 (반복)
-        usePattern: true,
-        pattern: [
-            { type: 'attack', value: 7, icon: '🔮', name: '마법 화살' },
-            { type: 'healSelf', value: 8, icon: '💚', name: '치유' },
+        usePattern: false,
+        intents: [
+            // 💨 후퇴 - 맨 뒤가 아닐 때 (최우선)
+            { 
+                type: 'retreat', 
+                value: 0, 
+                icon: '💨', 
+                name: '후퇴',
+                animationKey: 'retreat_back',
+                weight: 100, // 최우선
+                condition: (enemy, gameState) => {
+                    const aliveMinions = gameState.enemies.filter(e => 
+                        e.hp > 0 && !e.isBoss && !e.isElite
+                    );
+                    if (aliveMinions.length <= 1) return false;
+                    const lastMinion = aliveMinions[aliveMinions.length - 1];
+                    const canRetreat = lastMinion !== enemy;
+                    console.log(`[샤먼 후퇴] 후퇴가능: ${canRetreat}`);
+                    return canRetreat;
+                }
+            },
+            // 💚 아군 힐 - 맨 뒤이고, 다친 아군이 있을 때 (최우선 서포트)
+            { 
+                type: 'healAlly', 
+                value: 10, 
+                icon: '💚', 
+                name: '치유 주문',
+                animationKey: 'heal_spell',
+                weight: 80, // 높은 우선순위
+                condition: (enemy, gameState) => {
+                    const aliveMinions = gameState.enemies.filter(e => 
+                        e.hp > 0 && !e.isBoss && !e.isElite
+                    );
+                    if (aliveMinions.length <= 1) return false;
+                    
+                    const lastMinion = aliveMinions[aliveMinions.length - 1];
+                    const isLast = lastMinion === enemy;
+                    if (!isLast) return false;
+                    
+                    // 다친 아군이 있는지 확인 (HP 70% 미만)
+                    const woundedAlly = gameState.enemies.find(e => 
+                        e !== enemy && e.hp > 0 && e.hp < e.maxHp * 0.7
+                    );
+                    const hasWounded = !!woundedAlly;
+                    console.log(`[샤먼 힐] 맨뒤: ${isLast}, 다친아군: ${hasWounded}`);
+                    return hasWounded;
+                }
+            },
+            // 🛡️ 아군 보호 - 맨 뒤이고, 아군이 있을 때 (방어도 부여)
+            { 
+                type: 'defendAllies', 
+                value: 5, 
+                icon: '🛡️', 
+                name: '보호 주문',
+                animationKey: 'shield_spell',
+                weight: 50,
+                condition: (enemy, gameState) => {
+                    const aliveMinions = gameState.enemies.filter(e => 
+                        e.hp > 0 && !e.isBoss && !e.isElite
+                    );
+                    if (aliveMinions.length <= 1) return false;
+                    
+                    const lastMinion = aliveMinions[aliveMinions.length - 1];
+                    const isLast = lastMinion === enemy;
+                    console.log(`[샤먼 보호] 맨뒤: ${isLast}`);
+                    return isLast;
+                }
+            },
+            // 🔥 아군 버프 - 맨 뒤이고, 아군이 있을 때
+            { 
+                type: 'buffAllies', 
+                value: 3, 
+                icon: '🔥', 
+                name: '전투 주문',
+                animationKey: 'buff_spell',
+                weight: 40,
+                condition: (enemy, gameState) => {
+                    const aliveMinions = gameState.enemies.filter(e => 
+                        e.hp > 0 && !e.isBoss && !e.isElite
+                    );
+                    if (aliveMinions.length <= 1) return false;
+                    
+                    const lastMinion = aliveMinions[aliveMinions.length - 1];
+                    const isLast = lastMinion === enemy;
+                    console.log(`[샤먼 버프] 맨뒤: ${isLast}`);
+                    return isLast;
+                }
+            },
+            // 🔮 마법 화살 - 혼자거나 서포트 할 게 없을 때
             { 
                 type: 'attack', 
-                value: 5, 
-                hits: 3, 
-                icon: '⚡', 
-                name: '번개 폭풍',
-                // 브레이크 레시피: 물리 3번
-                breakRecipe: ['physical', 'physical', 'physical']
+                value: 6, 
+                icon: '🔮', 
+                name: '마법 화살',
+                animationKey: 'magic_arrow',
+                weight: 25 // 서포트 우선, 공격은 보조
+            },
+            // 💚 자가 힐 - HP가 낮을 때
+            { 
+                type: 'healSelf', 
+                value: 8, 
+                icon: '💚', 
+                name: '치유',
+                weight: 35,
+                condition: (enemy, gameState) => {
+                    const isLowHp = enemy.hp < enemy.maxHp * 0.5;
+                    console.log(`[샤먼 자힐] HP낮음: ${isLowHp}`);
+                    return isLowHp;
+                }
             }
-        ],
-        intents: [
-            { type: 'attack', value: 7, icon: '🔮', name: '마법 화살' }
         ]
     },
     // 미믹 (보물 상자 위장 몬스터)

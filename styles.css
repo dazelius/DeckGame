@@ -637,6 +637,20 @@ img {
     animation: blockFlash 0.3s ease-out;
 }
 
+/* 적 - 방어막 획득 시 간단한 플래시 */
+.enemy-unit.block-flash .enemy-sprite-img {
+    animation: enemyBlockFlash 0.4s ease-out !important;
+}
+
+@keyframes enemyBlockFlash {
+    0% { 
+        filter: brightness(1.4);
+    }
+    100% { 
+        filter: brightness(1);
+    }
+}
+
 @keyframes blockFlash {
     0% { filter: brightness(1.4) sepia(0.5) saturate(2) hue-rotate(180deg); }
     100% { filter: brightness(1) sepia(0) saturate(1) hue-rotate(0deg); }
@@ -654,13 +668,13 @@ img {
     /* 애니메이션 제거 - 너무 산만함 */
 }
 
-/* 적 - 방어막 있음 (파란색 외곽선 - 매우 약하게!) */
+/* 적 - 방어막 있음 (파란색 외곽선 - 조금 진하게) */
 .enemy-unit.has-block .enemy-sprite-img {
     filter: 
-        drop-shadow(1px 0 0 rgba(60, 150, 255, 0.4))
-        drop-shadow(-1px 0 0 rgba(60, 150, 255, 0.4))
-        drop-shadow(0 1px 0 rgba(60, 150, 255, 0.4))
-        drop-shadow(0 -1px 0 rgba(60, 150, 255, 0.4)) !important;
+        drop-shadow(2px 0 0 rgba(60, 150, 255, 0.8))
+        drop-shadow(-2px 0 0 rgba(60, 150, 255, 0.8))
+        drop-shadow(0 2px 0 rgba(60, 150, 255, 0.8))
+        drop-shadow(0 -2px 0 rgba(60, 150, 255, 0.8)) !important;
 }
 
 /* 플레이어 - 취약 상태 (붉은 틴트) */
