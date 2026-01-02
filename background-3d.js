@@ -620,6 +620,207 @@ const Background3D = {
         console.log('[Background3D] 테마 변경:', name);
     },
     
+    // ==========================================
+    // 타격 광원 효과
+    // ==========================================
+    hitFlash(x = 0, y = 3, z = 0, color = 0xffffff, intensity = 3, duration = 150) {
+        if (!this.scene) {
+            console.log('[Background3D] hitFlash: scene 없음');
+            return;
+        }
+        
+        console.log('[Background3D] 💥 hitFlash 호출!', { x, y, z, color: color.toString(16), intensity });
+        
+        // 충격 광원 생성 - 범위 크게
+        const hitLight = new THREE.PointLight(color, intensity, 50);
+        hitLight.position.set(x, y, z);
+        this.scene.add(hitLight);
+        
+        // 페이드 아웃
+        const startTime = performance.now();
+        const fadeOut = () => {
+            const elapsed = performance.now() - startTime;
+            const progress = elapsed / duration;
+            
+            if (progress < 1) {
+                hitLight.intensity = intensity * (1 - progress);
+                requestAnimationFrame(fadeOut);
+            } else {
+                this.scene.remove(hitLight);
+                hitLight.dispose();
+            }
+        };
+        fadeOut();
+    },
+    
+    // 플레이어 타격 (적이 플레이어를 때림)
+    playerHit() {
+        console.log('[Background3D] 💔 playerHit 호출!');
+        
+        // 🔴 빨간 CSS 플래시 (중앙에서 퍼짐)
+        this.cssHitFlash('#ff2200', 100);
+        
+        // 빨간빛 3D 플래시
+        this.hitFlash(-10, 4, 5, 0xff3333, 8, 200);
+        
+        // 화면 가장자리 빨간 비네트 (플래시 후)
+        setTimeout(() => {
+            this.damageVignette();
+        }, 30);
+        
+        // 화면 흔들림 효과 (플래시 후 약간 딜레이)
+        setTimeout(() => {
+            if (this.camera) {
+                const originalY = this.camera.position.y;
+                const originalX = this.camera.position.x;
+                let shakeCount = 0;
+                const shakeInterval = setInterval(() => {
+                    this.camera.position.y = originalY + (Math.random() - 0.5) * 0.6;
+                    this.camera.position.x = originalX + (Math.random() - 0.5) * 0.4;
+                    shakeCount++;
+                    if (shakeCount > 6) {
+                        clearInterval(shakeInterval);
+                        this.camera.position.y = originalY;
+                        this.camera.position.x = originalX;
+                    }
+                }, 30);
+            }
+        }, 50);
+    },
+    
+    // 피격 시 빨간 비네트
+    damageVignette() {
+        const vignette = document.createElement('div');
+        vignette.style.cssText = `
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 9998;
+            box-shadow: inset 0 0 100px 50px rgba(255, 0, 0, 0.5);
+            opacity: 1;
+            transition: opacity 0.3s ease-out;
+        `;
+        document.body.appendChild(vignette);
+        
+        requestAnimationFrame(() => {
+            vignette.style.opacity = '0';
+        });
+        
+        setTimeout(() => vignette.remove(), 350);
+    },
+    
+    // 적 타격 (플레이어가 적을 때림)
+    enemyHit(enemyIndex = 0, isCritical = false) {
+        console.log('[Background3D] ⚔️ enemyHit 호출!', { enemyIndex, isCritical });
+        
+        // 타격 위치 계산
+        const x = 5 + (enemyIndex * 8);
+        
+        // 🔥 CSS 화면 플래시 (가장 임팩트 있음!)
+        this.cssHitFlash(isCritical ? '#ffaa00' : '#ffffff', isCritical ? 150 : 80);
+        
+        // 3D 광원 효과
+        const color = isCritical ? 0xffaa00 : 0xffffcc;
+        const intensity = isCritical ? 15 : 8;
+        this.hitFlash(x, 5, 5, color, intensity, isCritical ? 300 : 200);
+        
+        // 앰비언트 순간 증가
+        if (this.scene) {
+            const ambientBoost = new THREE.AmbientLight(0xffffff, isCritical ? 2 : 1);
+            this.scene.add(ambientBoost);
+            setTimeout(() => {
+                this.scene.remove(ambientBoost);
+                ambientBoost.dispose();
+            }, isCritical ? 100 : 50);
+        }
+        
+        // 크리티컬 시 추가 효과
+        if (isCritical) {
+            setTimeout(() => {
+                this.hitFlash(x + 2, 6, 3, 0xff6600, 5, 150);
+                this.cssHitFlash('#ff4400', 60);
+            }, 50);
+        }
+    },
+    
+    // CSS 화면 플래시 (중앙에서 퍼지는 효과)
+    cssHitFlash(color = '#ffffff', duration = 80) {
+        const flash = document.createElement('div');
+        flash.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: radial-gradient(circle, ${color} 0%, transparent 70%);
+            opacity: 0.6;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            mix-blend-mode: screen;
+        `;
+        document.body.appendChild(flash);
+        
+        // 빠르게 퍼지면서 페이드아웃
+        requestAnimationFrame(() => {
+            flash.style.transition = `all ${duration}ms ease-out`;
+            flash.style.width = '200vmax';
+            flash.style.height = '200vmax';
+            flash.style.opacity = '0';
+        });
+        
+        setTimeout(() => flash.remove(), duration + 50);
+    },
+    
+    // 스킬/마법 이펙트 광원
+    skillFlash(skillType = 'fire') {
+        const skillColors = {
+            fire: { color: 0xff4400, intensity: 5 },
+            ice: { color: 0x44aaff, intensity: 4 },
+            lightning: { color: 0xffff44, intensity: 8 },
+            heal: { color: 0x44ff44, intensity: 3 },
+            dark: { color: 0x8844ff, intensity: 4 },
+            holy: { color: 0xffffaa, intensity: 6 }
+        };
+        
+        const skill = skillColors[skillType] || skillColors.fire;
+        
+        // 중앙에서 폭발하는 광원
+        this.hitFlash(0, 5, 0, skill.color, skill.intensity, 300);
+        
+        // 잔여 광원
+        setTimeout(() => {
+            this.hitFlash(0, 4, 2, skill.color, skill.intensity * 0.5, 200);
+        }, 100);
+    },
+    
+    // 전체 화면 플래시 (강력한 공격)
+    screenFlash(color = 0xffffff, duration = 300) {
+        if (!this.scene) return;
+        
+        // 앰비언트 라이트 일시적으로 강하게
+        const flashLight = new THREE.AmbientLight(color, 2);
+        this.scene.add(flashLight);
+        
+        const startTime = performance.now();
+        const fadeOut = () => {
+            const elapsed = performance.now() - startTime;
+            const progress = elapsed / duration;
+            
+            if (progress < 1) {
+                // 빠르게 밝아졌다가 천천히 어두워짐
+                const curve = progress < 0.2 ? progress * 5 : 1 - ((progress - 0.2) / 0.8);
+                flashLight.intensity = 2 * Math.max(0, curve);
+                requestAnimationFrame(fadeOut);
+            } else {
+                this.scene.remove(flashLight);
+                flashLight.dispose();
+            }
+        };
+        fadeOut();
+    },
+    
     // 정리
     dispose() {
         if (this.animationId) {

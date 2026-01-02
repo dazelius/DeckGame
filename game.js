@@ -260,6 +260,11 @@ function loadPlayerDeck() {
 // 전투 시작
 // ==========================================
 function startBattle() {
+    // 🎬 전투 시작 트랜지션
+    if (typeof ScreenTransition !== 'undefined') {
+        ScreenTransition.battleEnter();
+    }
+    
     // 🛡️ 인텐트 안전 체크 시스템 시작
     startIntentSafetyCheck();
     
@@ -474,6 +479,13 @@ function startBattle() {
         const bossIndex = Math.floor(Math.random() * bossDatabase.length);
         const enemyData = bossDatabase[bossIndex];
         gameState.enemies.push(createEnemy(enemyData, 0));
+        
+        // 🎬 보스 등장 트랜지션
+        if (typeof ScreenTransition !== 'undefined') {
+            setTimeout(() => {
+                ScreenTransition.bossAppear(enemyData.name);
+            }, 500);
+        }
     } else {
         // 일반 전투 (분열된 슬라임 등 특수 몬스터 제외)
         const normalEnemies = enemyDatabase.filter(e => !e.isSplitForm);

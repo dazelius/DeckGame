@@ -1212,3 +1212,448 @@ document.head.appendChild(turnEffectStyles);
 
 console.log('[TurnEffects] 로드 완료');
 
+// ==========================================
+// 화면 전환 트랜지션 시스템
+// ==========================================
+const ScreenTransition = {
+    isTransitioning: false,
+    
+    // 페이드 투 블랙 (전투 시작/종료용)
+    fadeToBlack(duration = 800) {
+        return new Promise(resolve => {
+            if (this.isTransitioning) return resolve();
+            this.isTransitioning = true;
+            
+            const overlay = document.createElement('div');
+            overlay.className = 'screen-transition fade-to-black';
+            overlay.innerHTML = `<div class="transition-vignette"></div>`;
+            document.body.appendChild(overlay);
+            
+            // 페이드 인
+            requestAnimationFrame(() => {
+                overlay.classList.add('active');
+            });
+            
+            setTimeout(() => {
+                resolve();
+            }, duration);
+        });
+    },
+    
+    // 페이드 프롬 블랙 (전투 시작/종료용)
+    fadeFromBlack(duration = 800) {
+        return new Promise(resolve => {
+            const overlay = document.querySelector('.screen-transition.fade-to-black');
+            if (overlay) {
+                overlay.classList.remove('active');
+                overlay.classList.add('fade-out');
+                
+                setTimeout(() => {
+                    overlay.remove();
+                    this.isTransitioning = false;
+                    resolve();
+                }, duration);
+            } else {
+                this.isTransitioning = false;
+                resolve();
+            }
+        });
+    },
+    
+    // 전투 시작 트랜지션 (문이 열리는 효과)
+    battleEnter(callback) {
+        const overlay = document.createElement('div');
+        overlay.className = 'screen-transition battle-enter';
+        overlay.innerHTML = `
+            <div class="door-left"></div>
+            <div class="door-right"></div>
+            <div class="battle-flash"></div>
+        `;
+        document.body.appendChild(overlay);
+        
+        // 문 열림 애니메이션
+        requestAnimationFrame(() => {
+            overlay.classList.add('opening');
+        });
+        
+        setTimeout(() => {
+            if (callback) callback();
+        }, 400);
+        
+        setTimeout(() => {
+            overlay.classList.add('fade-out');
+            setTimeout(() => overlay.remove(), 500);
+        }, 1000);
+    },
+    
+    // 전투 종료 트랜지션 (승리 후 맵으로)
+    battleExit(callback) {
+        const overlay = document.createElement('div');
+        overlay.className = 'screen-transition battle-exit';
+        overlay.innerHTML = `
+            <div class="exit-wipe"></div>
+            <div class="exit-particles"></div>
+        `;
+        document.body.appendChild(overlay);
+        
+        // 파티클 생성
+        const particles = overlay.querySelector('.exit-particles');
+        for (let i = 0; i < 20; i++) {
+            const p = document.createElement('div');
+            p.className = 'exit-particle';
+            p.style.left = Math.random() * 100 + '%';
+            p.style.animationDelay = Math.random() * 0.5 + 's';
+            particles.appendChild(p);
+        }
+        
+        requestAnimationFrame(() => {
+            overlay.classList.add('active');
+        });
+        
+        setTimeout(() => {
+            if (callback) callback();
+        }, 600);
+        
+        setTimeout(() => {
+            overlay.remove();
+        }, 1200);
+    },
+    
+    // 맵 이동 트랜지션 (방 이동)
+    roomTransition(direction = 'right', callback) {
+        const overlay = document.createElement('div');
+        overlay.className = `screen-transition room-transition ${direction}`;
+        overlay.innerHTML = `
+            <div class="room-slide"></div>
+            <div class="room-dust"></div>
+        `;
+        document.body.appendChild(overlay);
+        
+        // 먼지 파티클
+        const dust = overlay.querySelector('.room-dust');
+        for (let i = 0; i < 15; i++) {
+            const d = document.createElement('div');
+            d.className = 'dust-particle';
+            d.style.top = Math.random() * 100 + '%';
+            d.style.animationDelay = Math.random() * 0.3 + 's';
+            dust.appendChild(d);
+        }
+        
+        requestAnimationFrame(() => {
+            overlay.classList.add('active');
+        });
+        
+        setTimeout(() => {
+            if (callback) callback();
+        }, 300);
+        
+        setTimeout(() => {
+            overlay.classList.add('exit');
+            setTimeout(() => overlay.remove(), 400);
+        }, 600);
+    },
+    
+    // 이벤트/상점 진입 (페이드 + 블러)
+    eventEnter(callback) {
+        const overlay = document.createElement('div');
+        overlay.className = 'screen-transition event-enter';
+        overlay.innerHTML = `<div class="event-blur"></div>`;
+        document.body.appendChild(overlay);
+        
+        requestAnimationFrame(() => {
+            overlay.classList.add('active');
+        });
+        
+        setTimeout(() => {
+            if (callback) callback();
+            setTimeout(() => {
+                overlay.classList.add('fade-out');
+                setTimeout(() => overlay.remove(), 400);
+            }, 200);
+        }, 400);
+    },
+    
+    // 보스 등장 트랜지션
+    bossAppear(bossName, callback) {
+        const overlay = document.createElement('div');
+        overlay.className = 'screen-transition boss-appear';
+        overlay.innerHTML = `
+            <div class="boss-vignette"></div>
+            <div class="boss-flash"></div>
+            <div class="boss-name-container">
+                <div class="boss-subtitle">BOSS</div>
+                <div class="boss-name">${bossName || 'UNKNOWN'}</div>
+            </div>
+            <div class="boss-lines">
+                <div class="boss-line left"></div>
+                <div class="boss-line right"></div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        
+        requestAnimationFrame(() => {
+            overlay.classList.add('active');
+        });
+        
+        setTimeout(() => {
+            if (callback) callback();
+        }, 1500);
+        
+        setTimeout(() => {
+            overlay.classList.add('fade-out');
+            setTimeout(() => overlay.remove(), 800);
+        }, 2500);
+    }
+};
+
+// 트랜지션 스타일
+const transitionStyles = document.createElement('style');
+transitionStyles.textContent = `
+    .screen-transition {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        pointer-events: none;
+    }
+    
+    /* 페이드 투 블랙 */
+    .fade-to-black {
+        background: #000;
+        opacity: 0;
+        transition: opacity 0.8s ease;
+    }
+    .fade-to-black.active {
+        opacity: 1;
+    }
+    .fade-to-black.fade-out {
+        opacity: 0;
+    }
+    .fade-to-black .transition-vignette {
+        position: absolute;
+        inset: 0;
+        box-shadow: inset 0 0 150px rgba(0,0,0,0.8);
+    }
+    
+    /* 전투 시작 - 문 열림 */
+    .battle-enter {
+        background: transparent;
+    }
+    .battle-enter .door-left,
+    .battle-enter .door-right {
+        position: absolute;
+        top: 0;
+        width: 50%;
+        height: 100%;
+        background: linear-gradient(90deg, #0a0a0a, #1a1a1a);
+        transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .battle-enter .door-left {
+        left: 0;
+        transform: translateX(0);
+        border-right: 3px solid #2a2a2a;
+    }
+    .battle-enter .door-right {
+        right: 0;
+        transform: translateX(0);
+        border-left: 3px solid #2a2a2a;
+    }
+    .battle-enter.opening .door-left {
+        transform: translateX(-100%);
+    }
+    .battle-enter.opening .door-right {
+        transform: translateX(100%);
+    }
+    .battle-enter .battle-flash {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle, rgba(255,200,100,0.3) 0%, transparent 70%);
+        opacity: 0;
+        animation: battleFlash 0.3s ease-out 0.3s forwards;
+    }
+    @keyframes battleFlash {
+        0% { opacity: 0; }
+        50% { opacity: 1; }
+        100% { opacity: 0; }
+    }
+    .battle-enter.fade-out {
+        opacity: 0;
+        transition: opacity 0.5s ease;
+    }
+    
+    /* 전투 종료 - 와이프 */
+    .battle-exit .exit-wipe {
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, #000 30%, #000 70%, transparent);
+        transition: left 0.6s ease-in-out;
+    }
+    .battle-exit.active .exit-wipe {
+        left: 100%;
+    }
+    .battle-exit .exit-particles {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+    }
+    .battle-exit .exit-particle {
+        position: absolute;
+        width: 3px;
+        height: 20px;
+        background: linear-gradient(to bottom, #c9a227, transparent);
+        animation: exitParticle 0.8s ease-out forwards;
+    }
+    @keyframes exitParticle {
+        0% { transform: translateY(100vh); opacity: 0; }
+        50% { opacity: 1; }
+        100% { transform: translateY(-20px); opacity: 0; }
+    }
+    
+    /* 방 이동 */
+    .room-transition .room-slide {
+        position: absolute;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: #0a0a0a;
+        transform: translateX(-100%);
+        transition: transform 0.4s ease-in-out;
+    }
+    .room-transition.right .room-slide { transform: translateX(-100%); }
+    .room-transition.left .room-slide { transform: translateX(100%); }
+    .room-transition.right.active .room-slide { transform: translateX(0); }
+    .room-transition.left.active .room-slide { transform: translateX(0); }
+    .room-transition.right.exit .room-slide { transform: translateX(100%); }
+    .room-transition.left.exit .room-slide { transform: translateX(-100%); }
+    
+    .room-transition .room-dust {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+    }
+    .room-transition .dust-particle {
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        background: rgba(150, 130, 100, 0.6);
+        border-radius: 50%;
+        left: -10px;
+        animation: dustFloat 0.6s ease-out forwards;
+    }
+    .room-transition.left .dust-particle {
+        left: auto;
+        right: -10px;
+        animation: dustFloatReverse 0.6s ease-out forwards;
+    }
+    @keyframes dustFloat {
+        to { transform: translateX(100vw); opacity: 0; }
+    }
+    @keyframes dustFloatReverse {
+        to { transform: translateX(-100vw); opacity: 0; }
+    }
+    
+    /* 이벤트 진입 */
+    .event-enter {
+        background: rgba(0,0,0,0);
+        backdrop-filter: blur(0px);
+        transition: all 0.4s ease;
+    }
+    .event-enter.active {
+        background: rgba(0,0,0,0.5);
+        backdrop-filter: blur(5px);
+    }
+    .event-enter.fade-out {
+        background: rgba(0,0,0,0);
+        backdrop-filter: blur(0px);
+    }
+    
+    /* 보스 등장 */
+    .boss-appear {
+        background: rgba(0,0,0,0);
+        transition: background 0.5s ease;
+    }
+    .boss-appear.active {
+        background: rgba(0,0,0,0.85);
+    }
+    .boss-appear .boss-vignette {
+        position: absolute;
+        inset: 0;
+        box-shadow: inset 0 0 200px rgba(139,0,0,0.5);
+        opacity: 0;
+        transition: opacity 0.5s ease;
+    }
+    .boss-appear.active .boss-vignette {
+        opacity: 1;
+    }
+    .boss-appear .boss-flash {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle, rgba(255,50,50,0.4) 0%, transparent 60%);
+        opacity: 0;
+        animation: bossFlash 0.5s ease-out 0.3s;
+    }
+    @keyframes bossFlash {
+        0%, 100% { opacity: 0; }
+        50% { opacity: 1; }
+    }
+    .boss-appear .boss-name-container {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.8);
+        text-align: center;
+        opacity: 0;
+        transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.3s;
+    }
+    .boss-appear.active .boss-name-container {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    .boss-appear .boss-subtitle {
+        font-family: 'Cinzel', serif;
+        font-size: 1.2rem;
+        color: #8b0000;
+        letter-spacing: 0.5em;
+        margin-bottom: 10px;
+        text-shadow: 0 0 20px rgba(139,0,0,0.8);
+    }
+    .boss-appear .boss-name {
+        font-family: 'Cinzel', serif;
+        font-size: 3rem;
+        color: #c9a227;
+        letter-spacing: 0.2em;
+        text-shadow: 
+            0 0 30px rgba(201,162,39,0.8),
+            0 2px 4px rgba(0,0,0,0.9);
+    }
+    .boss-appear .boss-lines {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 80%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .boss-appear .boss-line {
+        width: 0;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #c9a227, transparent);
+        transition: width 0.6s ease 0.5s;
+    }
+    .boss-appear.active .boss-line {
+        width: 35%;
+    }
+    .boss-appear.fade-out {
+        opacity: 0;
+        transition: opacity 0.8s ease;
+    }
+`;
+document.head.appendChild(transitionStyles);
+
+// 전역 접근
+window.ScreenTransition = ScreenTransition;
+console.log('[ScreenTransition] 트랜지션 시스템 로드 완료');
