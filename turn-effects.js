@@ -236,7 +236,7 @@ const TurnEffects = {
     // ==========================================
     // 승리 연출 - 다크소울 스타일
     // ==========================================
-    showVictory() {
+    showVictory(onComplete = null) {
         const container = document.createElement('div');
         container.className = 'ds-victory-container';
         
@@ -286,10 +286,16 @@ const TurnEffects = {
             raysEl.appendChild(ray);
         }
         
-        // 3초 후 페이드아웃
+        // 3초 후 페이드아웃, 완료 후 콜백 실행
         setTimeout(() => {
             container.classList.add('fade-out');
-            setTimeout(() => container.remove(), 1000);
+            setTimeout(() => {
+                container.remove();
+                // 연출 완료 후 콜백 실행
+                if (onComplete && typeof onComplete === 'function') {
+                    onComplete();
+                }
+            }, 1000);
         }, 2500);
     },
     

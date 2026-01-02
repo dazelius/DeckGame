@@ -5171,11 +5171,20 @@ function continueVictory() {
         CameraEffects.onBattleEnd();
     }
     
-    // 승리 연출
+    // 승리 연출 후 카드 보상 표시
     if (typeof TurnEffects !== 'undefined') {
-        TurnEffects.showVictory();
+        TurnEffects.showVictory(() => {
+            // 연출 완료 후 카드 보상 표시
+            showVictoryReward();
+        });
+    } else {
+        // TurnEffects 없으면 바로 보상 표시
+        showVictoryReward();
     }
-    
+}
+
+// 승리 보상 처리 (연출 완료 후 호출)
+function showVictoryReward() {
     // 엘리트/보스 전투시 유물 보상
     const isElite = gameState.currentBattleType === 'elite';
     const isBoss = gameState.currentBattleType === 'boss';
