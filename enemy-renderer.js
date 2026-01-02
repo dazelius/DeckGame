@@ -175,7 +175,7 @@ const EnemyRenderer = {
     getSlotY(slotIndex) {
         // ✅ 모든 적 같은 Y 위치
         const appHeight = this.app?.renderer?.height || 600;
-        return appHeight * 0.63;  // 화면 높이의 63% 위치 (10px 위로)
+        return appHeight * 0.58;  // 화면 높이의 58% 위치 (5% 위로)
     },
     
     getSlotScale(slotIndex, enemy = null) {
