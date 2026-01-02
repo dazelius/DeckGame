@@ -831,6 +831,8 @@ const EnemyRenderer = {
     
     // 브레이크 상태 설정 (스프라이트 효과)
     setEnemyBrokenState(enemy, isBroken) {
+        if (!enemy) return;
+        
         const enemyId = enemy.pixiId || enemy.id || enemy.name;
         const data = this.sprites.get(enemyId);
         
@@ -839,45 +841,51 @@ const EnemyRenderer = {
         const container = data.container;
         const sprite = data.sprite;
         
-        if (isBroken) {
-            // 브레이크 상태: 스턴 효과
-            if (sprite && sprite.tint !== undefined) {
-                sprite.tint = 0xaaaaff;  // 파란 빛
+        try {
+            if (isBroken) {
+                // 브레이크 상태: 스턴 효과
+                if (sprite && sprite.tint !== undefined) {
+                    sprite.tint = 0xaaaaff;  // 파란 빛
+                }
+                
+                // 숨쉬기 애니메이션 멈추기
+                if (container.breathingTween) {
+                    container.breathingTween.pause();
+                }
+                
+                // 스턴 흔들림 애니메이션 (rotation 속성이 있는지 확인)
+                if (typeof gsap !== 'undefined' && container.rotation !== undefined) {
+                    gsap.to(container, {
+                        rotation: 0.05,
+                        duration: 0.1,
+                        yoyo: true,
+                        repeat: -1,
+                        ease: 'sine.inOut'
+                    });
+                }
+                
+                console.log('[EnemyRenderer] 브레이크 상태 설정:', enemyId);
+            } else {
+                // 브레이크 해제
+                if (sprite && sprite.tint !== undefined) {
+                    sprite.tint = 0xffffff;  // 원래 색상
+                }
+                
+                // 흔들림 멈추기
+                if (typeof gsap !== 'undefined') {
+                    gsap.killTweensOf(container);
+                    if (container.rotation !== undefined) {
+                        container.rotation = 0;
+                    }
+                }
+                
+                // 숨쉬기 애니메이션 재개
+                if (container.breathingTween) {
+                    container.breathingTween.resume();
+                }
             }
-            
-            // 숨쉬기 애니메이션 멈추기
-            if (container.breathingTween) {
-                container.breathingTween.pause();
-            }
-            
-            // 스턴 흔들림 애니메이션
-            if (typeof gsap !== 'undefined') {
-                gsap.to(container, {
-                    rotation: 0.05,
-                    duration: 0.1,
-                    yoyo: true,
-                    repeat: -1,
-                    ease: 'sine.inOut'
-                });
-            }
-            
-            console.log('[EnemyRenderer] 브레이크 상태 설정:', enemyId);
-        } else {
-            // 브레이크 해제
-            if (sprite && sprite.tint !== undefined) {
-                sprite.tint = 0xffffff;  // 원래 색상
-            }
-            
-            // 흔들림 멈추기
-            if (typeof gsap !== 'undefined') {
-                gsap.killTweensOf(container);
-                container.rotation = 0;
-            }
-            
-            // 숨쉬기 애니메이션 재개
-            if (container.breathingTween) {
-                container.breathingTween.resume();
-            }
+        } catch (e) {
+            console.warn('[EnemyRenderer] setEnemyBrokenState error:', e);
         }
     },
     
@@ -1185,11 +1193,21 @@ const EnemyRenderer = {
     
     // ✅ 숨쉬는 애니메이션 (GSAP 기반 - DOM 버전과 동일한 느낌)
     startBreathingAnimation(container, baseScale) {
-        if (!container || typeof gsap === 'undefined') return;
+        if (!container || !container.scale || typeof gsap === 'undefined') return;
+        
+        // y 값이 없으면 종료
+        if (container.y === null || container.y === undefined) {
+            console.warn('[EnemyRenderer] startBreathingAnimation: container.y is null');
+            return;
+        }
+        
+        // 기존 애니메이션 정리
+        this.stopBreathingAnimation(container);
         
         // 각 적마다 다른 딜레이로 시작 (동기화 방지)
         const delay = Math.random() * 1.5;
         const duration = 1.0 + Math.random() * 0.3;  // 1.0~1.3초 주기
+        const baseY = container.y;  // 현재 y 위치 저장
         
         // GSAP 타임라인으로 숨쉬기 (반복, yoyo)
         const tl = gsap.timeline({ 
@@ -1207,29 +1225,35 @@ const EnemyRenderer = {
         }, 0);
         
         tl.to(container, {
-            y: container.y - 5,    // 위로 5px
+            y: baseY - 5,    // 위로 5px (저장된 baseY 사용)
             duration: duration
         }, 0);
         
         // 참조 저장 (나중에 중지용)
         container.breathingTween = tl;
         container.breathingBaseScale = baseScale;
-        container.breathingBaseY = container.y;
+        container.breathingBaseY = baseY;
     },
     
     // 숨쉬기 애니메이션 중지
     stopBreathingAnimation(container) {
-        if (container && container.breathingTween) {
+        if (!container) return;
+        
+        if (container.breathingTween) {
             container.breathingTween.kill();
             container.breathingTween = null;
-            
-            // 원래 스케일과 위치로 복원
-            if (container.breathingBaseScale) {
+        }
+        
+        // 원래 스케일과 위치로 복원 (안전하게)
+        try {
+            if (container.scale && container.breathingBaseScale) {
                 container.scale.set(container.breathingBaseScale);
             }
-            if (container.breathingBaseY !== undefined) {
+            if (container.breathingBaseY !== undefined && container.breathingBaseY !== null) {
                 container.y = container.breathingBaseY;
             }
+        } catch (e) {
+            console.warn('[EnemyRenderer] stopBreathingAnimation error:', e);
         }
     },
     
@@ -1422,102 +1446,114 @@ const EnemyRenderer = {
     },
     
     playHitAnimation(enemy, damage = 10, isCritical = false) {
+        if (!enemy) return;
+        
         const enemyId = enemy.pixiId || enemy.id || enemy.name;
         const data = this.sprites.get(enemyId);
         
-        if (!data) return;
+        if (!data || !data.container || !data.container.scale) return;
         
-        // 숨쉬기 애니메이션 일시 중지
-        if (data.container.breathingTween) {
-            data.container.breathingTween.pause();
-        }
+        const container = data.container;
+        const sprite = data.sprite;
         
-        // 🔥 데미지 기반 강도 계산
-        const intensity = Math.min(damage / 5, 8);
-        const knockbackX = 20 + intensity * 8;
-        const isHeavy = damage >= 12;
-        const baseScale = data.container.breathingBaseScale || this.getSlotScale(data.slotIndex);
-        
-        // 🎆 PixiJS 이펙트 (글로벌 좌표에서)
-        const globalPos = data.container.getGlobalPosition();
-        const effectX = globalPos.x;
-        const effectY = globalPos.y - (data.sprite ? data.sprite.height * data.container.scale.y / 2 : 100);
-        
-        if (typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized) {
-            if (isCritical) {
-                PixiRenderer.createCriticalHit(effectX, effectY, damage);
-                PixiRenderer.hitFlash('#ff0000', 120);
-            } else if (isHeavy) {
-                PixiRenderer.createHitImpact(effectX, effectY, damage, '#ff4444');
-                PixiRenderer.hitFlash('#ff0000', 60);
-            } else {
-                PixiRenderer.createHitImpact(effectX, effectY, damage, '#ff6644');
+        try {
+            // 숨쉬기 애니메이션 일시 중지
+            if (container.breathingTween) {
+                container.breathingTween.pause();
             }
-        }
-        
-        // 🌍 화면 흔들림 (데미지 비례)
-        if (typeof SpriteAnimation !== 'undefined') {
-            SpriteAnimation.screenShake(intensity * 3, 0.1 + intensity * 0.02);
-        }
-        
-        // 원래 위치 저장
-        const originalX = data.container.x;
-        const freezeTime = Math.min(0.04 + damage * 0.003, 0.12);  // 히트스탑
-        
-        // 🎬 피격 애니메이션 타임라인
-        const tl = gsap.timeline();
-        
-        // 1️⃣ 순간 넉백 + 스쿼시
-        tl.to(data.container, {
-            x: originalX + knockbackX,
-            duration: 0.03,
-            ease: "power4.out"
-        }, 0);
-        
-        tl.to(data.container.scale, {
-            x: baseScale * 0.85,
-            y: baseScale * 1.15,
-            duration: 0.03,
-            ease: "power4.out"
-        }, 0);
-        
-        // 2️⃣ 히트스탑 (프리즈!)
-        tl.to({}, { duration: freezeTime });
-        
-        // 3️⃣ 복귀 (탄성있게)
-        tl.to(data.container, {
-            x: originalX,
-            duration: 0.25,
-            ease: "elastic.out(1, 0.4)"
-        });
-        
-        tl.to(data.container.scale, {
-            x: baseScale,
-            y: baseScale,
-            duration: 0.2,
-            ease: "elastic.out(1, 0.5)"
-        }, "<");
-        
-        // 4️⃣ 숨쉬기 재개
-        tl.add(() => {
-            if (data.container.breathingTween) {
-                data.container.breathingTween.resume();
-            }
-        });
-        
-        // 🔴 빨간 플래시 (틴트) - 별도 처리
-        if (data.sprite && data.sprite.tint !== undefined) {
-            const flashTint = isCritical ? 0xff0000 : 0xff6666;
-            const flashDuration = isCritical ? 150 : 100;
             
-            // 흰색 -> 빨간색 -> 원래색
-            data.sprite.tint = 0xffffff;
-            gsap.delayedCall(0.02, () => {
-                data.sprite.tint = flashTint;
+            // 🔥 데미지 기반 강도 계산
+            const intensity = Math.min(damage / 5, 8);
+            const knockbackX = 20 + intensity * 8;
+            const isHeavy = damage >= 12;
+            const baseScale = container.breathingBaseScale || this.getSlotScale(data.slotIndex);
+            
+            // 🎆 PixiJS 이펙트 (글로벌 좌표에서)
+            if (container.getGlobalPosition) {
+                const globalPos = container.getGlobalPosition();
+                const effectX = globalPos.x;
+                const spriteHeight = sprite && sprite.height ? sprite.height * container.scale.y : 200;
+                const effectY = globalPos.y - spriteHeight / 2;
+                
+                if (typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized) {
+                    if (isCritical) {
+                        PixiRenderer.createCriticalHit(effectX, effectY, damage);
+                        PixiRenderer.hitFlash('#ff0000', 120);
+                    } else if (isHeavy) {
+                        PixiRenderer.createHitImpact(effectX, effectY, damage, '#ff4444');
+                        PixiRenderer.hitFlash('#ff0000', 60);
+                    } else {
+                        PixiRenderer.createHitImpact(effectX, effectY, damage, '#ff6644');
+                    }
+                }
+            }
+            
+            // 🌍 화면 흔들림 (데미지 비례)
+            if (typeof SpriteAnimation !== 'undefined') {
+                SpriteAnimation.screenShake(intensity * 3, 0.1 + intensity * 0.02);
+            }
+            
+            // 원래 위치 저장 (null 체크)
+            const originalX = container.x || 0;
+            const freezeTime = Math.min(0.04 + damage * 0.003, 0.12);  // 히트스탑
+            
+            // 🎬 피격 애니메이션 타임라인
+            const tl = gsap.timeline();
+            
+            // 1️⃣ 순간 넉백 + 스쿼시
+            tl.to(container, {
+                x: originalX + knockbackX,
+                duration: 0.03,
+                ease: "power4.out"
+            }, 0);
+            
+            tl.to(container.scale, {
+                x: baseScale * 0.85,
+                y: baseScale * 1.15,
+                duration: 0.03,
+                ease: "power4.out"
+            }, 0);
+            
+            // 2️⃣ 히트스탑 (프리즈!)
+            tl.to({}, { duration: freezeTime });
+            
+            // 3️⃣ 복귀 (탄성있게)
+            tl.to(container, {
+                x: originalX,
+                duration: 0.25,
+                ease: "elastic.out(1, 0.4)"
             });
-            gsap.delayedCall(flashDuration / 1000, () => {
-                data.sprite.tint = 0xffffff;
+            
+            tl.to(container.scale, {
+                x: baseScale,
+                y: baseScale,
+                duration: 0.2,
+                ease: "elastic.out(1, 0.5)"
+            }, "<");
+            
+            // 4️⃣ 숨쉬기 재개
+            tl.add(() => {
+                if (container.breathingTween) {
+                    container.breathingTween.resume();
+                }
             });
+            
+            // 🔴 빨간 플래시 (틴트) - 별도 처리
+            if (sprite && sprite.tint !== undefined) {
+                const flashTint = isCritical ? 0xff0000 : 0xff6666;
+                const flashDuration = isCritical ? 150 : 100;
+                
+                // 흰색 -> 빨간색 -> 원래색
+                sprite.tint = 0xffffff;
+                gsap.delayedCall(0.02, () => {
+                    if (sprite && sprite.tint !== undefined) sprite.tint = flashTint;
+                });
+                gsap.delayedCall(flashDuration / 1000, () => {
+                    if (sprite && sprite.tint !== undefined) sprite.tint = 0xffffff;
+                });
+            }
+        } catch (e) {
+            console.warn('[EnemyRenderer] playHitAnimation error:', e);
         }
     },
     
