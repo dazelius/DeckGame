@@ -3,6 +3,67 @@
 // ==========================================
 
 // ==========================================
+// 🛡️ 인텐트 안전 체크 시스템
+// ==========================================
+let intentSafetyCheckInterval = null;
+
+function startIntentSafetyCheck() {
+    // 이미 실행 중이면 중복 방지
+    if (intentSafetyCheckInterval) return;
+    
+    console.log('[IntentSafety] 🛡️ 안전 체크 시스템 시작');
+    
+    intentSafetyCheckInterval = setInterval(() => {
+        if (!gameState || !gameState.enemies) return;
+        if (gameState.intentsHidden) return; // 인텐트가 숨김 상태면 체크 안함
+        
+        gameState.enemies.forEach((enemy, index) => {
+            if (enemy.hp <= 0 || enemy.isBroken) return; // 죽은 적이나 브레이크 상태는 건너뛰기
+            
+            const enemyEl = document.querySelector(`.enemy-unit[data-index="${index}"]`);
+            if (!enemyEl) return;
+            
+            const intentEl = enemyEl.querySelector('.enemy-intent-display');
+            if (!intentEl) return;
+            
+            // 인텐트가 비어있거나 숨겨져 있으면 강제 복구
+            const isHidden = intentEl.style.display === 'none' || 
+                             intentEl.style.visibility === 'hidden' ||
+                             intentEl.style.opacity === '0';
+            const isEmpty = !intentEl.innerHTML || intentEl.innerHTML.trim() === '';
+            
+            if ((isHidden || isEmpty) && enemy.intent) {
+                console.log(`[IntentSafety] ⚠️ ${enemy.name} 인텐트 복구! (${enemy.intent} ${enemy.intentValue})`);
+                
+                // 스타일 복구
+                intentEl.style.display = '';
+                intentEl.style.visibility = 'visible';
+                intentEl.style.opacity = '1';
+                intentEl.classList.remove('is-broken', 'intent-hidden');
+                
+                // 내용 채우기
+                if (isEmpty && typeof getIntentIcon === 'function') {
+                    intentEl.innerHTML = getIntentIcon(
+                        enemy.intent, 
+                        enemy.intentValue, 
+                        enemy.intentHits || 1, 
+                        enemy.intentBleed || 0
+                    );
+                }
+            }
+        });
+    }, 500); // 500ms마다 체크
+}
+
+function stopIntentSafetyCheck() {
+    if (intentSafetyCheckInterval) {
+        clearInterval(intentSafetyCheckInterval);
+        intentSafetyCheckInterval = null;
+        console.log('[IntentSafety] 🛑 안전 체크 시스템 중지');
+    }
+}
+
+// ==========================================
 // 플레이어 초기화
 // ==========================================
 function initializePlayer() {
@@ -197,6 +258,9 @@ function loadPlayerDeck() {
 // 전투 시작
 // ==========================================
 function startBattle() {
+    // 🛡️ 인텐트 안전 체크 시스템 시작
+    startIntentSafetyCheck();
+    
     // 🎵 전투 BGM 시작
     if (typeof BGMSystem !== 'undefined') {
         BGMSystem.play('battle');
@@ -620,7 +684,9 @@ function createEnemy(enemyData, hpBonus = 0) {
         // ✅ 브레이크 시스템 (인텐트 기반)
         currentBreakRecipe: null,  // 현재 인텐트의 브레이크 레시피
         breakProgress: [],         // 현재까지 맞힌 속성들
-        isBroken: false
+        isBroken: false,
+        // ✅ 배치 위치 (후퇴 시스템용)
+        battlePosition: 0  // 높을수록 뒤쪽에 배치
     };
     
     // 브레이크 시스템 초기화
@@ -656,15 +722,27 @@ function renderEnemies(withEntrance = true) {
     const boss = gameState.enemies.find(e => e.isBoss || e.isElite);
     const minions = gameState.enemies.filter(e => !e.isBoss && !e.isElite);
     
-    // 미니언들을 왼쪽/오른쪽으로 분배
+    // ✅ 미니언들을 battlePosition 기준으로 분류
+    // - position 0: 전열 (왼쪽/오른쪽 번갈아 배치)
+    // - position > 0: 후열 (무조건 오른쪽에 배치)
+    const frontMinions = minions.filter(m => (m.battlePosition || 0) === 0);
+    const rearMinions = minions.filter(m => (m.battlePosition || 0) > 0)
+        .sort((a, b) => (a.battlePosition || 0) - (b.battlePosition || 0));
+    
+    // 전열 미니언은 번갈아가며 왼쪽/오른쪽 배치
     const leftMinions = [];
     const rightMinions = [];
-    minions.forEach((minion, i) => {
+    frontMinions.forEach((minion, i) => {
         if (i % 2 === 0) {
             leftMinions.push(minion);
         } else {
             rightMinions.push(minion);
         }
+    });
+    
+    // 후열 미니언(후퇴한 적)은 무조건 오른쪽에 추가
+    rearMinions.forEach(minion => {
+        rightMinions.push(minion);
     });
     
     // 왼쪽 미니언 컨테이너
@@ -970,6 +1048,8 @@ function getIntentIcon(intent, value, hits = 1, bleed = 0) {
         return `<span class="intent-debuff">저주 ${value}턴</span>`;
     } else if (intent === 'taunt') {
         return `<span class="intent-debuff">도발</span>`;
+    } else if (intent === 'retreat') {
+        return `<span class="intent-move">💨 이동</span>`;
     } else if (intent === 'prepare') {
         return `<span class="intent-danger">처형 준비</span>`;
     } else if (intent === 'selfHarm') {
@@ -1049,11 +1129,21 @@ function updateEnemiesUI() {
         // 의도 업데이트
         const intentDisplay = enemyEl.querySelector('.enemy-intent-display');
         if (intentDisplay) {
-            // 도플갱어는 카드 리스트로 표시
-            if (enemy.isDoppelganger && enemy.plannedCards && enemy.plannedCards.length > 0) {
-                intentDisplay.innerHTML = getDoppelgangerIntentDisplay(enemy.plannedCards);
+            // 🔥 브레이크 상태면 인텐트 숨기기!
+            if (enemy.isBroken) {
+                intentDisplay.innerHTML = '';
+                intentDisplay.style.display = 'none';
+                intentDisplay.classList.add('is-broken');
             } else {
-                intentDisplay.innerHTML = enemy.intent ? getIntentIcon(enemy.intent, enemy.intentValue, enemy.intentHits || 1, enemy.intentBleed || 0) : '';
+                intentDisplay.style.display = '';
+                intentDisplay.classList.remove('is-broken');
+                
+                // 도플갱어는 카드 리스트로 표시
+                if (enemy.isDoppelganger && enemy.plannedCards && enemy.plannedCards.length > 0) {
+                    intentDisplay.innerHTML = getDoppelgangerIntentDisplay(enemy.plannedCards);
+                } else {
+                    intentDisplay.innerHTML = enemy.intent ? getIntentIcon(enemy.intent, enemy.intentValue, enemy.intentHits || 1, enemy.intentBleed || 0) : '';
+                }
             }
             
             // 인텐트 숨김 상태 처리
@@ -1073,9 +1163,10 @@ function updateEnemiesUI() {
             if (enemy.intent === 'taunt') {
                 // 도발: 팔짝팔짝 뛰기
                 enemyEl.classList.add('intent-taunt');
-            } else if (enemy.intent === 'attack' && enemy.intentValue >= 10) {
-                // 강한 공격: 위협적 흔들림
+            } else if (typeof BreakSystem !== 'undefined' && BreakSystem.hasBreakableIntent(enemy)) {
+                // 브레이크 가능 인텐트: 힘을 모으는 애니메이션
                 enemyEl.classList.add('intent-attack-strong');
+                console.log(`[Intent] ${enemy.name} 강한 공격 준비! (브레이크 가능)`);
             } else if (enemy.intent === 'defend' || enemy.intent === 'block') {
                 // 방어: 웅크리기
                 enemyEl.classList.add('intent-defend');
@@ -2321,6 +2412,11 @@ function checkEnemyDefeated() {
             
             // 사망 표시 (딜레이 후)
             if (enemyEl) {
+                // 🌟 브레이크 별 이펙트 즉시 중지!
+                if (typeof PixiRenderer !== 'undefined' && PixiRenderer.stopPersistentStunLoop) {
+                    PixiRenderer.stopPersistentStunLoop(enemyEl);
+                }
+                
                 setTimeout(() => {
                     enemyEl.classList.add('dead');
                     setTimeout(() => {
@@ -3146,21 +3242,31 @@ function processEnemyTurnEndPassives() {
 function executeEnemyIntent(onAllComplete) {
     // 모든 살아있는 적이 순서대로 행동
     const aliveEnemies = gameState.enemies.filter(e => e.hp > 0);
+    
+    // ✅ battlePosition 기준으로 정렬 (화면에서 보이는 순서대로 행동)
+    // 낮은 값 = 앞쪽 = 먼저 행동
+    const sortedEnemies = [...aliveEnemies].sort((a, b) => {
+        // 보스/엘리트는 마지막에 행동
+        if (a.isBoss || a.isElite) return 1;
+        if (b.isBoss || b.isElite) return -1;
+        return (a.battlePosition || 0) - (b.battlePosition || 0);
+    });
+    
     let completedCount = 0;
     
-    if (aliveEnemies.length === 0) {
+    if (sortedEnemies.length === 0) {
         if (onAllComplete) onAllComplete();
         return;
     }
     
     const onEnemyComplete = () => {
         completedCount++;
-        if (completedCount >= aliveEnemies.length) {
+        if (completedCount >= sortedEnemies.length) {
             if (onAllComplete) onAllComplete();
         }
     };
     
-    aliveEnemies.forEach((enemy, i) => {
+    sortedEnemies.forEach((enemy, i) => {
         // 원래 배열에서의 인덱스 찾기
         const originalIndex = gameState.enemies.indexOf(enemy);
         setTimeout(() => {
@@ -3181,13 +3287,8 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
         const enemyEl = getEnemyElement(enemyIndex);
         addLog(`${enemy.name} is BROKEN! Skipping action.`, 'system');
         
-        // 브레이크 해제 처리
+        // 브레이크 해제 처리 (스타일만 복구)
         BreakSystem.onTurnEnd(enemy);
-        
-        // 🔥 브레이크 해제 후 새로운 인텐트 설정!
-        if (typeof decideEnemyIntentForEnemy === 'function') {
-            decideEnemyIntentForEnemy(enemy);
-        }
         
         // 브레이크 해제 연출
         if (enemyEl && !enemy.isBroken) {
@@ -3211,11 +3312,27 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
             enemyEl.appendChild(recoverEffect);
             setTimeout(() => recoverEffect.remove(), 1000);
             
-            // 브레이크 UI 업데이트
-            BreakSystem.updateBreakUI(enemy);
+            // 🔥 인텐트 표시 복구 (비워두기 - 다음 턴에 결정됨)
+            const intentEl = enemyEl.querySelector('.enemy-intent-display');
+            if (intentEl) {
+                intentEl.style.display = '';
+                intentEl.style.visibility = 'visible';
+                intentEl.style.opacity = '1';
+                intentEl.classList.remove('is-broken', 'danger-intent', 'intent-shattering');
+                // 🔧 중요: data-original-text 속성 제거 (다음 인텐트에서 새로 추출하도록)
+                intentEl.removeAttribute('data-original-text');
+                // 인텐트는 비워두고 "?" 표시 (다음 플레이어 턴 시작 시 결정됨)
+                intentEl.innerHTML = '<span class="intent-unknown">❓</span>';
+            }
         }
         
-        // UI 업데이트 (새 인텐트 표시)
+        // ⚠️ 인텐트는 결정하지 않음! 
+        // 다음 플레이어 턴 시작 시 decideEnemyIntent()에서 자연스럽게 결정됨
+        enemy.intent = null;
+        enemy.intentValue = 0;
+        console.log(`[BreakRecover] ${enemy.name} 회복 완료 - 인텐트는 다음 턴에 결정됨`);
+        
+        // UI 업데이트
         updateEnemiesUI();
         
         if (onComplete) setTimeout(onComplete, 500);
@@ -3277,9 +3394,16 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
                 const currentHasClones = typeof ShadowCloneSystem !== 'undefined' && ShadowCloneSystem.hasClones();
                 const currentTarget = currentHasClones ? ShadowCloneSystem.getFirstCloneElement() : playerEl;
                 
-                // 적 공격 연출
-                if (typeof EffectSystem !== 'undefined' && enemyEl) {
-                    EffectSystem.enemyAttack(enemyEl, currentTarget, intentValue);
+                // 적 공격 연출 (animationKey 우선, 없으면 attackType 기반)
+                if (enemy.intentAnimationKey && typeof MonsterAnimations !== 'undefined') {
+                    MonsterAnimations.execute(enemy.intentAnimationKey, {
+                        enemyEl,
+                        targetEl: currentTarget,
+                        enemy,
+                        damage: intentValue
+                    });
+                } else if (typeof EffectSystem !== 'undefined' && enemyEl) {
+                    EffectSystem.enemyAttack(enemyEl, currentTarget, intentValue, enemy.attackType || 'melee');
                 }
                 
                 // 데미지 적용
@@ -3318,9 +3442,16 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
             // 단일 공격
             addLog(`${name} attacks ${targetName}! ${intentValue} dmg`, 'damage');
             
-            // 적 공격 연출
-            if (typeof EffectSystem !== 'undefined' && enemyEl) {
-                EffectSystem.enemyAttack(enemyEl, attackTarget, intentValue);
+            // 적 공격 연출 (animationKey 우선, 없으면 attackType 기반)
+            if (enemy.intentAnimationKey && typeof MonsterAnimations !== 'undefined') {
+                MonsterAnimations.execute(enemy.intentAnimationKey, {
+                    enemyEl,
+                    targetEl: attackTarget,
+                    enemy,
+                    damage: intentValue
+                });
+            } else if (typeof EffectSystem !== 'undefined' && enemyEl) {
+                EffectSystem.enemyAttack(enemyEl, attackTarget, intentValue, enemy.attackType || 'melee');
             }
             
             // 약간의 딜레이 후 데미지 적용
@@ -3577,6 +3708,12 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
         
         addLog(`${name}: 도발! 방어도 생성량 감소 ${intentValue}턴!`, 'debuff');
         
+        // 🎵 도발 음표 이펙트 (PixiJS)
+        if (typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized && enemyEl) {
+            const rect = enemyEl.getBoundingClientRect();
+            PixiRenderer.createTauntNotes(rect.left + rect.width / 2, rect.top);
+        }
+        
         // 도발 이펙트
         const playerEl = document.getElementById('player');
         if (typeof EffectSystem !== 'undefined' && playerEl) {
@@ -3593,6 +3730,139 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
         
         if (typeof updatePlayerStatusUI === 'function') {
             updatePlayerStatusUI();
+        }
+        
+        updateUI();
+    } else if (intent === 'retreat') {
+        // ==========================================
+        // 후퇴: 가장 뒤로 이동 (GSAP 애니메이션)
+        // ==========================================
+        
+        // 현재 가장 높은 battlePosition 계산
+        const maxPosition = Math.max(...gameState.enemies.map(e => e.battlePosition || 0));
+        const currentPosition = enemy.battlePosition || 0;
+        
+        // 이미 가장 뒤에 있으면 이동 안함
+        if (currentPosition < maxPosition || gameState.enemies.length > 1) {
+            addLog(`💨 ${name}: 후퇴! 뒤로 이동!`, 'system');
+            
+            // 후퇴 완료 처리 (GSAP 사용)
+            const executeRetreatWithGSAP = () => {
+                // battlePosition 업데이트
+                enemy.battlePosition = maxPosition + 1;
+                
+                // 현재 모든 적의 위치 계산
+                const container = document.getElementById('enemies-container');
+                if (!container) {
+                    renderEnemies(false);
+                    updateSelectedEnemy();
+                    return;
+                }
+                
+                // 미니언들만 추출하여 새 순서 계산
+                const minions = gameState.enemies.filter(e => !e.isBoss && !e.isElite && e.hp > 0);
+                const frontMinions = minions.filter(m => (m.battlePosition || 0) === 0);
+                const rearMinions = minions.filter(m => (m.battlePosition || 0) > 0)
+                    .sort((a, b) => (a.battlePosition || 0) - (b.battlePosition || 0));
+                
+                // 새로운 왼쪽/오른쪽 배치 계산
+                const leftMinions = [];
+                const rightMinions = [];
+                frontMinions.forEach((m, i) => {
+                    if (i % 2 === 0) leftMinions.push(m);
+                    else rightMinions.push(m);
+                });
+                rearMinions.forEach(m => rightMinions.push(m));
+                
+                // GSAP으로 부드럽게 위치 이동
+                if (typeof gsap !== 'undefined') {
+                    const timeline = gsap.timeline();
+                    
+                    // 후퇴하는 적: 오른쪽으로 이동
+                    if (enemyEl) {
+                        timeline.to(enemyEl, {
+                            x: 80,
+                            opacity: 0.3,
+                            scale: 0.95,
+                            duration: 0.25,
+                            ease: 'power2.in'
+                        });
+                    }
+                    
+                    // 다른 미니언들: 앞으로 당기기
+                    gameState.enemies.forEach((otherEnemy, idx) => {
+                        if (otherEnemy === enemy || otherEnemy.isBoss || otherEnemy.isElite) return;
+                        if (otherEnemy.hp <= 0) return;
+                        
+                        const otherEl = container.querySelector(`[data-index="${idx}"]`);
+                        if (otherEl && (otherEnemy.battlePosition || 0) < (enemy.battlePosition || 999)) {
+                            timeline.to(otherEl, {
+                                x: -30,
+                                duration: 0.2,
+                                ease: 'power1.out'
+                            }, '<0.05');
+                        }
+                    });
+                    
+                    // 페이드아웃 완료 후 DOM 갱신
+                    timeline.call(() => {
+                        // 모든 적 페이드아웃
+                        gsap.to('.enemy-unit', {
+                            opacity: 0,
+                            duration: 0.1,
+                            onComplete: () => {
+                                // DOM 갱신
+                                renderEnemies(false);
+                                updateSelectedEnemy();
+                                
+                                // 새 요소들 페이드인
+                                gsap.fromTo('.enemy-unit', 
+                                    { opacity: 0, x: 20 },
+                                    { 
+                                        opacity: 1, 
+                                        x: 0, 
+                                        duration: 0.25, 
+                                        stagger: 0.03,
+                                        ease: 'power2.out'
+                                    }
+                                );
+                            }
+                        });
+                    }, null, '+=0.05');
+                } else {
+                    // GSAP 없으면 기본 방식
+                    renderEnemies(false);
+                    updateSelectedEnemy();
+                }
+            };
+            
+            if (enemy.intentAnimationKey && typeof MonsterAnimations !== 'undefined') {
+                MonsterAnimations.execute(enemy.intentAnimationKey, {
+                    enemyEl,
+                    enemy,
+                    onComplete: executeRetreatWithGSAP
+                });
+            } else {
+                // 기본 후퇴 애니메이션 (GSAP)
+                if (typeof gsap !== 'undefined' && enemyEl) {
+                    gsap.to(enemyEl, {
+                        x: 100,
+                        opacity: 0,
+                        duration: 0.35,
+                        ease: 'power2.in',
+                        onComplete: executeRetreatWithGSAP
+                    });
+                } else if (enemyEl) {
+                    enemyEl.style.transition = 'transform 0.35s ease-out, opacity 0.2s';
+                    enemyEl.style.transform = 'translateX(100px)';
+                    enemyEl.style.opacity = '0';
+                    setTimeout(executeRetreatWithGSAP, 350);
+                } else {
+                    executeRetreatWithGSAP();
+                }
+            }
+        } else {
+            addLog(`${name}: 이미 최후방!`, 'system');
         }
         
         updateUI();
@@ -4181,6 +4451,9 @@ function victory() {
     console.log('=== victory() 호출 ===');
     console.log(`gameState.enemy.name: ${gameState.enemy?.name}`);
     console.log(`gameState.currentBattleType: ${gameState.currentBattleType}`);
+    
+    // 🛡️ 인텐트 안전 체크 중지
+    stopIntentSafetyCheck();
     
     // ⚡ 에너지 볼트 정리
     if (typeof EnergyBoltSystem !== 'undefined') {

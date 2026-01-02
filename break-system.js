@@ -63,7 +63,30 @@ const BreakSystem = {
         // 이전 브레이크 상태 초기화
         enemy.currentBreakRecipe = null;
         enemy.breakProgress = [];
+        
+        const enemyIndex = gameState.enemies?.indexOf(enemy);
+        
+        // 브레이크 상태였으면 별 이펙트 중지
+        if (enemy.isBroken) {
+            if (enemyIndex !== -1) {
+                const enemyEl = document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`);
+                if (enemyEl && typeof PixiRenderer !== 'undefined') {
+                    PixiRenderer.stopPersistentStunLoop(enemyEl);
+                }
+            }
+        }
         enemy.isBroken = false;
+        
+        // 🔧 중요: 새 인텐트 선택 시 data-original-text 초기화 (이전 값이 잘못 사용되는 것 방지)
+        if (enemyIndex !== -1) {
+            const enemyEl = document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`);
+            if (enemyEl) {
+                const intentEl = enemyEl.querySelector('.enemy-intent-display');
+                if (intentEl) {
+                    intentEl.removeAttribute('data-original-text');
+                }
+            }
+        }
         
         // 위협 상태 해제
         this.clearThreatState(enemy);
@@ -114,10 +137,11 @@ const BreakSystem = {
         if (enemyEl) {
             enemyEl.classList.remove('threat-active');
             
-            // 인텐트 원본 콘텐츠 복원용 속성 제거
+            // 인텐트 원본 콘텐츠 복원용 속성 제거 (다음 인텐트에서 새로 추출하도록)
             const intentEl = enemyEl.querySelector('.enemy-intent-display');
             if (intentEl) {
                 intentEl.removeAttribute('data-original-text');
+                intentEl.classList.remove('danger-intent');
             }
         }
     },
@@ -287,30 +311,46 @@ const BreakSystem = {
     triggerBreak(enemy) {
         enemy.isBroken = true;
         
-        console.log(`[BreakSystem] ${enemy.name} BREAK!!!`);
+        // 🔥 취약 부여 (1턴 + 레시피 길이에 따른 보너스)
+        const recipeLength = enemy.currentBreakRecipe?.length || 2;
+        const vulnerableTurns = Math.max(1, recipeLength - 1); // 2칸 레시피 = 1턴, 3칸 = 2턴
+        enemy.vulnerable = (enemy.vulnerable || 0) + vulnerableTurns;
         
-        // 즉시 그레이스케일 적용
+        console.log(`[BreakSystem] ${enemy.name} BREAK!!! +취약 ${vulnerableTurns}턴 (총 ${enemy.vulnerable}턴)`);
+        
         const enemyIndex = gameState.enemies?.indexOf(enemy);
-        if (enemyIndex !== -1) {
-            const enemyEl = document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`);
-            if (enemyEl) {
-                enemyEl.classList.add('enemy-broken');
-            }
-        }
+        const enemyEl = enemyIndex !== -1 ? document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`) : null;
         
-        // 브레이크 이펙트
+        // 🔥 1단계: 브레이크 연출 먼저!
         this.showBreakEffect(enemy);
         
-        // 인텐트 파괴
+        // 인텐트 데이터 초기화
         enemy.intent = null;
         enemy.intentValue = 0;
         enemy.currentBreakRecipe = null;
         
-        // UI 업데이트
-        this.updateBreakUI(enemy);
-        if (typeof updateEnemiesUI === 'function') {
-            updateEnemiesUI();
-        }
+        // 🔥 2단계: 연출 후 UI 업데이트 (500ms 딜레이)
+        setTimeout(() => {
+            if (enemyEl) {
+                enemyEl.classList.add('enemy-broken');
+                
+                // 🌟 지속적인 3D 별 이펙트 시작!
+                if (typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized) {
+                    PixiRenderer.startPersistentStunLoop(enemyEl);
+                }
+                
+                // 인텐트 숨기기
+                const intentEl = enemyEl.querySelector('.enemy-intent-display');
+                if (intentEl) {
+                    intentEl.style.display = 'none';
+                    intentEl.classList.add('is-broken');
+                }
+            }
+            
+            if (typeof updateEnemiesUI === 'function') {
+                updateEnemiesUI();
+            }
+        }, 500);
     },
     
     // ==========================================
@@ -329,6 +369,46 @@ const BreakSystem = {
             enemy.currentBreakRecipe = null;
             enemy.breakProgress = [];
             console.log(`[BreakSystem] ${enemy.name} 브레이크 해제`);
+            
+            const enemyIndex = gameState.enemies?.indexOf(enemy);
+            if (enemyIndex !== -1) {
+                const enemyEl = document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`);
+                if (enemyEl) {
+                    // 🌟 지속 별 이펙트 중지!
+                    if (typeof PixiRenderer !== 'undefined') {
+                        PixiRenderer.stopPersistentStunLoop(enemyEl);
+                    }
+                    
+                    // 스프라이트 스타일 초기화 (GSAP 적용된 것 리셋)
+                    const sprite = enemyEl.querySelector('.enemy-sprite-img');
+                    if (sprite) {
+                        // GSAP 킬
+                        if (typeof gsap !== 'undefined') {
+                            gsap.killTweensOf(sprite);
+                            gsap.killTweensOf(enemyEl);
+                        }
+                        // 스타일 초기화
+                        sprite.style.filter = '';
+                        sprite.style.transform = '';
+                        sprite.style.opacity = '';
+                        enemyEl.style.transform = '';
+                    }
+                    
+                    // 인텐트 다시 표시 (스타일만 복구, innerHTML은 game.js에서 처리)
+                    const intentEl = enemyEl.querySelector('.enemy-intent-display');
+                    if (intentEl) {
+                        intentEl.style.display = '';
+                        intentEl.style.visibility = '';
+                        intentEl.style.opacity = '';
+                        intentEl.classList.remove('is-broken', 'danger-intent', 'intent-shattering');
+                        // 🔧 중요: data-original-text 속성 제거 (다음 인텐트에서 새로 추출하도록)
+                        intentEl.removeAttribute('data-original-text');
+                        console.log(`[BreakSystem.onTurnEnd] ${enemy.name} 인텐트 스타일 복구 완료 (data-original-text 제거됨)`);
+                    }
+                    enemyEl.classList.remove('enemy-broken');
+                }
+            }
+            // ⚠️ 인텐트 결정과 UI 업데이트는 game.js에서 처리 (중복 방지)
         }
     },
     
@@ -349,15 +429,25 @@ const BreakSystem = {
         intentEl.classList.remove('danger-intent', 'is-broken');
         enemyEl.classList.remove('enemy-broken');
         
-        // 브레이크 가능 인텐트가 없으면 표시 안함
-        if (!this.hasBreakableIntent(enemy) && !enemy.isBroken) {
-            return;
+        // 🔥 브레이크 해제된 상태면 인텐트 표시 복구만 하고 리턴
+        if (!enemy.isBroken) {
+            intentEl.style.display = '';
+            intentEl.style.visibility = '';
+            
+            // 브레이크 가능 인텐트가 없으면 여기서 끝
+            if (!this.hasBreakableIntent(enemy)) {
+                return;
+            }
         }
         
         if (enemy.isBroken) {
-            // 브레이크 상태 - 즉시 그레이스케일
+            // 브레이크 상태 - 인텐트 완전히 숨기기
             intentEl.classList.add('is-broken');
             enemyEl.classList.add('enemy-broken');
+            
+            // 인텐트 내용 비우기 (별만 보이도록)
+            intentEl.innerHTML = '';
+            intentEl.style.display = 'none';
         } else {
             // 위험 인텐트 표시 (인텐트 내부에 모두 통합)
             intentEl.classList.add('danger-intent');
@@ -399,7 +489,7 @@ const BreakSystem = {
     },
     
     // ==========================================
-    // 브레이크 이펙트
+    // 브레이크 이펙트 (GSAP + PixiJS 업그레이드!)
     // ==========================================
     showBreakEffect(enemy) {
         const enemyIndex = gameState.enemies?.indexOf(enemy);
@@ -409,6 +499,64 @@ const BreakSystem = {
         if (!enemyEl) return;
         
         const intentEl = enemyEl.querySelector('.enemy-intent-display');
+        const rect = enemyEl.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        
+        // 🔥 1단계: 히트스탑 (GSAP) - 게임이 잠시 멈추는 느낌!
+        if (typeof gsap !== 'undefined') {
+            // 적 스프라이트 찾기
+            const sprite = enemyEl.querySelector('.enemy-sprite-img');
+            if (sprite) {
+                // 히트스탑: 잠시 멈추고 하얗게 번쩍!
+                gsap.timeline()
+                    .set(sprite, { filter: 'brightness(3) saturate(0)' })
+                    .to(sprite, { 
+                        x: -8, 
+                        duration: 0.02 
+                    })
+                    .to(sprite, { 
+                        x: 8, 
+                        duration: 0.02 
+                    })
+                    .to(sprite, { 
+                        x: -5, 
+                        duration: 0.02 
+                    })
+                    .to(sprite, { 
+                        x: 5, 
+                        duration: 0.02 
+                    })
+                    .to(sprite, { 
+                        x: 0, 
+                        filter: 'brightness(1) grayscale(0.8)',
+                        duration: 0.1 
+                    });
+            }
+        }
+        
+        // ⚡ 2단계: PixiJS 스턴 이펙트!
+        if (typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized) {
+            // 💥 스턴 전용 폭발 이펙트!
+            PixiRenderer.createStunEffect(centerX, centerY - 40);
+            
+            // 큰 충격파 (노란색)
+            PixiRenderer.createShockwave(centerX, centerY - 30, '#ffcc00');
+            
+            // 별 회전 스턴 이펙트 (CSS용 + PixiJS용 둘 다)
+            this.createStunStars(centerX, centerY - 50);
+            PixiRenderer.createStunLoop(centerX, centerY - 60, 1500);
+            
+            // 스파크 폭발 (빨강 + 노랑 + 흰색) - VFX 사용
+            if (typeof VFX !== 'undefined' && VFX.sparks) {
+                VFX.sparks(centerX, centerY - 30, { color: '#ff4444', count: 25, speed: 15 });
+                VFX.sparks(centerX, centerY - 30, { color: '#ffcc00', count: 20, speed: 12 });
+                VFX.sparks(centerX, centerY - 30, { color: '#ffffff', count: 15, speed: 10 });
+            }
+        }
+        
+        // 🌟 3단계: 화면 플래시
+        this.createBreakFlash();
         
         // 인텐트 위치에서 깨지는 효과
         if (intentEl) {
@@ -428,11 +576,7 @@ const BreakSystem = {
             }
         }
         
-        const rect = enemyEl.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        
-        // BREAK 텍스트 (인텐트 위치에)
+        // 💥 BREAK 텍스트 (GSAP 애니메이션!)
         const breakText = document.createElement('div');
         breakText.className = 'break-effect-text';
         breakText.textContent = 'BREAK!';
@@ -442,17 +586,112 @@ const BreakSystem = {
             left: ${centerX}px;
             top: ${textY}px;
             transform: translate(-50%, -50%) scale(0);
-            z-index: 2000;
+            opacity: 0;
+            z-index: 9999;
             pointer-events: none;
+            font-family: 'Cinzel', serif;
+            font-size: 4rem;
+            font-weight: 900;
+            color: #fbbf24;
+            text-shadow: 
+                0 0 20px rgba(251, 191, 36, 1),
+                0 0 40px rgba(251, 191, 36, 0.8),
+                3px 3px 0 #000;
+            letter-spacing: 8px;
         `;
         document.body.appendChild(breakText);
+        
+        // 💔 취약 텍스트 (BREAK 아래에 표시)
+        const vulnerableText = document.createElement('div');
+        vulnerableText.className = 'break-vulnerable-text';
+        const vulnTurns = Math.max(1, (enemy.currentBreakRecipe?.length || 2) - 1);
+        vulnerableText.textContent = `💔 취약 +${vulnTurns}`;
+        vulnerableText.style.cssText = `
+            position: fixed;
+            left: ${centerX}px;
+            top: ${textY + 50}px;
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 0;
+            z-index: 9998;
+            pointer-events: none;
+            font-family: 'Cinzel', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #ef4444;
+            text-shadow: 
+                0 0 10px rgba(239, 68, 68, 0.8),
+                2px 2px 0 #000;
+        `;
+        document.body.appendChild(vulnerableText);
+        
+        console.log('[BreakSystem] 🔥 BREAK 텍스트 생성됨!', { centerX, textY });
+        
+        // GSAP으로 BREAK 텍스트 애니메이션
+        if (typeof gsap !== 'undefined') {
+            // BREAK 텍스트
+            gsap.timeline()
+                .to(breakText, {
+                    scale: 1.5,
+                    rotation: -5,
+                    opacity: 1,
+                    duration: 0.15,
+                    ease: "back.out(3)"
+                })
+                .to(breakText, {
+                    scale: 1.2,
+                    rotation: 3,
+                    duration: 0.1
+                })
+                .to(breakText, {
+                    scale: 1,
+                    rotation: 0,
+                    duration: 0.1
+                })
+                .to(breakText, {
+                    y: -30,
+                    opacity: 0,
+                    duration: 0.5,
+                    delay: 0.5,
+                    ease: "power2.in",
+                    onComplete: () => breakText.remove()
+                });
+            
+            // 취약 텍스트 (약간 딜레이 후)
+            gsap.timeline({ delay: 0.2 })
+                .to(vulnerableText, {
+                    scale: 1.2,
+                    opacity: 1,
+                    duration: 0.2,
+                    ease: "back.out(2)"
+                })
+                .to(vulnerableText, {
+                    scale: 1,
+                    duration: 0.1
+                })
+                .to(vulnerableText, {
+                    y: -20,
+                    opacity: 0,
+                    duration: 0.4,
+                    delay: 0.8,
+                    ease: "power2.in",
+                    onComplete: () => vulnerableText.remove()
+                });
+        } else {
+            // GSAP 없을 때 CSS 애니메이션 폴백
+            breakText.style.animation = 'breakEffectAnim 1.5s ease-out forwards';
+            setTimeout(() => breakText.remove(), 1500);
+            vulnerableText.style.animation = 'vulnerablePopAnim 1.5s ease-out forwards';
+            setTimeout(() => vulnerableText.remove(), 1500);
+        }
         
         // 파편 효과 (캐릭터 위치)
         this.createShatterParticles(centerX, centerY);
         
-        // 화면 흔들림
-        if (typeof EffectSystem !== 'undefined' && EffectSystem.screenShake) {
-            EffectSystem.screenShake(15, 400);
+        // 화면 흔들림 (더 강하게!)
+        if (typeof SpriteAnimation !== 'undefined') {
+            SpriteAnimation.screenShake(20, 0.4);
+        } else if (typeof EffectSystem !== 'undefined' && EffectSystem.screenShake) {
+            EffectSystem.screenShake(20, 400);
         }
         
         // 사운드
@@ -461,6 +700,109 @@ const BreakSystem = {
         }
         
         setTimeout(() => breakText.remove(), 1500);
+    },
+    
+    // ==========================================
+    // 스턴 별 회전 이펙트 (PixiJS)
+    // ==========================================
+    createStunStars(x, y) {
+        if (typeof PixiRenderer === 'undefined' || !PixiRenderer.initialized) return;
+        
+        const container = new PIXI.Container();
+        container.x = x;
+        container.y = y;
+        PixiRenderer.effectsContainer.addChild(container);
+        
+        const starCount = 5;
+        const starGraphics = [];
+        
+        // 별 생성
+        for (let i = 0; i < starCount; i++) {
+            const star = new PIXI.Graphics();
+            const angle = (Math.PI * 2 / starCount) * i;
+            const radius = 35;
+            
+            // 별 모양 그리기
+            const points = [];
+            for (let j = 0; j < 10; j++) {
+                const r = j % 2 === 0 ? 8 : 4;
+                const a = (Math.PI * 2 / 10) * j - Math.PI / 2;
+                points.push(Math.cos(a) * r, Math.sin(a) * r);
+            }
+            star.poly(points);
+            star.fill({ color: '#ffcc00', alpha: 1 });
+            star.stroke({ width: 1, color: '#ffffff', alpha: 0.8 });
+            
+            star.x = Math.cos(angle) * radius;
+            star.y = Math.sin(angle) * radius;
+            star.scale.set(0);
+            
+            container.addChild(star);
+            starGraphics.push({ star, baseAngle: angle, radius });
+        }
+        
+        // 회전 애니메이션
+        let time = 0;
+        const duration = 120; // 2초
+        
+        const animate = () => {
+            time++;
+            const progress = time / duration;
+            
+            // 전체 회전
+            container.rotation = progress * Math.PI * 4;
+            
+            // 각 별 위치 업데이트
+            starGraphics.forEach((data, i) => {
+                const newAngle = data.baseAngle + progress * Math.PI * 2;
+                data.star.x = Math.cos(newAngle) * data.radius;
+                data.star.y = Math.sin(newAngle) * data.radius;
+                
+                // 스케일 (처음에 커졌다가 유지, 마지막에 작아짐)
+                let scale = 1;
+                if (progress < 0.1) {
+                    scale = progress * 10;
+                } else if (progress > 0.8) {
+                    scale = 1 - (progress - 0.8) * 5;
+                }
+                data.star.scale.set(scale);
+                data.star.alpha = scale;
+            });
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                container.destroy({ children: true });
+            }
+        };
+        
+        requestAnimationFrame(animate);
+    },
+    
+    // ==========================================
+    // 브레이크 화면 플래시
+    // ==========================================
+    createBreakFlash() {
+        const flash = document.createElement('div');
+        flash.style.cssText = `
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at center, rgba(255, 200, 50, 0.6), transparent 70%);
+            z-index: 9999;
+            pointer-events: none;
+        `;
+        document.body.appendChild(flash);
+        
+        if (typeof gsap !== 'undefined') {
+            gsap.to(flash, {
+                opacity: 0,
+                duration: 0.3,
+                ease: "power2.out",
+                onComplete: () => flash.remove()
+            });
+        } else {
+            setTimeout(() => flash.remove(), 300);
+        }
     },
     
     // ==========================================
@@ -729,10 +1071,9 @@ const BreakSystem = {
                 }
             }
             
-            /* BREAK 상태 인텐트 */
+            /* BREAK 상태 인텐트 - 완전히 숨김 */
             .enemy-intent-display.is-broken {
-                opacity: 0.4;
-                filter: grayscale(0.5);
+                display: none !important;
             }
             
             /* 인텐트 깨지는 애니메이션 */
@@ -770,58 +1111,102 @@ const BreakSystem = {
                 }
             }
             
-            /* 브레이크된 몬스터 - 그레이스케일 + 하얀 외곽선 유지! */
+            /* 브레이크된 몬스터 - 스턴 상태! */
             .enemy-unit.enemy-broken .enemy-sprite-img {
                 filter: 
-                    drop-shadow(1px 0 0 rgba(255, 255, 255, 0.85))
-                    drop-shadow(-1px 0 0 rgba(255, 255, 255, 0.85))
-                    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.85))
-                    drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.85))
-                    drop-shadow(0 0 8px rgba(150, 150, 150, 0.5))
-                    grayscale(0.7) brightness(0.6) !important;
-                animation: brokenShake 0.1s ease-in-out infinite;
+                    drop-shadow(1px 0 0 rgba(255, 200, 50, 0.9))
+                    drop-shadow(-1px 0 0 rgba(255, 200, 50, 0.9))
+                    drop-shadow(0 1px 0 rgba(255, 200, 50, 0.9))
+                    drop-shadow(0 -1px 0 rgba(255, 200, 50, 0.9))
+                    drop-shadow(0 0 12px rgba(255, 200, 50, 0.6))
+                    grayscale(0.8) brightness(0.5) !important;
+                animation: brokenStun 0.15s ease-in-out infinite;
             }
             
-            @keyframes brokenShake {
-                0%, 100% { transform: translateX(0); }
-                50% { transform: translateX(2px); }
+            @keyframes brokenStun {
+                0%, 100% { 
+                    transform: translateX(0) rotate(0deg); 
+                }
+                25% { 
+                    transform: translateX(-3px) rotate(-1deg); 
+                }
+                75% { 
+                    transform: translateX(3px) rotate(1deg); 
+                }
             }
             
-            /* 브레이크 이펙트 텍스트 */
+            /* 스턴 상태 배경 효과 */
+            .enemy-unit.enemy-broken::after {
+                content: '';
+                position: absolute;
+                inset: -10px;
+                background: radial-gradient(ellipse at center, 
+                    rgba(255, 200, 50, 0.15) 0%, 
+                    transparent 70%);
+                animation: stunPulse 1s ease-in-out infinite;
+                pointer-events: none;
+                z-index: -1;
+                border-radius: 50%;
+            }
+            
+            @keyframes stunPulse {
+                0%, 100% {
+                    transform: scale(1);
+                    opacity: 0.5;
+                }
+                50% {
+                    transform: scale(1.2);
+                    opacity: 0.8;
+                }
+            }
+            
+            /* 브레이크 이펙트 텍스트 - 더 극적으로! */
             .break-effect-text {
                 font-family: 'Cinzel', serif;
-                font-size: 3.5rem;
+                font-size: 4rem;
                 font-weight: 900;
-                color: #ef4444;
-                text-shadow: 
-                    0 0 20px rgba(239, 68, 68, 1),
-                    0 0 40px rgba(239, 68, 68, 0.8),
-                    0 0 60px rgba(239, 68, 68, 0.6),
-                    3px 3px 0 #000;
-                letter-spacing: 6px;
+                color: #fbbf24;
+                background: linear-gradient(180deg, #fef3c7 0%, #f59e0b 50%, #dc2626 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                text-shadow: none;
+                filter: 
+                    drop-shadow(0 0 10px rgba(251, 191, 36, 1))
+                    drop-shadow(0 0 20px rgba(251, 191, 36, 0.8))
+                    drop-shadow(0 0 40px rgba(239, 68, 68, 0.6))
+                    drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.8));
+                letter-spacing: 8px;
                 animation: breakEffectAnim 1.5s ease-out forwards;
             }
             
             @keyframes breakEffectAnim {
                 0% {
-                    transform: translate(-50%, -50%) scale(0) rotate(-10deg);
+                    transform: translate(-50%, -50%) scale(0) rotate(-15deg);
                     opacity: 0;
+                    filter: 
+                        drop-shadow(0 0 30px rgba(255, 255, 255, 1))
+                        drop-shadow(0 0 60px rgba(251, 191, 36, 1));
                 }
-                20% {
-                    transform: translate(-50%, -50%) scale(1.3) rotate(5deg);
+                15% {
+                    transform: translate(-50%, -50%) scale(1.6) rotate(5deg);
                     opacity: 1;
                 }
-                40% {
-                    transform: translate(-50%, -50%) scale(1) rotate(0deg);
-                    opacity: 1;
+                30% {
+                    transform: translate(-50%, -50%) scale(1.2) rotate(-3deg);
                 }
-                80% {
+                45% {
+                    transform: translate(-50%, -50%) scale(1.1) rotate(1deg);
+                }
+                60% {
                     transform: translate(-50%, -50%) scale(1) rotate(0deg);
                     opacity: 1;
                 }
                 100% {
-                    transform: translate(-50%, -50%) scale(0.8) translateY(-30px);
+                    transform: translate(-50%, -50%) scale(0.6) translateY(-40px);
                     opacity: 0;
+                    filter: 
+                        drop-shadow(0 0 10px rgba(251, 191, 36, 0.5))
+                        drop-shadow(0 0 20px rgba(239, 68, 68, 0.3));
                 }
             }
             

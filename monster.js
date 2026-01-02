@@ -28,27 +28,41 @@ const enemyDatabase = [
             { type: 'attack', value: 5, icon: '🗡️' }
         ]
     },
-    // 고블린 궁수 (패턴 기반 - 도발 후 강화 공격)
+    // 고블린 궁수 (패턴 기반 - 뒤로 이동 후 강화 공격)
     {
         id: 'goblinArcher',
         name: "고블린 궁수",
         maxHp: 28,
         img: 'goblinarcher.png',
-        // 패턴 시스템: 도발 → 강화 공격 (반복)
+        attackType: 'ranged', // 🏹 원거리 공격 (기본 화살)
+        // 패턴 시스템: 뒤로 이동 → 강화 공격 (반복)
         usePattern: true,
         pattern: [
-            { type: 'taunt', value: 1, icon: '😤', name: '도발' }, // 1턴간 방어도 생성량 감소
+            { 
+                type: 'retreat', 
+                value: 0, 
+                icon: '💨', 
+                name: '이동',
+                animationKey: 'retreat_back' // 🎬 뒤로 도망가는 애니메이션
+            },
             { 
                 type: 'attack', 
                 value: 9,
                 icon: '🎯',
                 name: '급소 조준',
+                animationKey: 'arrow_precision', // 🎬 정밀 사격 애니메이션
                 // 브레이크 가능 (물리 2번)
                 breakRecipe: ['physical', 'physical']
             }
         ],
         intents: [
-            { type: 'attack', value: 3, hits: 2, icon: '🏹' }
+            { 
+                type: 'attack', 
+                value: 3, 
+                hits: 2, 
+                icon: '🏹',
+                animationKey: 'arrow_shot' // 🎬 일반 화살 애니메이션
+            }
         ]
     },
     // 그림자 슬라임

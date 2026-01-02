@@ -124,8 +124,8 @@ function dealDamage(target, amount, card = null) {
     
     console.log('[dealDamage] 최종 targetEl:', targetEl);
     
-    // 카드가 없으면 현재 사용 중인 카드 가져오기
-    const activeCard = card || (gameState.currentCard || null);
+    // 카드가 없으면 현재 사용 중인 카드 가져오기 (lastPlayedCard도 fallback)
+    const activeCard = card || gameState.currentCard || gameState.lastPlayedCard || null;
     
     // 유물 보너스 데미지 계산 (플레이어가 적에게 공격할 때만)
     let totalDamage = amount;

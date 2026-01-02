@@ -700,26 +700,146 @@ img {
     }
 }
 
-/* 🔥 공격 준비 - 위협적 흔들림 */
+/* 🔥 강한 공격 준비 - 힘을 모으는 느낌! (더 역동적!) */
 .enemy-unit.intent-attack-strong .enemy-sprite-img {
-    animation: threatShake 0.6s ease-in-out infinite;
+    animation: powerCharge 1.2s ease-in-out infinite, colorPulse 0.6s ease-in-out infinite alternate;
+    /* 붉은/주황 글로우 (힘 축적) + 점점 강해짐 */
+    filter: 
+        drop-shadow(2px 0 0 rgba(255, 200, 100, 0.95))
+        drop-shadow(-2px 0 0 rgba(255, 200, 100, 0.95))
+        drop-shadow(0 2px 0 rgba(255, 200, 100, 0.95))
+        drop-shadow(0 -2px 0 rgba(255, 200, 100, 0.95))
+        drop-shadow(0 0 15px rgba(255, 100, 0, 0.8))
+        drop-shadow(0 0 30px rgba(255, 50, 0, 0.6))
+        drop-shadow(0 0 50px rgba(255, 0, 0, 0.3)) !important;
 }
 
-@keyframes threatShake {
-    0%, 100% { 
-        transform: translateX(0) rotate(0deg); 
+/* 색상 펄스 (점점 빨개졌다가 돌아오기) */
+@keyframes colorPulse {
+    0% { 
+        filter: 
+            drop-shadow(2px 0 0 rgba(255, 220, 150, 1))
+            drop-shadow(-2px 0 0 rgba(255, 220, 150, 1))
+            drop-shadow(0 2px 0 rgba(255, 220, 150, 1))
+            drop-shadow(0 -2px 0 rgba(255, 220, 150, 1))
+            drop-shadow(0 0 20px rgba(255, 150, 50, 0.9))
+            drop-shadow(0 0 40px rgba(255, 100, 0, 0.7))
+            brightness(1.1);
     }
-    20% { 
-        transform: translateX(-4px) rotate(-1deg); 
+    100% { 
+        filter: 
+            drop-shadow(2px 0 0 rgba(255, 100, 50, 1))
+            drop-shadow(-2px 0 0 rgba(255, 100, 50, 1))
+            drop-shadow(0 2px 0 rgba(255, 100, 50, 1))
+            drop-shadow(0 -2px 0 rgba(255, 100, 50, 1))
+            drop-shadow(0 0 25px rgba(255, 50, 0, 1))
+            drop-shadow(0 0 50px rgba(200, 0, 0, 0.8))
+            brightness(1.3);
     }
-    40% { 
-        transform: translateX(4px) rotate(1deg); 
+}
+
+@keyframes powerCharge {
+    /* 기본 자세 */
+    0% { 
+        transform: translateY(0) scaleY(1) scaleX(1) rotate(0deg); 
     }
-    60% { 
-        transform: translateX(-3px) rotate(-0.5deg); 
+    /* 깊이 웅크리기! (힘을 모으는 중) */
+    10% { 
+        transform: translateY(12px) scaleY(0.85) scaleX(1.1) rotate(-1deg); 
     }
-    80% { 
-        transform: translateX(3px) rotate(0.5deg); 
+    /* 부들부들 떨림 (힘을 참는 중) - 빠르게! */
+    15% { transform: translateY(12px) scaleY(0.85) scaleX(1.1) translateX(-4px) rotate(1deg); }
+    20% { transform: translateY(11px) scaleY(0.86) scaleX(1.09) translateX(4px) rotate(-1deg); }
+    25% { transform: translateY(12px) scaleY(0.85) scaleX(1.1) translateX(-3px) rotate(0.5deg); }
+    30% { transform: translateY(11px) scaleY(0.86) scaleX(1.09) translateX(3px) rotate(-0.5deg); }
+    35% { transform: translateY(12px) scaleY(0.85) scaleX(1.1) translateX(-4px) rotate(1deg); }
+    40% { transform: translateY(11px) scaleY(0.86) scaleX(1.09) translateX(4px) rotate(-1deg); }
+    /* 힘이 차오르며 점점 일어남 */
+    50% { transform: translateY(8px) scaleY(0.9) scaleX(1.07) translateX(-2px); }
+    55% { transform: translateY(7px) scaleY(0.91) scaleX(1.06) translateX(2px); }
+    60% { transform: translateY(6px) scaleY(0.92) scaleX(1.05) translateX(-2px); }
+    65% { transform: translateY(5px) scaleY(0.93) scaleX(1.04) translateX(2px); }
+    /* 폭발 직전! 살짝 뒤로 젖힘 */
+    75% { 
+        transform: translateY(-5px) scaleY(1.05) scaleX(0.98) rotate(2deg); 
+    }
+    /* 정지! (타격 직전 긴장감) */
+    85%, 95% { 
+        transform: translateY(-3px) scaleY(1.03) scaleX(0.99) rotate(1deg); 
+    }
+    /* 다시 처음으로 */
+    100% { 
+        transform: translateY(0) scaleY(1) scaleX(1) rotate(0deg); 
+    }
+}
+
+/* 강한 공격 - 발밑 타원형 기(氣) 이펙트 */
+.enemy-unit.intent-attack-strong::before {
+    content: '';
+    position: absolute;
+    bottom: 5%;
+    left: 50%;
+    width: 70%;
+    height: 25%;
+    transform: translateX(-50%);
+    background: radial-gradient(ellipse at center, rgba(255, 80, 0, 0.5) 0%, rgba(255, 50, 0, 0.3) 40%, transparent 70%);
+    border-radius: 50%;
+    animation: energyPulse 0.8s ease-in-out infinite;
+    pointer-events: none;
+    z-index: -1;
+}
+
+@keyframes energyPulse {
+    0%, 100% {
+        opacity: 0.5;
+        transform: translateX(-50%) scale(1);
+    }
+    50% {
+        opacity: 0.9;
+        transform: translateX(-50%) scale(1.2);
+    }
+}
+
+/* 강한 공격 - 충격파 링 */
+.enemy-unit.intent-attack-strong::after {
+    content: '';
+    position: absolute;
+    bottom: 5%;
+    left: 50%;
+    width: 80px;
+    height: 20px;
+    transform: translateX(-50%);
+    border: 3px solid rgba(255, 100, 0, 0.6);
+    border-radius: 50%;
+    animation: shockwaveRing 1s ease-out infinite;
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* energyRise는 energyPulse로 대체됨 */
+
+@keyframes shockwaveRing {
+    0% {
+        opacity: 0.8;
+        transform: translateX(-50%) scale(0.5);
+        border-width: 4px;
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(-50%) scale(2);
+        border-width: 1px;
+    }
+}
+
+/* 구버전 펄스 제거하고 새 이펙트로 대체 */
+@keyframes powerPulse {
+    0%, 100% {
+        opacity: 0.5;
+        transform: translate(-50%, -50%) scale(0.9);
+    }
+    50% {
+        opacity: 0.6;
+        transform: translate(-50%, -50%) scale(1.1);
     }
 }
 
@@ -1264,24 +1384,30 @@ img {
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
-/* 플레이어 디버프 컨테이너 */
+/* 플레이어 디버프 컨테이너 - 절대 위치로 스프라이트 위치에 영향 안줌 */
 .player-debuffs {
+    position: absolute;
+    bottom: -35px;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
-    gap: 8px;
+    gap: 6px;
     justify-content: center;
-    margin-top: 5px;
+    z-index: 50;
+    pointer-events: auto;
 }
 
 .player-debuff-icon {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
     background: linear-gradient(145deg, rgba(30, 30, 45, 0.95) 0%, rgba(15, 15, 25, 0.98) 100%);
-    padding: 6px 12px;
-    border-radius: 20px;
+    padding: 4px 8px;
+    border-radius: 15px;
     cursor: pointer;
     transition: all 0.2s ease;
     position: relative;
+    flex-shrink: 0;
 }
 
 .player-debuff-icon.vulnerable {
@@ -1294,6 +1420,17 @@ img {
     border: 2px solid #6b21a8;
     box-shadow: 0 0 10px rgba(107, 33, 168, 0.4);
     animation: debuffPulse 2s infinite;
+}
+
+.player-debuff-icon.taunt {
+    border: 2px solid #f59e0b;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+    animation: tauntPulse 1.5s infinite;
+}
+
+@keyframes tauntPulse {
+    0%, 100% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.4); }
+    50% { box-shadow: 0 0 18px rgba(245, 158, 11, 0.7); }
 }
 
 .player-debuff-icon.bleed-debuff {
@@ -1313,13 +1450,13 @@ img {
 }
 
 .debuff-emoji {
-    font-size: 1.2rem;
+    font-size: 1rem;
 }
 
 .debuff-count,
 .debuff-value {
     font-family: 'Cinzel', serif;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: bold;
     color: #fff;
 }
@@ -4398,6 +4535,7 @@ body .card-drag-ghost.can-drop {
 .enemy-unit .enemy-info {
     margin-top: 5px;
     text-align: center;
+    position: relative;  /* 🔥 자식 absolute 기준점 */
 }
 
 /* 적 스탯 바 (쉴드 + HP) 레이아웃 */
@@ -4801,6 +4939,34 @@ body .card-drag-ghost.can-drop {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
+/* 알 수 없음 인텐트 - 회복 중 (?) */
+.intent-unknown {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 14px;
+    font-size: 1.3rem;
+    color: #fbbf24;
+    background: linear-gradient(180deg, rgba(251, 191, 36, 0.2) 0%, rgba(180, 130, 20, 0.3) 100%);
+    border: 2px solid rgba(251, 191, 36, 0.6);
+    border-radius: 8px;
+    box-shadow: 
+        0 0 10px rgba(251, 191, 36, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    animation: unknownPulse 1s ease-in-out infinite;
+}
+
+@keyframes unknownPulse {
+    0%, 100% { 
+        opacity: 0.7; 
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 1; 
+        transform: scale(1.05);
+    }
+}
+
 /* 위험/처형 준비 인텐트 - 금색/붉은 톤 */
 .enemy-unit .intent-danger {
     color: #fef3c7;
@@ -4829,6 +4995,17 @@ body .card-drag-ghost.can-drop {
             0 0 40px rgba(239, 68, 68, 0.5);
         transform: scale(1.03);
     }
+}
+
+/* 이동 인텐트 - 회색/청록 */
+.enemy-unit .intent-move {
+    color: #e2e8f0;
+    background: linear-gradient(180deg, rgba(71, 85, 105, 0.9) 0%, rgba(51, 65, 85, 0.95) 100%);
+    border: 1px solid #64748b;
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 2px 8px rgba(100, 116, 139, 0.4);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 /* 디버프 인텐트 - 어두운 보라 */
@@ -5102,12 +5279,17 @@ body .card-drag-ghost.can-drop {
 
 /* 상태이상 표시 - HP바 아래에 표시 (이름 대신) */
 .enemy-status-display {
-    margin-top: 5px;
+    /* 🔥 absolute로 변경하여 스프라이트 위치에 영향 안 주도록! */
+    position: absolute;
+    bottom: -30px;  /* HP바 아래에 표시 */
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
     justify-content: center;
     z-index: 500;
+    white-space: nowrap;
 }
 
 /* ==========================================

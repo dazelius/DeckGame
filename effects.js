@@ -696,13 +696,20 @@ const EffectSystem = {
     // ==========================================
     // 적 공격 이펙트
     // ==========================================
-    enemyAttack(enemyEl, playerEl, damage) {
+    enemyAttack(enemyEl, playerEl, damage, attackType = 'melee') {
         if (!enemyEl || !playerEl) return;
         
         const playerRect = playerEl.getBoundingClientRect();
         const playerCenterX = playerRect.left + playerRect.width / 2;
         const playerCenterY = playerRect.top + playerRect.height / 2;
         
+        // 🏹 원거리 공격 (궁수 등)
+        if (attackType === 'ranged') {
+            this.enemyRangedAttack(enemyEl, playerEl, damage);
+            return;
+        }
+        
+        // 근접 공격 (기본)
         // 적 돌진 애니메이션
         enemyEl.classList.add('enemy-attacking');
         
@@ -724,6 +731,57 @@ const EffectSystem = {
         // 적 원위치
         setTimeout(() => {
             enemyEl.classList.remove('enemy-attacking');
+        }, 600);
+    },
+    
+    // ==========================================
+    // 🏹 원거리 공격 이펙트 (화살)
+    // ==========================================
+    enemyRangedAttack(enemyEl, playerEl, damage) {
+        if (!enemyEl || !playerEl) return;
+        
+        const enemyRect = enemyEl.getBoundingClientRect();
+        const playerRect = playerEl.getBoundingClientRect();
+        
+        // 적 위치 (화살 발사 지점)
+        const enemyCenterX = enemyRect.left + enemyRect.width / 2;
+        const enemyCenterY = enemyRect.top + enemyRect.height * 0.4;
+        
+        // 플레이어 위치 (화살 도착 지점)
+        const playerCenterX = playerRect.left + playerRect.width / 2;
+        const playerCenterY = playerRect.top + playerRect.height / 2;
+        
+        // 활 쏘기 애니메이션
+        enemyEl.classList.add('enemy-shooting');
+        
+        // 활 당기는 모션 후 발사
+        setTimeout(() => {
+            // 화살 투사체 발사
+            if (typeof VFX !== 'undefined' && VFX.arrow) {
+                VFX.arrow(enemyCenterX, enemyCenterY, playerCenterX, playerCenterY, {
+                    speed: 28,
+                    onHit: () => {
+                        this.screenShake(damage > 10 ? 15 : 10, 300);
+                        this.showDamageVignette();
+                    }
+                });
+            } else if (typeof VFX !== 'undefined') {
+                // VFX.arrow가 없으면 projectile 사용
+                VFX.projectile(enemyCenterX, enemyCenterY, playerCenterX, playerCenterY, {
+                    color: '#f59e0b',
+                    speed: 25,
+                    size: 8,
+                    onHit: () => {
+                        this.screenShake(damage > 10 ? 15 : 10, 300);
+                        this.showDamageVignette();
+                    }
+                });
+            }
+        }, 200);
+        
+        // 적 원위치
+        setTimeout(() => {
+            enemyEl.classList.remove('enemy-shooting');
         }, 600);
     },
     
@@ -811,6 +869,46 @@ effectStyles.textContent = `
         30% { transform: translateX(-80px) scale(1.1); }
         50% { transform: translateX(-100px) scale(1.15); }
         100% { transform: translateX(0) scale(1); }
+    }
+    
+    /* 🏹 활 쏘기 (궁수 공격) - 스피디 버전 */
+    .enemy-shooting {
+        animation: bowShoot 0.4s ease-out !important;
+    }
+    
+    .enemy-shooting .enemy-sprite-img {
+        animation: bowDraw 0.4s ease-out !important;
+    }
+    
+    @keyframes bowShoot {
+        0% { transform: translateX(0); }
+        25% { transform: translateX(6px) rotate(-2deg); }
+        50% { transform: translateX(-12px) rotate(1deg); }
+        75% { transform: translateX(-5px); }
+        100% { transform: translateX(0); }
+    }
+    
+    @keyframes bowDraw {
+        0% { 
+            transform: scaleX(1) scaleY(1); 
+            filter: brightness(1);
+        }
+        25% { 
+            transform: scaleX(0.9) scaleY(1.08) translateX(5px); 
+            filter: brightness(1.1);
+        }
+        50% { 
+            transform: scaleX(1.12) scaleY(0.94) translateX(-8px); 
+            filter: brightness(1.4);
+        }
+        75% { 
+            transform: scaleX(1.05) scaleY(0.98) translateX(-3px); 
+            filter: brightness(1.15);
+        }
+        100% { 
+            transform: scaleX(1) scaleY(1) translateX(0); 
+            filter: brightness(1);
+        }
     }
     
     /* 데미지 비네팅 */
