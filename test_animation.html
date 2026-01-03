@@ -1077,10 +1077,15 @@
             
             stageContainer.x = 0;
             stageContainer.y = 0;
+            stageContainer.scale.set(1, 1);  // ⚠️ 스케일도 복원!
             stageContainer.alpha = 1;  // ⚠️ 스테이지 알파도 복원!
             
-            // ⚠️ DDOOAction 캐릭터도 리셋!
+            // ⚠️ DDOOAction 카메라/이펙트 리셋!
             if (typeof DDOOAction !== 'undefined' && DDOOAction.initialized) {
+                DDOOAction.resetCameraImmediate();
+                DDOOAction.resetColorGradeImmediate();
+                DDOOAction.resetSlowmoImmediate();
+                
                 const playerChar = DDOOAction.characters.get('player');
                 if (playerChar) {
                     playerChar.sprite.alpha = 1;
@@ -1097,6 +1102,12 @@
                     enemyChar.container.x = config.enemyBaseX;
                     enemyChar.container.y = config.baseY;
                 }
+            }
+            
+            // 🎥 3D 배경 카메라도 리셋
+            if (typeof Background3D !== 'undefined' && Background3D.isInitialized && Background3D.camera) {
+                const baseZ = Background3D.cameraDefaults?.posZ || 15;
+                Background3D.camera.position.z = baseZ;
             }
             
             clearVFX();
