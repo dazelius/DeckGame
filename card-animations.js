@@ -41,6 +41,16 @@ const CardAnimations = {
             };
         });
         
+        // 🎯 조건부 애니메이션 (강탈 - 취약 상태 확인)
+        this.registry['plunder'] = {
+            name: '강탈',
+            execute: (options) => this.playPlunderAnimation(options)
+        };
+        this.registry['plunderP'] = {
+            name: '강탈+',
+            execute: (options) => this.playPlunderAnimation(options, true)
+        };
+        
         console.log('[CardAnimations] 등록된 애니메이션:', Object.keys(this.registry));
     },
     
@@ -271,6 +281,42 @@ const CardAnimations = {
             }
             sprite.rotation = 0;
         }, 1000);
+    },
+    
+    // ==========================================
+    // 🎯 강탈 조건부 애니메이션
+    // ==========================================
+    async playPlunderAnimation(options = {}, isUpgraded = false) {
+        const { target } = options;
+        
+        // 취약 상태 확인
+        const isVulnerable = target && target.vulnerable && target.vulnerable > 0;
+        
+        // 조건에 따라 다른 JSON 재생
+        const jsonId = isVulnerable ? 'card.plunder_drain' : 'card.plunder';
+        
+        console.log(`[CardAnimations] 🎯 강탈${isUpgraded ? '+' : ''}: 취약=${isVulnerable} → ${jsonId}`);
+        
+        // 데미지 값 조정 (강화 버전은 10 데미지)
+        const damage = isUpgraded ? 10 : 8;
+        
+        return this.playDDOOAction(jsonId, {
+            ...options,
+            damage,
+            // 취약 보너스 시 에너지 획득 콜백 추가
+            onEvent: isVulnerable ? (eventData) => {
+                if (eventData.type === 'energy' && typeof gameState !== 'undefined') {
+                    gameState.player.energy += eventData.value;
+                    console.log(`[CardAnimations] ⚡ 에너지 강탈! +${eventData.value}`);
+                    
+                    // UI 업데이트
+                    if (typeof updateUI === 'function') updateUI();
+                    if (typeof renderHand === 'function') renderHand(false);
+                    if (typeof showEnergyGainEffect === 'function') showEnergyGainEffect(eventData.value);
+                    if (typeof addLog === 'function') addLog(`강탈 성공! +${eventData.value} 에너지!`, 'energy');
+                }
+            } : undefined
+        });
     },
     
     // ==========================================

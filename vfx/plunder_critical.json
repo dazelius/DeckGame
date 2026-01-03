@@ -1,0 +1,57 @@
+{
+    "id": "plunder_critical",
+    "name": "강탈 크리티컬 - 취약 보너스",
+    "shake": 12,
+    "particles": [
+        {
+            "type": "slash",
+            "count": 3,
+            "angle": [-35, 0, 35],
+            "length": [80, 120],
+            "width": 12,
+            "color": "#fbbf24",
+            "glow": "#f59e0b",
+            "life": 180
+        },
+        {
+            "type": "flash",
+            "size": 80,
+            "color": "#ffffff",
+            "life": 80
+        },
+        {
+            "type": "ring",
+            "size": 20,
+            "maxSize": 100,
+            "color": "#fbbf24",
+            "life": 160
+        },
+        {
+            "type": "spark",
+            "count": 20,
+            "spread": 60,
+            "speed": [8, 20],
+            "size": [3, 7],
+            "colors": ["#fbbf24", "#f59e0b", "#ffffff", "#22c55e"],
+            "life": [150, 300]
+        },
+        {
+            "type": "symbol",
+            "symbol": "💰",
+            "count": 3,
+            "size": 28,
+            "floatUp": true,
+            "life": 600
+        },
+        {
+            "type": "line",
+            "count": 10,
+            "angleStep": 36,
+            "length": [40, 70],
+            "width": 4,
+            "color": "#fbbf24",
+            "life": 150
+        }
+    ]
+}
+

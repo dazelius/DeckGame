@@ -1,0 +1,13 @@
+{
+    "id": "card.plunder",
+    "name": "강탈 - 기본",
+    "type": "sequence",
+    "description": "적을 공격하고 취약 상태면 에너지를 강탈한다",
+    "returnToBase": true,
+    "steps": [
+        { "anim": "player.plunder", "wait": true },
+        { "delay": 80 },
+        { "anim": ["enemy.plunder_hit", "enemy.hit_left", "enemy.hit_right"], "wait": true, "damage": 8 }
+    ]
+}
+

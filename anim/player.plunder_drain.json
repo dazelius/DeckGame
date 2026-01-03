@@ -1,0 +1,27 @@
+{
+    "id": "player.plunder_drain",
+    "name": "강탈 - 에너지 흡수 (취약 보너스)",
+    "target": "player",
+    "type": "once",
+    "priority": 17,
+    "duration": 700,
+    "returnToBase": true,
+    "keyframes": [
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "alpha": 1, "duration": 0 },
+        
+        { "x": -10, "y": 2, "scaleX": 0.95, "scaleY": 1.05, "rotation": -0.05, "duration": 40, "ease": "power2.out", "color": "power" },
+        { "x": -30, "y": 8, "scaleX": 0.85, "scaleY": 1.15, "rotation": -0.12, "duration": 50, "ease": "power2.in", "afterimage": true },
+        
+        { "x": 100, "y": -20, "scaleX": 1.25, "scaleY": 0.8, "rotation": 0.18, "duration": 40, "ease": "power4.out", "dashToTarget": "enemy", "dashPadding": 15, "afterimage": true, "slowmo": { "scale": 0.4, "duration": 80 } },
+        { "x": 140, "y": -12, "scaleX": 1.2, "scaleY": 0.85, "rotation": 0.25, "duration": 35, "ease": "power3.out", "vfx": "plunder_critical", "shake": 12, "hitstop": 80, "camera": { "zoom": 1.15 } },
+        { "x": 150, "y": -5, "scaleX": 1.15, "scaleY": 0.88, "rotation": 0.2, "duration": 30, "ease": "power2.out", "vfx": "energy_drain" },
+        { "x": 145, "y": 0, "scaleX": 1.1, "scaleY": 0.92, "rotation": 0.15, "duration": 40, "ease": "power2.out", "slowmo": "reset" },
+        
+        { "x": 110, "y": 5, "scaleX": 1.05, "scaleY": 0.96, "rotation": 0.08, "duration": 50, "ease": "power2.inOut", "vfx": "energy_absorb", "vfxTarget": "self" },
+        { "x": 70, "y": 5, "scaleX": 1.02, "scaleY": 0.98, "rotation": 0.04, "duration": 60, "ease": "power2.inOut" },
+        { "x": 35, "y": 3, "scaleX": 1.01, "scaleY": 0.99, "rotation": 0.02, "duration": 60, "ease": "power2.out" },
+        { "x": 12, "y": 1, "scaleX": 1, "scaleY": 1, "rotation": 0.01, "duration": 50, "ease": "power2.out" },
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 40, "ease": "power2.out" }
+    ]
+}
+
