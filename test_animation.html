@@ -227,7 +227,11 @@
             speed: 1,
             playerBaseX: 0,
             enemyBaseX: 0,
-            baseY: 0
+            baseY: 0,
+            // 캐릭터 크기 정보
+            charHeight: 120,    // 기본 캐릭터 높이
+            charWidth: 60,      // 기본 캐릭터 너비
+            vfxScale: 1.0       // VFX 스케일
         };
         
         const animCache = new Map();
@@ -329,7 +333,7 @@
                 playerSprite = new PIXI.Sprite(tex);
                 playerSprite.anchor.set(0.5, 1);
                 playerSprite.scale.set(1.0);
-                log('success', '✅ hero.png');
+                log('success', `✅ hero.png (${tex.width}x${tex.height})`);
             } catch (e) {
                 playerSprite = createFallback(0x60a5fa, 'P');
                 log('warn', '⚠️ hero.png fallback');
@@ -347,7 +351,7 @@
                 enemySprite = new PIXI.Sprite(tex);
                 enemySprite.anchor.set(0.5, 1);
                 enemySprite.scale.set(1.0);
-                log('success', '✅ goblinarcher.png');
+                log('success', `✅ goblinarcher.png (${tex.width}x${tex.height})`);
             } catch (e) {
                 enemySprite = createFallback(0xef4444, 'E');
                 log('warn', '⚠️ goblinarcher.png fallback');
@@ -355,7 +359,25 @@
             enemyContainer.addChild(enemySprite);
             stageContainer.addChild(enemyContainer);
             
+            // 캐릭터 크기 저장
+            updateCharacterInfo();
+            
             startBreathing();
+        }
+        
+        function updateCharacterInfo() {
+            // 플레이어 바운드
+            const pBounds = playerSprite.getBounds();
+            config.playerHeight = pBounds.height;
+            config.playerWidth = pBounds.width;
+            
+            // 적 바운드
+            const eBounds = enemySprite.getBounds();
+            config.enemyHeight = eBounds.height;
+            config.enemyWidth = eBounds.width;
+            
+            log('info', `Player: ${config.playerWidth.toFixed(0)}x${config.playerHeight.toFixed(0)}`);
+            log('info', `Enemy: ${config.enemyWidth.toFixed(0)}x${config.enemyHeight.toFixed(0)}`);
         }
         
         function createFallback(color, letter) {
@@ -597,6 +619,35 @@
         }
         
         // ==================== VFX 시스템 (JSON 기반) ====================
+        
+        // 캐릭터의 실제 바운드 계산
+        function getCharacterBounds(container) {
+            const sprite = container.children[0];
+            if (!sprite) return { width: 60, height: 120, centerY: -60 };
+            
+            const bounds = sprite.getBounds();
+            const scale = sprite.scale.x;
+            
+            return {
+                width: bounds.width,
+                height: bounds.height,
+                centerY: -bounds.height / 2,  // 중심점 Y
+                scale: scale
+            };
+        }
+        
+        // 타격점 계산 (적 위치 기준)
+        function getHitPoint(attackerContainer, targetContainer) {
+            const targetBounds = getCharacterBounds(targetContainer);
+            
+            // 타격점은 타겟 캐릭터의 중심
+            return {
+                x: targetContainer.x,
+                y: targetContainer.y + targetBounds.centerY,
+                scale: targetBounds.scale
+            };
+        }
+        
         function triggerVFX(vfxId, container, dir) {
             const vfxData = vfxCache.get(vfxId);
             if (!vfxData) {
@@ -604,10 +655,28 @@
                 return;
             }
             
-            const x = container.x;
-            const y = container.y - 60;
+            // 타격점 계산: 공격자가 플레이어면 적에게, 적이면 플레이어에게
+            const isPlayer = container === playerContainer;
+            const targetContainer = isPlayer ? enemyContainer : playerContainer;
+            const hitPoint = getHitPoint(container, targetContainer);
             
-            log('vfx', `💥 ${vfxId} at (${x.toFixed(0)}, ${y.toFixed(0)})`);
+            // VFX 타입에 따른 위치 결정
+            let vfxX, vfxY, vfxScale;
+            
+            if (vfxId === 'dash' || vfxId === 'trail') {
+                // 대시/트레일은 자신 위치
+                const bounds = getCharacterBounds(container);
+                vfxX = container.x;
+                vfxY = container.y + bounds.centerY;
+                vfxScale = bounds.scale;
+            } else {
+                // 공격 이펙트는 타격점 (타겟 위치)
+                vfxX = hitPoint.x;
+                vfxY = hitPoint.y;
+                vfxScale = hitPoint.scale;
+            }
+            
+            log('vfx', `💥 ${vfxId} at (${vfxX.toFixed(0)}, ${vfxY.toFixed(0)}) scale:${vfxScale.toFixed(2)}`);
             
             // VFX에 정의된 shake 실행
             if (vfxData.shake) {
@@ -616,12 +685,12 @@
             
             // 각 파티클 정의 처리
             for (const pDef of vfxData.particles) {
-                spawnParticlesFromDef(pDef, x, y, dir, container);
+                spawnParticlesFromDef(pDef, vfxX, vfxY, dir, container, vfxScale);
             }
         }
         
-        // JSON 정의에서 파티클 생성
-        function spawnParticlesFromDef(def, x, y, dir, container) {
+        // JSON 정의에서 파티클 생성 (스케일 적용)
+        function spawnParticlesFromDef(def, x, y, dir, container, scale = 1.0) {
             const count = def.count || 1;
             const delayBetween = def.delay || 0;
             
@@ -630,52 +699,53 @@
                     switch (def.type) {
                         case 'slash':
                         case 'thrust':
-                            spawnSlashParticle(def, x, y, dir, i);
+                            spawnSlashParticle(def, x, y, dir, i, scale);
                             break;
                         case 'spark':
-                            spawnSparkParticle(def, x, y);
+                            spawnSparkParticle(def, x, y, scale);
                             break;
                         case 'flash':
-                            spawnFlashParticle(def, x, y);
+                            spawnFlashParticle(def, x, y, scale);
                             break;
                         case 'ring':
-                            spawnRingParticle(def, x, y);
+                            spawnRingParticle(def, x, y, scale);
                             break;
                         case 'line':
-                            spawnLineParticle(def, x, y, i);
+                            spawnLineParticle(def, x, y, i, scale);
                             break;
                         case 'debris':
-                            spawnDebrisParticle(def, x, y);
+                            spawnDebrisParticle(def, x, y, scale);
                             break;
                         case 'trail':
-                            spawnTrailParticle(def, container, i);
+                            spawnTrailParticle(def, container, i, scale);
                             break;
                     }
                 }, i * delayBetween);
             }
         }
         
-        function spawnSlashParticle(def, x, y, dir, index) {
+        function spawnSlashParticle(def, x, y, dir, index, scale) {
             const angles = Array.isArray(def.angle) ? def.angle : [def.angle || 0];
             const angle = angles[index % angles.length] || (Math.random() - 0.5) * 60;
-            const length = getRandValue(def.length);
+            const length = getRandValue(def.length) * scale;
+            const width = (def.width || 8) * scale;
             
             spawnParticle({
                 type: 'slash',
                 x, y,
                 angle: angle * dir,
                 length: length,
-                width: def.width || 8,
+                width: width,
                 color: def.color || '#ffffff',
                 glow: def.glow || '#60a5fa',
                 life: def.life || 150
             });
         }
         
-        function spawnSparkParticle(def, x, y) {
-            const spread = def.spread || 50;
-            const speed = getRandValue(def.speed);
-            const size = getRandValue(def.size);
+        function spawnSparkParticle(def, x, y, scale) {
+            const spread = (def.spread || 50) * scale;
+            const speed = getRandValue(def.speed) * scale;
+            const size = getRandValue(def.size) * scale;
             const angle = Math.random() * Math.PI * 2;
             const colors = def.colors || [def.color || '#fbbf24'];
             
@@ -691,46 +761,47 @@
             });
         }
         
-        function spawnFlashParticle(def, x, y) {
+        function spawnFlashParticle(def, x, y, scale) {
             spawnParticle({
                 type: 'flash',
                 x, y,
-                size: def.size || 80,
+                size: (def.size || 80) * scale,
                 color: def.color || '#ffffff',
                 life: def.life || 80
             });
         }
         
-        function spawnRingParticle(def, x, y) {
+        function spawnRingParticle(def, x, y, scale) {
             spawnParticle({
                 type: 'ring',
                 x, y,
-                size: def.size || 20,
-                maxSize: def.maxSize || 100,
+                size: (def.size || 20) * scale,
+                maxSize: (def.maxSize || 100) * scale,
                 color: def.color || '#ef4444',
                 life: def.life || 200
             });
         }
         
-        function spawnLineParticle(def, x, y, index) {
+        function spawnLineParticle(def, x, y, index, scale) {
             const angleStep = def.angleStep || 30;
             const angle = index * angleStep;
-            const length = getRandValue(def.length);
+            const length = getRandValue(def.length) * scale;
+            const width = (def.width || 3) * scale;
             
             spawnParticle({
                 type: 'line',
                 x, y,
                 angle: angle,
                 length: length,
-                width: def.width || 3,
+                width: width,
                 color: def.color || '#fbbf24',
                 life: def.life || 150
             });
         }
         
-        function spawnDebrisParticle(def, x, y) {
-            const speed = getRandValue(def.speed);
-            const size = getRandValue(def.size);
+        function spawnDebrisParticle(def, x, y, scale) {
+            const speed = getRandValue(def.speed) * scale;
+            const size = getRandValue(def.size) * scale;
             const angle = Math.random() * Math.PI * 2;
             const colors = def.colors || [def.color || '#ef4444'];
             
@@ -746,14 +817,15 @@
             });
         }
         
-        function spawnTrailParticle(def, container, index) {
-            const offsetX = (def.offsetX || -20) * index;
-            const size = getRandValue(def.size) - index * 5;
+        function spawnTrailParticle(def, container, index, scale) {
+            const bounds = getCharacterBounds(container);
+            const offsetX = (def.offsetX || -20) * index * scale;
+            const size = (getRandValue(def.size) - index * 5) * scale;
             
             spawnParticle({
                 type: 'trail',
                 x: container.x + offsetX,
-                y: container.y - 50,
+                y: container.y + bounds.centerY,
                 size: Math.max(size, 10),
                 color: def.color || 'rgba(96, 165, 250, 0.3)',
                 life: def.life || 150
