@@ -1064,6 +1064,11 @@
         }
         
         function drawTrailParticle(p, alpha) {
+            // NaN/Infinity 체크
+            if (!isFinite(p.x) || !isFinite(p.y) || !isFinite(p.size) || p.size <= 0) {
+                return;
+            }
+            
             const grad = vfxCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
             grad.addColorStop(0, p.color.replace('0.3', String(0.3 * alpha)));
             grad.addColorStop(1, 'transparent');
@@ -1130,8 +1135,8 @@
             
             vfxCtx.restore();
             
-            // 잔상 트레일 생성
-            if (Math.random() > 0.6) {
+            // 잔상 트레일 생성 (dist > 0 일 때만)
+            if (dist > 0.1 && Math.random() > 0.6) {
                 spawnParticle({
                     type: 'trail',
                     x: p.x - (dx / dist) * 10,
