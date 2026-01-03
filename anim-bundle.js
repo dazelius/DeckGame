@@ -1,12 +1,12 @@
 /**
  * DDOO Animation Bundle - 자동 생성됨
- * 생성일: 2026-01-03T16:35:50.853Z
+ * 생성일: 2026-01-03T16:41:30.703Z
  * 
  * 이 파일을 포함하면 fetch 없이 모든 애니메이션/VFX 데이터 사용 가능!
  * <script src="anim-bundle.js"></script>
  */
 
-// 애니메이션 데이터 (32개)
+// 애니메이션 데이터 (39개)
 window.ANIM_BUNDLE = {
   "card.bash": {
     "id": "card.bash",
@@ -32,6 +32,58 @@ window.ANIM_BUNDLE = {
           "name": "vulnerable",
           "value": 2
         }
+      }
+    ]
+  },
+  "card.battleopening": {
+    "id": "card.battleopening",
+    "name": "전투 개막 - 파워태클",
+    "type": "sequence",
+    "description": "폭발적인 가속으로 적을 격파하는 개막 일격",
+    "returnToBase": true,
+    "steps": [
+      {
+        "anim": "player.power_windup",
+        "wait": true
+      },
+      {
+        "delay": 50
+      },
+      {
+        "anim": "player.power_tackle",
+        "wait": false,
+        "damage": 8
+      },
+      {
+        "anim": "enemy.power_impact",
+        "wait": true,
+        "delay": 30
+      }
+    ]
+  },
+  "card.battleopeningP": {
+    "id": "card.battleopeningP",
+    "name": "전투 개막+ - 파워태클 강화",
+    "type": "sequence",
+    "description": "더욱 강력한 폭발적 개막 일격",
+    "returnToBase": true,
+    "steps": [
+      {
+        "anim": "player.power_windup",
+        "wait": true
+      },
+      {
+        "delay": 40
+      },
+      {
+        "anim": "player.power_tackle_plus",
+        "wait": false,
+        "damage": 12
+      },
+      {
+        "anim": "enemy.power_impact_heavy",
+        "wait": true,
+        "delay": 25
       }
     ]
   },
@@ -978,6 +1030,206 @@ window.ANIM_BUNDLE = {
         "alpha": 0.97,
         "rotation": 0,
         "duration": 35,
+        "ease": "power2.out"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "alpha": 1,
+        "rotation": 0,
+        "duration": 30,
+        "ease": "power2.out"
+      }
+    ]
+  },
+  "enemy.power_impact": {
+    "id": "enemy.power_impact",
+    "name": "파워 임팩트 피격",
+    "target": "enemy",
+    "type": "once",
+    "priority": 18,
+    "duration": 200,
+    "keyframes": [
+      {
+        "x": 0,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "alpha": 1,
+        "rotation": 0,
+        "duration": 0
+      },
+      {
+        "x": 60,
+        "y": -15,
+        "scaleX": 0.6,
+        "scaleY": 1.5,
+        "alpha": 0.4,
+        "rotation": 0.2,
+        "duration": 15,
+        "ease": "power4.out",
+        "vfx": "impact_shockwave"
+      },
+      {
+        "x": 85,
+        "y": -8,
+        "scaleX": 0.55,
+        "scaleY": 1.6,
+        "alpha": 0.35,
+        "rotation": 0.25,
+        "duration": 20,
+        "ease": "power2.out"
+      },
+      {
+        "x": 100,
+        "y": 0,
+        "scaleX": 0.5,
+        "scaleY": 1.7,
+        "alpha": 0.3,
+        "rotation": 0.3,
+        "duration": 25,
+        "ease": "power2.out"
+      },
+      {
+        "x": 90,
+        "y": 5,
+        "scaleX": 0.6,
+        "scaleY": 1.5,
+        "alpha": 0.4,
+        "rotation": 0.25,
+        "duration": 30,
+        "ease": "power2.out"
+      },
+      {
+        "x": 70,
+        "y": 8,
+        "scaleX": 0.7,
+        "scaleY": 1.35,
+        "alpha": 0.55,
+        "rotation": 0.18,
+        "duration": 30,
+        "ease": "power2.out"
+      },
+      {
+        "x": 45,
+        "y": 5,
+        "scaleX": 0.82,
+        "scaleY": 1.2,
+        "alpha": 0.7,
+        "rotation": 0.1,
+        "duration": 30,
+        "ease": "power2.out"
+      },
+      {
+        "x": 20,
+        "y": 2,
+        "scaleX": 0.92,
+        "scaleY": 1.08,
+        "alpha": 0.88,
+        "rotation": 0.04,
+        "duration": 25,
+        "ease": "power2.out"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "alpha": 1,
+        "rotation": 0,
+        "duration": 25,
+        "ease": "power2.out"
+      }
+    ]
+  },
+  "enemy.power_impact_heavy": {
+    "id": "enemy.power_impact_heavy",
+    "name": "파워 임팩트+ 강타 피격",
+    "target": "enemy",
+    "type": "once",
+    "priority": 20,
+    "duration": 250,
+    "keyframes": [
+      {
+        "x": 0,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "alpha": 1,
+        "rotation": 0,
+        "duration": 0
+      },
+      {
+        "x": 80,
+        "y": -20,
+        "scaleX": 0.5,
+        "scaleY": 1.7,
+        "alpha": 0.3,
+        "rotation": 0.3,
+        "duration": 12,
+        "ease": "power4.out",
+        "vfx": "impact_shockwave_heavy"
+      },
+      {
+        "x": 110,
+        "y": -10,
+        "scaleX": 0.45,
+        "scaleY": 1.8,
+        "alpha": 0.25,
+        "rotation": 0.35,
+        "duration": 18,
+        "ease": "power2.out"
+      },
+      {
+        "x": 130,
+        "y": 0,
+        "scaleX": 0.4,
+        "scaleY": 1.9,
+        "alpha": 0.2,
+        "rotation": 0.4,
+        "duration": 25,
+        "ease": "power2.out"
+      },
+      {
+        "x": 115,
+        "y": 8,
+        "scaleX": 0.5,
+        "scaleY": 1.65,
+        "alpha": 0.35,
+        "rotation": 0.32,
+        "duration": 35,
+        "ease": "power2.out"
+      },
+      {
+        "x": 90,
+        "y": 10,
+        "scaleX": 0.62,
+        "scaleY": 1.45,
+        "alpha": 0.5,
+        "rotation": 0.22,
+        "duration": 35,
+        "ease": "power2.out"
+      },
+      {
+        "x": 55,
+        "y": 6,
+        "scaleX": 0.78,
+        "scaleY": 1.25,
+        "alpha": 0.68,
+        "rotation": 0.12,
+        "duration": 35,
+        "ease": "power2.out"
+      },
+      {
+        "x": 25,
+        "y": 3,
+        "scaleX": 0.9,
+        "scaleY": 1.1,
+        "alpha": 0.85,
+        "rotation": 0.05,
+        "duration": 30,
         "ease": "power2.out"
       },
       {
@@ -2404,6 +2656,343 @@ window.ANIM_BUNDLE = {
       }
     ]
   },
+  "player.power_tackle": {
+    "id": "player.power_tackle",
+    "name": "파워 태클 - 폭발적 돌진",
+    "target": "player",
+    "type": "once",
+    "priority": 18,
+    "duration": 320,
+    "keyframes": [
+      {
+        "x": -38,
+        "y": 8,
+        "scaleX": 0.65,
+        "scaleY": 1.35,
+        "rotation": -0.18,
+        "duration": 0
+      },
+      {
+        "x": -20,
+        "y": -5,
+        "scaleX": 0.9,
+        "scaleY": 1.1,
+        "rotation": -0.1,
+        "duration": 15,
+        "ease": "power4.out",
+        "afterimage": true,
+        "vfx": "tackle_burst",
+        "vfxTarget": "self"
+      },
+      {
+        "x": 80,
+        "y": -15,
+        "scaleX": 1.4,
+        "scaleY": 0.7,
+        "rotation": 0.08,
+        "duration": 25,
+        "ease": "power4.out",
+        "afterimage": true
+      },
+      {
+        "x": 180,
+        "y": -10,
+        "scaleX": 1.5,
+        "scaleY": 0.65,
+        "rotation": 0.12,
+        "duration": 20,
+        "ease": "linear",
+        "afterimage": true,
+        "vfx": "speed_lines",
+        "vfxTarget": "self"
+      },
+      {
+        "x": 260,
+        "y": -5,
+        "scaleX": 1.45,
+        "scaleY": 0.68,
+        "rotation": 0.15,
+        "duration": 18,
+        "ease": "power2.in",
+        "afterimage": true
+      },
+      {
+        "x": 290,
+        "y": 0,
+        "scaleX": 1.3,
+        "scaleY": 0.75,
+        "rotation": 0.1,
+        "duration": 15,
+        "ease": "power4.out",
+        "vfx": "power_impact",
+        "shake": 15,
+        "hitstop": 80
+      },
+      {
+        "x": 285,
+        "y": 5,
+        "scaleX": 1.15,
+        "scaleY": 0.88,
+        "rotation": 0.06,
+        "duration": 25,
+        "ease": "power2.out"
+      },
+      {
+        "x": 270,
+        "y": 8,
+        "scaleX": 1.05,
+        "scaleY": 0.96,
+        "rotation": 0.03,
+        "duration": 30,
+        "ease": "power2.out"
+      },
+      {
+        "x": 250,
+        "y": 5,
+        "scaleX": 1.02,
+        "scaleY": 0.98,
+        "rotation": 0.01,
+        "duration": 35,
+        "ease": "power2.out"
+      },
+      {
+        "x": 220,
+        "y": 3,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "duration": 40,
+        "ease": "power2.out"
+      },
+      {
+        "x": 180,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "duration": 45,
+        "ease": "power2.out"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "duration": 52,
+        "ease": "power2.inOut"
+      }
+    ]
+  },
+  "player.power_tackle_plus": {
+    "id": "player.power_tackle_plus",
+    "name": "파워 태클+ - 초폭발 돌진",
+    "target": "player",
+    "type": "once",
+    "priority": 20,
+    "duration": 350,
+    "keyframes": [
+      {
+        "x": -38,
+        "y": 8,
+        "scaleX": 0.65,
+        "scaleY": 1.35,
+        "rotation": -0.18,
+        "duration": 0
+      },
+      {
+        "x": -15,
+        "y": -8,
+        "scaleX": 0.95,
+        "scaleY": 1.05,
+        "rotation": -0.08,
+        "duration": 12,
+        "ease": "power4.out",
+        "afterimage": true,
+        "vfx": "tackle_burst_plus",
+        "vfxTarget": "self"
+      },
+      {
+        "x": 100,
+        "y": -20,
+        "scaleX": 1.5,
+        "scaleY": 0.6,
+        "rotation": 0.1,
+        "duration": 20,
+        "ease": "power4.out",
+        "afterimage": true
+      },
+      {
+        "x": 200,
+        "y": -12,
+        "scaleX": 1.6,
+        "scaleY": 0.55,
+        "rotation": 0.15,
+        "duration": 18,
+        "ease": "linear",
+        "afterimage": true,
+        "vfx": "speed_lines_intense",
+        "vfxTarget": "self"
+      },
+      {
+        "x": 275,
+        "y": -5,
+        "scaleX": 1.55,
+        "scaleY": 0.58,
+        "rotation": 0.18,
+        "duration": 15,
+        "ease": "power2.in",
+        "afterimage": true
+      },
+      {
+        "x": 300,
+        "y": 0,
+        "scaleX": 1.4,
+        "scaleY": 0.7,
+        "rotation": 0.12,
+        "duration": 12,
+        "ease": "power4.out",
+        "vfx": "power_impact_plus",
+        "shake": 22,
+        "hitstop": 100
+      },
+      {
+        "x": 295,
+        "y": 8,
+        "scaleX": 1.2,
+        "scaleY": 0.85,
+        "rotation": 0.07,
+        "duration": 25,
+        "ease": "power2.out"
+      },
+      {
+        "x": 275,
+        "y": 10,
+        "scaleX": 1.08,
+        "scaleY": 0.94,
+        "rotation": 0.04,
+        "duration": 30,
+        "ease": "power2.out"
+      },
+      {
+        "x": 250,
+        "y": 6,
+        "scaleX": 1.03,
+        "scaleY": 0.98,
+        "rotation": 0.02,
+        "duration": 35,
+        "ease": "power2.out"
+      },
+      {
+        "x": 210,
+        "y": 3,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "duration": 40,
+        "ease": "power2.out"
+      },
+      {
+        "x": 160,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "duration": 45,
+        "ease": "power2.out"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "duration": 58,
+        "ease": "power2.inOut"
+      }
+    ]
+  },
+  "player.power_windup": {
+    "id": "player.power_windup",
+    "name": "파워 차징 - 웅크림",
+    "target": "player",
+    "type": "once",
+    "priority": 15,
+    "duration": 280,
+    "keyframes": [
+      {
+        "x": 0,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
+        "duration": 0
+      },
+      {
+        "x": -15,
+        "y": 5,
+        "scaleX": 0.85,
+        "scaleY": 1.15,
+        "rotation": -0.05,
+        "duration": 40,
+        "ease": "power2.in",
+        "vfx": "power_charge",
+        "vfxTarget": "self"
+      },
+      {
+        "x": -25,
+        "y": 8,
+        "scaleX": 0.78,
+        "scaleY": 1.22,
+        "rotation": -0.08,
+        "duration": 50,
+        "ease": "power2.out"
+      },
+      {
+        "x": -30,
+        "y": 10,
+        "scaleX": 0.72,
+        "scaleY": 1.28,
+        "rotation": -0.1,
+        "duration": 60,
+        "ease": "power1.inOut",
+        "vfx": "power_aura",
+        "vfxTarget": "self",
+        "shake": 2
+      },
+      {
+        "x": -32,
+        "y": 12,
+        "scaleX": 0.7,
+        "scaleY": 1.3,
+        "rotation": -0.12,
+        "duration": 50,
+        "ease": "power1.out",
+        "shake": 3
+      },
+      {
+        "x": -35,
+        "y": 10,
+        "scaleX": 0.68,
+        "scaleY": 1.32,
+        "rotation": -0.15,
+        "duration": 40,
+        "ease": "power2.in",
+        "vfx": "power_ready",
+        "vfxTarget": "self",
+        "shake": 4
+      },
+      {
+        "x": -38,
+        "y": 8,
+        "scaleX": 0.65,
+        "scaleY": 1.35,
+        "rotation": -0.18,
+        "duration": 40,
+        "ease": "power3.in"
+      }
+    ]
+  },
   "player.return": {
     "id": "player.return",
     "name": "플레이어 복귀",
@@ -2925,7 +3514,7 @@ window.ANIM_BUNDLE = {
   }
 };
 
-// VFX 데이터 (27개)
+// VFX 데이터 (38개)
 window.VFX_BUNDLE = {
   "backstab_slash": {
     "id": "backstab_slash",
@@ -4195,6 +4784,98 @@ window.VFX_BUNDLE = {
       }
     ]
   },
+  "impact_shockwave": {
+    "id": "impact_shockwave",
+    "name": "충격파",
+    "duration": 400,
+    "offset": {
+      "x": 0,
+      "y": -20
+    },
+    "particles": [
+      {
+        "type": "ring",
+        "count": 2,
+        "color": "#ffffff",
+        "size": 50,
+        "maxSize": 250,
+        "alpha": 0.8,
+        "fadeOut": true,
+        "delay": [
+          0,
+          80
+        ]
+      },
+      {
+        "type": "flash",
+        "color": "#ff8844",
+        "size": 180,
+        "alpha": 0.9,
+        "fadeOut": true
+      },
+      {
+        "type": "spark",
+        "count": 30,
+        "color": "#ffcc00",
+        "size": 6,
+        "speed": 150,
+        "alpha": 0.9,
+        "lifetime": 350
+      }
+    ]
+  },
+  "impact_shockwave_heavy": {
+    "id": "impact_shockwave_heavy",
+    "name": "강타 충격파",
+    "duration": 500,
+    "offset": {
+      "x": 0,
+      "y": -25
+    },
+    "particles": [
+      {
+        "type": "ring",
+        "count": 3,
+        "color": "#ffffff",
+        "size": 60,
+        "maxSize": 350,
+        "alpha": 0.9,
+        "fadeOut": true,
+        "delay": [
+          0,
+          60,
+          120
+        ]
+      },
+      {
+        "type": "flash",
+        "color": "#ff4422",
+        "size": 250,
+        "alpha": 1,
+        "fadeOut": true
+      },
+      {
+        "type": "spark",
+        "count": 50,
+        "color": "#ffaa00",
+        "size": 8,
+        "speed": 200,
+        "alpha": 1,
+        "lifetime": 400
+      },
+      {
+        "type": "debris",
+        "count": 15,
+        "color": "#664433",
+        "size": 10,
+        "speed": 160,
+        "gravity": 4,
+        "rotation": true,
+        "alpha": 0.8,
+        "lifetime": 500
+      }
+    ]
+  },
   "landing_dust": {
     "id": "landing_dust",
     "name": "착지 먼지",
@@ -4275,6 +4956,257 @@ window.VFX_BUNDLE = {
       "intensity": 4,
       "duration": 60
     }
+  },
+  "power_aura": {
+    "id": "power_aura",
+    "name": "파워 오라",
+    "duration": 500,
+    "offset": {
+      "x": 0,
+      "y": -40
+    },
+    "particles": [
+      {
+        "type": "ring",
+        "count": 2,
+        "color": "#ff4400",
+        "size": 30,
+        "maxSize": 120,
+        "alpha": 0.6,
+        "fadeOut": true,
+        "delay": [
+          0,
+          150
+        ]
+      },
+      {
+        "type": "line",
+        "count": 12,
+        "color": "#ffcc00",
+        "length": 60,
+        "width": 3,
+        "speed": 100,
+        "angle": "radial",
+        "alpha": 0.8,
+        "lifetime": 400
+      },
+      {
+        "type": "spark",
+        "count": 25,
+        "color": "#ff8800",
+        "size": 5,
+        "speed": 80,
+        "gravity": -1,
+        "alpha": 1,
+        "lifetime": 450
+      }
+    ]
+  },
+  "power_charge": {
+    "id": "power_charge",
+    "name": "파워 차징",
+    "duration": 400,
+    "offset": {
+      "x": 0,
+      "y": -30
+    },
+    "particles": [
+      {
+        "type": "ring",
+        "count": 3,
+        "color": "#ff6600",
+        "size": 20,
+        "maxSize": 80,
+        "alpha": 0.7,
+        "fadeOut": true,
+        "delay": [
+          0,
+          100,
+          200
+        ]
+      },
+      {
+        "type": "spark",
+        "count": 15,
+        "color": "#ffaa00",
+        "size": 4,
+        "speed": 60,
+        "gravity": -0.5,
+        "alpha": 0.9,
+        "lifetime": 350
+      },
+      {
+        "type": "flash",
+        "color": "#ff8800",
+        "size": 60,
+        "alpha": 0.5,
+        "fadeOut": true
+      }
+    ]
+  },
+  "power_impact": {
+    "id": "power_impact",
+    "name": "파워 임팩트",
+    "duration": 500,
+    "offset": {
+      "x": 30,
+      "y": -30
+    },
+    "particles": [
+      {
+        "type": "flash",
+        "color": "#ffffff",
+        "size": 250,
+        "alpha": 1,
+        "fadeOut": true
+      },
+      {
+        "type": "ring",
+        "count": 3,
+        "color": "#ff4400",
+        "size": 80,
+        "maxSize": 300,
+        "alpha": 0.9,
+        "fadeOut": true,
+        "delay": [
+          0,
+          50,
+          100
+        ]
+      },
+      {
+        "type": "spark",
+        "count": 50,
+        "color": "#ffaa00",
+        "size": 10,
+        "speed": 250,
+        "angle": "random",
+        "gravity": 2,
+        "alpha": 1,
+        "lifetime": 450
+      },
+      {
+        "type": "debris",
+        "count": 20,
+        "color": "#886644",
+        "size": 12,
+        "speed": 180,
+        "gravity": 4,
+        "rotation": true,
+        "alpha": 0.9,
+        "lifetime": 600
+      },
+      {
+        "type": "smoke",
+        "count": 10,
+        "color": "#444444",
+        "size": 80,
+        "speed": 30,
+        "alpha": 0.5,
+        "lifetime": 700
+      }
+    ]
+  },
+  "power_impact_plus": {
+    "id": "power_impact_plus",
+    "name": "파워 임팩트+",
+    "duration": 600,
+    "offset": {
+      "x": 40,
+      "y": -35
+    },
+    "particles": [
+      {
+        "type": "flash",
+        "color": "#ffffff",
+        "size": 350,
+        "alpha": 1,
+        "fadeOut": true
+      },
+      {
+        "type": "ring",
+        "count": 4,
+        "color": "#ff2200",
+        "size": 100,
+        "maxSize": 400,
+        "alpha": 1,
+        "fadeOut": true,
+        "delay": [
+          0,
+          40,
+          80,
+          120
+        ]
+      },
+      {
+        "type": "spark",
+        "count": 80,
+        "color": "#ff6600",
+        "size": 12,
+        "speed": 320,
+        "angle": "random",
+        "gravity": 2.5,
+        "alpha": 1,
+        "lifetime": 500
+      },
+      {
+        "type": "debris",
+        "count": 30,
+        "color": "#775533",
+        "size": 15,
+        "speed": 220,
+        "gravity": 5,
+        "rotation": true,
+        "alpha": 1,
+        "lifetime": 700
+      },
+      {
+        "type": "smoke",
+        "count": 15,
+        "color": "#333333",
+        "size": 100,
+        "speed": 40,
+        "alpha": 0.6,
+        "lifetime": 800
+      }
+    ]
+  },
+  "power_ready": {
+    "id": "power_ready",
+    "name": "파워 레디",
+    "duration": 350,
+    "offset": {
+      "x": 0,
+      "y": -50
+    },
+    "particles": [
+      {
+        "type": "flash",
+        "color": "#ffffff",
+        "size": 150,
+        "alpha": 0.8,
+        "fadeOut": true
+      },
+      {
+        "type": "ring",
+        "count": 1,
+        "color": "#ff2200",
+        "size": 40,
+        "maxSize": 160,
+        "alpha": 0.9,
+        "fadeOut": true
+      },
+      {
+        "type": "spark",
+        "count": 30,
+        "color": "#ffff00",
+        "size": 6,
+        "speed": 120,
+        "gravity": 0,
+        "alpha": 1,
+        "lifetime": 300
+      }
+    ]
   },
   "shadow_appear": {
     "id": "shadow_appear",
@@ -4630,6 +5562,87 @@ window.VFX_BUNDLE = {
       }
     ]
   },
+  "speed_lines": {
+    "id": "speed_lines",
+    "name": "스피드 라인",
+    "duration": 300,
+    "offset": {
+      "x": -50,
+      "y": 0
+    },
+    "particles": [
+      {
+        "type": "line",
+        "count": 20,
+        "color": "#ffffff",
+        "length": 120,
+        "width": 4,
+        "speed": 400,
+        "angle": 0,
+        "spread": 15,
+        "alpha": 0.8,
+        "lifetime": 250
+      },
+      {
+        "type": "line",
+        "count": 15,
+        "color": "#ffcc00",
+        "length": 80,
+        "width": 3,
+        "speed": 350,
+        "angle": 0,
+        "spread": 20,
+        "alpha": 0.6,
+        "lifetime": 200
+      }
+    ]
+  },
+  "speed_lines_intense": {
+    "id": "speed_lines_intense",
+    "name": "스피드 라인 강화",
+    "duration": 350,
+    "offset": {
+      "x": -60,
+      "y": 0
+    },
+    "particles": [
+      {
+        "type": "line",
+        "count": 30,
+        "color": "#ffffff",
+        "length": 160,
+        "width": 5,
+        "speed": 500,
+        "angle": 0,
+        "spread": 12,
+        "alpha": 0.9,
+        "lifetime": 280
+      },
+      {
+        "type": "line",
+        "count": 25,
+        "color": "#ff8800",
+        "length": 120,
+        "width": 4,
+        "speed": 450,
+        "angle": 0,
+        "spread": 18,
+        "alpha": 0.7,
+        "lifetime": 250
+      },
+      {
+        "type": "spark",
+        "count": 15,
+        "color": "#ffff00",
+        "size": 4,
+        "speed": 350,
+        "angle": 0,
+        "spread": 25,
+        "alpha": 0.9,
+        "lifetime": 200
+      }
+    ]
+  },
   "stab": {
     "id": "stab",
     "name": "찌르기",
@@ -4705,6 +5718,111 @@ window.VFX_BUNDLE = {
           90,
           180
         ]
+      }
+    ]
+  },
+  "tackle_burst": {
+    "id": "tackle_burst",
+    "name": "태클 버스트",
+    "duration": 400,
+    "offset": {
+      "x": 30,
+      "y": -20
+    },
+    "particles": [
+      {
+        "type": "flash",
+        "color": "#ff6600",
+        "size": 200,
+        "alpha": 1,
+        "fadeOut": true
+      },
+      {
+        "type": "ring",
+        "count": 2,
+        "color": "#ffaa00",
+        "size": 50,
+        "maxSize": 200,
+        "alpha": 0.8,
+        "fadeOut": true,
+        "delay": [
+          0,
+          50
+        ]
+      },
+      {
+        "type": "spark",
+        "count": 40,
+        "color": "#ff4400",
+        "size": 8,
+        "speed": 200,
+        "angle": 0,
+        "spread": 60,
+        "gravity": 0.5,
+        "alpha": 1,
+        "lifetime": 350
+      },
+      {
+        "type": "smoke",
+        "count": 8,
+        "color": "#664422",
+        "size": 50,
+        "speed": 40,
+        "alpha": 0.6,
+        "lifetime": 500
+      }
+    ]
+  },
+  "tackle_burst_plus": {
+    "id": "tackle_burst_plus",
+    "name": "태클 버스트+",
+    "duration": 450,
+    "offset": {
+      "x": 40,
+      "y": -25
+    },
+    "particles": [
+      {
+        "type": "flash",
+        "color": "#ff4400",
+        "size": 280,
+        "alpha": 1,
+        "fadeOut": true
+      },
+      {
+        "type": "ring",
+        "count": 3,
+        "color": "#ff8800",
+        "size": 60,
+        "maxSize": 280,
+        "alpha": 0.9,
+        "fadeOut": true,
+        "delay": [
+          0,
+          40,
+          80
+        ]
+      },
+      {
+        "type": "spark",
+        "count": 60,
+        "color": "#ff2200",
+        "size": 10,
+        "speed": 280,
+        "angle": 0,
+        "spread": 70,
+        "gravity": 0.3,
+        "alpha": 1,
+        "lifetime": 400
+      },
+      {
+        "type": "smoke",
+        "count": 12,
+        "color": "#553311",
+        "size": 70,
+        "speed": 50,
+        "alpha": 0.7,
+        "lifetime": 550
       }
     ]
   },

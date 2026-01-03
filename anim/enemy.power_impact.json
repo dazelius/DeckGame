@@ -1,0 +1,20 @@
+{
+    "id": "enemy.power_impact",
+    "name": "파워 임팩트 피격",
+    "target": "enemy",
+    "type": "once",
+    "priority": 18,
+    "duration": 200,
+    "keyframes": [
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 0 },
+        { "x": 60, "y": -15, "scaleX": 0.6, "scaleY": 1.5, "alpha": 0.4, "rotation": 0.2, "duration": 15, "ease": "power4.out", "vfx": "impact_shockwave" },
+        { "x": 85, "y": -8, "scaleX": 0.55, "scaleY": 1.6, "alpha": 0.35, "rotation": 0.25, "duration": 20, "ease": "power2.out" },
+        { "x": 100, "y": 0, "scaleX": 0.5, "scaleY": 1.7, "alpha": 0.3, "rotation": 0.3, "duration": 25, "ease": "power2.out" },
+        { "x": 90, "y": 5, "scaleX": 0.6, "scaleY": 1.5, "alpha": 0.4, "rotation": 0.25, "duration": 30, "ease": "power2.out" },
+        { "x": 70, "y": 8, "scaleX": 0.7, "scaleY": 1.35, "alpha": 0.55, "rotation": 0.18, "duration": 30, "ease": "power2.out" },
+        { "x": 45, "y": 5, "scaleX": 0.82, "scaleY": 1.2, "alpha": 0.7, "rotation": 0.1, "duration": 30, "ease": "power2.out" },
+        { "x": 20, "y": 2, "scaleX": 0.92, "scaleY": 1.08, "alpha": 0.88, "rotation": 0.04, "duration": 25, "ease": "power2.out" },
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 25, "ease": "power2.out" }
+    ]
+}
+

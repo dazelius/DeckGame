@@ -1,0 +1,14 @@
+{
+    "id": "card.battleopening",
+    "name": "전투 개막 - 파워태클",
+    "type": "sequence",
+    "description": "폭발적인 가속으로 적을 격파하는 개막 일격",
+    "returnToBase": true,
+    "steps": [
+        { "anim": "player.power_windup", "wait": true },
+        { "delay": 50 },
+        { "anim": "player.power_tackle", "wait": false, "damage": 8 },
+        { "anim": "enemy.power_impact", "wait": true, "delay": 30 }
+    ]
+}
+

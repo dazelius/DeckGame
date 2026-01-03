@@ -1,0 +1,35 @@
+{
+    "id": "impact_shockwave",
+    "name": "충격파",
+    "duration": 400,
+    "offset": { "x": 0, "y": -20 },
+    "particles": [
+        {
+            "type": "ring",
+            "count": 2,
+            "color": "#ffffff",
+            "size": 50,
+            "maxSize": 250,
+            "alpha": 0.8,
+            "fadeOut": true,
+            "delay": [0, 80]
+        },
+        {
+            "type": "flash",
+            "color": "#ff8844",
+            "size": 180,
+            "alpha": 0.9,
+            "fadeOut": true
+        },
+        {
+            "type": "spark",
+            "count": 30,
+            "color": "#ffcc00",
+            "size": 6,
+            "speed": 150,
+            "alpha": 0.9,
+            "lifetime": 350
+        }
+    ]
+}
+

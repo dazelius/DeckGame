@@ -29,7 +29,9 @@ const CardAnimations = {
             { id: 'dirtyStrikeP', name: '비열한 일격+', jsonId: 'card.dirtystrikeP' },
             { id: 'dodge', name: '닷지', jsonId: 'card.dodge' },
             { id: 'dodgeP', name: '닷지+', jsonId: 'card.dodge' },
-            { id: 'dagger', name: '단검 투척', jsonId: 'card.dagger' }
+            { id: 'dagger', name: '단검 투척', jsonId: 'card.dagger' },
+            { id: 'battleOpening', name: '전투 개막', jsonId: 'card.battleopening' },
+            { id: 'battleOpeningP', name: '전투 개막+', jsonId: 'card.battleopeningP' }
         ];
         
         cardAnimations.forEach(anim => {
