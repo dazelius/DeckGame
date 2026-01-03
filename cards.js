@@ -721,56 +721,53 @@ Object.assign(cardDatabase, {
         icon: '<img src="yungyuk.png" alt="Flurry" class="card-icon-img">',
         description: '<span class="damage">2</span> 데미지를 3회 줍니다.',
         hitCount: 3,
-        hitInterval: 100,
+        hitInterval: 120,
+        animationId: 'flurry',  // 🎬 카드 애니메이션 ID 참조!
         effect: (state) => {
-            const playerEl = document.getElementById('player');
-            const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
             const totalHits = 3;
-            const interval = 100; // 더 빠르게!
+            const damage = 2;
             
-            // 플레이어 돌진 → 돌진 후에 공격 시작!
-            EffectSystem.playerAttack(playerEl, enemyEl, () => {
-                // 돌진 완료 후 연속 찌르기 시작!
-                let hitCount = 0;
+            // 🎬 CardAnimations 사용 (고유 애니메이션!)
+            if (typeof CardAnimations !== 'undefined' && CardAnimations.has('flurry')) {
+                CardAnimations.play('flurry', {
+                    target: state.enemy,
+                    targetEl: typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : null,
+                    hitCount: totalHits,
+                    damage: damage,
+                    interval: 120,
+                    onHit: (hitIndex, dmg) => {
+                        // 각 타격마다 데미지 적용
+                        if (state.enemy.hp > 0) {
+                            dealDamage(state.enemy, dmg);
+                            
+                            // 추가 콤보 카운트 (2번째, 3번째 타격)
+                            if (hitIndex > 0 && typeof RelicSystem !== 'undefined') {
+                                RelicSystem.onCardPlayed({ type: CardType.ATTACK }, state);
+                            }
+                        }
+                    },
+                    onComplete: () => {
+                        console.log('[Flurry] 연속 찌르기 완료!');
+                    }
+                });
+            } else {
+                // 폴백: 기존 방식
+                const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
+                const playerEl = document.getElementById('player');
                 
-                const doHit = () => {
-                    if (hitCount >= totalHits) return;
-                    if (state.enemy.hp <= 0) return; // 적 사망 체크
-                    
-                    // 슬래시 이펙트 + 데미지 동시에!
-                    const rect = enemyEl.getBoundingClientRect();
-                    const centerX = rect.left + rect.width / 2;
-                    const centerY = rect.top + rect.height / 2;
-                    const offsetY = (hitCount - 1) * 25;
-                    
-                    if (typeof VFX !== 'undefined') {
-                        VFX.slash(centerX, centerY + offsetY, {
-                            color: '#60a5fa',
-                            length: 200,
-                            width: 10,
-                            angle: (Math.random() - 0.5) * 20
-                        });
-                        VFX.sparks(centerX + 30, centerY + offsetY, { color: '#60a5fa', count: 8 });
-                    }
-                    
-                    // 데미지
-                    dealDamage(state.enemy, 2);
-                    
-                    hitCount++;
-                    
-                    // 추가 콤보 카운트 (2번째, 3번째 타격)
-                    if (hitCount < totalHits && typeof RelicSystem !== 'undefined') {
-                        RelicSystem.onCardPlayed({ type: CardType.ATTACK }, state);
-                    }
-                    
-                    // 다음 타격
-                    if (hitCount < totalHits && state.enemy.hp > 0) {
-                        setTimeout(doHit, interval);
-                    }
-                };
-                
-                doHit();
-            });
+                EffectSystem.playerAttack(playerEl, enemyEl, () => {
+                    let hitCount = 0;
+                    const doHit = () => {
+                        if (hitCount >= totalHits || state.enemy.hp <= 0) return;
+                        dealDamage(state.enemy, damage);
+                        hitCount++;
+                        if (hitCount < totalHits && state.enemy.hp > 0) {
+                            setTimeout(doHit, 100);
+                        }
+                    };
+                    doHit();
+                });
+            }
             
             addLog('연속 찌르기! 2×3 데미지!', 'damage');
         }
