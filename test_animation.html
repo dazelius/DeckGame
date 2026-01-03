@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎮 DDOO Action Studio</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="background-3d.js"></script>
     <script src="ddoo-action.js"></script>
     <!-- 🎁 번들 (fetch 없이 즉시 로드!) -->
     <script src="anim-bundle.js"></script>
@@ -112,8 +114,25 @@
             flex: 1;
             position: relative;
             background: #0a0a12;
+            overflow: hidden;
         }
-        #pixiContainer { width: 100%; height: 100%; }
+        #pixiContainer { 
+            width: 100%; 
+            height: 100%;
+            position: relative;
+        }
+        #bg3d {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+        #pixiContainer canvas {
+            position: relative;
+            z-index: 1;
+        }
         #vfxCanvas {
             position: absolute;
             top: 0;
@@ -465,14 +484,43 @@
             const width = container.clientWidth || 900;
             const height = container.clientHeight || 600;
             
+            // 🎥 3D 배경 초기화 (Background3D)
+            if (typeof Background3D !== 'undefined') {
+                log('info', '🎥 3D 배경 초기화 중...');
+                // 컨테이너 설정 (pixiContainer 안에 렌더링)
+                Background3D.createContainer = function() {
+                    const old = document.getElementById('bg3d');
+                    if (old) old.remove();
+                    
+                    this.container = document.createElement('div');
+                    this.container.id = 'bg3d';
+                    this.container.style.cssText = `
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        z-index: 0;
+                        pointer-events: none;
+                    `;
+                    container.appendChild(this.container);
+                };
+                
+                await Background3D.init();
+                Background3D.setAutoZoom(false);  // 자동 줌 비활성화
+                log('success', '✅ 3D 배경 초기화 완료');
+            }
+            
             app = new PIXI.Application({
                 width, height,
-                backgroundColor: 0x0a0a12,
+                backgroundAlpha: 0,  // 투명 배경 (3D 배경 보이게)
                 antialias: true,
                 resolution: window.devicePixelRatio || 1,
                 autoDensity: true
             });
             container.appendChild(app.view);
+            app.view.style.position = 'relative';
+            app.view.style.zIndex = '1';
             
             vfxCanvas = document.getElementById('vfxCanvas');
             vfxCanvas.width = width;
@@ -483,7 +531,10 @@
             stageContainer = new PIXI.Container();
             app.stage.addChild(stageContainer);
             
-            drawBackground(width, height);
+            // 3D 배경이 없으면 폴백 배경 그리기
+            if (typeof Background3D === 'undefined' || !Background3D.isInitialized) {
+                drawBackground(width, height);
+            }
             
             // DDOOAction 엔진 초기화 (컨테이너/애니메이션/VFX 로드) - 캐릭터 생성 전에!
             if (typeof DDOOAction !== 'undefined') {

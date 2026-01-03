@@ -791,12 +791,28 @@ const DDOOAction = {
         const targetZoom = Math.max(this.config.camera.minZoom, Math.min(this.config.camera.maxZoom, zoom));
         const dur = duration / 1000 / this.config.speed / this.timescale;
         
+        // PixiJS stageContainer 줌
         gsap.to(this.stageContainer.scale, {
             x: targetZoom,
             y: targetZoom,
             duration: dur,
             ease: 'power2.out'
         });
+        
+        // 🎥 Background3D 카메라 줌 연동 (있으면)
+        if (typeof Background3D !== 'undefined' && Background3D.isInitialized && Background3D.camera) {
+            // 3D 카메라 Z 위치로 줌 (줌인 = 가까이, 줌아웃 = 멀리)
+            const baseZ = Background3D.cameraDefaults?.posZ || 15;
+            const targetZ = baseZ / targetZoom;  // 줌인하면 카메라 가까이
+            
+            gsap.to(Background3D.camera.position, {
+                z: targetZ,
+                duration: dur,
+                ease: 'power2.out'
+            });
+            
+            if (this.config.debug) console.log(`[DDOOAction] 📷 3D Cam Z: ${targetZ.toFixed(1)}`);
+        }
         
         this.cameraState.zoom = targetZoom;
         if (this.config.debug) console.log(`[DDOOAction] 📷 Zoom: ${targetZoom.toFixed(2)}`);
@@ -873,6 +889,16 @@ const DDOOAction = {
             gsap.to(this.stageContainer, {
                 x: 0,
                 y: 0,
+                duration: dur,
+                ease: 'power2.out'
+            });
+        }
+        
+        // 🎥 Background3D 카메라도 리셋
+        if (typeof Background3D !== 'undefined' && Background3D.isInitialized && Background3D.camera) {
+            const baseZ = Background3D.cameraDefaults?.posZ || 15;
+            gsap.to(Background3D.camera.position, {
+                z: baseZ,
                 duration: dur,
                 ease: 'power2.out'
             });
