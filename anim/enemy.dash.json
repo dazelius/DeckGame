@@ -12,7 +12,7 @@
         { "x": 15, "y": 8, "scaleX": 0.90, "scaleY": 1.10, "rotation": 0.05, "duration": 40, "ease": "power2.in" },
         { "x": 25, "y": 15, "scaleX": 0.82, "scaleY": 1.18, "rotation": 0.08, "duration": 35, "ease": "power2.in", "vfx": "dash", "vfxTarget": "self" },
         
-        { "dashToTarget": "player", "dashOffset": 70, "y": -5, "scaleX": 1.2, "scaleY": 0.85, "rotation": -0.06, "duration": 80, "dashEase": "power4.out", "afterimage": true },
+        { "dashToTarget": "player", "dashPadding": 15, "y": -5, "scaleX": 1.2, "scaleY": 0.85, "rotation": -0.06, "duration": 80, "dashEase": "power4.out", "afterimage": true },
         
         { "scaleX": 1.1, "scaleY": 0.92, "rotation": -0.03, "duration": 30, "ease": "power2.out" },
         { "scaleX": 1.05, "scaleY": 0.96, "rotation": -0.01, "duration": 25, "ease": "power2.out" },

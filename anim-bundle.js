@@ -1,6 +1,6 @@
 /**
  * DDOO Animation Bundle - 자동 생성됨
- * 생성일: 2026-01-03T18:22:30.964Z
+ * 생성일: 2026-01-03T18:24:31.843Z
  * 
  * 이 파일을 포함하면 fetch 없이 모든 애니메이션/VFX 데이터 사용 가능!
  * <script src="anim-bundle.js"></script>
@@ -1020,7 +1020,7 @@ window.ANIM_BUNDLE = {
       },
       {
         "dashToTarget": "player",
-        "dashOffset": 70,
+        "dashPadding": 15,
         "y": -5,
         "scaleX": 1.2,
         "scaleY": 0.85,
@@ -2288,7 +2288,7 @@ window.ANIM_BUNDLE = {
       },
       {
         "dashToTarget": "enemy",
-        "dashOffset": 70,
+        "dashPadding": 15,
         "y": -5,
         "scaleX": 1.2,
         "scaleY": 0.85,
