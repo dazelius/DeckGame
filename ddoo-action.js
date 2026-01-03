@@ -1,6 +1,6 @@
 // =====================================================
-// DDOO Action Engine v1.0
-// 애니메이션 & VFX 통합 엔진
+// DDOO Action Engine v1.1
+// 애니메이션 & VFX & 캐릭터 렌더링 통합 엔진
 // =====================================================
 
 const DDOOAction = {
@@ -11,12 +11,35 @@ const DDOOAction = {
         enableVFX: true,
         enableShake: true,
         enableHitstop: true,
-        debug: false
+        enableShadow: true,
+        enableOutline: true,
+        enableHitFlash: true,
+        enableBreathing: true,
+        enableGlow: true,
+        debug: false,
+        
+        // 캐릭터 렌더링 설정
+        character: {
+            shadowAlpha: 0.4,
+            shadowScaleY: 0.3,
+            shadowOffsetY: 5,
+            outlineColor: 0xffffff,
+            outlineThickness: 2,
+            hitFlashColor: 0xffffff,
+            hitFlashDuration: 100,
+            breathingAmount: 0.02,
+            breathingSpeed: 1.5,
+            glowColor: 0x60a5fa,
+            glowStrength: 0.5
+        }
     },
     
     // ==================== 캐시 ====================
     animCache: new Map(),
     vfxCache: new Map(),
+    
+    // ==================== 캐릭터 관리 ====================
+    characters: new Map(),  // id -> CharacterData
     
     // ==================== 상태 ====================
     initialized: false,
@@ -27,6 +50,7 @@ const DDOOAction = {
     afterimages: [],
     afterimageContainer: null,
     stageContainer: null,
+    shadowContainer: null,
     animationFrame: null,
     
     // ==================== 초기화 ====================
@@ -91,9 +115,301 @@ const DDOOAction = {
     createAfterimageContainer() {
         if (!this.stageContainer) return;
         
+        // 그림자 컨테이너 (맨 아래)
+        this.shadowContainer = new PIXI.Container();
+        this.shadowContainer.name = 'ddoo-shadows';
+        this.stageContainer.addChildAt(this.shadowContainer, 0);
+        
+        // 잔상 컨테이너 (그림자 위)
         this.afterimageContainer = new PIXI.Container();
         this.afterimageContainer.name = 'ddoo-afterimages';
-        this.stageContainer.addChildAt(this.afterimageContainer, 0);
+        this.stageContainer.addChildAt(this.afterimageContainer, 1);
+    },
+    
+    // ==================== 캐릭터 생성 ====================
+    createCharacter(id, options = {}) {
+        const {
+            texture,           // PIXI.Texture
+            x = 0,
+            y = 0,
+            scale = 1,
+            anchor = { x: 0.5, y: 1 },
+            team = 'player',   // 'player' | 'enemy'
+            enableEffects = true
+        } = options;
+        
+        // 메인 컨테이너
+        const container = new PIXI.Container();
+        container.x = x;
+        container.y = y;
+        container.name = `char-${id}`;
+        
+        // 그림자 (별도 컨테이너에)
+        let shadow = null;
+        if (this.config.enableShadow && this.shadowContainer) {
+            shadow = this.createShadow(texture, scale);
+            shadow.x = x;
+            shadow.y = y + this.config.character.shadowOffsetY;
+            this.shadowContainer.addChild(shadow);
+        }
+        
+        // 메인 스프라이트
+        const sprite = new PIXI.Sprite(texture);
+        sprite.anchor.set(anchor.x, anchor.y);
+        sprite.scale.set(scale);
+        
+        // 아웃라인 스프라이트들 (4방향)
+        const outlines = [];
+        if (this.config.enableOutline && enableEffects) {
+            const outlineSprites = this.createOutlineSprites(texture, scale, anchor);
+            outlines.push(...outlineSprites);
+            outlineSprites.forEach(o => container.addChild(o));
+        }
+        
+        container.addChild(sprite);
+        this.stageContainer.addChild(container);
+        
+        // 캐릭터 데이터 저장
+        const charData = {
+            id,
+            container,
+            sprite,
+            shadow,
+            outlines,
+            team,
+            baseScale: scale,
+            baseX: x,
+            baseY: y,
+            state: 'idle',
+            effects: {
+                hitFlash: null,
+                glow: null,
+                breathing: null
+            }
+        };
+        
+        this.characters.set(id, charData);
+        
+        // 브레싱 애니메이션 시작
+        if (this.config.enableBreathing && enableEffects) {
+            this.startBreathing(charData);
+        }
+        
+        console.log(`[DDOOAction] 캐릭터 생성: ${id}`);
+        return charData;
+    },
+    
+    // 그림자 생성
+    createShadow(texture, scale) {
+        const shadow = new PIXI.Sprite(texture);
+        shadow.anchor.set(0.5, 0.5);
+        shadow.scale.set(scale, scale * this.config.character.shadowScaleY);
+        shadow.alpha = this.config.character.shadowAlpha;
+        shadow.tint = 0x000000;
+        return shadow;
+    },
+    
+    // 아웃라인 스프라이트 생성 (픽셀 스타일)
+    createOutlineSprites(texture, scale, anchor) {
+        const thickness = this.config.character.outlineThickness;
+        const color = this.config.character.outlineColor;
+        const offsets = [
+            { x: -thickness, y: 0 },
+            { x: thickness, y: 0 },
+            { x: 0, y: -thickness },
+            { x: 0, y: thickness }
+        ];
+        
+        return offsets.map(offset => {
+            const outline = new PIXI.Sprite(texture);
+            outline.anchor.set(anchor.x, anchor.y);
+            outline.scale.set(scale);
+            outline.tint = color;
+            outline.x = offset.x;
+            outline.y = offset.y;
+            outline.alpha = 0.9;
+            return outline;
+        });
+    },
+    
+    // 브레싱 애니메이션
+    startBreathing(charData) {
+        const { sprite, baseScale } = charData;
+        const amount = this.config.character.breathingAmount;
+        const speed = this.config.character.breathingSpeed;
+        
+        charData.effects.breathing = gsap.to(sprite.scale, {
+            y: baseScale * (1 + amount),
+            duration: speed,
+            repeat: -1,
+            yoyo: true,
+            ease: 'sine.inOut'
+        });
+    },
+    
+    // 브레싱 일시정지/재개
+    pauseBreathing(charData) {
+        if (charData.effects.breathing) {
+            charData.effects.breathing.pause();
+        }
+    },
+    
+    resumeBreathing(charData) {
+        if (charData.effects.breathing) {
+            charData.effects.breathing.resume();
+        }
+    },
+    
+    // ==================== 히트 플래시 ====================
+    hitFlash(charId, color = null) {
+        const charData = this.characters.get(charId);
+        if (!charData || !this.config.enableHitFlash) return;
+        
+        const { sprite, outlines } = charData;
+        const flashColor = color || this.config.character.hitFlashColor;
+        const duration = this.config.character.hitFlashDuration;
+        
+        // 기존 플래시 취소
+        if (charData.effects.hitFlash) {
+            charData.effects.hitFlash.kill();
+        }
+        
+        // 스프라이트 틴트 변경
+        sprite.tint = flashColor;
+        outlines.forEach(o => o.tint = flashColor);
+        
+        // 복원 타이머
+        charData.effects.hitFlash = gsap.delayedCall(duration / 1000, () => {
+            sprite.tint = 0xffffff;
+            outlines.forEach(o => o.tint = this.config.character.outlineColor);
+        });
+    },
+    
+    // ==================== 글로우 효과 ====================
+    setGlow(charId, enabled, color = null) {
+        const charData = this.characters.get(charId);
+        if (!charData || !this.config.enableGlow) return;
+        
+        const { sprite } = charData;
+        const glowColor = color || this.config.character.glowColor;
+        
+        if (enabled) {
+            // PixiJS GlowFilter 사용 (있으면)
+            if (typeof PIXI.filters !== 'undefined' && PIXI.filters.GlowFilter) {
+                const glow = new PIXI.filters.GlowFilter({
+                    color: glowColor,
+                    distance: 15,
+                    outerStrength: this.config.character.glowStrength,
+                    quality: 0.5
+                });
+                sprite.filters = [glow];
+                charData.effects.glow = glow;
+            }
+        } else {
+            sprite.filters = [];
+            charData.effects.glow = null;
+        }
+    },
+    
+    // ==================== 아웃라인 색상 변경 ====================
+    setOutlineColor(charId, color) {
+        const charData = this.characters.get(charId);
+        if (!charData) return;
+        
+        charData.outlines.forEach(o => o.tint = color);
+    },
+    
+    // ==================== 캐릭터 상태 변경 ====================
+    setState(charId, state) {
+        const charData = this.characters.get(charId);
+        if (!charData) return;
+        
+        const prevState = charData.state;
+        charData.state = state;
+        
+        // 상태별 비주얼 처리
+        switch (state) {
+            case 'idle':
+                this.resumeBreathing(charData);
+                this.setOutlineColor(charId, this.config.character.outlineColor);
+                break;
+            case 'attacking':
+                this.pauseBreathing(charData);
+                this.setOutlineColor(charId, 0xfbbf24); // 금색
+                break;
+            case 'hit':
+                this.hitFlash(charId);
+                break;
+            case 'defending':
+                this.setOutlineColor(charId, 0x60a5fa); // 파란색
+                break;
+            case 'stunned':
+                this.setGlow(charId, true, 0xfbbf24);
+                break;
+            case 'dead':
+                this.pauseBreathing(charData);
+                charData.sprite.tint = 0x666666;
+                break;
+        }
+        
+        if (this.config.debug) {
+            console.log(`[DDOOAction] ${charId} 상태: ${prevState} → ${state}`);
+        }
+    },
+    
+    // ==================== 캐릭터 위치/스케일 업데이트 ====================
+    updateCharacter(charId, props = {}) {
+        const charData = this.characters.get(charId);
+        if (!charData) return;
+        
+        const { container, sprite, shadow, outlines, baseScale } = charData;
+        
+        if (props.x !== undefined) container.x = props.x;
+        if (props.y !== undefined) container.y = props.y;
+        if (props.scale !== undefined) {
+            sprite.scale.set(props.scale);
+            outlines.forEach(o => o.scale.set(props.scale));
+        }
+        if (props.rotation !== undefined) sprite.rotation = props.rotation;
+        if (props.alpha !== undefined) sprite.alpha = props.alpha;
+        
+        // 그림자 동기화
+        if (shadow) {
+            shadow.x = container.x;
+            shadow.y = container.y + this.config.character.shadowOffsetY;
+            shadow.scale.x = (props.scale || baseScale);
+            shadow.scale.y = (props.scale || baseScale) * this.config.character.shadowScaleY;
+        }
+    },
+    
+    // ==================== 캐릭터 제거 ====================
+    removeCharacter(charId) {
+        const charData = this.characters.get(charId);
+        if (!charData) return;
+        
+        // 이펙트 정리
+        if (charData.effects.breathing) charData.effects.breathing.kill();
+        if (charData.effects.hitFlash) charData.effects.hitFlash.kill();
+        
+        // 그림자 제거
+        if (charData.shadow && charData.shadow.parent) {
+            charData.shadow.parent.removeChild(charData.shadow);
+            charData.shadow.destroy();
+        }
+        
+        // 컨테이너 제거
+        if (charData.container.parent) {
+            charData.container.parent.removeChild(charData.container);
+            charData.container.destroy({ children: true });
+        }
+        
+        this.characters.delete(charId);
+        console.log(`[DDOOAction] 캐릭터 제거: ${charId}`);
+    },
+    
+    // 캐릭터 가져오기
+    getCharacter(charId) {
+        return this.characters.get(charId);
     },
     
     // ==================== JSON 로드 ====================
@@ -803,12 +1119,21 @@ const DDOOAction = {
         if (this.animationFrame) {
             cancelAnimationFrame(this.animationFrame);
         }
+        
+        // 모든 캐릭터 제거
+        this.characters.forEach((_, id) => this.removeCharacter(id));
+        this.characters.clear();
+        
         this.clearAll();
+        
         if (this.vfxCanvas && this.vfxCanvas.parentElement) {
             this.vfxCanvas.parentElement.removeChild(this.vfxCanvas);
         }
         if (this.afterimageContainer && this.afterimageContainer.parent) {
             this.afterimageContainer.parent.removeChild(this.afterimageContainer);
+        }
+        if (this.shadowContainer && this.shadowContainer.parent) {
+            this.shadowContainer.parent.removeChild(this.shadowContainer);
         }
         this.initialized = false;
     },
@@ -819,8 +1144,17 @@ const DDOOAction = {
             animations: this.animCache.size,
             vfx: this.vfxCache.size,
             particles: this.particles.length,
-            afterimages: this.afterimages.length
+            afterimages: this.afterimages.length,
+            characters: this.characters.size
         };
+    },
+    
+    // 모든 캐릭터 정보 출력
+    debugCharacters() {
+        console.log('[DDOOAction] 캐릭터 목록:');
+        this.characters.forEach((data, id) => {
+            console.log(`  - ${id}: state=${data.state}, pos=(${data.container.x.toFixed(0)}, ${data.container.y.toFixed(0)})`);
+        });
     }
 };
 
