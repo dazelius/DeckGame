@@ -3657,7 +3657,7 @@ const upgradedCardDatabase = {
                     targetEl: typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : null,
                     hitCount: totalHits,
                     damage: damage,
-                    interval: 100,  // 더 빠른 간격
+                    interval: 160,  // 더 빠른 간격 (기본 200ms보다 빠름)
                     onHit: (hitIndex, dmg) => {
                         // 각 타격마다 데미지 적용
                         if (state.enemy.hp > 0) {
