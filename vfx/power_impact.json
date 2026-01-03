@@ -1,0 +1,57 @@
+{
+    "id": "power_impact",
+    "name": "파워 임팩트",
+    "duration": 500,
+    "offset": { "x": 30, "y": -30 },
+    "particles": [
+        {
+            "type": "flash",
+            "color": "#ffffff",
+            "size": 250,
+            "alpha": 1,
+            "fadeOut": true
+        },
+        {
+            "type": "ring",
+            "count": 3,
+            "color": "#ff4400",
+            "size": 80,
+            "maxSize": 300,
+            "alpha": 0.9,
+            "fadeOut": true,
+            "delay": [0, 50, 100]
+        },
+        {
+            "type": "spark",
+            "count": 50,
+            "color": "#ffaa00",
+            "size": 10,
+            "speed": 250,
+            "angle": "random",
+            "gravity": 2,
+            "alpha": 1,
+            "lifetime": 450
+        },
+        {
+            "type": "debris",
+            "count": 20,
+            "color": "#886644",
+            "size": 12,
+            "speed": 180,
+            "gravity": 4,
+            "rotation": true,
+            "alpha": 0.9,
+            "lifetime": 600
+        },
+        {
+            "type": "smoke",
+            "count": 10,
+            "color": "#444444",
+            "size": 80,
+            "speed": 30,
+            "alpha": 0.5,
+            "lifetime": 700
+        }
+    ]
+}
+

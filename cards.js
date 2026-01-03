@@ -552,7 +552,7 @@ Object.assign(cardDatabase, {
         }
     },
     
-    // 전투 개막 (선천성 + 소멸)
+    // 전투 개막 (선천성 + 소멸) - 파워태클!
     battleOpening: {
         id: 'battleOpening',
         name: '전투 개막',
@@ -563,16 +563,26 @@ Object.assign(cardDatabase, {
         description: '<span class="damage">8</span> 데미지.<br><span class="innate">선천성</span> · <span class="ethereal">소멸</span>',
         innate: true,      // 선천성: 전투 시작 시 항상 손패에
         ethereal: true,    // 소멸: 턴 종료 시 소멸
+        animationId: 'battleOpening',  // 🎬 파워태클 애니메이션!
         effect: (state) => {
-            const playerEl = document.getElementById('player');
-            const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
+            // 🎮 DDOO Action 엔진 - 파워태클!
+            if (typeof CardAnimations !== 'undefined' && CardAnimations.has('battleOpening')) {
+                CardAnimations.play('battleOpening', {
+                    target: state.enemy,
+                    targetEl: typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : null,
+                    damage: 8,
+                    onComplete: () => {}
+                });
+            } else {
+                // 폴백
+                const playerEl = document.getElementById('player');
+                const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
+                EffectSystem.bodySlam(playerEl, enemyEl, () => {
+                    dealDamage(state.enemy, 8);
+                });
+            }
             
-            // 몸통박치기 이펙트
-            EffectSystem.bodySlam(playerEl, enemyEl, () => {
-                dealDamage(state.enemy, 8);
-            });
-            
-            addLog('전투 개막! 8 데미지!', 'damage');
+            addLog('⚡ 전투 개막! 파워태클 8 데미지!', 'damage');
         }
     },
 
@@ -3568,7 +3578,7 @@ const upgradedCardDatabase = {
         }
     },
     
-    // 전투 개막 -> 전투 개막+
+    // 전투 개막 -> 전투 개막+ - 초폭발 파워태클!
     battleOpeningP: {
         id: 'battleOpeningP',
         name: '전투 개막+',
@@ -3580,15 +3590,26 @@ const upgradedCardDatabase = {
         innate: true,
         ethereal: true,
         upgraded: true,
+        animationId: 'battleOpeningP',  // 🎬 초폭발 파워태클!
         effect: (state) => {
-            const playerEl = document.getElementById('player');
-            const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
+            // 🎮 DDOO Action 엔진 - 초폭발 파워태클!
+            if (typeof CardAnimations !== 'undefined' && CardAnimations.has('battleOpeningP')) {
+                CardAnimations.play('battleOpeningP', {
+                    target: state.enemy,
+                    targetEl: typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : null,
+                    damage: 12,
+                    onComplete: () => {}
+                });
+            } else {
+                // 폴백
+                const playerEl = document.getElementById('player');
+                const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
+                EffectSystem.bodySlam(playerEl, enemyEl, () => {
+                    dealDamage(state.enemy, 12);
+                });
+            }
             
-            EffectSystem.bodySlam(playerEl, enemyEl, () => {
-                dealDamage(state.enemy, 12);
-            });
-            
-            addLog('전투 개막+! 12 데미지!', 'damage');
+            addLog('🔥 전투 개막+! 초폭발 파워태클 12 데미지!', 'damage');
         }
     },
     
