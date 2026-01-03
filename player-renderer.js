@@ -89,7 +89,25 @@ const PlayerRenderer = {
         this.initialized = true;
         
         console.log('[PlayerRenderer] ✅ 초기화 완료!');
+        
+        // DDOOAction 엔진 초기화
+        this.initDDOOAction();
+        
         return true;
+    },
+    
+    // DDOOAction 엔진 초기화
+    async initDDOOAction() {
+        if (typeof DDOOAction !== 'undefined' && !DDOOAction.initialized) {
+            try {
+                // EnemyRenderer의 stageContainer 사용
+                const stageContainer = this.app.stage;
+                await DDOOAction.init(this.app, stageContainer);
+                console.log('[PlayerRenderer] DDOOAction 엔진 연결됨');
+            } catch (e) {
+                console.warn('[PlayerRenderer] DDOOAction 초기화 실패:', e);
+            }
+        }
     },
     
     async createApp() {
