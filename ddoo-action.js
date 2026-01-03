@@ -982,20 +982,25 @@ const DDOOAction = {
         const ctx = this.vfxCtx;
         if (!ctx) return;
         
+        // 유효성 검사
+        const size = p.size || 20;
+        if (!isFinite(size) || size <= 0) return;
+        if (!isFinite(p.x) || !isFinite(p.y)) return;
+        
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(p.rotation || 0);
-        ctx.globalAlpha = alpha;
+        ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
         
         // 부드러운 원형 연기
-        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, p.size);
-        gradient.addColorStop(0, p.color);
-        gradient.addColorStop(0.5, p.color + 'aa');
+        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size);
+        gradient.addColorStop(0, p.color || '#333333');
+        gradient.addColorStop(0.5, (p.color || '#333333') + 'aa');
         gradient.addColorStop(1, 'transparent');
         
         ctx.fillStyle = gradient;
         ctx.beginPath();
-        ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+        ctx.arc(0, 0, size, 0, Math.PI * 2);
         ctx.fill();
         
         ctx.restore();
@@ -1006,9 +1011,14 @@ const DDOOAction = {
         const ctx = this.vfxCtx;
         if (!ctx) return;
         
+        // 유효성 검사
+        const size = p.size || 30;
+        if (!isFinite(size) || size <= 0) return;
+        if (!isFinite(p.x) || !isFinite(p.y)) return;
+        
         ctx.save();
-        ctx.globalAlpha = alpha;
-        ctx.font = `${p.size}px Arial`;
+        ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+        ctx.font = `${size}px Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         
@@ -1016,7 +1026,7 @@ const DDOOAction = {
         ctx.shadowColor = '#fbbf24';
         ctx.shadowBlur = 15;
         
-        ctx.fillText(p.symbol, p.x, p.y);
+        ctx.fillText(p.symbol || '⭐', p.x, p.y);
         ctx.restore();
     },
     
