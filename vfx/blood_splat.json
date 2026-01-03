@@ -4,26 +4,25 @@
     "particles": [
         {
             "type": "spark",
-            "count": 12,
+            "count": 18,
             "color": "#dc2626",
-            "size": { "min": 3, "max": 8 },
-            "speed": { "min": 2, "max": 5 },
-            "angle": { "min": 120, "max": 240 },
-            "life": { "min": 150, "max": 300 },
-            "gravity": 0.15,
+            "size": { "min": 3, "max": 10 },
+            "speed": { "min": 3, "max": 8 },
+            "angle": { "min": 100, "max": 260 },
+            "life": { "min": 150, "max": 350 },
+            "gravity": 0.2,
             "fadeOut": true
         },
         {
             "type": "debris",
-            "count": 5,
+            "count": 8,
             "color": "#991b1b",
-            "size": { "min": 2, "max": 5 },
-            "speed": { "min": 1, "max": 3 },
-            "angle": { "min": 150, "max": 210 },
-            "life": { "min": 200, "max": 400 },
-            "gravity": 0.2
+            "size": { "min": 2, "max": 6 },
+            "speed": { "min": 2, "max": 5 },
+            "angle": { "min": 130, "max": 230 },
+            "life": { "min": 200, "max": 450 },
+            "gravity": 0.25
         }
     ],
-    "offset": { "x": -10, "y": -60 }
+    "offset": { "x": -15, "y": -50 }
 }
-

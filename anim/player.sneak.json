@@ -1,13 +1,12 @@
 {
     "id": "player.sneak",
-    "name": "은밀한 접근",
+    "name": "은밀한 도약",
     "target": "player",
     "keyframes": [
         { "time": 0, "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0 },
-        { "time": 40, "x": 30, "y": -3, "scaleX": 0.95, "scaleY": 1.02, "alpha": 0.9, "rotation": -0.02, "duration": 40, "ease": "power2.in" },
-        { "time": 80, "x": 80, "y": -5, "scaleX": 0.9, "scaleY": 1.05, "alpha": 0.7, "rotation": -0.05, "duration": 40, "ease": "power2.in" },
-        { "time": 120, "x": 160, "y": -3, "scaleX": 0.85, "scaleY": 1.08, "alpha": 0.4, "rotation": -0.08, "duration": 40, "ease": "power3.in" },
-        { "time": 150, "x": 240, "y": 0, "scaleX": 0.8, "scaleY": 1.1, "alpha": 0.15, "rotation": -0.1, "duration": 30, "ease": "power3.in" }
+        { "time": 30, "x": 15, "y": -8, "scaleX": 0.92, "scaleY": 1.06, "alpha": 1, "rotation": -0.03, "duration": 30, "ease": "power2.in" },
+        { "time": 60, "x": 50, "y": -40, "scaleX": 0.88, "scaleY": 1.1, "alpha": 1, "rotation": -0.08, "duration": 30, "ease": "power2.out", "afterimage": true },
+        { "time": 100, "x": 120, "y": -80, "scaleX": 0.85, "scaleY": 1.12, "alpha": 1, "rotation": -0.12, "duration": 40, "ease": "power2.in", "afterimage": true },
+        { "time": 140, "x": 200, "y": -60, "scaleX": 0.9, "scaleY": 1.08, "alpha": 1, "rotation": -0.05, "duration": 40, "ease": "power2.out", "afterimage": true }
     ]
 }
-
