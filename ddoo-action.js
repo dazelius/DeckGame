@@ -1,6 +1,6 @@
 // =====================================================
-// DDOO Action Engine v3.0
-// 애니메이션 & VFX & 캐릭터 렌더링 & 카메라 & 컬러그레이딩 통합 엔진
+// DDOO Action Engine v3.1
+// 애니메이션 & VFX & 캐릭터 렌더링 & 카메라 & 컬러그레이딩 & 슬로우모션 통합 엔진
 // =====================================================
 
 const DDOOAction = {
@@ -18,6 +18,7 @@ const DDOOAction = {
         enableGlow: true,
         enableCamera: true,        // 📷 카메라 시스템
         enableColorGrade: true,    // 🎨 컬러 그레이딩
+        enableSlowmo: true,        // ⏱️ 슬로우모션
         debug: false,
         
         // 리턴 애니메이션 설정
@@ -44,8 +45,8 @@ const DDOOAction = {
         // 📷 카메라 설정
         camera: {
             defaultZoom: 1.0,
-            minZoom: 0.8,
-            maxZoom: 1.5,
+            minZoom: 0.5,
+            maxZoom: 2.0,
             zoomSpeed: 0.3,      // 줌 전환 시간 (초)
             panSpeed: 0.2        // 팬 전환 시간 (초)
         },
@@ -53,6 +54,13 @@ const DDOOAction = {
         // 🎨 컬러 그레이딩 설정
         colorGrade: {
             transitionSpeed: 0.15  // 색상 전환 시간 (초)
+        },
+        
+        // ⏱️ 슬로우모션 설정
+        slowmo: {
+            defaultScale: 1.0,
+            minScale: 0.1,
+            maxScale: 2.0
         }
     },
     
@@ -61,8 +69,13 @@ const DDOOAction = {
         zoom: 1.0,
         offsetX: 0,
         offsetY: 0,
-        focusTarget: null
+        focusTarget: null,
+        pivotSet: false
     },
+    
+    // ⏱️ 슬로우모션 상태
+    timescale: 1.0,
+    slowmoTween: null,
     
     // 🎨 컬러 그레이딩 필터
     colorFilter: null,
@@ -699,6 +712,9 @@ const DDOOAction = {
         // 🎨 컬러 그레이딩 리셋
         this.resetColorGrade();
         
+        // ⏱️ 슬로우모션 리셋
+        this.resetSlowmo();
+        
         if (options.onComplete) options.onComplete();
     },
     
@@ -750,12 +766,30 @@ const DDOOAction = {
     
     // ==================== 📷 카메라 시스템 ====================
     
+    // 카메라 피벗 설정 (확대/축소 기준점을 화면 중앙으로)
+    setupCameraPivot() {
+        if (!this.stageContainer || !this.pixiApp || this.cameraState.pivotSet) return;
+        
+        const centerX = this.pixiApp.screen.width / 2;
+        const centerY = this.pixiApp.screen.height / 2;
+        
+        // 피벗을 화면 중앙으로 설정
+        this.stageContainer.pivot.set(centerX, centerY);
+        this.stageContainer.position.set(centerX, centerY);
+        
+        this.cameraState.pivotSet = true;
+        if (this.config.debug) console.log(`[DDOOAction] 📷 Pivot set to center: (${centerX}, ${centerY})`);
+    },
+    
     // 카메라 줌
     cameraZoom(zoom, duration = 300) {
         if (!this.config.enableCamera || !this.stageContainer) return;
         
+        // 피벗이 설정되어 있는지 확인
+        this.setupCameraPivot();
+        
         const targetZoom = Math.max(this.config.camera.minZoom, Math.min(this.config.camera.maxZoom, zoom));
-        const dur = duration / 1000 / this.config.speed;
+        const dur = duration / 1000 / this.config.speed / this.timescale;
         
         gsap.to(this.stageContainer.scale, {
             x: targetZoom,
@@ -772,36 +806,42 @@ const DDOOAction = {
     cameraFocus(target, duration = 200) {
         if (!this.config.enableCamera || !this.stageContainer) return;
         
-        let focusX = 0, focusY = 0;
+        // 피벗이 설정되어 있는지 확인
+        this.setupCameraPivot();
+        
+        const centerX = this.pixiApp.screen.width / 2;
+        const centerY = this.pixiApp.screen.height / 2;
+        let focusX = centerX, focusY = centerY;
         
         if (target === 'player') {
             const playerChar = this.characters.get('player');
             if (playerChar) {
-                focusX = -(playerChar.container.x - this.pixiApp.screen.width / 2) * 0.3;
-                focusY = -(playerChar.container.y - this.pixiApp.screen.height / 2) * 0.2;
+                // 플레이어를 화면 중앙으로 이동 (포커스)
+                focusX = centerX + (centerX - playerChar.container.x) * 0.4;
+                focusY = centerY + (centerY - playerChar.container.y) * 0.3;
             }
         } else if (target === 'enemy') {
             const enemyChar = this.characters.get('enemy');
             if (enemyChar) {
-                focusX = -(enemyChar.container.x - this.pixiApp.screen.width / 2) * 0.3;
-                focusY = -(enemyChar.container.y - this.pixiApp.screen.height / 2) * 0.2;
+                focusX = centerX + (centerX - enemyChar.container.x) * 0.4;
+                focusY = centerY + (centerY - enemyChar.container.y) * 0.3;
             }
         } else if (target === 'center') {
-            focusX = 0;
-            focusY = 0;
+            focusX = centerX;
+            focusY = centerY;
         }
         
-        const dur = duration / 1000 / this.config.speed;
+        const dur = duration / 1000 / this.config.speed / this.timescale;
         
-        gsap.to(this.stageContainer, {
+        gsap.to(this.stageContainer.position, {
             x: focusX,
             y: focusY,
             duration: dur,
             ease: 'power2.out'
         });
         
-        this.cameraState.offsetX = focusX;
-        this.cameraState.offsetY = focusY;
+        this.cameraState.offsetX = focusX - centerX;
+        this.cameraState.offsetY = focusY - centerY;
         this.cameraState.focusTarget = target;
         
         if (this.config.debug) console.log(`[DDOOAction] 📷 Focus: ${target}`);
@@ -811,7 +851,9 @@ const DDOOAction = {
     resetCamera() {
         if (!this.config.enableCamera || !this.stageContainer) return;
         
-        const dur = this.config.camera.zoomSpeed / this.config.speed;
+        const dur = this.config.camera.zoomSpeed / this.config.speed / this.timescale;
+        const centerX = this.pixiApp?.screen.width / 2 || 0;
+        const centerY = this.pixiApp?.screen.height / 2 || 0;
         
         gsap.to(this.stageContainer.scale, {
             x: this.config.camera.defaultZoom,
@@ -820,19 +862,95 @@ const DDOOAction = {
             ease: 'power2.out'
         });
         
-        gsap.to(this.stageContainer, {
-            x: 0,
-            y: 0,
-            duration: dur,
-            ease: 'power2.out'
-        });
+        if (this.cameraState.pivotSet) {
+            gsap.to(this.stageContainer.position, {
+                x: centerX,
+                y: centerY,
+                duration: dur,
+                ease: 'power2.out'
+            });
+        } else {
+            gsap.to(this.stageContainer, {
+                x: 0,
+                y: 0,
+                duration: dur,
+                ease: 'power2.out'
+            });
+        }
         
         this.cameraState = {
             zoom: this.config.camera.defaultZoom,
             offsetX: 0,
             offsetY: 0,
-            focusTarget: null
+            focusTarget: null,
+            pivotSet: this.cameraState.pivotSet
         };
+    },
+    
+    // ==================== ⏱️ 슬로우모션 시스템 ====================
+    
+    // 슬로우모션 적용
+    slowmo(scale, duration = 500, ease = 'power2.out') {
+        if (!this.config.enableSlowmo) return;
+        
+        const targetScale = Math.max(
+            this.config.slowmo.minScale, 
+            Math.min(this.config.slowmo.maxScale, scale)
+        );
+        
+        // 기존 트윈 중단
+        if (this.slowmoTween) {
+            this.slowmoTween.kill();
+        }
+        
+        const dur = duration / 1000;
+        
+        this.slowmoTween = gsap.to(this, {
+            timescale: targetScale,
+            duration: dur,
+            ease: ease,
+            onUpdate: () => {
+                // GSAP globalTimeScale 동기화
+                if (typeof gsap !== 'undefined') {
+                    gsap.globalTimeline.timeScale(this.timescale);
+                }
+            }
+        });
+        
+        if (this.config.debug) console.log(`[DDOOAction] ⏱️ Slowmo: ${targetScale.toFixed(2)}`);
+        
+        return this.slowmoTween;
+    },
+    
+    // 슬로우모션 + 자동 복구 (임팩트용)
+    slowmoImpact(scale = 0.2, holdDuration = 100, recoveryDuration = 400) {
+        if (!this.config.enableSlowmo) return Promise.resolve();
+        
+        return new Promise(resolve => {
+            // 즉시 슬로우
+            this.slowmo(scale, 30, 'power4.out');
+            
+            // 홀드 후 복구
+            setTimeout(() => {
+                this.slowmo(1.0, recoveryDuration, 'power2.inOut');
+                setTimeout(resolve, recoveryDuration);
+            }, holdDuration);
+        });
+    },
+    
+    // 슬로우모션 리셋
+    resetSlowmo() {
+        if (this.slowmoTween) {
+            this.slowmoTween.kill();
+            this.slowmoTween = null;
+        }
+        
+        this.timescale = 1.0;
+        if (typeof gsap !== 'undefined') {
+            gsap.globalTimeline.timeScale(1.0);
+        }
+        
+        if (this.config.debug) console.log(`[DDOOAction] ⏱️ Slowmo reset`);
     },
     
     // ==================== 🎨 컬러 그레이딩 시스템 ====================
@@ -1150,6 +1268,25 @@ const DDOOAction = {
                 if (kf.color && this.config.enableColorGrade) {
                     tl.call(() => {
                         this.applyColorGrade(kf.color, kf.colorDuration || 150);
+                    }, null, '<');
+                }
+                
+                // ⏱️ 슬로우모션
+                if (kf.slowmo !== undefined && this.config.enableSlowmo) {
+                    tl.call(() => {
+                        if (typeof kf.slowmo === 'object') {
+                            // { scale: 0.3, duration: 500 }
+                            this.slowmo(kf.slowmo.scale, kf.slowmo.duration || 500, kf.slowmo.ease);
+                        } else if (kf.slowmo === 'impact') {
+                            // 임팩트 슬로우 (순간 멈춤 후 복귀)
+                            this.slowmoImpact(0.15, 80, 350);
+                        } else if (typeof kf.slowmo === 'number') {
+                            // 단순 스케일 값
+                            this.slowmo(kf.slowmo, kf.slowmoDuration || 300);
+                        } else if (kf.slowmo === 'reset' || kf.slowmo === 1) {
+                            // 리셋
+                            this.slowmo(1.0, 200);
+                        }
                     }, null, '<');
                 }
                 

@@ -1,6 +1,6 @@
 /**
  * DDOO Animation Bundle - 자동 생성됨
- * 생성일: 2026-01-03T18:17:10.654Z
+ * 생성일: 2026-01-03T18:22:30.964Z
  * 
  * 이 파일을 포함하면 fetch 없이 모든 애니메이션/VFX 데이터 사용 가능!
  * <script src="anim-bundle.js"></script>
@@ -1509,7 +1509,11 @@ window.ANIM_BUNDLE = {
         "vfx": "hit",
         "vfxTarget": "self",
         "color": "hit",
-        "colorDuration": 60
+        "colorDuration": 80,
+        "slowmo": {
+          "scale": 0.4,
+          "duration": 100
+        }
       },
       {
         "x": 55,
@@ -1529,7 +1533,8 @@ window.ANIM_BUNDLE = {
         "alpha": 0.8,
         "rotation": -0.08,
         "duration": 40,
-        "ease": "power2.out"
+        "ease": "power2.out",
+        "slowmo": 1
       },
       {
         "x": -8,
@@ -2033,7 +2038,7 @@ window.ANIM_BUNDLE = {
         "duration": 20,
         "ease": "power2.in",
         "camera": {
-          "zoom": 1.15,
+          "zoom": 1.25,
           "focus": "enemy",
           "duration": 150
         }
@@ -2049,10 +2054,10 @@ window.ANIM_BUNDLE = {
         "ease": "power4.out",
         "vfx": "backstab_slash",
         "vfxTarget": "target",
-        "shake": 12,
-        "hitstop": 80,
+        "shake": 14,
+        "slowmo": "impact",
         "color": "critical",
-        "colorDuration": 100
+        "colorDuration": 120
       },
       {
         "x": -45,
@@ -3252,8 +3257,8 @@ window.ANIM_BUNDLE = {
         "vfx": "tackle_burst",
         "vfxTarget": "self",
         "camera": {
-          "zoom": 1.2,
-          "duration": 200
+          "zoom": 1.3,
+          "duration": 250
         },
         "color": "power"
       },
@@ -3291,9 +3296,13 @@ window.ANIM_BUNDLE = {
         "duration": 50,
         "ease": "power4.out",
         "afterimage": true,
-        "shake": 15,
-        "hitstop": 100,
-        "color": "hit"
+        "shake": 18,
+        "slowmo": {
+          "scale": 0.15,
+          "duration": 400
+        },
+        "color": "hit",
+        "colorDuration": 150
       },
       {
         "x": 340,
@@ -3303,7 +3312,11 @@ window.ANIM_BUNDLE = {
         "alpha": 1,
         "rotation": 0.1,
         "duration": 40,
-        "ease": "power2.out"
+        "ease": "power2.out",
+        "slowmo": {
+          "scale": 1,
+          "duration": 300
+        }
       },
       {
         "x": 320,
