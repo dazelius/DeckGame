@@ -1,0 +1,26 @@
+{
+    "id": "enemy.bash_hit",
+    "name": "강타 피격",
+    "target": "enemy",
+    "type": "once",
+    "priority": 22,
+    "duration": 550,
+    "keyframes": [
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 0 },
+        
+        { "x": 25, "y": -8, "scaleX": 0.75, "scaleY": 1.25, "alpha": 0.6, "rotation": 0.12, "duration": 25, "ease": "power4.out", "vfx": "bash_hit" },
+        { "x": 55, "y": -12, "scaleX": 0.68, "scaleY": 1.32, "alpha": 0.45, "rotation": 0.20, "duration": 35, "ease": "power3.out" },
+        { "x": 80, "y": -8, "scaleX": 0.65, "scaleY": 1.35, "alpha": 0.40, "rotation": 0.25, "duration": 40, "ease": "power2.out" },
+        { "x": 95, "y": 0, "scaleX": 0.70, "scaleY": 1.30, "alpha": 0.45, "rotation": 0.22, "duration": 35, "ease": "power2.out" },
+        
+        { "x": 88, "y": 5, "scaleX": 0.75, "scaleY": 1.25, "alpha": 0.52, "rotation": 0.18, "duration": 40, "ease": "power2.inOut" },
+        { "x": 75, "y": 5, "scaleX": 0.82, "scaleY": 1.18, "alpha": 0.60, "rotation": 0.14, "duration": 45, "ease": "power2.inOut" },
+        { "x": 60, "y": 4, "scaleX": 0.88, "scaleY": 1.12, "alpha": 0.70, "rotation": 0.10, "duration": 50, "ease": "power2.out" },
+        { "x": 42, "y": 3, "scaleX": 0.92, "scaleY": 1.08, "alpha": 0.80, "rotation": 0.06, "duration": 50, "ease": "power2.out" },
+        { "x": 25, "y": 2, "scaleX": 0.96, "scaleY": 1.04, "alpha": 0.90, "rotation": 0.03, "duration": 45, "ease": "power2.out" },
+        { "x": 12, "y": 1, "scaleX": 0.98, "scaleY": 1.02, "alpha": 0.95, "rotation": 0.01, "duration": 40, "ease": "power2.out" },
+        { "x": 4, "y": 0, "scaleX": 0.99, "scaleY": 1.01, "alpha": 0.98, "rotation": 0, "duration": 35, "ease": "power2.out" },
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 30, "ease": "power2.out" }
+    ]
+}
+

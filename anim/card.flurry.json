@@ -4,19 +4,23 @@
     "type": "sequence",
     "target": "player",
     "priority": 15,
-    "description": "빠른 3연타: 대시 → 찌르기x3 → 복귀",
+    "description": "나비처럼 날아 벌처럼 쏜다! 세검 3연타",
     "steps": [
         { "anim": "player.dash", "wait": true },
-        { "delay": 20 },
-        { "anim": "player.stab", "wait": false },
-        { "anim": "enemy.hit", "wait": true, "delay": 30 },
-        { "delay": 80 },
-        { "anim": "player.stab", "wait": false },
-        { "anim": "enemy.hit", "wait": true, "delay": 30 },
-        { "delay": 80 },
-        { "anim": "player.stab", "wait": false },
-        { "anim": "enemy.hit", "wait": true, "delay": 30 },
-        { "delay": 150 },
+        { "delay": 30 },
+        
+        { "anim": "player.flurry_stab1", "wait": false },
+        { "anim": "enemy.flurry_hit", "wait": true, "delay": 18 },
+        { "delay": 40 },
+        
+        { "anim": "player.flurry_stab2", "wait": false },
+        { "anim": "enemy.flurry_hit", "wait": true, "delay": 16 },
+        { "delay": 40 },
+        
+        { "anim": "player.flurry_stab3", "wait": false },
+        { "anim": "enemy.flurry_hit", "wait": true, "delay": 22 },
+        { "delay": 120 },
+        
         { "anim": "player.return", "wait": true }
     ]
 }

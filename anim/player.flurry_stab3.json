@@ -1,0 +1,20 @@
+{
+    "id": "player.flurry_stab3",
+    "name": "연속찌르기 3타 (피니시)",
+    "target": "player",
+    "type": "once",
+    "priority": 14,
+    "duration": 150,
+    "keyframes": [
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 0 },
+        
+        { "x": -8, "y": 0, "scaleX": 0.88, "scaleY": 1.12, "rotation": -0.08, "duration": 20, "ease": "power2.in" },
+        { "x": 50, "y": -5, "scaleX": 1.35, "scaleY": 0.70, "rotation": 0.15, "duration": 22, "ease": "power4.out", "vfx": "flurry_finish", "shake": 4, "hitstop": 30 },
+        { "x": 55, "y": -3, "scaleX": 1.30, "scaleY": 0.75, "rotation": 0.12, "duration": 18, "ease": "power2.out" },
+        { "x": 45, "y": 0, "scaleX": 1.18, "scaleY": 0.85, "rotation": 0.08, "duration": 22, "ease": "power2.out" },
+        { "x": 30, "y": 2, "scaleX": 1.08, "scaleY": 0.92, "rotation": 0.04, "duration": 25, "ease": "power2.out" },
+        { "x": 12, "y": 1, "scaleX": 1.02, "scaleY": 0.98, "rotation": 0.01, "duration": 22, "ease": "power2.out" },
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 21, "ease": "power2.out" }
+    ]
+}
+

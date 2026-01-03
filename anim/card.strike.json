@@ -4,13 +4,13 @@
     "type": "sequence",
     "target": "player",
     "priority": 10,
-    "description": "강력한 일격: 대시 → 공격 → 복귀",
+    "description": "무게감 있는 대검 베기",
     "steps": [
         { "anim": "player.dash", "wait": true },
-        { "delay": 30 },
-        { "anim": "player.attack", "wait": false },
-        { "anim": "enemy.hit", "wait": true, "delay": 50 },
-        { "delay": 150 },
+        { "delay": 40 },
+        { "anim": "player.heavy_slash", "wait": false },
+        { "anim": "enemy.hit", "wait": true, "delay": 65 },
+        { "delay": 180 },
         { "anim": "player.return", "wait": true }
     ]
 }

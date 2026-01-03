@@ -1,0 +1,27 @@
+{
+    "id": "player.bash",
+    "name": "강타",
+    "target": "player",
+    "type": "once",
+    "priority": 13,
+    "duration": 400,
+    "keyframes": [
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 0 },
+        
+        { "x": -8, "y": 8, "scaleX": 0.95, "scaleY": 1.05, "rotation": -0.05, "duration": 45, "ease": "power1.out" },
+        { "x": -20, "y": 20, "scaleX": 0.85, "scaleY": 1.15, "rotation": -0.12, "duration": 55, "ease": "power2.in" },
+        { "x": -28, "y": 28, "scaleX": 0.78, "scaleY": 1.22, "rotation": -0.18, "duration": 45, "ease": "power2.in" },
+        
+        { "x": 15, "y": -10, "scaleX": 1.10, "scaleY": 0.90, "rotation": 0.08, "duration": 30, "ease": "power3.out" },
+        { "x": 55, "y": -20, "scaleX": 1.30, "scaleY": 0.75, "rotation": 0.20, "duration": 35, "ease": "power4.out", "vfx": "bash_impact", "shake": 12, "hitstop": 100 },
+        { "x": 62, "y": -15, "scaleX": 1.25, "scaleY": 0.78, "rotation": 0.18, "duration": 30, "ease": "power2.out" },
+        
+        { "x": 55, "y": -8, "scaleX": 1.18, "scaleY": 0.84, "rotation": 0.12, "duration": 35, "ease": "power2.inOut" },
+        { "x": 42, "y": -2, "scaleX": 1.10, "scaleY": 0.90, "rotation": 0.08, "duration": 35, "ease": "power2.inOut" },
+        { "x": 28, "y": 2, "scaleX": 1.04, "scaleY": 0.96, "rotation": 0.04, "duration": 30, "ease": "power2.out" },
+        { "x": 15, "y": 2, "scaleX": 1.01, "scaleY": 0.99, "rotation": 0.01, "duration": 28, "ease": "power2.out" },
+        { "x": 5, "y": 1, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 22, "ease": "power2.out" },
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 20, "ease": "power2.out" }
+    ]
+}
+

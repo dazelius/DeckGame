@@ -4,15 +4,12 @@
     "type": "sequence",
     "target": "player",
     "priority": 12,
-    "description": "강력한 타격: 대시 → 강타 → 복귀",
+    "description": "충격파를 동반한 강력한 일격",
     "steps": [
         { "anim": "player.dash", "wait": true },
         { "delay": 50 },
-        { "anim": "player.attack", "wait": false },
-        { "anim": "enemy.hit", "wait": true, "delay": 40 },
-        { "delay": 100 },
-        { "anim": "player.attack", "wait": false },
-        { "anim": "enemy.hit", "wait": true, "delay": 40 },
+        { "anim": "player.bash", "wait": false },
+        { "anim": "enemy.bash_hit", "wait": true, "delay": 55 },
         { "delay": 200 },
         { "anim": "player.return", "wait": true }
     ]
