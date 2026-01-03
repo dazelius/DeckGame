@@ -1,0 +1,14 @@
+{
+    "id": "card.dagger",
+    "name": "단검 투척",
+    "type": "sequence",
+    "target": "player",
+    "priority": 12,
+    "description": "단검을 투척하여 원거리 공격",
+    "steps": [
+        { "anim": "player.throw", "wait": true },
+        { "delay": 150 },
+        { "anim": "enemy.dagger_hit", "wait": true }
+    ]
+}
+

@@ -238,12 +238,12 @@
         const vfxCache = new Map();
         
         const ANIM_FILES = [
-            'player.attack', 'player.dash', 'player.defend', 'player.hit', 'player.return', 'player.stab',
-            'enemy.attack', 'enemy.dash', 'enemy.hit',
-            'card.strike', 'card.bash', 'card.flurry', 'card.flurryP'
+            'player.attack', 'player.dash', 'player.defend', 'player.hit', 'player.return', 'player.stab', 'player.throw',
+            'enemy.attack', 'enemy.dash', 'enemy.hit', 'enemy.dagger_hit',
+            'card.strike', 'card.bash', 'card.flurry', 'card.flurryP', 'card.dagger'
         ];
         
-        const VFX_FILES = ['slash', 'hit', 'spark', 'dash', 'stab', 'critical', 'block'];
+        const VFX_FILES = ['slash', 'hit', 'spark', 'dash', 'stab', 'critical', 'block', 'throw', 'dagger_hit'];
         
         // VFX 파티클 풀
         const particles = [];
@@ -719,6 +719,9 @@
                         case 'trail':
                             spawnTrailParticle(def, container, i, scale);
                             break;
+                        case 'projectile':
+                            spawnProjectileParticle(def, x, y, dir, scale, container);
+                            break;
                     }
                 }, i * delayBetween);
             }
@@ -832,6 +835,30 @@
             });
         }
         
+        function spawnProjectileParticle(def, startX, startY, dir, scale, container) {
+            // 시작점 (플레이어) → 끝점 (적)
+            const targetContainer = container === playerContainer ? enemyContainer : playerContainer;
+            const targetBounds = getCharacterBounds(targetContainer);
+            const endX = targetContainer.x;
+            const endY = targetContainer.y + targetBounds.centerY;
+            
+            spawnParticle({
+                type: 'projectile',
+                x: startX,
+                y: startY,
+                targetX: endX,
+                targetY: endY,
+                speed: (def.speed || 20) * scale,
+                rotation: def.rotation || 0,
+                size: (def.size || 15) * scale,
+                shape: def.shape || 'circle',
+                color: def.color || '#94a3b8',
+                glow: def.glow || '#60a5fa',
+                life: def.life || 300,
+                dir: dir
+            });
+        }
+        
         // 유틸: 배열이면 랜덤 범위, 아니면 그대로
         function getRandValue(val) {
             if (Array.isArray(val)) {
@@ -899,6 +926,9 @@
                             break;
                         case 'trail':
                             drawTrailParticle(p, alpha);
+                            break;
+                        case 'projectile':
+                            updateAndDrawProjectile(p, alpha, progress);
                             break;
                     }
                     
@@ -1021,6 +1051,76 @@
             vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
             vfxCtx.fill();
         }
+        
+        function updateAndDrawProjectile(p, alpha, progress) {
+            // 투사체 이동 (시작점 → 타겟)
+            const dx = p.targetX - p.x;
+            const dy = p.targetY - p.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dist > p.speed) {
+                p.x += (dx / dist) * p.speed;
+                p.y += (dy / dist) * p.speed;
+            }
+            
+            // 회전 업데이트
+            if (p.rotation) {
+                p.currentRotation = (p.currentRotation || 0) + (p.rotation * Math.PI / 180) * 0.016;
+            }
+            
+            vfxCtx.save();
+            vfxCtx.translate(p.x, p.y);
+            vfxCtx.rotate(p.currentRotation || 0);
+            
+            // 글로우
+            vfxCtx.shadowColor = p.glow;
+            vfxCtx.shadowBlur = 12;
+            vfxCtx.globalAlpha = alpha;
+            
+            // 단검 그리기
+            if (p.shape === 'dagger') {
+                // 단검 블레이드
+                vfxCtx.fillStyle = p.color;
+                vfxCtx.beginPath();
+                vfxCtx.moveTo(p.size, 0);           // 끝
+                vfxCtx.lineTo(0, -p.size * 0.3);    // 위
+                vfxCtx.lineTo(-p.size * 0.5, 0);    // 손잡이
+                vfxCtx.lineTo(0, p.size * 0.3);     // 아래
+                vfxCtx.closePath();
+                vfxCtx.fill();
+                
+                // 하이라이트
+                vfxCtx.fillStyle = '#ffffff';
+                vfxCtx.globalAlpha = alpha * 0.6;
+                vfxCtx.beginPath();
+                vfxCtx.moveTo(p.size * 0.8, 0);
+                vfxCtx.lineTo(0, -p.size * 0.15);
+                vfxCtx.lineTo(-p.size * 0.2, 0);
+                vfxCtx.closePath();
+                vfxCtx.fill();
+            } else {
+                // 기본 원형
+                vfxCtx.fillStyle = p.color;
+                vfxCtx.beginPath();
+                vfxCtx.arc(0, 0, p.size, 0, Math.PI * 2);
+                vfxCtx.fill();
+            }
+            
+            vfxCtx.restore();
+            
+            // 잔상 트레일 생성
+            if (Math.random() > 0.6) {
+                spawnParticle({
+                    type: 'trail',
+                    x: p.x - (dx / dist) * 10,
+                    y: p.y - (dy / dist) * 10,
+                    size: p.size * 0.5,
+                    color: 'rgba(148, 163, 184, 0.2)',
+                    life: 80
+                });
+            }
+        }
+        
         
         // 스크린쉐이크
         function screenShake(intensity) {
