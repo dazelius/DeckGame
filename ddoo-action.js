@@ -1,6 +1,6 @@
 // =====================================================
-// DDOO Action Engine v2.0
-// 애니메이션 & VFX & 캐릭터 렌더링 & 게임 이벤트 통합 엔진
+// DDOO Action Engine v3.0
+// 애니메이션 & VFX & 캐릭터 렌더링 & 카메라 & 컬러그레이딩 통합 엔진
 // =====================================================
 
 const DDOOAction = {
@@ -16,6 +16,8 @@ const DDOOAction = {
         enableHitFlash: true,
         enableBreathing: true,
         enableGlow: true,
+        enableCamera: true,        // 📷 카메라 시스템
+        enableColorGrade: true,    // 🎨 컬러 그레이딩
         debug: false,
         
         // 리턴 애니메이션 설정
@@ -37,8 +39,33 @@ const DDOOAction = {
             breathingSpeed: 1.5,
             glowColor: 0x60a5fa,
             glowStrength: 0.5
+        },
+        
+        // 📷 카메라 설정
+        camera: {
+            defaultZoom: 1.0,
+            minZoom: 0.8,
+            maxZoom: 1.5,
+            zoomSpeed: 0.3,      // 줌 전환 시간 (초)
+            panSpeed: 0.2        // 팬 전환 시간 (초)
+        },
+        
+        // 🎨 컬러 그레이딩 설정
+        colorGrade: {
+            transitionSpeed: 0.15  // 색상 전환 시간 (초)
         }
     },
+    
+    // 📷 카메라 상태
+    cameraState: {
+        zoom: 1.0,
+        offsetX: 0,
+        offsetY: 0,
+        focusTarget: null
+    },
+    
+    // 🎨 컬러 그레이딩 필터
+    colorFilter: null,
     
     // ==================== 캐시 ====================
     animCache: new Map(),
@@ -79,12 +106,40 @@ const DDOOAction = {
         // VFX 렌더 루프 시작
         this.startVFXLoop();
         
+        // 📷 카메라 초기화
+        this.initCamera();
+        
+        // 🎨 컬러 그레이딩 필터 초기화
+        this.initColorFilter();
+        
         this.initialized = true;
-        console.log('[DDOOAction] ✅ 엔진 초기화 완료');
+        console.log('[DDOOAction] ✅ 엔진 v3.0 초기화 완료');
         console.log(`[DDOOAction] 📁 애니메이션: ${this.animCache.size}개`);
         console.log(`[DDOOAction] 💥 VFX: ${this.vfxCache.size}개`);
+        console.log(`[DDOOAction] 📷 카메라: ${this.config.enableCamera ? 'ON' : 'OFF'}`);
+        console.log(`[DDOOAction] 🎨 컬러그레이딩: ${this.config.enableColorGrade ? 'ON' : 'OFF'}`);
         
         return this;
+    },
+    
+    // 📷 카메라 시스템 초기화
+    initCamera() {
+        this.cameraState = {
+            zoom: this.config.camera.defaultZoom,
+            offsetX: 0,
+            offsetY: 0,
+            focusTarget: null
+        };
+    },
+    
+    // 🎨 컬러 그레이딩 필터 초기화
+    initColorFilter() {
+        if (typeof PIXI !== 'undefined' && PIXI.ColorMatrixFilter) {
+            this.colorFilter = new PIXI.ColorMatrixFilter();
+            if (this.stageContainer && !this.stageContainer.filters) {
+                this.stageContainer.filters = [];
+            }
+        }
     },
     
     createVFXCanvas() {
@@ -638,6 +693,12 @@ const DDOOAction = {
             playerChar.container.y = playerChar.baseY;
         }
         
+        // 📷 카메라 리셋
+        this.resetCamera();
+        
+        // 🎨 컬러 그레이딩 리셋
+        this.resetColorGrade();
+        
         if (options.onComplete) options.onComplete();
     },
     
@@ -685,6 +746,191 @@ const DDOOAction = {
             gsap.to(sprite.scale, { x: 1, y: 1, duration, ease });
             gsap.to(sprite, { rotation: 0, alpha: 1, duration, ease });
         });
+    },
+    
+    // ==================== 📷 카메라 시스템 ====================
+    
+    // 카메라 줌
+    cameraZoom(zoom, duration = 300) {
+        if (!this.config.enableCamera || !this.stageContainer) return;
+        
+        const targetZoom = Math.max(this.config.camera.minZoom, Math.min(this.config.camera.maxZoom, zoom));
+        const dur = duration / 1000 / this.config.speed;
+        
+        gsap.to(this.stageContainer.scale, {
+            x: targetZoom,
+            y: targetZoom,
+            duration: dur,
+            ease: 'power2.out'
+        });
+        
+        this.cameraState.zoom = targetZoom;
+        if (this.config.debug) console.log(`[DDOOAction] 📷 Zoom: ${targetZoom.toFixed(2)}`);
+    },
+    
+    // 카메라 이동 (특정 대상 포커스)
+    cameraFocus(target, duration = 200) {
+        if (!this.config.enableCamera || !this.stageContainer) return;
+        
+        let focusX = 0, focusY = 0;
+        
+        if (target === 'player') {
+            const playerChar = this.characters.get('player');
+            if (playerChar) {
+                focusX = -(playerChar.container.x - this.pixiApp.screen.width / 2) * 0.3;
+                focusY = -(playerChar.container.y - this.pixiApp.screen.height / 2) * 0.2;
+            }
+        } else if (target === 'enemy') {
+            const enemyChar = this.characters.get('enemy');
+            if (enemyChar) {
+                focusX = -(enemyChar.container.x - this.pixiApp.screen.width / 2) * 0.3;
+                focusY = -(enemyChar.container.y - this.pixiApp.screen.height / 2) * 0.2;
+            }
+        } else if (target === 'center') {
+            focusX = 0;
+            focusY = 0;
+        }
+        
+        const dur = duration / 1000 / this.config.speed;
+        
+        gsap.to(this.stageContainer, {
+            x: focusX,
+            y: focusY,
+            duration: dur,
+            ease: 'power2.out'
+        });
+        
+        this.cameraState.offsetX = focusX;
+        this.cameraState.offsetY = focusY;
+        this.cameraState.focusTarget = target;
+        
+        if (this.config.debug) console.log(`[DDOOAction] 📷 Focus: ${target}`);
+    },
+    
+    // 카메라 리셋
+    resetCamera() {
+        if (!this.config.enableCamera || !this.stageContainer) return;
+        
+        const dur = this.config.camera.zoomSpeed / this.config.speed;
+        
+        gsap.to(this.stageContainer.scale, {
+            x: this.config.camera.defaultZoom,
+            y: this.config.camera.defaultZoom,
+            duration: dur,
+            ease: 'power2.out'
+        });
+        
+        gsap.to(this.stageContainer, {
+            x: 0,
+            y: 0,
+            duration: dur,
+            ease: 'power2.out'
+        });
+        
+        this.cameraState = {
+            zoom: this.config.camera.defaultZoom,
+            offsetX: 0,
+            offsetY: 0,
+            focusTarget: null
+        };
+    },
+    
+    // ==================== 🎨 컬러 그레이딩 시스템 ====================
+    
+    // 컬러 그레이딩 적용
+    applyColorGrade(effect, duration = 150) {
+        if (!this.config.enableColorGrade || !this.stageContainer) return;
+        
+        // 필터가 없으면 생성
+        if (!this.colorFilter && typeof PIXI !== 'undefined' && PIXI.ColorMatrixFilter) {
+            this.colorFilter = new PIXI.ColorMatrixFilter();
+        }
+        if (!this.colorFilter) return;
+        
+        // 필터 적용
+        if (!this.stageContainer.filters) {
+            this.stageContainer.filters = [this.colorFilter];
+        } else if (!this.stageContainer.filters.includes(this.colorFilter)) {
+            this.stageContainer.filters.push(this.colorFilter);
+        }
+        
+        const dur = duration / 1000 / this.config.speed;
+        
+        // 효과별 처리
+        switch (effect) {
+            case 'hit':  // 피격 - 붉은색 플래시
+                this.colorFilter.reset();
+                this.colorFilter.saturate(0.3);
+                gsap.to(this.colorFilter, {
+                    saturate: 1,
+                    duration: dur,
+                    ease: 'power2.out'
+                });
+                // 임시 틴트 효과
+                if (this.stageContainer.tint !== undefined) {
+                    gsap.fromTo(this.stageContainer, 
+                        { tint: 0xff6666 },
+                        { tint: 0xffffff, duration: dur }
+                    );
+                }
+                break;
+                
+            case 'critical':  // 크리티컬 - 흑백 플래시
+                this.colorFilter.reset();
+                this.colorFilter.desaturate();
+                gsap.to({}, {
+                    duration: dur * 0.5,
+                    onComplete: () => {
+                        this.colorFilter.reset();
+                    }
+                });
+                break;
+                
+            case 'power':  // 파워업 - 황금빛
+                this.colorFilter.reset();
+                this.colorFilter.sepia(0.3);
+                gsap.to({}, {
+                    duration: dur,
+                    onComplete: () => {
+                        this.colorFilter.reset();
+                    }
+                });
+                break;
+                
+            case 'shadow':  // 그림자 - 어두운 보라
+                this.colorFilter.reset();
+                this.colorFilter.night(0.3);
+                break;
+                
+            case 'heal':  // 힐 - 녹색
+                this.colorFilter.reset();
+                this.colorFilter.hue(60);
+                gsap.to({}, {
+                    duration: dur,
+                    onComplete: () => {
+                        this.colorFilter.reset();
+                    }
+                });
+                break;
+                
+            default:
+                this.colorFilter.reset();
+        }
+        
+        if (this.config.debug) console.log(`[DDOOAction] 🎨 Color: ${effect}`);
+    },
+    
+    // 컬러 그레이딩 리셋
+    resetColorGrade() {
+        if (!this.colorFilter) return;
+        
+        this.colorFilter.reset();
+        
+        // 필터 목록에서 제거 (선택적)
+        // if (this.stageContainer?.filters) {
+        //     const idx = this.stageContainer.filters.indexOf(this.colorFilter);
+        //     if (idx >= 0) this.stageContainer.filters.splice(idx, 1);
+        // }
     },
     
     // 📍 스텝 이벤트 처리
@@ -843,6 +1089,25 @@ const DDOOAction = {
                 // 스크린쉐이크
                 if (kf.shake && this.config.enableShake) {
                     tl.call(() => this.screenShake(kf.shake), null, '<');
+                }
+                
+                // 📷 카메라 줌
+                if (kf.camera && this.config.enableCamera) {
+                    tl.call(() => {
+                        if (kf.camera.zoom !== undefined) {
+                            this.cameraZoom(kf.camera.zoom, kf.camera.duration || 200);
+                        }
+                        if (kf.camera.focus !== undefined) {
+                            this.cameraFocus(kf.camera.focus, kf.camera.duration || 150);
+                        }
+                    }, null, '<');
+                }
+                
+                // 🎨 컬러 그레이딩
+                if (kf.color && this.config.enableColorGrade) {
+                    tl.call(() => {
+                        this.applyColorGrade(kf.color, kf.colorDuration || 150);
+                    }, null, '<');
                 }
                 
                 // 잔상

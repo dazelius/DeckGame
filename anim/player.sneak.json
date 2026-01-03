@@ -8,10 +8,10 @@
     "keyframes": [
         { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 0 },
         
-        { "x": -10, "y": 8, "scaleX": 0.85, "scaleY": 1.15, "alpha": 1, "rotation": 0, "duration": 30, "ease": "power2.in" },
+        { "x": -10, "y": 8, "scaleX": 0.85, "scaleY": 1.15, "alpha": 1, "rotation": 0, "duration": 30, "ease": "power2.in", "color": "shadow" },
         { "x": -5, "y": 15, "scaleX": 0.75, "scaleY": 1.25, "alpha": 0.9, "rotation": 0, "duration": 25, "ease": "power3.in", "vfx": "shadow_fade", "vfxTarget": "self" },
         
-        { "x": 150, "y": -20, "scaleX": 1.2, "scaleY": 0.8, "alpha": 0.7, "rotation": 0.1, "duration": 40, "ease": "power4.out", "afterimage": true },
+        { "x": 150, "y": -20, "scaleX": 1.2, "scaleY": 0.8, "alpha": 0.7, "rotation": 0.1, "duration": 40, "ease": "power4.out", "afterimage": true, "camera": { "focus": "enemy", "duration": 150 } },
         { "x": 280, "y": -5, "scaleX": 1.1, "scaleY": 0.9, "alpha": 0.8, "rotation": 0.05, "duration": 45, "ease": "power3.out", "afterimage": true, "vfx": "shadow_appear", "vfxTarget": "self" },
         
         { "x": 290, "y": 0, "scaleX": 1.05, "scaleY": 0.95, "alpha": 0.9, "rotation": 0.02, "duration": 35, "ease": "power2.out" },
