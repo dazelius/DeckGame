@@ -549,9 +549,42 @@ const DDOOAction = {
                         await this.delay(step.delay);
                     }
                     
+                    // 🎯 타겟에 따라 다른 캐릭터 사용!
+                    let stepContainer = container;
+                    let stepSprite = sprite;
+                    let stepOriginX = originX;
+                    let stepOriginY = originY;
+                    let stepDir = dir;
+                    
+                    const animTarget = actualAnimData.target || (animId.startsWith('enemy') ? 'enemy' : 'player');
+                    
+                    if (animTarget === 'enemy') {
+                        // 적 캐릭터 가져오기
+                        const enemyChar = this.characters.get('enemy');
+                        if (enemyChar) {
+                            stepContainer = enemyChar.container;
+                            stepSprite = enemyChar.sprite;
+                            stepOriginX = enemyChar.baseX;
+                            stepOriginY = enemyChar.baseY;
+                            stepDir = -1;
+                        } else if (options.targetContainer && options.targetSprite) {
+                            // 옵션에서 타겟 정보 사용
+                            stepContainer = options.targetContainer;
+                            stepSprite = options.targetSprite;
+                            stepOriginX = options.targetBaseX || stepContainer.x;
+                            stepOriginY = options.targetBaseY || stepContainer.y;
+                            stepDir = -1;
+                        }
+                    }
+                    
                     // 애니메이션 재생
                     const promise = this.playKeyframes(actualAnimData, {
                         ...options,
+                        container: stepContainer,
+                        sprite: stepSprite,
+                        originX: stepOriginX,
+                        originY: stepOriginY,
+                        dir: stepDir,
                         isRelative: true,  // 시퀀스 내에서는 상대 좌표
                         stepEvents: step   // 스텝에 정의된 이벤트 전달
                     });
