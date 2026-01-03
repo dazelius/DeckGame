@@ -1402,12 +1402,20 @@ const DDOOAction = {
                             vfxX = container.x;
                             vfxY = container.y - (bounds.height || 60) / 2;
                             vfxScale = sprite.scale.x || 1;
+                            
+                            // 🎯 프로젝타일용 타겟 정보 저장
+                            this.currentTargetContainer = options.targetContainer || null;
+                            this.currentTargetSprite = options.targetSprite || null;
                         } else {
                             // 적에게 VFX (공격)
                             const hitPoint = getHitPoint ? getHitPoint() : { x: container.x, y: container.y };
                             vfxX = hitPoint.x;
                             vfxY = hitPoint.y;
                             vfxScale = hitPoint.scale || 1;
+                            
+                            // 🎯 프로젝타일용 타겟 정보 저장
+                            this.currentTargetContainer = options.targetContainer || null;
+                            this.currentTargetSprite = options.targetSprite || null;
                         }
                         
                         this.triggerVFX(kf.vfx, vfxX, vfxY, dir, vfxScale);
@@ -1620,9 +1628,65 @@ const DDOOAction = {
                     case 'trail':
                         // trail은 잔상 시스템 사용
                         break;
+                    case 'projectile':
+                        this.spawnProjectileParticle(def, x, y, dir, scale);
+                        break;
                 }
             }, delayBetween * i);
         }
+    },
+    
+    // 🎯 프로젝타일 파티클 생성 (타겟을 향해 날아감)
+    spawnProjectileParticle(def, startX, startY, dir, scale) {
+        // 타겟 위치 계산 (현재 활성 타겟 컨테이너 사용)
+        let targetX = startX + dir * 400;  // 기본값
+        let targetY = startY;
+        
+        // DDOOAction의 현재 타겟 정보 사용
+        if (this.currentTargetContainer) {
+            targetX = this.currentTargetContainer.x;
+            // 타겟 스프라이트 중앙점
+            if (this.currentTargetSprite) {
+                const bounds = this.currentTargetSprite.getBounds();
+                targetY = this.currentTargetContainer.y - bounds.height / 2;
+            } else {
+                targetY = this.currentTargetContainer.y - 60;
+            }
+        } else {
+            // 캐릭터 Map에서 찾기
+            const targetChar = dir > 0 ? this.characters.get('enemy') : this.characters.get('player');
+            if (targetChar) {
+                targetX = targetChar.container.x;
+                if (targetChar.sprite) {
+                    const bounds = targetChar.sprite.getBounds();
+                    targetY = targetChar.container.y - bounds.height / 2;
+                } else {
+                    targetY = targetChar.container.y - 60;
+                }
+            }
+        }
+        
+        const speed = (def.speed || 25) * scale;
+        const size = (def.size || 20) * scale;
+        
+        this.spawnParticle({
+            type: 'projectile',
+            x: startX,
+            y: startY,
+            targetX: targetX,
+            targetY: targetY,
+            speed: speed,
+            size: size,
+            rotation: def.rotation || 0,
+            currentRotation: 0,
+            shape: def.shape || 'circle',
+            color: def.color || '#94a3b8',
+            glow: def.glow || '#60a5fa',
+            trail: def.trail !== false,
+            trailTimer: 0,
+            life: def.life || 500,
+            onHitVFX: def.onHitVFX || null
+        });
     },
     
     // 연기 파티클 생성
@@ -1873,7 +1937,157 @@ const DDOOAction = {
                 p.y += p.vy || 0;
                 this.drawSymbolParticle(p, alpha, progress);
                 break;
+            case 'projectile':
+                this.updateAndDrawProjectile(p, alpha, progress);
+                break;
+            case 'trail_dot':
+                this.drawTrailDot(p, alpha);
+                break;
         }
+    },
+    
+    // 🔵 트레일 도트 렌더링
+    drawTrailDot(p, alpha) {
+        const ctx = this.vfxCtx;
+        if (!ctx) return;
+        
+        const size = p.size || 5;
+        if (!isFinite(size) || size <= 0) return;
+        if (!isFinite(p.x) || !isFinite(p.y)) return;
+        
+        ctx.save();
+        ctx.globalAlpha = alpha * 0.6;
+        ctx.fillStyle = p.color || '#60a5fa';
+        ctx.shadowColor = p.color || '#60a5fa';
+        ctx.shadowBlur = 8;
+        
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, size * (1 - alpha * 0.3), 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    },
+    
+    // 🎯 프로젝타일 업데이트 및 렌더링
+    updateAndDrawProjectile(p, alpha, progress) {
+        const ctx = this.vfxCtx;
+        if (!ctx) return;
+        
+        // 프로젝타일 이동
+        const dx = p.targetX - p.x;
+        const dy = p.targetY - p.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist > p.speed) {
+            p.x += (dx / dist) * p.speed;
+            p.y += (dy / dist) * p.speed;
+        } else {
+            // 타겟 도달 - 히트 VFX
+            if (p.onHitVFX && !p.hitTriggered) {
+                p.hitTriggered = true;
+                this.triggerVFX(p.onHitVFX, p.targetX, p.targetY, 1, 1);
+            }
+            p.x = p.targetX;
+            p.y = p.targetY;
+            p.life = 0;  // 즉시 제거
+            return;
+        }
+        
+        // 회전
+        if (p.rotation) {
+            p.currentRotation += p.rotation * Math.PI / 180 * 0.016;
+        }
+        
+        // 잔상 트레일 생성
+        if (p.trail && dist > 10) {
+            p.trailTimer = (p.trailTimer || 0) + 1;
+            if (p.trailTimer % 3 === 0) {
+                this.spawnParticle({
+                    type: 'trail_dot',
+                    x: p.x - (dx / dist) * 8,
+                    y: p.y - (dy / dist) * 8,
+                    size: p.size * 0.4,
+                    color: p.glow || 'rgba(148, 163, 184, 0.5)',
+                    life: 120
+                });
+            }
+        }
+        
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.currentRotation || 0);
+        
+        // 글로우
+        ctx.shadowColor = p.glow || p.color;
+        ctx.shadowBlur = 15;
+        ctx.globalAlpha = alpha;
+        
+        // 모양별 렌더링
+        if (p.shape === 'dagger') {
+            // 🗡️ 단검 모양
+            const size = p.size;
+            
+            // 블레이드 (메인)
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.moveTo(size * 1.2, 0);           // 끝
+            ctx.lineTo(size * 0.3, -size * 0.25);  // 위쪽 날
+            ctx.lineTo(-size * 0.4, -size * 0.15); // 손잡이 연결부
+            ctx.lineTo(-size * 0.6, 0);            // 손잡이
+            ctx.lineTo(-size * 0.4, size * 0.15);  // 손잡이 연결부
+            ctx.lineTo(size * 0.3, size * 0.25);   // 아래쪽 날
+            ctx.closePath();
+            ctx.fill();
+            
+            // 하이라이트
+            ctx.fillStyle = '#ffffff';
+            ctx.globalAlpha = alpha * 0.7;
+            ctx.beginPath();
+            ctx.moveTo(size * 1.0, 0);
+            ctx.lineTo(size * 0.2, -size * 0.12);
+            ctx.lineTo(-size * 0.2, 0);
+            ctx.closePath();
+            ctx.fill();
+            
+            // 손잡이
+            ctx.fillStyle = '#4a3728';
+            ctx.globalAlpha = alpha;
+            ctx.fillRect(-size * 0.6, -size * 0.08, size * 0.25, size * 0.16);
+            
+        } else if (p.shape === 'shuriken') {
+            // ⭐ 수리검 모양
+            const size = p.size;
+            ctx.fillStyle = p.color;
+            
+            // 4개의 날
+            for (let i = 0; i < 4; i++) {
+                ctx.save();
+                ctx.rotate(i * Math.PI / 2);
+                ctx.beginPath();
+                ctx.moveTo(size, 0);
+                ctx.lineTo(size * 0.3, size * 0.3);
+                ctx.lineTo(0, 0);
+                ctx.lineTo(size * 0.3, -size * 0.3);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            }
+            
+            // 중앙 원
+            ctx.fillStyle = '#333';
+            ctx.beginPath();
+            ctx.arc(0, 0, size * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+            
+        } else {
+            // 기본 원형
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        ctx.restore();
     },
     
     // 연기 파티클 렌더링

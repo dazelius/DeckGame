@@ -1,0 +1,51 @@
+{
+    "id": "dagger_throw",
+    "name": "단검 투척 - 회전하는 단검",
+    "shake": 3,
+    "particles": [
+        {
+            "type": "projectile",
+            "shape": "dagger",
+            "speed": 32,
+            "rotation": 1200,
+            "size": 28,
+            "color": "#94a3b8",
+            "glow": "#60a5fa",
+            "trail": true,
+            "onHitVFX": "dagger_impact",
+            "life": 600
+        },
+        {
+            "type": "flash",
+            "size": 35,
+            "color": "#e0e7ff",
+            "life": 50
+        },
+        {
+            "type": "ring",
+            "size": 8,
+            "maxSize": 40,
+            "color": "#94a3b8",
+            "life": 100
+        },
+        {
+            "type": "spark",
+            "count": 6,
+            "spread": 25,
+            "speed": [4, 10],
+            "size": [2, 4],
+            "colors": ["#94a3b8", "#60a5fa", "#ffffff"],
+            "life": [100, 180]
+        },
+        {
+            "type": "line",
+            "count": 3,
+            "angleStep": 45,
+            "length": [30, 50],
+            "width": 2,
+            "color": "#c4b5fd",
+            "life": 80
+        }
+    ]
+}
+

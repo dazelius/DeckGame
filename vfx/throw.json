@@ -1,35 +1,37 @@
 {
     "id": "throw",
-    "name": "투척",
+    "name": "투척 모션",
     "particles": [
         {
-            "type": "projectile",
-            "shape": "dagger",
-            "speed": 25,
-            "rotation": 720,
-            "size": 20,
-            "color": "#94a3b8",
-            "glow": "#60a5fa",
-            "life": 300
+            "type": "flash",
+            "size": 30,
+            "color": "#e0e7ff",
+            "life": 40
         },
         {
-            "type": "trail",
-            "count": 6,
-            "delay": 15,
-            "offsetX": -15,
-            "size": [15, 30],
-            "color": "rgba(148, 163, 184, 0.3)",
-            "life": 120
+            "type": "ring",
+            "size": 10,
+            "maxSize": 35,
+            "color": "#94a3b8",
+            "life": 90
         },
         {
             "type": "spark",
-            "count": 4,
-            "spread": 25,
+            "count": 5,
+            "spread": 20,
             "speed": [3, 8],
             "size": [2, 4],
-            "colors": ["#94a3b8", "#cbd5e1"],
-            "life": [100, 180]
+            "colors": ["#94a3b8", "#60a5fa"],
+            "life": [80, 140]
+        },
+        {
+            "type": "line",
+            "count": 4,
+            "angleStep": 90,
+            "length": [20, 35],
+            "width": 2,
+            "color": "#a5b4fc",
+            "life": 70
         }
     ]
 }
-
