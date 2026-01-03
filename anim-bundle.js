@@ -1,6 +1,6 @@
 /**
  * DDOO Animation Bundle - 자동 생성됨
- * 생성일: 2026-01-03T16:17:27.884Z
+ * 생성일: 2026-01-03T16:22:52.900Z
  * 
  * 이 파일을 포함하면 fetch 없이 모든 애니메이션/VFX 데이터 사용 가능!
  * <script src="anim-bundle.js"></script>
@@ -12,32 +12,26 @@ window.ANIM_BUNDLE = {
     "id": "card.bash",
     "name": "강타",
     "type": "sequence",
-    "target": "player",
-    "priority": 12,
-    "description": "충격파를 동반한 강력한 일격",
+    "description": "강력한 타격으로 적을 취약하게 만든다",
+    "returnToBase": true,
     "steps": [
       {
         "anim": "player.dash",
         "wait": true
       },
       {
-        "delay": 50
-      },
-      {
-        "anim": "player.bash",
-        "wait": false
+        "anim": "player.heavy_slash",
+        "wait": false,
+        "damage": 8
       },
       {
         "anim": "enemy.bash_hit",
         "wait": true,
-        "delay": 55
-      },
-      {
-        "delay": 200
-      },
-      {
-        "anim": "player.return",
-        "wait": true
+        "delay": 30,
+        "debuff": {
+          "name": "vulnerable",
+          "value": 2
+        }
       }
     ]
   },
@@ -45,20 +39,20 @@ window.ANIM_BUNDLE = {
     "id": "card.dagger",
     "name": "단검 투척",
     "type": "sequence",
-    "target": "player",
-    "priority": 12,
-    "description": "단검을 투척하여 원거리 공격",
+    "description": "단검을 던져 적을 공격한다",
+    "returnToBase": true,
     "steps": [
       {
         "anim": "player.throw",
         "wait": true
       },
       {
-        "delay": 150
+        "delay": 100
       },
       {
         "anim": "enemy.dagger_hit",
-        "wait": true
+        "wait": true,
+        "damage": 4
       }
     ]
   },
@@ -67,6 +61,7 @@ window.ANIM_BUNDLE = {
     "name": "비열한 일격",
     "type": "sequence",
     "description": "그림자처럼 사라져 적의 뒤에서 급습한다",
+    "returnToBase": true,
     "steps": [
       {
         "anim": "player.sneak",
@@ -77,19 +72,17 @@ window.ANIM_BUNDLE = {
       },
       {
         "anim": "player.backstab_strike",
-        "wait": false
+        "wait": false,
+        "damage": 5
       },
       {
         "anim": "enemy.stabbed",
         "wait": true,
-        "delay": 20
-      },
-      {
-        "delay": 100
-      },
-      {
-        "anim": "player.sneak_return",
-        "wait": true
+        "delay": 20,
+        "debuff": {
+          "name": "poison",
+          "value": 3
+        }
       }
     ]
   },
@@ -98,10 +91,21 @@ window.ANIM_BUNDLE = {
     "name": "닷지",
     "type": "sequence",
     "description": "민첩하게 뒤로 물러서며 공격을 회피한다",
+    "returnToBase": true,
     "steps": [
       {
         "anim": "player.dodge_flip",
-        "wait": true
+        "wait": true,
+        "buff": {
+          "name": "block",
+          "value": 3
+        }
+      },
+      {
+        "event": {
+          "type": "draw",
+          "value": 1
+        }
       }
     ]
   },
@@ -109,56 +113,48 @@ window.ANIM_BUNDLE = {
     "id": "card.flurry",
     "name": "연속 찌르기",
     "type": "sequence",
-    "target": "player",
-    "priority": 15,
-    "description": "나비처럼 날아 벌처럼 쏜다! 세검 3연타",
+    "description": "3번 연속으로 빠르게 찌른다",
+    "returnToBase": true,
     "steps": [
       {
         "anim": "player.dash",
         "wait": true
       },
       {
-        "delay": 15
-      },
-      {
         "anim": "player.flurry_stab1",
-        "wait": false
+        "wait": true,
+        "damage": 3
       },
       {
         "anim": "enemy.flurry_hit",
-        "wait": true,
-        "delay": 12
+        "wait": false,
+        "delay": 10
       },
       {
-        "delay": 20
+        "delay": 30
       },
       {
         "anim": "player.flurry_stab2",
-        "wait": false
+        "wait": true,
+        "damage": 3
       },
       {
         "anim": "enemy.flurry_hit",
-        "wait": true,
-        "delay": 11
+        "wait": false,
+        "delay": 10
       },
       {
-        "delay": 20
+        "delay": 30
       },
       {
         "anim": "player.flurry_stab3",
-        "wait": false
+        "wait": true,
+        "damage": 3
       },
       {
         "anim": "enemy.flurry_hit",
         "wait": true,
-        "delay": 14
-      },
-      {
-        "delay": 80
-      },
-      {
-        "anim": "player.return",
-        "wait": true
+        "delay": 10
       }
     ]
   },
@@ -166,113 +162,97 @@ window.ANIM_BUNDLE = {
     "id": "card.flurryP",
     "name": "연속 찌르기+",
     "type": "sequence",
-    "target": "player",
-    "priority": 18,
-    "description": "초고속 5연타! 정신없이 몰아친다",
+    "description": "5번 연속으로 빠르게 찌른다",
+    "returnToBase": true,
     "steps": [
       {
         "anim": "player.dash",
         "wait": true
       },
       {
-        "delay": 10
-      },
-      {
         "anim": "player.flurry_stab1",
-        "wait": false
+        "wait": true,
+        "damage": 3
       },
       {
         "anim": "enemy.flurry_hit",
-        "wait": true,
+        "wait": false,
         "delay": 10
       },
       {
-        "delay": 12
+        "delay": 25
       },
       {
         "anim": "player.flurry_stab2",
-        "wait": false
+        "wait": true,
+        "damage": 3
       },
       {
         "anim": "enemy.flurry_hit",
-        "wait": true,
-        "delay": 9
-      },
-      {
-        "delay": 12
-      },
-      {
-        "anim": "player.flurry_stab1",
-        "wait": false
-      },
-      {
-        "anim": "enemy.flurry_hit",
-        "wait": true,
+        "wait": false,
         "delay": 10
       },
       {
-        "delay": 12
-      },
-      {
-        "anim": "player.flurry_stab2",
-        "wait": false
-      },
-      {
-        "anim": "enemy.flurry_hit",
-        "wait": true,
-        "delay": 9
-      },
-      {
-        "delay": 15
+        "delay": 25
       },
       {
         "anim": "player.flurry_stab3",
-        "wait": false
+        "wait": true,
+        "damage": 3
+      },
+      {
+        "anim": "enemy.flurry_hit",
+        "wait": false,
+        "delay": 10
+      },
+      {
+        "delay": 25
+      },
+      {
+        "anim": "player.flurry_stab1",
+        "wait": true,
+        "damage": 3
+      },
+      {
+        "anim": "enemy.flurry_hit",
+        "wait": false,
+        "delay": 10
+      },
+      {
+        "delay": 25
+      },
+      {
+        "anim": "player.flurry_stab2",
+        "wait": true,
+        "damage": 3
       },
       {
         "anim": "enemy.flurry_hit",
         "wait": true,
-        "delay": 14
-      },
-      {
-        "delay": 100
-      },
-      {
-        "anim": "player.return",
-        "wait": true
+        "delay": 10
       }
     ]
   },
   "card.strike": {
     "id": "card.strike",
-    "name": "베기",
+    "name": "기본 공격",
     "type": "sequence",
-    "target": "player",
-    "priority": 10,
-    "description": "무게감 있는 대검 베기",
+    "description": "적에게 돌진하여 베기",
+    "returnToBase": true,
     "steps": [
       {
         "anim": "player.dash",
         "wait": true
       },
       {
-        "delay": 40
-      },
-      {
-        "anim": "player.heavy_slash",
-        "wait": false
+        "anim": "player.attack",
+        "wait": false,
+        "damage": 6
       },
       {
         "anim": "enemy.hit",
         "wait": true,
-        "delay": 65
-      },
-      {
-        "delay": 180
-      },
-      {
-        "anim": "player.return",
-        "wait": true
+        "delay": 20
       }
     ]
   },

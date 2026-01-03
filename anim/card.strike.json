@@ -1,16 +1,12 @@
 {
     "id": "card.strike",
-    "name": "베기",
+    "name": "기본 공격",
     "type": "sequence",
-    "target": "player",
-    "priority": 10,
-    "description": "무게감 있는 대검 베기",
+    "description": "적에게 돌진하여 베기",
+    "returnToBase": true,
     "steps": [
         { "anim": "player.dash", "wait": true },
-        { "delay": 40 },
-        { "anim": "player.heavy_slash", "wait": false },
-        { "anim": "enemy.hit", "wait": true, "delay": 65 },
-        { "delay": 180 },
-        { "anim": "player.return", "wait": true }
+        { "anim": "player.attack", "wait": false, "damage": 6 },
+        { "anim": "enemy.hit", "wait": true, "delay": 20 }
     ]
 }

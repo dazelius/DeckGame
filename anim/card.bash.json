@@ -2,15 +2,11 @@
     "id": "card.bash",
     "name": "강타",
     "type": "sequence",
-    "target": "player",
-    "priority": 12,
-    "description": "충격파를 동반한 강력한 일격",
+    "description": "강력한 타격으로 적을 취약하게 만든다",
+    "returnToBase": true,
     "steps": [
         { "anim": "player.dash", "wait": true },
-        { "delay": 50 },
-        { "anim": "player.bash", "wait": false },
-        { "anim": "enemy.bash_hit", "wait": true, "delay": 55 },
-        { "delay": 200 },
-        { "anim": "player.return", "wait": true }
+        { "anim": "player.heavy_slash", "wait": false, "damage": 8 },
+        { "anim": "enemy.bash_hit", "wait": true, "delay": 30, "debuff": { "name": "vulnerable", "value": 2 } }
     ]
 }

@@ -3,12 +3,11 @@
     "name": "비열한 일격",
     "type": "sequence",
     "description": "그림자처럼 사라져 적의 뒤에서 급습한다",
+    "returnToBase": true,
     "steps": [
         { "anim": "player.sneak", "wait": true },
         { "delay": 30 },
-        { "anim": "player.backstab_strike", "wait": false },
-        { "anim": "enemy.stabbed", "wait": true, "delay": 20 },
-        { "delay": 100 },
-        { "anim": "player.sneak_return", "wait": true }
+        { "anim": "player.backstab_strike", "wait": false, "damage": 5 },
+        { "anim": "enemy.stabbed", "wait": true, "delay": 20, "debuff": { "name": "poison", "value": 3 } }
     ]
 }

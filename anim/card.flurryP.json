@@ -2,33 +2,23 @@
     "id": "card.flurryP",
     "name": "연속 찌르기+",
     "type": "sequence",
-    "target": "player",
-    "priority": 18,
-    "description": "초고속 5연타! 정신없이 몰아친다",
+    "description": "5번 연속으로 빠르게 찌른다",
+    "returnToBase": true,
     "steps": [
         { "anim": "player.dash", "wait": true },
-        { "delay": 10 },
-        
-        { "anim": "player.flurry_stab1", "wait": false },
-        { "anim": "enemy.flurry_hit", "wait": true, "delay": 10 },
-        { "delay": 12 },
-        
-        { "anim": "player.flurry_stab2", "wait": false },
-        { "anim": "enemy.flurry_hit", "wait": true, "delay": 9 },
-        { "delay": 12 },
-        
-        { "anim": "player.flurry_stab1", "wait": false },
-        { "anim": "enemy.flurry_hit", "wait": true, "delay": 10 },
-        { "delay": 12 },
-        
-        { "anim": "player.flurry_stab2", "wait": false },
-        { "anim": "enemy.flurry_hit", "wait": true, "delay": 9 },
-        { "delay": 15 },
-        
-        { "anim": "player.flurry_stab3", "wait": false },
-        { "anim": "enemy.flurry_hit", "wait": true, "delay": 14 },
-        { "delay": 100 },
-        
-        { "anim": "player.return", "wait": true }
+        { "anim": "player.flurry_stab1", "wait": true, "damage": 3 },
+        { "anim": "enemy.flurry_hit", "wait": false, "delay": 10 },
+        { "delay": 25 },
+        { "anim": "player.flurry_stab2", "wait": true, "damage": 3 },
+        { "anim": "enemy.flurry_hit", "wait": false, "delay": 10 },
+        { "delay": 25 },
+        { "anim": "player.flurry_stab3", "wait": true, "damage": 3 },
+        { "anim": "enemy.flurry_hit", "wait": false, "delay": 10 },
+        { "delay": 25 },
+        { "anim": "player.flurry_stab1", "wait": true, "damage": 3 },
+        { "anim": "enemy.flurry_hit", "wait": false, "delay": 10 },
+        { "delay": 25 },
+        { "anim": "player.flurry_stab2", "wait": true, "damage": 3 },
+        { "anim": "enemy.flurry_hit", "wait": true, "delay": 10 }
     ]
 }

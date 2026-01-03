@@ -1,6 +1,6 @@
 // =====================================================
-// DDOO Action Engine v1.1
-// 애니메이션 & VFX & 캐릭터 렌더링 통합 엔진
+// DDOO Action Engine v2.0
+// 애니메이션 & VFX & 캐릭터 렌더링 & 게임 이벤트 통합 엔진
 // =====================================================
 
 const DDOOAction = {
@@ -17,6 +17,12 @@ const DDOOAction = {
         enableBreathing: true,
         enableGlow: true,
         debug: false,
+        
+        // 리턴 애니메이션 설정
+        return: {
+            duration: 250,       // 리턴 시간 (ms)
+            ease: 'power2.inOut' // 이징
+        },
         
         // 캐릭터 렌더링 설정
         character: {
@@ -466,12 +472,16 @@ const DDOOAction = {
         const {
             container,      // PIXI.Container
             sprite,         // PIXI.Sprite
-            baseX,          // 기본 X 위치
-            baseY,          // 기본 Y 위치
+            baseX,          // 기본 X 위치 (리턴할 원점)
+            baseY,          // 기본 Y 위치 (리턴할 원점)
             dir = 1,        // 방향 (1: 오른쪽, -1: 왼쪽)
             isRelative = false,  // 상대 좌표 사용
             onComplete,     // 완료 콜백
             onHit,          // 히트 콜백
+            onDamage,       // 🎯 대미지 콜백 (value, target)
+            onBuff,         // 🎯 버프 콜백 (name, value, target)
+            onDebuff,       // 🎯 디버프 콜백 (name, value, target)
+            onEvent,        // 🎯 커스텀 이벤트 콜백 (eventData)
             getHitPoint     // 타격점 계산 함수
         } = options;
         
@@ -480,24 +490,38 @@ const DDOOAction = {
             return null;
         }
         
+        // 원점 저장 (리턴용)
+        const originX = baseX ?? container.x;
+        const originY = baseY ?? container.y;
+        
         // 시퀀스 타입
         if (data.type === 'sequence' && data.steps) {
-            return this.playSequence(data, options);
+            return this.playSequence(data, { ...options, originX, originY });
         }
         
         // 단일 애니메이션
-        return this.playKeyframes(data, options);
+        return this.playKeyframes(data, { ...options, originX, originY });
     },
     
     async playSequence(data, options) {
         if (this.config.debug) console.log(`[DDOOAction] 🎬 Sequence: ${data.id}`);
         
+        const { container, sprite, originX, originY, dir = 1 } = options;
+        
         for (const step of data.steps) {
+            // 순수 딜레이
             if (step.delay && !step.anim) {
                 await this.delay(step.delay);
                 continue;
             }
             
+            // 📍 게임 이벤트 처리 (애니메이션 없이 이벤트만)
+            if (!step.anim) {
+                await this.processStepEvents(step, options);
+                continue;
+            }
+            
+            // 애니메이션 재생
             if (step.anim) {
                 const animData = this.animCache.get(step.anim);
                 if (!animData) {
@@ -513,17 +537,85 @@ const DDOOAction = {
                 // 애니메이션 재생
                 const promise = this.playKeyframes(animData, {
                     ...options,
-                    isRelative: true  // 시퀀스 내에서는 상대 좌표
+                    isRelative: true,  // 시퀀스 내에서는 상대 좌표
+                    stepEvents: step   // 스텝에 정의된 이벤트 전달
                 });
                 
                 // wait가 true면 완료까지 대기
                 if (step.wait) {
                     await promise;
                 }
+                
+                // 📍 스텝 완료 후 이벤트 처리
+                await this.processStepEvents(step, options);
             }
         }
         
+        // ⭐ returnToBase: 원점으로 복귀!
+        if (data.returnToBase !== false) {
+            await this.returnToOrigin(container, sprite, originX, originY);
+        }
+        
         if (options.onComplete) options.onComplete();
+    },
+    
+    // ⭐ 원점 복귀 애니메이션
+    async returnToOrigin(container, sprite, originX, originY) {
+        return new Promise((resolve) => {
+            const duration = this.config.return.duration / 1000 / this.config.speed;
+            const ease = this.config.return.ease;
+            
+            // 그림자 찾기
+            const charId = [...this.characters.keys()].find(
+                id => this.characters.get(id)?.container === container
+            );
+            const shadow = charId ? this.characters.get(charId)?.shadow : null;
+            
+            gsap.to(container, {
+                x: originX,
+                y: originY,
+                duration,
+                ease,
+                onUpdate: () => {
+                    if (shadow) {
+                        shadow.x = container.x;
+                        shadow.y = container.y + (this.config.character.shadowOffsetY || 5);
+                    }
+                },
+                onComplete: resolve
+            });
+            
+            // 스케일/회전도 정규화
+            gsap.to(sprite.scale, { x: 1, y: 1, duration, ease });
+            gsap.to(sprite, { rotation: 0, alpha: 1, duration, ease });
+        });
+    },
+    
+    // 📍 스텝 이벤트 처리
+    async processStepEvents(step, options) {
+        const { onDamage, onBuff, onDebuff, onEvent } = options;
+        
+        // 🎯 대미지
+        if (step.damage !== undefined && onDamage) {
+            onDamage(step.damage, step.target || 'enemy');
+        }
+        
+        // 🎯 버프
+        if (step.buff && onBuff) {
+            const buff = typeof step.buff === 'object' ? step.buff : { name: step.buff, value: 1 };
+            onBuff(buff.name, buff.value, buff.target || 'player');
+        }
+        
+        // 🎯 디버프
+        if (step.debuff && onDebuff) {
+            const debuff = typeof step.debuff === 'object' ? step.debuff : { name: step.debuff, value: 1 };
+            onDebuff(debuff.name, debuff.value, debuff.target || 'enemy');
+        }
+        
+        // 🎯 커스텀 이벤트
+        if (step.event && onEvent) {
+            onEvent(step.event);
+        }
     },
     
     playKeyframes(data, options) {
@@ -533,26 +625,33 @@ const DDOOAction = {
                 sprite,
                 baseX = container.x,
                 baseY = container.y,
+                originX,
+                originY,
                 dir = 1,
                 isRelative = false,
-                getHitPoint
+                getHitPoint,
+                onDamage,
+                onBuff,
+                onDebuff,
+                onEvent,
+                onHit,
+                stepEvents
             } = options;
             
             // ⚠️ 중요: baseScale은 항상 1.0으로 고정!
-            // 이전: const baseScale = sprite.scale.x; (누적 버그 원인)
             const baseScale = 1.0;
             const startX = container.x;
             
             // 애니메이션 시작 전 스케일 정규화
-            // (이전 애니메이션에서 스케일이 변경된 경우 대비)
             if (data.keyframes && data.keyframes[0]) {
                 const firstKf = data.keyframes[0];
                 sprite.scale.set(firstKf.scaleX ?? 1, firstKf.scaleY ?? 1);
             }
             
             // 그림자 찾기 (캐릭터 ID로)
-            const charId = Object.keys(this.characters ? Object.fromEntries(this.characters) : {})
-                .find(id => this.characters.get(id)?.container === container);
+            const charId = [...this.characters.keys()].find(
+                id => this.characters.get(id)?.container === container
+            );
             const charData = charId ? this.characters.get(charId) : null;
             const shadow = charData?.shadow;
             
@@ -631,6 +730,42 @@ const DDOOAction = {
                         const tint = data.target === 'player' ? 0x60a5fa : 0xef4444;
                         this.createAfterimage(sprite, container, 0.7, tint);
                     }, null, '<');
+                }
+                
+                // ========== 🎯 게임 이벤트 (키프레임 레벨) ==========
+                
+                // 대미지
+                if (kf.damage !== undefined && onDamage) {
+                    tl.call(() => {
+                        onDamage(kf.damage, kf.target || 'enemy');
+                        if (onHit) onHit(kf);
+                    }, null, '<');
+                }
+                
+                // 버프
+                if (kf.buff && onBuff) {
+                    tl.call(() => {
+                        const buff = typeof kf.buff === 'object' ? kf.buff : { name: kf.buff, value: 1 };
+                        onBuff(buff.name, buff.value, buff.target || 'player');
+                    }, null, '<');
+                }
+                
+                // 디버프
+                if (kf.debuff && onDebuff) {
+                    tl.call(() => {
+                        const debuff = typeof kf.debuff === 'object' ? kf.debuff : { name: kf.debuff, value: 1 };
+                        onDebuff(debuff.name, debuff.value, debuff.target || 'enemy');
+                    }, null, '<');
+                }
+                
+                // 커스텀 이벤트
+                if (kf.event && onEvent) {
+                    tl.call(() => onEvent(kf.event), null, '<');
+                }
+                
+                // 히트 (단순 히트 마커)
+                if (kf.hit && onHit) {
+                    tl.call(() => onHit(kf), null, '<');
                 }
             });
         });
