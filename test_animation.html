@@ -621,8 +621,8 @@
             const width = container.clientWidth;
             const height = container.clientHeight;
             
-            app = new PIXI.Application();
-            await app.init({
+            // PixiJS 7 방식 (생성자에서 옵션 전달)
+            app = new PIXI.Application({
                 width: width,
                 height: height,
                 backgroundColor: 0x0a0a12,
@@ -631,7 +631,7 @@
                 autoDensity: true
             });
             
-            container.appendChild(app.canvas);
+            container.appendChild(app.view);
             
             // GSAP PixiPlugin 등록
             gsap.registerPlugin(PixiPlugin);
@@ -660,12 +660,13 @@
             const w = app.screen.width;
             const h = app.screen.height;
             
-            // 그라데이션 효과 (다크 던전)
-            bg.rect(0, 0, w, h);
-            bg.fill({ color: 0x0a0a12 });
+            // 배경 (PixiJS 7 스타일)
+            bg.beginFill(0x0a0a12);
+            bg.drawRect(0, 0, w, h);
+            bg.endFill();
             
             // 그리드 라인
-            bg.setStrokeStyle({ width: 1, color: 0x1a1a2a, alpha: 0.5 });
+            bg.lineStyle(1, 0x1a1a2a, 0.5);
             for (let x = 0; x < w; x += 50) {
                 bg.moveTo(x, 0);
                 bg.lineTo(x, h);
@@ -674,20 +675,17 @@
                 bg.moveTo(0, y);
                 bg.lineTo(w, y);
             }
-            bg.stroke();
             
             // 중앙선
-            bg.setStrokeStyle({ width: 2, color: 0x3a3a5a, alpha: 0.5 });
+            bg.lineStyle(2, 0x3a3a5a, 0.5);
             bg.moveTo(w / 2, 0);
             bg.lineTo(w / 2, h);
-            bg.stroke();
             
             // 바닥선
             const groundY = h * 0.7;
-            bg.setStrokeStyle({ width: 3, color: 0x4a4a6a, alpha: 0.8 });
+            bg.lineStyle(3, 0x4a4a6a, 0.8);
             bg.moveTo(0, groundY);
             bg.lineTo(w, groundY);
-            bg.stroke();
             
             app.stage.addChild(bg);
         }
@@ -723,41 +721,37 @@
             startBreathing();
         }
         
-        // 캐릭터 그래픽 생성
+        // 캐릭터 그래픽 생성 (PixiJS 7 스타일)
         function createCharacterGraphic(color, emoji, label) {
             const container = new PIXI.Container();
             
             // 바디
             const body = new PIXI.Graphics();
-            body.roundRect(-50, -120, 100, 120, 10);
-            body.fill({ color: color, alpha: 0.9 });
-            body.stroke({ width: 3, color: 0xffffff, alpha: 0.3 });
+            body.beginFill(color, 0.9);
+            body.lineStyle(3, 0xffffff, 0.3);
+            body.drawRoundedRect(-50, -120, 100, 120, 10);
+            body.endFill();
             container.addChild(body);
             
             // 그림자
             const shadow = new PIXI.Graphics();
-            shadow.ellipse(0, 5, 40, 10);
-            shadow.fill({ color: 0x000000, alpha: 0.4 });
+            shadow.beginFill(0x000000, 0.4);
+            shadow.drawEllipse(0, 5, 40, 10);
+            shadow.endFill();
             container.addChild(shadow);
             
-            // 이모지 텍스트
-            const emojiText = new PIXI.Text({
-                text: emoji,
-                style: { fontSize: 50 }
-            });
+            // 이모지 텍스트 (PixiJS 7 스타일)
+            const emojiText = new PIXI.Text(emoji, { fontSize: 50 });
             emojiText.anchor.set(0.5);
             emojiText.y = -70;
             container.addChild(emojiText);
             
-            // 라벨
-            const labelText = new PIXI.Text({
-                text: label,
-                style: {
-                    fontFamily: 'Cinzel',
-                    fontSize: 14,
-                    fill: 0xffffff,
-                    fontWeight: 'bold'
-                }
+            // 라벨 (PixiJS 7 스타일)
+            const labelText = new PIXI.Text(label, {
+                fontFamily: 'Cinzel',
+                fontSize: 14,
+                fill: 0xffffff,
+                fontWeight: 'bold'
             });
             labelText.anchor.set(0.5);
             labelText.y = -15;
