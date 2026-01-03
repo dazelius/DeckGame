@@ -70,7 +70,8 @@ const DDOOAction = {
         offsetX: 0,
         offsetY: 0,
         focusTarget: null,
-        pivotSet: false
+        pivotSet: false,
+        isRootStage: false  // app.stage를 직접 사용하는지 여부
     },
     
     // ⏱️ 슬로우모션 상태
@@ -105,6 +106,12 @@ const DDOOAction = {
         
         this.pixiApp = pixiApp;
         this.stageContainer = stageContainer;
+        
+        // 🔍 stageContainer가 app.stage인지 확인 (카메라 pivot 설정 방지용)
+        this.cameraState.isRootStage = (stageContainer === pixiApp?.stage);
+        if (this.cameraState.isRootStage) {
+            console.log('[DDOOAction] ⚠️ app.stage 직접 사용 - 카메라 pivot 비활성화');
+        }
         
         // VFX 캔버스 생성
         this.createVFXCanvas();
@@ -141,7 +148,9 @@ const DDOOAction = {
             zoom: this.config.camera.defaultZoom,
             offsetX: 0,
             offsetY: 0,
-            focusTarget: null
+            focusTarget: null,
+            pivotSet: false,
+            isRootStage: this.cameraState.isRootStage  // 🔄 유지!
         };
     },
     
@@ -559,6 +568,8 @@ const DDOOAction = {
             baseY,          // 기본 Y 위치 (리턴할 원점)
             dir = 1,        // 방향 (1: 오른쪽, -1: 왼쪽)
             isRelative = false,  // 상대 좌표 사용
+            targetContainer,// 🎯 적 컨테이너 (dashToTarget용)
+            targetSprite,   // 🎯 적 스프라이트 (dashToTarget용)
             onComplete,     // 완료 콜백
             onHit,          // 히트 콜백
             onDamage,       // 🎯 대미지 콜백 (value, target)
@@ -778,6 +789,13 @@ const DDOOAction = {
     setupCameraPivot() {
         if (!this.stageContainer || !this.pixiApp || this.cameraState.pivotSet) return;
         
+        // ⚠️ app.stage 직접 사용 시 pivot 설정 건너뜀 (위치 꼬임 방지)
+        if (this.cameraState.isRootStage) {
+            this.cameraState.pivotSet = true;
+            if (this.config.debug) console.log(`[DDOOAction] 📷 Pivot 설정 건너뜀 (app.stage 직접 사용)`);
+            return;
+        }
+        
         const centerX = this.pixiApp.screen.width / 2;
         const centerY = this.pixiApp.screen.height / 2;
         
@@ -799,13 +817,16 @@ const DDOOAction = {
         const targetZoom = Math.max(this.config.camera.minZoom, Math.min(this.config.camera.maxZoom, zoom));
         const dur = duration / 1000 / this.config.speed / this.timescale;
         
-        // PixiJS stageContainer 줌
-        gsap.to(this.stageContainer.scale, {
-            x: targetZoom,
-            y: targetZoom,
-            duration: dur,
-            ease: 'power2.out'
-        });
+        // ⚠️ app.stage 직접 사용 시 PixiJS 줌 건너뜀 (3D 배경만 줌)
+        if (!this.cameraState.isRootStage) {
+            // PixiJS stageContainer 줌
+            gsap.to(this.stageContainer.scale, {
+                x: targetZoom,
+                y: targetZoom,
+                duration: dur,
+                ease: 'power2.out'
+            });
+        }
         
         // 🎥 Background3D 카메라 줌 연동 (있으면)
         if (typeof Background3D !== 'undefined' && Background3D.isInitialized && Background3D.camera) {
@@ -829,6 +850,12 @@ const DDOOAction = {
     // 카메라 이동 (특정 대상 포커스)
     cameraFocus(target, duration = 200) {
         if (!this.config.enableCamera || !this.stageContainer) return;
+        
+        // ⚠️ app.stage 직접 사용 시 포커스 건너뜀
+        if (this.cameraState.isRootStage) {
+            if (this.config.debug) console.log(`[DDOOAction] 📷 Focus 건너뜀 (app.stage 직접 사용)`);
+            return;
+        }
         
         // 피벗이 설정되어 있는지 확인
         this.setupCameraPivot();
@@ -879,27 +906,30 @@ const DDOOAction = {
         const centerX = this.pixiApp?.screen.width / 2 || 0;
         const centerY = this.pixiApp?.screen.height / 2 || 0;
         
-        gsap.to(this.stageContainer.scale, {
-            x: this.config.camera.defaultZoom,
-            y: this.config.camera.defaultZoom,
-            duration: dur,
-            ease: 'power2.out'
-        });
-        
-        if (this.cameraState.pivotSet) {
-            gsap.to(this.stageContainer.position, {
-                x: centerX,
-                y: centerY,
+        // ⚠️ app.stage 직접 사용 시 PixiJS 카메라 조작 건너뜀
+        if (!this.cameraState.isRootStage) {
+            gsap.to(this.stageContainer.scale, {
+                x: this.config.camera.defaultZoom,
+                y: this.config.camera.defaultZoom,
                 duration: dur,
                 ease: 'power2.out'
             });
-        } else {
-            gsap.to(this.stageContainer, {
-                x: 0,
-                y: 0,
-                duration: dur,
-                ease: 'power2.out'
-            });
+            
+            if (this.cameraState.pivotSet) {
+                gsap.to(this.stageContainer.position, {
+                    x: centerX,
+                    y: centerY,
+                    duration: dur,
+                    ease: 'power2.out'
+                });
+            } else {
+                gsap.to(this.stageContainer, {
+                    x: 0,
+                    y: 0,
+                    duration: dur,
+                    ease: 'power2.out'
+                });
+            }
         }
         
         // 🎥 Background3D 카메라도 리셋
@@ -917,7 +947,8 @@ const DDOOAction = {
             offsetX: 0,
             offsetY: 0,
             focusTarget: null,
-            pivotSet: this.cameraState.pivotSet
+            pivotSet: this.cameraState.pivotSet,
+            isRootStage: this.cameraState.isRootStage  // 🔄 유지!
         };
     },
     
@@ -928,19 +959,22 @@ const DDOOAction = {
         const centerX = this.pixiApp?.screen.width / 2 || 0;
         const centerY = this.pixiApp?.screen.height / 2 || 0;
         
-        // GSAP 트윈 중단
-        gsap.killTweensOf(this.stageContainer.scale);
-        gsap.killTweensOf(this.stageContainer.position);
-        gsap.killTweensOf(this.stageContainer);
-        
-        // 즉시 리셋
-        this.stageContainer.scale.set(this.config.camera.defaultZoom);
-        
-        if (this.cameraState.pivotSet) {
-            this.stageContainer.position.set(centerX, centerY);
-        } else {
-            this.stageContainer.x = 0;
-            this.stageContainer.y = 0;
+        // ⚠️ app.stage 직접 사용 시 PixiJS 카메라 조작 건너뜀
+        if (!this.cameraState.isRootStage) {
+            // GSAP 트윈 중단
+            gsap.killTweensOf(this.stageContainer.scale);
+            gsap.killTweensOf(this.stageContainer.position);
+            gsap.killTweensOf(this.stageContainer);
+            
+            // 즉시 리셋
+            this.stageContainer.scale.set(this.config.camera.defaultZoom);
+            
+            if (this.cameraState.pivotSet) {
+                this.stageContainer.position.set(centerX, centerY);
+            } else {
+                this.stageContainer.x = 0;
+                this.stageContainer.y = 0;
+            }
         }
         
         // 🎥 Background3D 카메라도 즉시 리셋
@@ -955,7 +989,8 @@ const DDOOAction = {
             offsetX: 0,
             offsetY: 0,
             focusTarget: null,
-            pivotSet: this.cameraState.pivotSet
+            pivotSet: this.cameraState.pivotSet,
+            isRootStage: this.cameraState.isRootStage  // 🔄 유지!
         };
     },
     
@@ -1244,17 +1279,18 @@ const DDOOAction = {
                         let targetChar = null;
                         let myChar = null;
                         
-                        // 내 캐릭터 정보 찾기
+                        // 내 캐릭터 정보 찾기 (DDOOAction.characters 또는 현재 sprite)
                         const myCharId = [...this.characters.keys()].find(
                             id => this.characters.get(id)?.container === container
                         );
-                        myChar = myCharId ? this.characters.get(myCharId) : null;
+                        myChar = myCharId ? this.characters.get(myCharId) : { container, sprite };
                         
                         if (kf.dashToTarget === 'enemy' || kf.dashToTarget === true) {
-                            targetChar = this.characters.get('enemy');
-                            if (!targetChar && options.targetContainer) {
-                                // 폴백: targetContainer 사용
+                            // 🎯 우선순위: options.targetContainer > DDOOAction.characters
+                            if (options.targetContainer) {
                                 targetChar = { container: options.targetContainer, sprite: options.targetSprite };
+                            } else {
+                                targetChar = this.characters.get('enemy');
                             }
                         } else if (kf.dashToTarget === 'player') {
                             targetChar = this.characters.get('player');
