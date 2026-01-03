@@ -1,38 +1,60 @@
 {
     "id": "slash",
     "name": "베기",
+    "shake": 8,
     "particles": [
         {
+            "type": "flash",
+            "size": 60,
+            "color": "#ffffff",
+            "life": 50
+        },
+        {
             "type": "slash",
-            "count": 2,
-            "delay": 50,
-            "angle": [-30, 30],
-            "length": [120, 160],
-            "width": 8,
+            "count": 3,
+            "delay": 25,
+            "angle": [-50, 0, 50],
+            "length": [180, 250],
+            "width": 12,
             "color": "#ffffff",
             "glow": "#60a5fa",
+            "life": 180
+        },
+        {
+            "type": "slash",
+            "count": 3,
+            "delay": 25,
+            "angle": [-50, 0, 50],
+            "length": [150, 200],
+            "width": 30,
+            "color": "rgba(96, 165, 250, 0.6)",
+            "glow": "#3b82f6",
+            "life": 120
+        },
+        {
+            "type": "ring",
+            "size": 20,
+            "maxSize": 80,
+            "color": "#60a5fa",
             "life": 150
         },
         {
-            "type": "slash",
-            "count": 2,
-            "delay": 50,
-            "angle": [-30, 30],
-            "length": [96, 128],
-            "width": 20,
-            "color": "rgba(96, 165, 250, 0.5)",
-            "glow": "#60a5fa",
-            "life": 100
+            "type": "spark",
+            "count": 20,
+            "spread": 80,
+            "speed": [8, 20],
+            "size": [3, 8],
+            "colors": ["#fbbf24", "#ffffff", "#60a5fa"],
+            "life": [200, 400]
         },
         {
-            "type": "spark",
+            "type": "debris",
             "count": 8,
-            "spread": 60,
-            "speed": [5, 15],
+            "speed": [5, 12],
             "size": [2, 5],
-            "color": "#fbbf24",
-            "life": [200, 300]
+            "colors": ["#60a5fa", "#3b82f6"],
+            "gravity": 0.2,
+            "life": [200, 350]
         }
     ]
 }
-

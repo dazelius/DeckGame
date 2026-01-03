@@ -1,39 +1,69 @@
 {
     "id": "hit",
     "name": "임팩트",
-    "shake": 12,
+    "shake": 18,
     "particles": [
         {
             "type": "flash",
-            "size": 80,
+            "size": 150,
             "color": "#ffffff",
-            "life": 80
+            "life": 60
+        },
+        {
+            "type": "flash",
+            "size": 100,
+            "color": "#ef4444",
+            "life": 100
+        },
+        {
+            "type": "ring",
+            "size": 30,
+            "maxSize": 180,
+            "color": "#ef4444",
+            "life": 250
         },
         {
             "type": "ring",
             "size": 20,
-            "maxSize": 100,
-            "color": "#ef4444",
+            "maxSize": 120,
+            "color": "#fbbf24",
             "life": 200
         },
         {
             "type": "line",
-            "count": 12,
-            "angleStep": 30,
-            "length": [30, 80],
-            "width": 3,
+            "count": 16,
+            "angleStep": 22.5,
+            "length": [60, 120],
+            "width": 4,
             "color": "#fbbf24",
+            "life": 200
+        },
+        {
+            "type": "line",
+            "count": 8,
+            "angleStep": 45,
+            "length": [40, 80],
+            "width": 6,
+            "color": "#ffffff",
             "life": 150
         },
         {
+            "type": "spark",
+            "count": 30,
+            "spread": 100,
+            "speed": [10, 25],
+            "size": [4, 10],
+            "colors": ["#ef4444", "#fbbf24", "#ffffff"],
+            "life": [250, 450]
+        },
+        {
             "type": "debris",
-            "count": 15,
-            "speed": [5, 15],
-            "size": [3, 8],
-            "colors": ["#ef4444", "#fbbf24"],
-            "gravity": 0.3,
-            "life": [300, 500]
+            "count": 25,
+            "speed": [8, 22],
+            "size": [4, 12],
+            "colors": ["#ef4444", "#fbbf24", "#dc2626"],
+            "gravity": 0.4,
+            "life": [350, 600]
         }
     ]
 }
-

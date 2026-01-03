@@ -3,19 +3,12 @@
     "name": "플레이어 방어",
     "target": "player",
     "type": "once",
-    "priority": 5,
+    "priority": 15,
     "duration": 300,
     "keyframes": [
-        { "scaleX": 1, "scaleY": 1, "duration": 0 },
-        { "scaleX": 0.9, "scaleY": 1.1, "duration": 100, "ease": "power2.out" },
-        { "scaleX": 1, "scaleY": 1, "duration": 200, "ease": "elastic.out(1,0.5)" }
-    ],
-    "events": {
-        "onPeak": {
-            "frame": 1,
-            "vfx": "shield",
-            "sound": "shield"
-        }
-    }
+        { "x": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 0 },
+        { "x": -20, "scaleX": 0.85, "scaleY": 1.15, "rotation": -0.1, "duration": 50, "ease": "power2.out", "vfx": "block" },
+        { "x": -15, "scaleX": 0.9, "scaleY": 1.1, "rotation": -0.05, "duration": 100, "ease": "power2.inOut" },
+        { "x": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 150, "ease": "power2.out" }
+    ]
 }
-

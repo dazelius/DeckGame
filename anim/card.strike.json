@@ -4,16 +4,13 @@
     "type": "sequence",
     "target": "player",
     "priority": 10,
-    "description": "기본 공격: 대시 → 공격 → 복귀",
+    "description": "강력한 일격: 대시 → 공격 → 복귀",
     "steps": [
         { "anim": "player.dash", "wait": true },
+        { "delay": 30 },
         { "anim": "player.attack", "wait": false },
-        { "anim": "enemy.hit", "wait": true, "delay": 40 },
-        { "delay": 100 },
+        { "anim": "enemy.hit", "wait": true, "delay": 50 },
+        { "delay": 150 },
         { "anim": "player.return", "wait": true }
-    ],
-    "vfx": {
-        "onHit": "slash",
-        "color": "#fbbf24"
-    }
+    ]
 }
