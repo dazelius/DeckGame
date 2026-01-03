@@ -531,6 +531,11 @@ const DDOOAction = {
     
     // ==================== 애니메이션 재생 ====================
     async play(animId, options = {}) {
+        // 🔄 애니메이션 시작 전 카메라/이펙트 상태 초기화
+        this.resetCameraImmediate();
+        this.resetColorGradeImmediate();
+        this.resetSlowmoImmediate();
+        
         // 🎲 배열이면 랜덤 선택!
         let actualAnimId = animId;
         if (Array.isArray(animId)) {
@@ -913,6 +918,44 @@ const DDOOAction = {
         };
     },
     
+    // 🔄 카메라 즉시 리셋 (애니메이션 없이)
+    resetCameraImmediate() {
+        if (!this.stageContainer) return;
+        
+        const centerX = this.pixiApp?.screen.width / 2 || 0;
+        const centerY = this.pixiApp?.screen.height / 2 || 0;
+        
+        // GSAP 트윈 중단
+        gsap.killTweensOf(this.stageContainer.scale);
+        gsap.killTweensOf(this.stageContainer.position);
+        gsap.killTweensOf(this.stageContainer);
+        
+        // 즉시 리셋
+        this.stageContainer.scale.set(this.config.camera.defaultZoom);
+        
+        if (this.cameraState.pivotSet) {
+            this.stageContainer.position.set(centerX, centerY);
+        } else {
+            this.stageContainer.x = 0;
+            this.stageContainer.y = 0;
+        }
+        
+        // 🎥 Background3D 카메라도 즉시 리셋
+        if (typeof Background3D !== 'undefined' && Background3D.isInitialized && Background3D.camera) {
+            gsap.killTweensOf(Background3D.camera.position);
+            const baseZ = Background3D.cameraDefaults?.posZ || 15;
+            Background3D.camera.position.z = baseZ;
+        }
+        
+        this.cameraState = {
+            zoom: this.config.camera.defaultZoom,
+            offsetX: 0,
+            offsetY: 0,
+            focusTarget: null,
+            pivotSet: this.cameraState.pivotSet
+        };
+    },
+    
     // ==================== ⏱️ 슬로우모션 시스템 ====================
     
     // 슬로우모션 적용
@@ -977,6 +1020,18 @@ const DDOOAction = {
         }
         
         if (this.config.debug) console.log(`[DDOOAction] ⏱️ Slowmo reset`);
+    },
+    
+    // 🔄 슬로우모션 즉시 리셋 (애니메이션 없이)
+    resetSlowmoImmediate() {
+        if (this.slowmoTween) {
+            this.slowmoTween.kill();
+            this.slowmoTween = null;
+        }
+        this.timescale = 1.0;
+        if (typeof gsap !== 'undefined') {
+            gsap.globalTimeline.timeScale(1.0);
+        }
     },
     
     // ==================== 🎨 컬러 그레이딩 시스템 ====================
@@ -1075,6 +1130,13 @@ const DDOOAction = {
         //     const idx = this.stageContainer.filters.indexOf(this.colorFilter);
         //     if (idx >= 0) this.stageContainer.filters.splice(idx, 1);
         // }
+    },
+    
+    // 🔄 컬러 그레이딩 즉시 리셋
+    resetColorGradeImmediate() {
+        if (this.colorFilter) {
+            this.colorFilter.reset();
+        }
     },
     
     // 📍 스텝 이벤트 처리
