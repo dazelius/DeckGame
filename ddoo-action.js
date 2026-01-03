@@ -706,8 +706,24 @@ const DDOOAction = {
                 // VFX
                 if (kf.vfx && this.config.enableVFX) {
                     tl.call(() => {
-                        const hitPoint = getHitPoint ? getHitPoint() : { x: container.x, y: container.y };
-                        this.triggerVFX(kf.vfx, hitPoint.x, hitPoint.y, dir, hitPoint.scale || 1);
+                        // vfxTarget: "self"면 자기 위치, 아니면 타격점
+                        let vfxX, vfxY, vfxScale;
+                        
+                        if (kf.vfxTarget === 'self' || data.target === 'player' && !kf.damage) {
+                            // 자기 자신에게 VFX (회피, 버프 등)
+                            const bounds = sprite.getBounds();
+                            vfxX = container.x;
+                            vfxY = container.y - (bounds.height || 60) / 2;
+                            vfxScale = sprite.scale.x || 1;
+                        } else {
+                            // 적에게 VFX (공격)
+                            const hitPoint = getHitPoint ? getHitPoint() : { x: container.x, y: container.y };
+                            vfxX = hitPoint.x;
+                            vfxY = hitPoint.y;
+                            vfxScale = hitPoint.scale || 1;
+                        }
+                        
+                        this.triggerVFX(kf.vfx, vfxX, vfxY, dir, vfxScale);
                     }, null, '<');
                 }
                 

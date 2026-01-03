@@ -4,34 +4,33 @@
     "particles": [
         {
             "type": "ring",
-            "count": 3,
+            "count": 4,
             "color": "#0ea5e9",
-            "size": 5,
-            "maxSize": 80,
-            "life": 200,
-            "delay": 30
+            "size": 10,
+            "maxSize": 120,
+            "life": 250,
+            "delay": 25
         },
         {
             "type": "slash",
-            "count": 8,
+            "count": 12,
             "color": "#e0f2fe",
             "glow": "#0284c7",
-            "angle": [0, 45, 90, 135, 180, 225, 270, 315],
-            "length": { "min": 25, "max": 45 },
-            "width": 4,
-            "life": 120
+            "angle": [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330],
+            "length": { "min": 40, "max": 70 },
+            "width": 5,
+            "life": 150
         },
         {
             "type": "spark",
-            "count": 20,
-            "colors": ["#ffffff", "#bae6fd", "#7dd3fc"],
-            "size": { "min": 2, "max": 5 },
-            "speed": { "min": 5, "max": 12 },
+            "count": 30,
+            "colors": ["#ffffff", "#bae6fd", "#7dd3fc", "#0ea5e9"],
+            "size": { "min": 3, "max": 8 },
+            "speed": { "min": 8, "max": 18 },
             "angle": { "min": -180, "max": 180 },
-            "life": { "min": 100, "max": 200 },
+            "life": { "min": 120, "max": 250 },
             "fadeOut": true
         }
     ],
-    "offset": { "x": 0, "y": -50 }
+    "offset": { "x": 0, "y": 0 }
 }
-
