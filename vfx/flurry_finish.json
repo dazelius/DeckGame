@@ -1,74 +1,67 @@
 {
     "id": "flurry_finish",
     "name": "세검 피니시",
-    "shake": 8,
+    "shake": 6,
     "particles": [
         {
             "type": "flash",
-            "size": 150,
+            "size": 100,
             "color": "#ffffff",
-            "life": 70
+            "life": 60
         },
         {
             "type": "flash",
-            "size": 100,
+            "size": 70,
             "color": "#c4b5fd",
-            "life": 90
+            "life": 80
         },
         {
-            "type": "thrust",
-            "count": 3,
-            "angle": [-5, 0, 5],
-            "length": [550, 650],
-            "width": 8,
+            "type": "arrow",
+            "count": 1,
+            "length": [280, 340],
+            "width": 80,
+            "tipAngle": 28,
             "color": "#ffffff",
             "glow": "#a78bfa",
-            "life": 150
+            "innerColor": "rgba(139, 92, 246, 0.6)",
+            "life": 140
         },
         {
-            "type": "thrust",
-            "count": 3,
-            "angle": [-5, 0, 5],
-            "length": [480, 580],
-            "width": 4,
+            "type": "arrow",
+            "count": 1,
+            "length": [220, 280],
+            "width": 55,
+            "tipAngle": 25,
             "color": "#e0e7ff",
             "glow": "#8b5cf6",
-            "life": 120
+            "innerColor": "rgba(167, 139, 250, 0.4)",
+            "life": 110
         },
         {
             "type": "thrust",
             "count": 3,
-            "angle": [-5, 0, 5],
-            "length": [400, 500],
-            "width": 30,
-            "color": "rgba(139, 92, 246, 0.35)",
-            "glow": "#7c3aed",
-            "life": 100
+            "angle": [-3, 0, 3],
+            "length": [450, 550],
+            "width": 5,
+            "color": "#ffffff",
+            "glow": "#a78bfa",
+            "life": 130
         },
         {
             "type": "ring",
-            "size": 30,
-            "maxSize": 180,
+            "size": 25,
+            "maxSize": 140,
             "color": "#a78bfa",
-            "life": 200
+            "life": 180
         },
         {
             "type": "spark",
-            "count": 25,
-            "spread": 100,
-            "speed": [20, 45],
-            "size": [4, 12],
+            "count": 20,
+            "spread": 80,
+            "speed": [15, 35],
+            "size": [3, 10],
             "colors": ["#a78bfa", "#c4b5fd", "#f0abfc", "#ffffff"],
-            "life": [120, 220]
-        },
-        {
-            "type": "line",
-            "count": 8,
-            "angleStep": 45,
-            "length": [80, 140],
-            "width": 3,
-            "color": "#a78bfa",
-            "life": 120
+            "life": [100, 200]
         }
     ]
 }
