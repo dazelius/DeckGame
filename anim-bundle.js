@@ -1,12 +1,12 @@
 /**
  * DDOO Animation Bundle - 자동 생성됨
- * 생성일: 2026-01-03T17:02:57.364Z
+ * 생성일: 2026-01-03T17:06:05.913Z
  * 
  * 이 파일을 포함하면 fetch 없이 모든 애니메이션/VFX 데이터 사용 가능!
  * <script src="anim-bundle.js"></script>
  */
 
-// 애니메이션 데이터 (43개)
+// 애니메이션 데이터 (45개)
 window.ANIM_BUNDLE = {
   "card.bash": {
     "id": "card.bash",
@@ -25,7 +25,10 @@ window.ANIM_BUNDLE = {
         "damage": 12
       },
       {
-        "anim": "enemy.bash_hit",
+        "anim": [
+          "enemy.bash_hit_left",
+          "enemy.bash_hit_right"
+        ],
         "wait": true,
         "delay": 30,
         "debuff": {
@@ -221,7 +224,10 @@ window.ANIM_BUNDLE = {
         "wait": false
       },
       {
-        "anim": "enemy.flurry_hit",
+        "anim": [
+          "enemy.flurry_hit_left",
+          "enemy.flurry_hit_right"
+        ],
         "wait": true,
         "delay": 25,
         "damage": 2
@@ -234,7 +240,10 @@ window.ANIM_BUNDLE = {
         "wait": false
       },
       {
-        "anim": "enemy.flurry_hit",
+        "anim": [
+          "enemy.flurry_hit_left",
+          "enemy.flurry_hit_right"
+        ],
         "wait": true,
         "delay": 25,
         "damage": 2
@@ -247,7 +256,10 @@ window.ANIM_BUNDLE = {
         "wait": false
       },
       {
-        "anim": "enemy.flurry_hit",
+        "anim": [
+          "enemy.flurry_hit_left",
+          "enemy.flurry_hit_right"
+        ],
         "wait": true,
         "delay": 25,
         "damage": 2
@@ -270,7 +282,10 @@ window.ANIM_BUNDLE = {
         "wait": false
       },
       {
-        "anim": "enemy.flurry_hit",
+        "anim": [
+          "enemy.flurry_hit_left",
+          "enemy.flurry_hit_right"
+        ],
         "wait": true,
         "delay": 20,
         "damage": 3
@@ -283,7 +298,10 @@ window.ANIM_BUNDLE = {
         "wait": false
       },
       {
-        "anim": "enemy.flurry_hit",
+        "anim": [
+          "enemy.flurry_hit_left",
+          "enemy.flurry_hit_right"
+        ],
         "wait": true,
         "delay": 20,
         "damage": 3
@@ -296,7 +314,10 @@ window.ANIM_BUNDLE = {
         "wait": false
       },
       {
-        "anim": "enemy.flurry_hit",
+        "anim": [
+          "enemy.flurry_hit_left",
+          "enemy.flurry_hit_right"
+        ],
         "wait": true,
         "delay": 20,
         "damage": 3
@@ -309,7 +330,10 @@ window.ANIM_BUNDLE = {
         "wait": false
       },
       {
-        "anim": "enemy.flurry_hit",
+        "anim": [
+          "enemy.flurry_hit_left",
+          "enemy.flurry_hit_right"
+        ],
         "wait": true,
         "delay": 20,
         "damage": 3
@@ -322,7 +346,10 @@ window.ANIM_BUNDLE = {
         "wait": false
       },
       {
-        "anim": "enemy.flurry_hit",
+        "anim": [
+          "enemy.flurry_hit_left",
+          "enemy.flurry_hit_right"
+        ],
         "wait": true,
         "delay": 20,
         "damage": 3
@@ -346,7 +373,10 @@ window.ANIM_BUNDLE = {
         "damage": 6
       },
       {
-        "anim": "enemy.hit",
+        "anim": [
+          "enemy.hit_left",
+          "enemy.hit_right"
+        ],
         "wait": true,
         "delay": 20
       }
@@ -484,6 +514,228 @@ window.ANIM_BUNDLE = {
   "enemy.bash_hit": {
     "id": "enemy.bash_hit",
     "name": "강타 피격 - 강렬한 좌우",
+    "target": "enemy",
+    "type": "once",
+    "priority": 22,
+    "duration": 480,
+    "keyframes": [
+      {
+        "x": 0,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "alpha": 1,
+        "rotation": 0,
+        "duration": 0
+      },
+      {
+        "x": 50,
+        "y": -15,
+        "scaleX": 0.65,
+        "scaleY": 1.38,
+        "alpha": 0.45,
+        "rotation": 0.22,
+        "duration": 30,
+        "ease": "power4.out",
+        "vfx": "bash_hit",
+        "vfxTarget": "self"
+      },
+      {
+        "x": 85,
+        "y": -10,
+        "scaleX": 0.58,
+        "scaleY": 1.45,
+        "alpha": 0.35,
+        "rotation": 0.28,
+        "duration": 40,
+        "ease": "power3.out"
+      },
+      {
+        "x": 100,
+        "y": 0,
+        "scaleX": 0.6,
+        "scaleY": 1.42,
+        "alpha": 0.38,
+        "rotation": 0.25,
+        "duration": 35,
+        "ease": "power2.out"
+      },
+      {
+        "x": -30,
+        "y": 8,
+        "scaleX": 1.12,
+        "scaleY": 0.9,
+        "alpha": 0.55,
+        "rotation": -0.12,
+        "duration": 50,
+        "ease": "power2.out"
+      },
+      {
+        "x": 15,
+        "y": 4,
+        "scaleX": 0.95,
+        "scaleY": 1.06,
+        "alpha": 0.72,
+        "rotation": 0.05,
+        "duration": 55,
+        "ease": "elastic.out(1, 0.5)"
+      },
+      {
+        "x": -8,
+        "y": 2,
+        "scaleX": 1.03,
+        "scaleY": 0.97,
+        "alpha": 0.85,
+        "rotation": -0.03,
+        "duration": 50,
+        "ease": "power2.out"
+      },
+      {
+        "x": 4,
+        "y": 0,
+        "scaleX": 0.99,
+        "scaleY": 1.01,
+        "alpha": 0.93,
+        "rotation": 0.01,
+        "duration": 45,
+        "ease": "power2.out"
+      },
+      {
+        "x": -1,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "alpha": 0.97,
+        "rotation": 0,
+        "duration": 40,
+        "ease": "power2.out"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "alpha": 1,
+        "rotation": 0,
+        "duration": 35,
+        "ease": "power2.out"
+      }
+    ]
+  },
+  "enemy.bash_hit_left": {
+    "id": "enemy.bash_hit_left",
+    "name": "강타 피격 - 왼쪽",
+    "target": "enemy",
+    "type": "once",
+    "priority": 22,
+    "duration": 480,
+    "keyframes": [
+      {
+        "x": 0,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "alpha": 1,
+        "rotation": 0,
+        "duration": 0
+      },
+      {
+        "x": -50,
+        "y": -15,
+        "scaleX": 0.65,
+        "scaleY": 1.38,
+        "alpha": 0.45,
+        "rotation": -0.22,
+        "duration": 30,
+        "ease": "power4.out",
+        "vfx": "bash_hit",
+        "vfxTarget": "self"
+      },
+      {
+        "x": -85,
+        "y": -10,
+        "scaleX": 0.58,
+        "scaleY": 1.45,
+        "alpha": 0.35,
+        "rotation": -0.28,
+        "duration": 40,
+        "ease": "power3.out"
+      },
+      {
+        "x": -100,
+        "y": 0,
+        "scaleX": 0.6,
+        "scaleY": 1.42,
+        "alpha": 0.38,
+        "rotation": -0.25,
+        "duration": 35,
+        "ease": "power2.out"
+      },
+      {
+        "x": 30,
+        "y": 8,
+        "scaleX": 1.12,
+        "scaleY": 0.9,
+        "alpha": 0.55,
+        "rotation": 0.12,
+        "duration": 50,
+        "ease": "power2.out"
+      },
+      {
+        "x": -15,
+        "y": 4,
+        "scaleX": 0.95,
+        "scaleY": 1.06,
+        "alpha": 0.72,
+        "rotation": -0.05,
+        "duration": 55,
+        "ease": "elastic.out(1, 0.5)"
+      },
+      {
+        "x": 8,
+        "y": 2,
+        "scaleX": 1.03,
+        "scaleY": 0.97,
+        "alpha": 0.85,
+        "rotation": 0.03,
+        "duration": 50,
+        "ease": "power2.out"
+      },
+      {
+        "x": -4,
+        "y": 0,
+        "scaleX": 0.99,
+        "scaleY": 1.01,
+        "alpha": 0.93,
+        "rotation": -0.01,
+        "duration": 45,
+        "ease": "power2.out"
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "alpha": 0.97,
+        "rotation": 0,
+        "duration": 40,
+        "ease": "power2.out"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "alpha": 1,
+        "rotation": 0,
+        "duration": 35,
+        "ease": "power2.out"
+      }
+    ]
+  },
+  "enemy.bash_hit_right": {
+    "id": "enemy.bash_hit_right",
+    "name": "강타 피격 - 오른쪽",
     "target": "enemy",
     "type": "once",
     "priority": 22,

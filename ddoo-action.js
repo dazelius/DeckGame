@@ -463,14 +463,11 @@ const DDOOAction = {
     
     // ==================== 애니메이션 재생 ====================
     async play(animId, options = {}) {
-        // 🎲 피격 애니메이션 랜덤 좌우 선택!
+        // 🎲 배열이면 랜덤 선택!
         let actualAnimId = animId;
-        if (animId === 'enemy.hit') {
-            actualAnimId = Math.random() > 0.5 ? 'enemy.hit_left' : 'enemy.hit_right';
-            if (this.config.debug) console.log(`[DDOOAction] 🎲 랜덤 피격: ${actualAnimId}`);
-        } else if (animId === 'enemy.flurry_hit') {
-            actualAnimId = Math.random() > 0.5 ? 'enemy.flurry_hit_left' : 'enemy.flurry_hit_right';
-            if (this.config.debug) console.log(`[DDOOAction] 🎲 랜덤 연타 피격: ${actualAnimId}`);
+        if (Array.isArray(animId)) {
+            actualAnimId = animId[Math.floor(Math.random() * animId.length)];
+            if (this.config.debug) console.log(`[DDOOAction] 🎲 랜덤 선택: ${actualAnimId}`);
         }
         
         const data = this.animCache.get(actualAnimId);
@@ -534,33 +531,22 @@ const DDOOAction = {
                 
                 // 애니메이션 재생
                 if (step.anim) {
-                    const animData = this.animCache.get(step.anim);
-                    if (!animData) {
-                        if (this.config.debug) console.warn(`[DDOOAction] 애니메이션 없음: ${step.anim}`);
+                    // 🎲 배열이면 랜덤 선택!
+                    let animId = step.anim;
+                    if (Array.isArray(step.anim)) {
+                        animId = step.anim[Math.floor(Math.random() * step.anim.length)];
+                        if (this.config.debug) console.log(`[DDOOAction] 🎲 랜덤 선택: ${animId}`);
+                    }
+                    
+                    const actualAnimData = this.animCache.get(animId);
+                    if (!actualAnimData) {
+                        if (this.config.debug) console.warn(`[DDOOAction] 애니메이션 없음: ${animId}`);
                         continue;
                     }
                     
                     // 딜레이가 있으면 적용
                     if (step.delay) {
                         await this.delay(step.delay);
-                    }
-                    
-                    // 🎲 적 피격 애니메이션 랜덤 좌우 선택!
-                    let actualAnimData = animData;
-                    if (step.anim === 'enemy.hit') {
-                        const randomHit = Math.random() > 0.5 ? 'enemy.hit_left' : 'enemy.hit_right';
-                        const randomAnimData = this.animCache.get(randomHit);
-                        if (randomAnimData) {
-                            actualAnimData = randomAnimData;
-                            if (this.config.debug) console.log(`[DDOOAction] 🎲 랜덤 피격: ${randomHit}`);
-                        }
-                    } else if (step.anim === 'enemy.flurry_hit') {
-                        const randomHit = Math.random() > 0.5 ? 'enemy.flurry_hit_left' : 'enemy.flurry_hit_right';
-                        const randomAnimData = this.animCache.get(randomHit);
-                        if (randomAnimData) {
-                            actualAnimData = randomAnimData;
-                            if (this.config.debug) console.log(`[DDOOAction] 🎲 랜덤 연타 피격: ${randomHit}`);
-                        }
                     }
                     
                     // 애니메이션 재생

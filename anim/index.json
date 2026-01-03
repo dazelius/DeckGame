@@ -11,6 +11,8 @@
   "card.strike",
   "enemy.attack",
   "enemy.bash_hit",
+  "enemy.bash_hit_left",
+  "enemy.bash_hit_right",
   "enemy.dagger_hit",
   "enemy.dash",
   "enemy.flurry_hit",
