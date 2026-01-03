@@ -607,7 +607,7 @@ const DDOOAction = {
             await this.returnToOrigin(container, sprite, originX, originY);
         }
         
-        // ⚠️ 최종 안전장치: sprite 상태 확실히 복원
+        // ⚠️ 최종 안전장치: 플레이어 sprite 상태 확실히 복원
         if (sprite) {
             sprite.alpha = 1;
             sprite.rotation = 0;
@@ -616,6 +616,26 @@ const DDOOAction = {
         if (container) {
             container.x = originX;
             container.y = originY;
+        }
+        
+        // ⚠️ 적 캐릭터도 상태 복원!
+        const enemyChar = this.characters.get('enemy');
+        if (enemyChar) {
+            enemyChar.sprite.alpha = 1;
+            enemyChar.sprite.rotation = 0;
+            if (enemyChar.sprite.scale) enemyChar.sprite.scale.set(1, 1);
+            enemyChar.container.x = enemyChar.baseX;
+            enemyChar.container.y = enemyChar.baseY;
+        }
+        
+        // ⚠️ 플레이어 캐릭터도 확실히 복원! (DDOOAction 캐릭터)
+        const playerChar = this.characters.get('player');
+        if (playerChar) {
+            playerChar.sprite.alpha = 1;
+            playerChar.sprite.rotation = 0;
+            if (playerChar.sprite.scale) playerChar.sprite.scale.set(1, 1);
+            playerChar.container.x = playerChar.baseX;
+            playerChar.container.y = playerChar.baseY;
         }
         
         if (options.onComplete) options.onComplete();

@@ -1026,6 +1026,27 @@
             
             stageContainer.x = 0;
             stageContainer.y = 0;
+            stageContainer.alpha = 1;  // ⚠️ 스테이지 알파도 복원!
+            
+            // ⚠️ DDOOAction 캐릭터도 리셋!
+            if (typeof DDOOAction !== 'undefined' && DDOOAction.initialized) {
+                const playerChar = DDOOAction.characters.get('player');
+                if (playerChar) {
+                    playerChar.sprite.alpha = 1;
+                    playerChar.sprite.rotation = 0;
+                    playerChar.sprite.scale.set(1, 1);
+                    playerChar.container.x = config.playerBaseX;
+                    playerChar.container.y = config.baseY;
+                }
+                const enemyChar = DDOOAction.characters.get('enemy');
+                if (enemyChar) {
+                    enemyChar.sprite.alpha = 1;
+                    enemyChar.sprite.rotation = 0;
+                    enemyChar.sprite.scale.set(1, 1);
+                    enemyChar.container.x = config.enemyBaseX;
+                    enemyChar.container.y = config.baseY;
+                }
+            }
             
             clearVFX();
             clearAfterimages();
