@@ -1084,11 +1084,12 @@ const DDOOAction = {
         }
         if (!this.colorFilter) return;
         
-        // 필터 적용
+        // 필터 적용 (⚠️ filters 배열은 직접 수정 불가, 새 배열로 할당!)
         if (!this.stageContainer.filters) {
             this.stageContainer.filters = [this.colorFilter];
         } else if (!this.stageContainer.filters.includes(this.colorFilter)) {
-            this.stageContainer.filters.push(this.colorFilter);
+            // push 대신 새 배열 생성하여 할당
+            this.stageContainer.filters = [...this.stageContainer.filters, this.colorFilter];
         }
         
         const dur = duration / 1000 / this.config.speed;
