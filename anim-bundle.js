@@ -1,6 +1,6 @@
 /**
  * DDOO Animation Bundle - 자동 생성됨
- * 생성일: 2026-01-03T16:25:36.438Z
+ * 생성일: 2026-01-03T16:27:54.141Z
  * 
  * 이 파일을 포함하면 fetch 없이 모든 애니메이션/VFX 데이터 사용 가능!
  * <script src="anim-bundle.js"></script>
@@ -1761,7 +1761,8 @@ window.ANIM_BUNDLE = {
         "duration": 30,
         "ease": "power3.out",
         "afterimage": true,
-        "vfx": "dodge_flash"
+        "vfx": "dodge_flash",
+        "vfxTarget": "self"
       },
       {
         "time": 80,
@@ -1786,7 +1787,8 @@ window.ANIM_BUNDLE = {
         "duration": 35,
         "ease": "power2.inOut",
         "afterimage": true,
-        "vfx": "wind_spiral"
+        "vfx": "wind_spiral",
+        "vfxTarget": "self"
       },
       {
         "time": 155,
@@ -1821,7 +1823,8 @@ window.ANIM_BUNDLE = {
         "rotation": 6.28,
         "duration": 60,
         "ease": "power3.out",
-        "vfx": "landing_dust"
+        "vfx": "landing_dust",
+        "vfxTarget": "self"
       }
     ]
   },
@@ -3694,59 +3697,61 @@ window.VFX_BUNDLE = {
         "type": "flash",
         "count": 1,
         "color": "#60a5fa",
-        "size": 70,
-        "life": 60
+        "size": 120,
+        "life": 80
       },
       {
         "type": "ring",
-        "count": 2,
+        "count": 3,
         "color": "#3b82f6",
-        "size": 8,
-        "maxSize": 60,
-        "life": 150
+        "size": 15,
+        "maxSize": 100,
+        "life": 180,
+        "delay": 20
       },
       {
         "type": "spark",
-        "count": 18,
+        "count": 25,
         "colors": [
           "#ffffff",
           "#93c5fd",
-          "#60a5fa"
+          "#60a5fa",
+          "#3b82f6"
         ],
         "size": {
-          "min": 3,
-          "max": 7
+          "min": 4,
+          "max": 10
         },
         "speed": {
-          "min": 8,
-          "max": 16
+          "min": 10,
+          "max": 22
         },
         "angle": {
           "min": -180,
           "max": 180
         },
         "life": {
-          "min": 100,
-          "max": 200
+          "min": 120,
+          "max": 250
         },
         "fadeOut": true
       },
       {
         "type": "line",
-        "count": 8,
+        "count": 12,
         "color": "#bfdbfe",
         "length": {
-          "min": 30,
-          "max": 60
+          "min": 50,
+          "max": 90
         },
-        "width": 2,
-        "angleStep": 45,
-        "life": 120
+        "width": 3,
+        "angleStep": 30,
+        "life": 150
       }
     ],
     "offset": {
       "x": 0,
-      "y": -60
+      "y": 0
     }
   },
   "flurry_finish": {
@@ -4175,70 +4180,79 @@ window.VFX_BUNDLE = {
     "particles": [
       {
         "type": "smoke",
-        "count": 15,
-        "color": "#a8a29e",
+        "count": 20,
+        "color": "#78716c",
         "size": {
-          "min": 20,
-          "max": 40
+          "min": 30,
+          "max": 60
         },
         "speed": {
-          "min": 3,
-          "max": 8
+          "min": 4,
+          "max": 12
         },
         "angle": {
-          "min": 150,
-          "max": 210
+          "min": 130,
+          "max": 230
         },
         "life": {
-          "min": 200,
-          "max": 400
+          "min": 250,
+          "max": 450
         },
-        "gravity": -0.05,
+        "gravity": -0.08,
         "fadeOut": true
       },
       {
         "type": "debris",
-        "count": 10,
+        "count": 15,
         "colors": [
+          "#57534e",
           "#78716c",
           "#a8a29e",
           "#d6d3d1"
         ],
         "size": {
-          "min": 2,
-          "max": 5
+          "min": 3,
+          "max": 8
         },
         "speed": {
-          "min": 4,
-          "max": 10
+          "min": 6,
+          "max": 15
         },
         "angle": {
-          "min": 140,
-          "max": 220
+          "min": 120,
+          "max": 240
         },
         "life": {
-          "min": 150,
-          "max": 300
+          "min": 180,
+          "max": 350
         },
-        "gravity": 0.2,
+        "gravity": 0.25,
         "fadeOut": true
       },
       {
         "type": "ring",
+        "count": 2,
+        "color": "#a8a29e",
+        "size": 15,
+        "maxSize": 80,
+        "life": 180,
+        "delay": 30
+      },
+      {
+        "type": "flash",
         "count": 1,
-        "color": "#78716c",
-        "size": 10,
-        "maxSize": 50,
-        "life": 150
+        "color": "#d6d3d1",
+        "size": 50,
+        "life": 50
       }
     ],
     "offset": {
       "x": 0,
-      "y": 0
+      "y": 30
     },
     "shake": {
-      "intensity": 3,
-      "duration": 50
+      "intensity": 4,
+      "duration": 60
     }
   },
   "shadow_appear": {
@@ -4802,65 +4816,70 @@ window.VFX_BUNDLE = {
     "particles": [
       {
         "type": "ring",
-        "count": 3,
+        "count": 4,
         "color": "#0ea5e9",
-        "size": 5,
-        "maxSize": 80,
-        "life": 200,
-        "delay": 30
+        "size": 10,
+        "maxSize": 120,
+        "life": 250,
+        "delay": 25
       },
       {
         "type": "slash",
-        "count": 8,
+        "count": 12,
         "color": "#e0f2fe",
         "glow": "#0284c7",
         "angle": [
           0,
-          45,
+          30,
+          60,
           90,
-          135,
+          120,
+          150,
           180,
-          225,
+          210,
+          240,
           270,
-          315
+          300,
+          330
         ],
         "length": {
-          "min": 25,
-          "max": 45
+          "min": 40,
+          "max": 70
         },
-        "width": 4,
-        "life": 120
+        "width": 5,
+        "life": 150
       },
       {
         "type": "spark",
-        "count": 20,
+        "count": 30,
         "colors": [
           "#ffffff",
           "#bae6fd",
-          "#7dd3fc"
+          "#7dd3fc",
+          "#0ea5e9"
         ],
         "size": {
-          "min": 2,
-          "max": 5
+          "min": 3,
+          "max": 8
         },
         "speed": {
-          "min": 5,
-          "max": 12
+          "min": 8,
+          "max": 18
         },
         "angle": {
           "min": -180,
           "max": 180
         },
         "life": {
-          "min": 100,
-          "max": 200
+          "min": 120,
+          "max": 250
         },
         "fadeOut": true
       }
     ],
     "offset": {
       "x": 0,
-      "y": -50
+      "y": 0
     }
   }
 };

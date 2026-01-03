@@ -5,12 +5,11 @@
     "keyframes": [
         { "time": 0, "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0 },
         { "time": 20, "x": -10, "y": -8, "scaleX": 0.9, "scaleY": 1.1, "alpha": 1, "rotation": 0.1, "duration": 20, "ease": "power2.in" },
-        { "time": 50, "x": -40, "y": -50, "scaleX": 0.85, "scaleY": 1.15, "alpha": 0.9, "rotation": 0.8, "duration": 30, "ease": "power3.out", "afterimage": true, "vfx": "dodge_flash" },
+        { "time": 50, "x": -40, "y": -50, "scaleX": 0.85, "scaleY": 1.15, "alpha": 0.9, "rotation": 0.8, "duration": 30, "ease": "power3.out", "afterimage": true, "vfx": "dodge_flash", "vfxTarget": "self" },
         { "time": 80, "x": -75, "y": -70, "scaleX": 0.8, "scaleY": 1.2, "alpha": 0.7, "rotation": 1.8, "duration": 30, "ease": "power2.inOut", "afterimage": true },
-        { "time": 115, "x": -100, "y": -55, "scaleX": 0.85, "scaleY": 1.15, "alpha": 0.6, "rotation": 3.14, "duration": 35, "ease": "power2.inOut", "afterimage": true, "vfx": "wind_spiral" },
+        { "time": 115, "x": -100, "y": -55, "scaleX": 0.85, "scaleY": 1.15, "alpha": 0.6, "rotation": 3.14, "duration": 35, "ease": "power2.inOut", "afterimage": true, "vfx": "wind_spiral", "vfxTarget": "self" },
         { "time": 155, "x": -85, "y": -25, "scaleX": 0.92, "scaleY": 1.08, "alpha": 0.8, "rotation": 4.5, "duration": 40, "ease": "power2.out", "afterimage": true },
         { "time": 200, "x": -50, "y": -5, "scaleX": 0.98, "scaleY": 1.02, "alpha": 0.95, "rotation": 5.8, "duration": 45, "ease": "power2.out" },
-        { "time": 260, "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 6.28, "duration": 60, "ease": "power3.out", "vfx": "landing_dust" }
+        { "time": 260, "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 6.28, "duration": 60, "ease": "power3.out", "vfx": "landing_dust", "vfxTarget": "self" }
     ]
 }
-

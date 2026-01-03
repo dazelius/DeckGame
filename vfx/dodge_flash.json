@@ -6,37 +6,37 @@
             "type": "flash",
             "count": 1,
             "color": "#60a5fa",
-            "size": 70,
-            "life": 60
+            "size": 120,
+            "life": 80
         },
         {
             "type": "ring",
-            "count": 2,
+            "count": 3,
             "color": "#3b82f6",
-            "size": 8,
-            "maxSize": 60,
-            "life": 150
+            "size": 15,
+            "maxSize": 100,
+            "life": 180,
+            "delay": 20
         },
         {
             "type": "spark",
-            "count": 18,
-            "colors": ["#ffffff", "#93c5fd", "#60a5fa"],
-            "size": { "min": 3, "max": 7 },
-            "speed": { "min": 8, "max": 16 },
+            "count": 25,
+            "colors": ["#ffffff", "#93c5fd", "#60a5fa", "#3b82f6"],
+            "size": { "min": 4, "max": 10 },
+            "speed": { "min": 10, "max": 22 },
             "angle": { "min": -180, "max": 180 },
-            "life": { "min": 100, "max": 200 },
+            "life": { "min": 120, "max": 250 },
             "fadeOut": true
         },
         {
             "type": "line",
-            "count": 8,
+            "count": 12,
             "color": "#bfdbfe",
-            "length": { "min": 30, "max": 60 },
-            "width": 2,
-            "angleStep": 45,
-            "life": 120
+            "length": { "min": 50, "max": 90 },
+            "width": 3,
+            "angleStep": 30,
+            "life": 150
         }
     ],
-    "offset": { "x": 0, "y": -60 }
+    "offset": { "x": 0, "y": 0 }
 }
-
