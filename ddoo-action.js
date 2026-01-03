@@ -1150,19 +1150,71 @@ const DDOOAction = {
                     tl.call(() => {
                         // 타겟 위치 계산
                         let targetX = container.x;
-                        const offset = kf.dashOffset || 60;  // 타겟 앞 오프셋
+                        let targetChar = null;
+                        let myChar = null;
+                        
+                        // 내 캐릭터 정보 찾기
+                        const myCharId = [...this.characters.keys()].find(
+                            id => this.characters.get(id)?.container === container
+                        );
+                        myChar = myCharId ? this.characters.get(myCharId) : null;
                         
                         if (kf.dashToTarget === 'enemy' || kf.dashToTarget === true) {
-                            const enemyChar = this.characters.get('enemy');
-                            if (enemyChar) {
-                                targetX = enemyChar.container.x - (offset * dir);
-                            } else if (options.targetContainer) {
-                                targetX = options.targetContainer.x - (offset * dir);
+                            targetChar = this.characters.get('enemy');
+                            if (!targetChar && options.targetContainer) {
+                                // 폴백: targetContainer 사용
+                                targetChar = { container: options.targetContainer, sprite: options.targetSprite };
                             }
                         } else if (kf.dashToTarget === 'player') {
-                            const playerChar = this.characters.get('player');
-                            if (playerChar) {
-                                targetX = playerChar.container.x + (offset * dir);
+                            targetChar = this.characters.get('player');
+                        }
+                        
+                        if (targetChar) {
+                            // 🎯 스프라이트 크기 기반 오프셋 계산 (겹침 방지)
+                            let myWidth = 50;  // 기본값
+                            let targetWidth = 50;  // 기본값
+                            const padding = kf.dashPadding || 10;  // 추가 여백
+                            
+                            // 내 스프라이트 너비 계산
+                            if (myChar?.sprite) {
+                                try {
+                                    const myBounds = myChar.sprite.getBounds();
+                                    myWidth = myBounds.width / 2;
+                                } catch (e) {
+                                    myWidth = (myChar.sprite.width || 50) * Math.abs(myChar.sprite.scale?.x || 1) / 2;
+                                }
+                            } else if (sprite) {
+                                try {
+                                    const myBounds = sprite.getBounds();
+                                    myWidth = myBounds.width / 2;
+                                } catch (e) {
+                                    myWidth = (sprite.width || 50) * Math.abs(sprite.scale?.x || 1) / 2;
+                                }
+                            }
+                            
+                            // 타겟 스프라이트 너비 계산
+                            if (targetChar.sprite) {
+                                try {
+                                    const targetBounds = targetChar.sprite.getBounds();
+                                    targetWidth = targetBounds.width / 2;
+                                } catch (e) {
+                                    targetWidth = (targetChar.sprite.width || 50) * Math.abs(targetChar.sprite.scale?.x || 1) / 2;
+                                }
+                            }
+                            
+                            // 동적 오프셋: 두 스프라이트가 겹치지 않는 거리
+                            const autoOffset = myWidth + targetWidth + padding;
+                            const offset = kf.dashOffset !== undefined ? kf.dashOffset : autoOffset;
+                            
+                            // 타겟 위치에서 오프셋만큼 떨어진 곳으로
+                            if (kf.dashToTarget === 'player') {
+                                targetX = targetChar.container.x + (offset * dir);
+                            } else {
+                                targetX = targetChar.container.x - (offset * dir);
+                            }
+                            
+                            if (this.config.debug) {
+                                console.log(`[DDOOAction] 🎯 DashToTarget - myWidth: ${myWidth.toFixed(0)}, targetWidth: ${targetWidth.toFixed(0)}, offset: ${offset.toFixed(0)}`);
                             }
                         }
                         
@@ -1174,13 +1226,9 @@ const DDOOAction = {
                             ease: kf.dashEase || 'power3.out',
                             onUpdate: () => {
                                 // 그림자 동기화
-                                const charId = [...this.characters.keys()].find(
-                                    id => this.characters.get(id)?.container === container
-                                );
-                                const shadow = charId ? this.characters.get(charId)?.shadow : null;
-                                if (shadow) {
-                                    shadow.x = container.x;
-                                    shadow.y = container.y + (this.config.character.shadowOffsetY || 5);
+                                if (myChar?.shadow) {
+                                    myChar.shadow.x = container.x;
+                                    myChar.shadow.y = container.y + (this.config.character.shadowOffsetY || 5);
                                 }
                             }
                         });
