@@ -1,44 +1,45 @@
 {
     "id": "blood_burst",
     "name": "피 분출",
+    "duration": 400,
+    "offset": { "x": 0, "y": -35 },
     "particles": [
         {
-            "type": "debris",
-            "count": 25,
-            "colors": ["#ef4444", "#dc2626", "#b91c1c", "#7f1d1d"],
-            "size": { "min": 4, "max": 12 },
-            "speed": { "min": 6, "max": 16 },
-            "angle": { "min": 120, "max": 240 },
-            "life": { "min": 200, "max": 400 },
-            "gravity": 0.25,
-            "fadeOut": true
-        },
-        {
-            "type": "spark",
-            "count": 15,
-            "color": "#fca5a5",
-            "size": { "min": 2, "max": 6 },
-            "speed": { "min": 8, "max": 20 },
-            "angle": { "min": 100, "max": 260 },
-            "life": { "min": 100, "max": 250 },
-            "fadeOut": true
-        },
-        {
             "type": "flash",
-            "count": 1,
             "color": "#ef4444",
-            "size": 80,
-            "life": 80
+            "size": 100,
+            "alpha": 0.9,
+            "fadeOut": true
         },
         {
             "type": "ring",
-            "count": 1,
+            "count": 2,
             "color": "#dc2626",
-            "size": 15,
-            "maxSize": 70,
-            "life": 150
+            "size": 20,
+            "maxSize": 90,
+            "alpha": 0.8,
+            "fadeOut": true,
+            "delay": [0, 50]
+        },
+        {
+            "type": "debris",
+            "count": 30,
+            "color": "#ef4444",
+            "size": 10,
+            "speed": 140,
+            "angle": "radial",
+            "gravity": 3,
+            "alpha": 1,
+            "lifetime": 350
+        },
+        {
+            "type": "spark",
+            "count": 20,
+            "color": "#fca5a5",
+            "size": 5,
+            "speed": 180,
+            "alpha": 0.9,
+            "lifetime": 280
         }
-    ],
-    "offset": { "x": -20, "y": -60 }
+    ]
 }
-

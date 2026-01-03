@@ -1,67 +1,62 @@
 {
     "id": "flurry_finish",
     "name": "세검 피니시",
-    "shake": 6,
+    "duration": 250,
+    "offset": { "x": 0, "y": -35 },
     "particles": [
         {
             "type": "flash",
-            "size": 100,
             "color": "#ffffff",
-            "life": 60
+            "size": 150,
+            "alpha": 1,
+            "fadeOut": true
         },
         {
             "type": "flash",
-            "size": 70,
-            "color": "#c4b5fd",
-            "life": 80
+            "color": "#a78bfa",
+            "size": 110,
+            "alpha": 0.85,
+            "fadeOut": true
         },
         {
             "type": "arrow",
-            "count": 1,
-            "length": [280, 340],
-            "width": 80,
-            "tipAngle": 28,
-            "color": "#ffffff",
-            "glow": "#a78bfa",
-            "innerColor": "rgba(139, 92, 246, 0.6)",
-            "life": 140
-        },
-        {
-            "type": "arrow",
-            "count": 1,
-            "length": [220, 280],
-            "width": 55,
-            "tipAngle": 25,
+            "count": 2,
             "color": "#e0e7ff",
             "glow": "#8b5cf6",
-            "innerColor": "rgba(167, 139, 250, 0.4)",
-            "life": 110
+            "length": 250,
+            "width": 70,
+            "alpha": 1,
+            "lifetime": 180
         },
         {
-            "type": "thrust",
-            "count": 3,
-            "angle": [-3, 0, 3],
-            "length": [450, 550],
-            "width": 5,
+            "type": "line",
+            "count": 1,
             "color": "#ffffff",
-            "glow": "#a78bfa",
-            "life": 130
+            "length": 450,
+            "width": 10,
+            "angle": 0,
+            "alpha": 1,
+            "lifetime": 150
         },
         {
             "type": "ring",
-            "size": 25,
-            "maxSize": 140,
+            "count": 2,
             "color": "#a78bfa",
-            "life": 180
+            "size": 30,
+            "maxSize": 150,
+            "alpha": 0.8,
+            "fadeOut": true,
+            "delay": [0, 40]
         },
         {
             "type": "spark",
-            "count": 20,
-            "spread": 80,
-            "speed": [15, 35],
-            "size": [3, 10],
-            "colors": ["#a78bfa", "#c4b5fd", "#f0abfc", "#ffffff"],
-            "life": [100, 200]
+            "count": 30,
+            "color": "#c4b5fd",
+            "size": 7,
+            "speed": 200,
+            "angle": "radial",
+            "alpha": 1,
+            "lifetime": 200
         }
     ]
 }

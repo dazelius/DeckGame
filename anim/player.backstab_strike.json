@@ -8,8 +8,8 @@
     "keyframes": [
         { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 0 },
         { "x": -8, "y": 3, "scaleX": 0.88, "scaleY": 1.12, "alpha": 1, "rotation": -0.08, "duration": 30, "ease": "power3.in" },
-        { "x": -25, "y": -5, "scaleX": 1.35, "scaleY": 0.72, "alpha": 1, "rotation": 0.35, "duration": 25, "ease": "power4.out", "afterimage": true, "vfx": "backstab_slash" },
-        { "x": -38, "y": 0, "scaleX": 1.45, "scaleY": 0.68, "alpha": 1, "rotation": 0.45, "duration": 20, "ease": "linear", "vfx": "blood_burst", "shake": 15, "hitstop": 100 },
+        { "x": -25, "y": -5, "scaleX": 1.35, "scaleY": 0.72, "alpha": 1, "rotation": 0.35, "duration": 25, "ease": "power4.out", "afterimage": true, "vfx": "backstab_slash", "vfxTarget": "target" },
+        { "x": -38, "y": 0, "scaleX": 1.45, "scaleY": 0.68, "alpha": 1, "rotation": 0.45, "duration": 20, "ease": "linear", "vfx": "blood_burst", "vfxTarget": "target", "shake": 15, "hitstop": 100 },
         { "x": -32, "y": 3, "scaleX": 1.25, "scaleY": 0.82, "alpha": 1, "rotation": 0.28, "duration": 45, "ease": "power2.out" },
         { "x": -22, "y": 2, "scaleX": 1.12, "scaleY": 0.92, "alpha": 1, "rotation": 0.15, "duration": 50, "ease": "power2.out" },
         { "x": -10, "y": 0, "scaleX": 1.05, "scaleY": 0.98, "alpha": 1, "rotation": 0.05, "duration": 45, "ease": "power2.out" },

@@ -1,66 +1,70 @@
 {
     "id": "heavy_slash",
     "name": "대검 베기",
-    "shake": 10,
+    "duration": 350,
+    "offset": { "x": 0, "y": -40 },
     "particles": [
         {
             "type": "flash",
-            "size": 180,
             "color": "#ffffff",
-            "life": 70
+            "size": 220,
+            "alpha": 1,
+            "fadeOut": true
         },
         {
             "type": "flash",
-            "size": 130,
-            "color": "#f59e0b",
-            "life": 90
+            "color": "#ef4444",
+            "size": 160,
+            "alpha": 0.9,
+            "fadeOut": true
+        },
+        {
+            "type": "flash",
+            "color": "#fbbf24",
+            "size": 120,
+            "alpha": 0.8,
+            "fadeOut": true
         },
         {
             "type": "slash",
-            "count": 1,
-            "delay": 0,
-            "angle": [-45],
-            "length": [450, 550],
-            "width": 20,
+            "count": 2,
             "color": "#ffffff",
-            "glow": "#f59e0b",
-            "life": 200
-        },
-        {
-            "type": "slash",
-            "count": 1,
-            "delay": 0,
-            "angle": [-45],
-            "length": [350, 450],
-            "width": 60,
-            "color": "rgba(245, 158, 11, 0.5)",
-            "glow": "#d97706",
-            "life": 170
+            "glow": "#ef4444",
+            "angle": [-55, -40],
+            "length": 220,
+            "width": 22,
+            "alpha": 1,
+            "lifetime": 220
         },
         {
             "type": "ring",
-            "size": 50,
-            "maxSize": 220,
-            "color": "#f59e0b",
-            "life": 250
+            "count": 2,
+            "color": "#ef4444",
+            "size": 55,
+            "maxSize": 280,
+            "alpha": 0.9,
+            "fadeOut": true,
+            "delay": [0, 50]
         },
         {
             "type": "spark",
-            "count": 30,
-            "spread": 120,
-            "speed": [18, 45],
-            "size": [6, 16],
-            "colors": ["#f59e0b", "#fbbf24", "#ffffff"],
-            "life": [150, 300]
+            "count": 45,
+            "color": "#fbbf24",
+            "size": 12,
+            "speed": 250,
+            "angle": "radial",
+            "alpha": 1,
+            "lifetime": 320
         },
         {
             "type": "debris",
-            "count": 15,
-            "speed": [12, 30],
-            "size": [5, 12],
-            "colors": ["#f59e0b", "#d97706"],
-            "gravity": 0.35,
-            "life": [250, 450]
+            "count": 30,
+            "color": "#ef4444",
+            "size": 12,
+            "speed": 180,
+            "gravity": 4,
+            "alpha": 0.9,
+            "lifetime": 450
         }
     ]
 }

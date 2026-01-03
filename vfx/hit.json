@@ -1,60 +1,62 @@
 {
     "id": "hit",
     "name": "타격",
-    "shake": 5,
+    "duration": 280,
+    "offset": { "x": 0, "y": -30 },
     "particles": [
         {
             "type": "flash",
-            "size": 140,
             "color": "#ffffff",
-            "life": 55
+            "size": 150,
+            "alpha": 1,
+            "fadeOut": true
         },
         {
             "type": "flash",
-            "size": 100,
             "color": "#ef4444",
-            "life": 80
+            "size": 110,
+            "alpha": 0.85,
+            "fadeOut": true
         },
         {
             "type": "ring",
+            "count": 2,
+            "color": "#ef4444",
             "size": 35,
-            "maxSize": 150,
-            "color": "#ef4444",
-            "life": 180
-        },
-        {
-            "type": "ring",
-            "size": 25,
-            "maxSize": 100,
-            "color": "#fbbf24",
-            "life": 140
+            "maxSize": 160,
+            "alpha": 0.8,
+            "fadeOut": true,
+            "delay": [0, 40]
         },
         {
             "type": "spark",
-            "count": 22,
-            "spread": 90,
-            "speed": [14, 32],
-            "size": [5, 13],
-            "colors": ["#ef4444", "#fbbf24", "#ffffff"],
-            "life": [110, 220]
+            "count": 25,
+            "color": "#fbbf24",
+            "size": 9,
+            "speed": 180,
+            "angle": "radial",
+            "alpha": 1,
+            "lifetime": 200
         },
         {
             "type": "line",
-            "count": 14,
-            "angleStep": 25.7,
-            "length": [45, 110],
-            "width": 4,
+            "count": 16,
             "color": "#fbbf24",
-            "life": 110
+            "length": 90,
+            "width": 4,
+            "angle": "radial",
+            "alpha": 0.7,
+            "lifetime": 130
         },
         {
             "type": "debris",
-            "count": 12,
-            "speed": [10, 25],
-            "size": [4, 10],
-            "colors": ["#ef4444", "#dc2626"],
-            "gravity": 0.4,
-            "life": [180, 350]
+            "count": 15,
+            "color": "#ef4444",
+            "size": 8,
+            "speed": 120,
+            "gravity": 3,
+            "alpha": 0.9,
+            "lifetime": 300
         }
     ]
 }
