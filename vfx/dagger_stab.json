@@ -1,28 +1,49 @@
 {
     "id": "dagger_stab",
-    "name": "단검 찌르기",
+    "name": "단검 급습",
     "particles": [
+        {
+            "type": "arrow",
+            "count": 2,
+            "color": "#e2e8f0",
+            "length": 80,
+            "width": 15,
+            "angle": 45,
+            "life": 120,
+            "fadeOut": true
+        },
         {
             "type": "arrow",
             "count": 1,
             "color": "#94a3b8",
             "length": 60,
-            "width": 12,
-            "angle": 0,
+            "width": 10,
+            "angle": 30,
+            "life": 100,
+            "fadeOut": true,
+            "delay": 20
+        },
+        {
+            "type": "slash",
+            "count": 1,
+            "color": "#f8fafc",
+            "glow": "#64748b",
+            "length": 70,
+            "width": 6,
+            "angle": 50,
             "life": 100,
             "fadeOut": true
         },
         {
             "type": "spark",
-            "count": 8,
-            "color": "#e2e8f0",
-            "size": { "min": 2, "max": 5 },
-            "speed": { "min": 3, "max": 6 },
-            "angle": { "min": -30, "max": 30 },
-            "life": { "min": 80, "max": 150 },
+            "count": 15,
+            "color": "#f1f5f9",
+            "size": { "min": 2, "max": 6 },
+            "speed": { "min": 4, "max": 10 },
+            "angle": { "min": 20, "max": 70 },
+            "life": { "min": 80, "max": 180 },
             "fadeOut": true
         }
     ],
-    "offset": { "x": 20, "y": -50 }
+    "offset": { "x": 30, "y": -40 }
 }
-
