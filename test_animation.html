@@ -358,6 +358,9 @@
             // 캐릭터 크기 저장
             updateCharacterInfo();
             
+            // 잔상 시스템 초기화
+            initAfterimageSystem();
+            
             startBreathing();
         }
         
@@ -393,6 +396,64 @@
         function startBreathing() {
             gsap.to(playerSprite.scale, { y: 1.02, duration: 1.8, repeat: -1, yoyo: true, ease: 'sine.inOut' });
             gsap.to(enemySprite.scale, { y: 1.02, duration: 1.5, repeat: -1, yoyo: true, ease: 'sine.inOut' });
+        }
+        
+        // ==================== 잔상 시스템 ====================
+        const afterimages = [];
+        let afterimageContainer = null;
+        
+        function initAfterimageSystem() {
+            afterimageContainer = new PIXI.Container();
+            stageContainer.addChildAt(afterimageContainer, 0); // 캐릭터 뒤에 배치
+        }
+        
+        function createAfterimage(sourceSprite, sourceContainer, alpha = 0.6, tint = 0x8888ff) {
+            if (!afterimageContainer || !sourceSprite.texture) return;
+            
+            const ghost = new PIXI.Sprite(sourceSprite.texture);
+            ghost.anchor.set(sourceSprite.anchor.x, sourceSprite.anchor.y);
+            ghost.x = sourceContainer.x;
+            ghost.y = sourceContainer.y;
+            ghost.scale.set(sourceSprite.scale.x, sourceSprite.scale.y);
+            ghost.rotation = sourceSprite.rotation;
+            ghost.alpha = alpha;
+            ghost.tint = tint;
+            
+            afterimageContainer.addChild(ghost);
+            
+            // 잔상 데이터 저장
+            afterimages.push({
+                sprite: ghost,
+                life: 150,
+                maxLife: 150,
+                fadeSpeed: 1
+            });
+        }
+        
+        function updateAfterimages(delta) {
+            for (let i = afterimages.length - 1; i >= 0; i--) {
+                const ai = afterimages[i];
+                ai.life -= delta * 16;
+                
+                const progress = ai.life / ai.maxLife;
+                ai.sprite.alpha = progress * 0.6;
+                ai.sprite.scale.x *= 0.995;
+                ai.sprite.scale.y *= 0.995;
+                
+                if (ai.life <= 0) {
+                    afterimageContainer.removeChild(ai.sprite);
+                    ai.sprite.destroy();
+                    afterimages.splice(i, 1);
+                }
+            }
+        }
+        
+        function clearAfterimages() {
+            afterimages.forEach(ai => {
+                afterimageContainer.removeChild(ai.sprite);
+                ai.sprite.destroy();
+            });
+            afterimages.length = 0;
         }
         
         // ==================== JSON 로드 (동적) ====================
@@ -608,6 +669,14 @@
                     if (kf.shake) {
                         tl.call(() => screenShake(kf.shake), null, '<');
                     }
+                    
+                    // ========== 잔상 생성 ==========
+                    if (kf.afterimage) {
+                        tl.call(() => {
+                            const tint = data.target === 'player' ? 0x60a5fa : 0xef4444;
+                            createAfterimage(sprite, container, 0.7, tint);
+                        }, null, '<');
+                    }
                 });
             });
         }
@@ -637,6 +706,7 @@
             stageContainer.y = 0;
             
             clearVFX();
+            clearAfterimages();
             startBreathing();
         }
         
@@ -902,10 +972,17 @@
         
         // VFX 렌더 루프
         function startVFXLoop() {
+            let lastTime = performance.now();
+            
             function render() {
-                vfxCtx.clearRect(0, 0, vfxCanvas.width, vfxCanvas.height);
-                
                 const now = performance.now();
+                const delta = (now - lastTime) / 16.67; // 60fps 기준
+                lastTime = now;
+                
+                // 잔상 업데이트
+                updateAfterimages(delta);
+                
+                vfxCtx.clearRect(0, 0, vfxCanvas.width, vfxCanvas.height);
                 
                 for (let i = particles.length - 1; i >= 0; i--) {
                     const p = particles[i];
