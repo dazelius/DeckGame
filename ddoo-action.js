@@ -1027,13 +1027,56 @@ const DDOOAction = {
                 const ease = kf.ease || 'power2.out';
                 const pos = idx === 1 ? 0 : '>';
                 
-                // 이동
-                if (kf.x !== undefined) {
+                // 🎯 타겟으로 대시 (dashToTarget)
+                if (kf.dashToTarget) {
+                    tl.call(() => {
+                        // 타겟 위치 계산
+                        let targetX = container.x;
+                        const offset = kf.dashOffset || 60;  // 타겟 앞 오프셋
+                        
+                        if (kf.dashToTarget === 'enemy' || kf.dashToTarget === true) {
+                            const enemyChar = this.characters.get('enemy');
+                            if (enemyChar) {
+                                targetX = enemyChar.container.x - (offset * dir);
+                            } else if (options.targetContainer) {
+                                targetX = options.targetContainer.x - (offset * dir);
+                            }
+                        } else if (kf.dashToTarget === 'player') {
+                            const playerChar = this.characters.get('player');
+                            if (playerChar) {
+                                targetX = playerChar.container.x + (offset * dir);
+                            }
+                        }
+                        
+                        // 빠른 대시 애니메이션
+                        gsap.to(container, {
+                            x: targetX,
+                            y: baseY + (kf.y || 0),
+                            duration: dur,
+                            ease: kf.dashEase || 'power3.out',
+                            onUpdate: () => {
+                                // 그림자 동기화
+                                const charId = [...this.characters.keys()].find(
+                                    id => this.characters.get(id)?.container === container
+                                );
+                                const shadow = charId ? this.characters.get(charId)?.shadow : null;
+                                if (shadow) {
+                                    shadow.x = container.x;
+                                    shadow.y = container.y + (this.config.character.shadowOffsetY || 5);
+                                }
+                            }
+                        });
+                        
+                        if (this.config.debug) console.log(`[DDOOAction] 🎯 DashToTarget: ${targetX.toFixed(0)}`);
+                    }, null, pos);
+                }
+                // 일반 이동
+                else if (kf.x !== undefined) {
                     const targetX = isRelative ? startX + (kf.x * dir) : baseX + (kf.x * dir);
                     tl.to(container, { x: targetX, duration: dur, ease }, pos);
                 }
                 
-                if (kf.y !== undefined) {
+                if (kf.y !== undefined && !kf.dashToTarget) {
                     tl.to(container, { y: baseY + kf.y, duration: dur, ease }, '<');
                 }
                 

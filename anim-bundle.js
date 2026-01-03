@@ -1,6 +1,6 @@
 /**
  * DDOO Animation Bundle - 자동 생성됨
- * 생성일: 2026-01-03T18:14:52.338Z
+ * 생성일: 2026-01-03T18:17:10.654Z
  * 
  * 이 파일을 포함하면 fetch 없이 모든 애니메이션/VFX 데이터 사용 가능!
  * <script src="anim-bundle.js"></script>
@@ -1014,60 +1014,40 @@ window.ANIM_BUNDLE = {
         "scaleY": 1.18,
         "rotation": 0.08,
         "duration": 35,
-        "ease": "power2.in"
+        "ease": "power2.in",
+        "vfx": "dash",
+        "vfxTarget": "self"
       },
       {
-        "x": -30,
+        "dashToTarget": "player",
+        "dashOffset": 70,
         "y": -5,
-        "scaleX": 1.05,
-        "scaleY": 0.95,
-        "rotation": -0.02,
-        "duration": 20,
-        "ease": "power3.out",
-        "vfx": "dash"
-      },
-      {
-        "x": -120,
-        "y": -10,
-        "scaleX": 1.15,
-        "scaleY": 0.88,
-        "rotation": -0.05,
-        "duration": 35,
-        "ease": "power3.out"
-      },
-      {
-        "x": -220,
-        "y": -8,
-        "scaleX": 1.18,
+        "scaleX": 1.2,
         "scaleY": 0.85,
         "rotation": -0.06,
-        "duration": 40,
-        "ease": "power2.out"
+        "duration": 80,
+        "dashEase": "power4.out",
+        "afterimage": true
       },
       {
-        "x": -280,
-        "y": -5,
-        "scaleX": 1.15,
-        "scaleY": 0.88,
-        "rotation": -0.04,
-        "duration": 35,
-        "ease": "power2.out"
-      },
-      {
-        "x": -310,
-        "y": -2,
         "scaleX": 1.1,
         "scaleY": 0.92,
-        "rotation": -0.02,
+        "rotation": -0.03,
+        "duration": 30,
+        "ease": "power2.out"
+      },
+      {
+        "scaleX": 1.05,
+        "scaleY": 0.96,
+        "rotation": -0.01,
         "duration": 25,
         "ease": "power2.out"
       },
       {
-        "x": -320,
         "y": 0,
-        "scaleX": 1.05,
-        "scaleY": 0.96,
-        "rotation": -0.01,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
         "duration": 20,
         "ease": "power2.out"
       }
@@ -2297,60 +2277,40 @@ window.ANIM_BUNDLE = {
         "scaleY": 1.18,
         "rotation": -0.08,
         "duration": 35,
-        "ease": "power2.in"
+        "ease": "power2.in",
+        "vfx": "dash",
+        "vfxTarget": "self"
       },
       {
-        "x": 30,
+        "dashToTarget": "enemy",
+        "dashOffset": 70,
         "y": -5,
-        "scaleX": 1.05,
-        "scaleY": 0.95,
-        "rotation": 0.02,
-        "duration": 20,
-        "ease": "power3.out",
-        "vfx": "dash"
-      },
-      {
-        "x": 120,
-        "y": -10,
-        "scaleX": 1.15,
-        "scaleY": 0.88,
-        "rotation": 0.05,
-        "duration": 35,
-        "ease": "power3.out"
-      },
-      {
-        "x": 220,
-        "y": -8,
-        "scaleX": 1.18,
+        "scaleX": 1.2,
         "scaleY": 0.85,
         "rotation": 0.06,
-        "duration": 40,
-        "ease": "power2.out"
+        "duration": 80,
+        "dashEase": "power4.out",
+        "afterimage": true
       },
       {
-        "x": 280,
-        "y": -5,
-        "scaleX": 1.15,
-        "scaleY": 0.88,
-        "rotation": 0.04,
-        "duration": 35,
-        "ease": "power2.out"
-      },
-      {
-        "x": 310,
-        "y": -2,
         "scaleX": 1.1,
         "scaleY": 0.92,
-        "rotation": 0.02,
+        "rotation": 0.03,
+        "duration": 30,
+        "ease": "power2.out"
+      },
+      {
+        "scaleX": 1.05,
+        "scaleY": 0.96,
+        "rotation": 0.01,
         "duration": 25,
         "ease": "power2.out"
       },
       {
-        "x": 320,
         "y": 0,
-        "scaleX": 1.05,
-        "scaleY": 0.96,
-        "rotation": 0.01,
+        "scaleX": 1,
+        "scaleY": 1,
+        "rotation": 0,
         "duration": 20,
         "ease": "power2.out"
       }
