@@ -175,6 +175,175 @@
         .log-entry.anim { color: #a78bfa; }
         .log-entry.vfx { color: #f472b6; }
         .log-time { color: #444; margin-right: 5px; }
+        
+        /* ==================== 타임라인 패널 ==================== */
+        .timeline-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 200px;
+            background: #0d0d15;
+            border-top: 2px solid #fbbf24;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 12px;
+            background: #1a1a2e;
+            border-bottom: 1px solid #2a2a4a;
+        }
+        .timeline-header h3 { color: #fbbf24; font-size: 0.8rem; margin: 0; }
+        .timeline-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .timeline-btn {
+            background: #3a3a5a;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 4px;
+            color: #ddd;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        .timeline-btn:hover { background: #4a4a6a; }
+        .timeline-btn.active { background: #60a5fa; color: #000; }
+        .timeline-time {
+            font-family: monospace;
+            color: #60a5fa;
+            font-size: 0.8rem;
+            min-width: 80px;
+        }
+        .timeline-body {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+        .timeline-tracks {
+            width: 120px;
+            background: #12121a;
+            border-right: 1px solid #2a2a4a;
+            flex-shrink: 0;
+        }
+        .timeline-track-header {
+            height: 32px;
+            padding: 0 10px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #1a1a2a;
+            font-size: 0.7rem;
+            color: #888;
+        }
+        .timeline-track-header.player { color: #60a5fa; }
+        .timeline-track-header.enemy { color: #ef4444; }
+        .timeline-track-header.vfx { color: #a855f7; }
+        .timeline-track-header.shake { color: #fbbf24; }
+        .timeline-content {
+            flex: 1;
+            overflow-x: auto;
+            overflow-y: hidden;
+            position: relative;
+        }
+        .timeline-ruler {
+            height: 24px;
+            background: #1a1a28;
+            border-bottom: 1px solid #2a2a4a;
+            position: relative;
+        }
+        .timeline-ruler-mark {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            border-left: 1px solid #3a3a5a;
+            font-size: 0.6rem;
+            color: #666;
+            padding-left: 3px;
+            padding-top: 2px;
+        }
+        .timeline-ruler-mark.major { border-color: #5a5a7a; color: #888; }
+        .timeline-lanes {
+            position: relative;
+        }
+        .timeline-lane {
+            height: 32px;
+            border-bottom: 1px solid #1a1a2a;
+            position: relative;
+        }
+        .timeline-keyframe {
+            position: absolute;
+            height: 24px;
+            top: 4px;
+            border-radius: 3px;
+            font-size: 0.6rem;
+            display: flex;
+            align-items: center;
+            padding: 0 4px;
+            cursor: pointer;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .timeline-keyframe.player {
+            background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+            border: 1px solid #60a5fa;
+        }
+        .timeline-keyframe.enemy {
+            background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
+            border: 1px solid #f87171;
+        }
+        .timeline-keyframe.vfx {
+            background: linear-gradient(180deg, #a855f7 0%, #7c3aed 100%);
+            border: 1px solid #c084fc;
+            height: 18px;
+            top: 7px;
+        }
+        .timeline-keyframe.shake {
+            background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%);
+            border: 1px solid #fcd34d;
+            height: 14px;
+            top: 9px;
+        }
+        .timeline-keyframe.hitstop {
+            background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+            border: 1px solid #34d399;
+            height: 14px;
+            top: 9px;
+        }
+        .timeline-playhead {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #ef4444;
+            z-index: 100;
+            pointer-events: none;
+        }
+        .timeline-playhead::before {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: -5px;
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid #ef4444;
+        }
+        .timeline-empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #555;
+            font-size: 0.8rem;
+        }
+        /* 메인 컨테이너 높이 조정 */
+        .main-container { height: calc(100vh - 200px); }
     </style>
 </head>
 <body>
@@ -215,6 +384,37 @@
                 <button onclick="clearLog()">Clear</button>
             </div>
             <div id="logContainer" class="log-container"></div>
+        </div>
+    </div>
+    
+    <!-- 🎬 타임라인 패널 -->
+    <div class="timeline-panel" id="timelinePanel">
+        <div class="timeline-header">
+            <h3>🎬 Timeline</h3>
+            <div class="timeline-controls">
+                <button class="timeline-btn" onclick="timelineZoom(-1)">➖</button>
+                <button class="timeline-btn" onclick="timelineZoom(1)">➕</button>
+                <span class="timeline-time" id="timelineTime">0.000s</span>
+                <button class="timeline-btn" onclick="toggleTimeline()">▼ 숨기기</button>
+            </div>
+        </div>
+        <div class="timeline-body">
+            <div class="timeline-tracks">
+                <div class="timeline-track-header player">🎮 Player</div>
+                <div class="timeline-track-header enemy">👹 Enemy</div>
+                <div class="timeline-track-header vfx">✨ VFX</div>
+                <div class="timeline-track-header shake">📳 Shake/Stop</div>
+            </div>
+            <div class="timeline-content" id="timelineContent">
+                <div class="timeline-ruler" id="timelineRuler"></div>
+                <div class="timeline-lanes" id="timelineLanes">
+                    <div class="timeline-lane" id="playerLane"></div>
+                    <div class="timeline-lane" id="enemyLane"></div>
+                    <div class="timeline-lane" id="vfxLane"></div>
+                    <div class="timeline-lane" id="shakeLane"></div>
+                </div>
+                <div class="timeline-playhead" id="timelinePlayhead" style="left: 0;"></div>
+            </div>
         </div>
     </div>
 
@@ -1466,6 +1666,274 @@
                 document.getElementById('fpsValue').textContent = Math.round(app.ticker.FPS);
             }, 100);
         }
+        
+        // ==================== 🎬 타임라인 시스템 ====================
+        const Timeline = {
+            scale: 0.3,          // 1ms = 0.3px
+            duration: 2000,      // 기본 2초
+            currentTime: 0,
+            isPlaying: false,
+            tracks: {
+                player: [],
+                enemy: [],
+                vfx: [],
+                shake: []
+            },
+            
+            init() {
+                this.renderRuler();
+                this.setupScrollSync();
+            },
+            
+            // 눈금자 렌더링
+            renderRuler() {
+                const ruler = document.getElementById('timelineRuler');
+                ruler.innerHTML = '';
+                ruler.style.width = (this.duration * this.scale) + 'px';
+                
+                // 100ms 단위로 눈금
+                for (let t = 0; t <= this.duration; t += 100) {
+                    const mark = document.createElement('div');
+                    mark.className = 'timeline-ruler-mark' + (t % 500 === 0 ? ' major' : '');
+                    mark.style.left = (t * this.scale) + 'px';
+                    if (t % 500 === 0) {
+                        mark.textContent = (t / 1000).toFixed(1) + 's';
+                    }
+                    ruler.appendChild(mark);
+                }
+            },
+            
+            // 스크롤 동기화
+            setupScrollSync() {
+                const content = document.getElementById('timelineContent');
+                content.addEventListener('scroll', () => {
+                    // 플레이헤드 위치 유지
+                });
+            },
+            
+            // 애니메이션 분석하여 타임라인에 추가
+            analyzeAnimation(animId) {
+                const data = animCache.get(animId);
+                if (!data) return;
+                
+                this.clear();
+                
+                // 시퀀스 타입인 경우
+                if (data.type === 'sequence' && data.steps) {
+                    this.analyzeSequence(data);
+                } else if (data.keyframes) {
+                    this.analyzeKeyframes(data, 0);
+                }
+                
+                this.render();
+            },
+            
+            // 시퀀스 분석
+            analyzeSequence(data) {
+                let currentTime = 0;
+                
+                data.steps.forEach((step, idx) => {
+                    if (step.delay && !step.anim) {
+                        currentTime += step.delay;
+                        return;
+                    }
+                    
+                    if (step.anim) {
+                        const animData = animCache.get(step.anim);
+                        if (!animData) return;
+                        
+                        if (step.delay) currentTime += step.delay;
+                        
+                        // 키프레임 분석
+                        this.analyzeKeyframes(animData, currentTime);
+                        
+                        // 애니메이션 길이 계산
+                        if (animData.keyframes && step.wait) {
+                            const lastKf = animData.keyframes[animData.keyframes.length - 1];
+                            currentTime += lastKf.time || 0;
+                        }
+                    }
+                });
+                
+                this.duration = Math.max(this.duration, currentTime + 500);
+                this.renderRuler();
+            },
+            
+            // 키프레임 분석
+            analyzeKeyframes(data, startTime) {
+                const target = data.target || (data.id?.startsWith('enemy') ? 'enemy' : 'player');
+                const trackName = target;
+                
+                if (!data.keyframes) return;
+                
+                data.keyframes.forEach((kf, idx) => {
+                    const time = startTime + (kf.time || 0);
+                    const duration = kf.duration || 50;
+                    
+                    // 메인 키프레임
+                    this.tracks[trackName].push({
+                        time,
+                        duration,
+                        label: this.getKeyframeLabel(kf, idx),
+                        type: trackName,
+                        data: kf
+                    });
+                    
+                    // VFX
+                    if (kf.vfx) {
+                        this.tracks.vfx.push({
+                            time,
+                            duration: 150,
+                            label: kf.vfx,
+                            type: 'vfx',
+                            data: kf
+                        });
+                    }
+                    
+                    // Shake
+                    if (kf.shake) {
+                        this.tracks.shake.push({
+                            time,
+                            duration: kf.shake.duration || 100,
+                            label: '📳 Shake',
+                            type: 'shake',
+                            data: kf
+                        });
+                    }
+                    
+                    // Hitstop
+                    if (kf.hitstop) {
+                        this.tracks.shake.push({
+                            time,
+                            duration: kf.hitstop,
+                            label: '⏸️ Stop ' + kf.hitstop + 'ms',
+                            type: 'hitstop',
+                            data: kf
+                        });
+                    }
+                });
+            },
+            
+            // 키프레임 레이블 생성
+            getKeyframeLabel(kf, idx) {
+                const parts = [];
+                if (kf.x !== undefined) parts.push(`X:${kf.x}`);
+                if (kf.y !== undefined) parts.push(`Y:${kf.y}`);
+                if (kf.scaleX !== undefined || kf.scaleY !== undefined) {
+                    parts.push(`S:${(kf.scaleX || 1).toFixed(2)},${(kf.scaleY || 1).toFixed(2)}`);
+                }
+                if (kf.rotation !== undefined) parts.push(`R:${kf.rotation.toFixed(2)}`);
+                if (kf.alpha !== undefined) parts.push(`α:${kf.alpha}`);
+                if (kf.afterimage) parts.push('👤');
+                
+                return parts.length > 0 ? parts.join(' ') : `KF ${idx}`;
+            },
+            
+            // 렌더링
+            render() {
+                this.renderTrack('player', 'playerLane');
+                this.renderTrack('enemy', 'enemyLane');
+                this.renderTrack('vfx', 'vfxLane');
+                this.renderTrack('shake', 'shakeLane');
+                
+                // 레인 너비 설정
+                const lanes = document.getElementById('timelineLanes');
+                lanes.style.width = (this.duration * this.scale) + 'px';
+            },
+            
+            renderTrack(trackName, laneId) {
+                const lane = document.getElementById(laneId);
+                lane.innerHTML = '';
+                
+                this.tracks[trackName].forEach(item => {
+                    const kf = document.createElement('div');
+                    kf.className = `timeline-keyframe ${item.type}`;
+                    kf.style.left = (item.time * this.scale) + 'px';
+                    kf.style.width = Math.max(item.duration * this.scale, 30) + 'px';
+                    kf.textContent = item.label;
+                    kf.title = JSON.stringify(item.data, null, 2);
+                    
+                    kf.onclick = () => this.onKeyframeClick(item);
+                    
+                    lane.appendChild(kf);
+                });
+            },
+            
+            onKeyframeClick(item) {
+                log('info', `🎯 키프레임: ${item.label} @ ${item.time}ms`);
+                console.log('Keyframe data:', item.data);
+            },
+            
+            // 플레이헤드 이동
+            setPlayhead(time) {
+                this.currentTime = time;
+                const playhead = document.getElementById('timelinePlayhead');
+                playhead.style.left = (time * this.scale) + 'px';
+                document.getElementById('timelineTime').textContent = (time / 1000).toFixed(3) + 's';
+            },
+            
+            // 클리어
+            clear() {
+                this.tracks = { player: [], enemy: [], vfx: [], shake: [] };
+                this.duration = 2000;
+                this.setPlayhead(0);
+            }
+        };
+        
+        // 줌 인/아웃
+        function timelineZoom(dir) {
+            Timeline.scale = Math.max(0.1, Math.min(2, Timeline.scale + dir * 0.1));
+            Timeline.renderRuler();
+            Timeline.render();
+            log('info', `타임라인 줌: ${Timeline.scale.toFixed(1)}x`);
+        }
+        
+        // 타임라인 숨기기/보이기
+        let timelineVisible = true;
+        function toggleTimeline() {
+            timelineVisible = !timelineVisible;
+            const panel = document.getElementById('timelinePanel');
+            const btn = event.target;
+            
+            if (timelineVisible) {
+                panel.style.height = '200px';
+                btn.textContent = '▼ 숨기기';
+                document.querySelector('.main-container').style.height = 'calc(100vh - 200px)';
+            } else {
+                panel.style.height = '32px';
+                btn.textContent = '▲ 펼치기';
+                document.querySelector('.main-container').style.height = 'calc(100vh - 32px)';
+            }
+        }
+        
+        // 원본 playAnimation을 래핑하여 타임라인 연동
+        const _originalPlayAnimation = playAnimation;
+        playAnimation = async function(id, skipReset) {
+            // 타임라인 분석
+            Timeline.analyzeAnimation(id);
+            
+            // 플레이헤드 애니메이션
+            Timeline.setPlayhead(0);
+            const startTime = performance.now();
+            
+            const updatePlayhead = () => {
+                const elapsed = performance.now() - startTime;
+                Timeline.setPlayhead(elapsed / config.speed);
+                
+                if (elapsed / config.speed < Timeline.duration) {
+                    requestAnimationFrame(updatePlayhead);
+                }
+            };
+            requestAnimationFrame(updatePlayhead);
+            
+            // 원본 실행
+            return _originalPlayAnimation(id, skipReset);
+        };
+        
+        // 타임라인 초기화
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => Timeline.init(), 100);
+        });
     </script>
 </body>
 </html>
