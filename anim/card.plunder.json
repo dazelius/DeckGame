@@ -1,13 +1,12 @@
 {
     "id": "card.plunder",
-    "name": "강탈 - 기본",
+    "name": "강탈 - 등 뒤 습격",
     "type": "sequence",
-    "description": "적을 공격하고 취약 상태면 에너지를 강탈한다",
+    "description": "적 뒤로 순간이동해 찌르고 뜯어낸다",
     "returnToBase": true,
     "steps": [
         { "anim": "player.plunder", "wait": true },
-        { "delay": 80 },
-        { "anim": ["enemy.plunder_hit", "enemy.hit_left", "enemy.hit_right"], "wait": true, "damage": 8 }
+        { "delay": 40 },
+        { "anim": "enemy.plunder_hit", "wait": true, "damage": 8 }
     ]
 }
-

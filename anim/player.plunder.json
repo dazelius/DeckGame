@@ -1,29 +1,29 @@
 {
     "id": "player.plunder",
-    "name": "강탈 - 약탈자의 습격",
+    "name": "강탈 - 등 뒤 습격",
     "target": "player",
     "type": "once",
     "priority": 16,
-    "duration": 580,
+    "duration": 650,
     "returnToBase": true,
     "keyframes": [
         { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "alpha": 1, "duration": 0 },
         
-        { "x": 5, "y": -8, "scaleX": 0.95, "scaleY": 1.05, "rotation": 0.02, "alpha": 0.9, "duration": 30, "ease": "power1.out" },
-        { "x": -5, "y": -20, "scaleX": 0.85, "scaleY": 1.15, "rotation": -0.05, "alpha": 0.7, "duration": 40, "ease": "power2.in", "afterimage": true, "vfx": "speed_lines" },
-        { "x": -15, "y": -35, "scaleX": 0.75, "scaleY": 1.25, "rotation": -0.1, "alpha": 0.5, "duration": 35, "ease": "power2.in", "afterimage": true },
+        { "x": 10, "y": 0, "scaleX": 1.05, "scaleY": 0.95, "rotation": 0.05, "alpha": 1, "duration": 30, "ease": "power2.out" },
+        { "x": -20, "y": 0, "scaleX": 0.9, "scaleY": 1.1, "rotation": -0.1, "alpha": 0.8, "duration": 40, "ease": "power2.in", "afterimage": true },
+        { "x": -50, "y": 0, "scaleX": 0.7, "scaleY": 1.3, "rotation": -0.2, "alpha": 0.4, "duration": 35, "ease": "power3.in", "afterimage": true, "vfx": "shadow_fade", "vfxTarget": "self" },
         
-        { "x": 60, "y": -50, "scaleX": 1.1, "scaleY": 0.9, "rotation": 0.3, "alpha": 0.6, "duration": 25, "ease": "power4.out", "afterimage": true },
-        { "x": 130, "y": -25, "scaleX": 1.3, "scaleY": 0.75, "rotation": 0.5, "alpha": 0.9, "duration": 30, "ease": "power3.out", "dashToTarget": "enemy", "dashPadding": 5, "afterimage": true },
+        { "x": 250, "y": 0, "scaleX": 0.6, "scaleY": 1.4, "rotation": 0, "alpha": 0.3, "duration": 40, "ease": "power4.out", "afterimage": true },
         
-        { "x": 155, "y": -8, "scaleX": 0.7, "scaleY": 1.3, "rotation": -0.15, "alpha": 1, "duration": 20, "ease": "power4.out", "vfx": "plunder_stab", "shake": 10, "hitstop": 60 },
-        { "x": 160, "y": 5, "scaleX": 0.6, "scaleY": 1.4, "rotation": -0.25, "alpha": 1, "duration": 25, "ease": "power2.out", "vfx": "plunder_slash" },
-        { "x": 150, "y": 15, "scaleX": 0.65, "scaleY": 1.35, "rotation": -0.3, "alpha": 1, "duration": 30, "ease": "power2.out", "shake": 6 },
+        { "x": 220, "y": 0, "scaleX": 1.2, "scaleY": 0.85, "rotation": 0.15, "alpha": 1, "duration": 25, "ease": "power3.out", "vfx": "shadow_appear", "vfxTarget": "self" },
         
-        { "x": 130, "y": 8, "scaleX": 0.85, "scaleY": 1.15, "rotation": -0.15, "alpha": 1, "duration": 35, "ease": "power2.inOut", "afterimage": true },
-        { "x": 90, "y": 0, "scaleX": 0.95, "scaleY": 1.05, "rotation": -0.05, "alpha": 1, "duration": 45, "ease": "power2.inOut" },
-        { "x": 45, "y": -5, "scaleX": 1.02, "scaleY": 0.98, "rotation": 0.02, "alpha": 1, "duration": 55, "ease": "power2.out" },
-        { "x": 15, "y": -2, "scaleX": 1.01, "scaleY": 0.99, "rotation": 0.01, "alpha": 1, "duration": 50, "ease": "power2.out" },
-        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "alpha": 1, "duration": 40, "ease": "power2.out" }
+        { "x": 180, "y": 0, "scaleX": 0.85, "scaleY": 1.15, "rotation": -0.2, "alpha": 1, "duration": 35, "ease": "power3.out", "vfx": "backstab_stab", "shake": 10, "hitstop": 80 },
+        
+        { "x": 140, "y": 0, "scaleX": 1.15, "scaleY": 0.88, "rotation": 0.1, "alpha": 1, "duration": 40, "ease": "power2.out", "vfx": "plunder_rip" },
+        { "x": 100, "y": 0, "scaleX": 1.1, "scaleY": 0.92, "rotation": 0.05, "alpha": 1, "duration": 50, "ease": "power2.inOut", "afterimage": true },
+        
+        { "x": 50, "y": 0, "scaleX": 1.05, "scaleY": 0.96, "rotation": 0.02, "alpha": 1, "duration": 60, "ease": "power2.out" },
+        { "x": 20, "y": 0, "scaleX": 1.02, "scaleY": 0.98, "rotation": 0.01, "alpha": 1, "duration": 55, "ease": "power2.out" },
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "alpha": 1, "duration": 45, "ease": "power2.out" }
     ]
 }
