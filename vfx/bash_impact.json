@@ -1,0 +1,61 @@
+{
+    "id": "bash_impact",
+    "name": "강타 임팩트",
+    "shake": 10,
+    "particles": [
+        {
+            "type": "flash",
+            "size": 100,
+            "color": "#ffffff",
+            "life": 70
+        },
+        {
+            "type": "flash",
+            "size": 70,
+            "color": "#ef4444",
+            "life": 100
+        },
+        {
+            "type": "ring",
+            "size": 30,
+            "maxSize": 140,
+            "color": "#ef4444",
+            "life": 220
+        },
+        {
+            "type": "ring",
+            "size": 20,
+            "maxSize": 90,
+            "color": "#fbbf24",
+            "life": 180
+        },
+        {
+            "type": "line",
+            "count": 12,
+            "angleStep": 30,
+            "length": [50, 100],
+            "width": 5,
+            "color": "#fbbf24",
+            "life": 180
+        },
+        {
+            "type": "spark",
+            "count": 20,
+            "spread": 90,
+            "speed": [10, 22],
+            "size": [4, 10],
+            "colors": ["#ef4444", "#fbbf24", "#ffffff"],
+            "life": [200, 380]
+        },
+        {
+            "type": "debris",
+            "count": 18,
+            "speed": [8, 20],
+            "size": [4, 10],
+            "colors": ["#ef4444", "#fbbf24", "#dc2626"],
+            "gravity": 0.4,
+            "life": [280, 500]
+        }
+    ]
+}
+

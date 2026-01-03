@@ -1,0 +1,52 @@
+{
+    "id": "flurry_finish",
+    "name": "세검 피니시",
+    "shake": 5,
+    "particles": [
+        {
+            "type": "flash",
+            "size": 50,
+            "color": "#ffffff",
+            "life": 50
+        },
+        {
+            "type": "thrust",
+            "count": 3,
+            "delay": 15,
+            "angle": [-15, 0, 15],
+            "length": [120, 150],
+            "width": 5,
+            "color": "#ffffff",
+            "glow": "#a78bfa",
+            "life": 120
+        },
+        {
+            "type": "thrust",
+            "count": 3,
+            "delay": 15,
+            "angle": [-15, 0, 15],
+            "length": [90, 120],
+            "width": 16,
+            "color": "rgba(167, 139, 250, 0.5)",
+            "glow": "#8b5cf6",
+            "life": 90
+        },
+        {
+            "type": "ring",
+            "size": 15,
+            "maxSize": 60,
+            "color": "#a78bfa",
+            "life": 140
+        },
+        {
+            "type": "spark",
+            "count": 12,
+            "spread": 50,
+            "speed": [8, 18],
+            "size": [2, 6],
+            "colors": ["#a78bfa", "#c4b5fd", "#ffffff"],
+            "life": [150, 280]
+        }
+    ]
+}
+

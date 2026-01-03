@@ -1,0 +1,19 @@
+{
+    "id": "player.flurry_stab2",
+    "name": "연속찌르기 2타",
+    "target": "player",
+    "type": "once",
+    "priority": 14,
+    "duration": 110,
+    "keyframes": [
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 0 },
+        
+        { "x": -3, "y": 5, "scaleX": 0.94, "scaleY": 1.06, "rotation": 0.03, "duration": 12, "ease": "power2.in" },
+        { "x": 38, "y": 12, "scaleX": 1.28, "scaleY": 0.75, "rotation": -0.08, "duration": 16, "ease": "power4.out", "vfx": "flurry_stab", "shake": 2 },
+        { "x": 42, "y": 10, "scaleX": 1.22, "scaleY": 0.80, "rotation": -0.06, "duration": 14, "ease": "power2.out" },
+        { "x": 32, "y": 6, "scaleX": 1.12, "scaleY": 0.88, "rotation": -0.03, "duration": 18, "ease": "power2.out" },
+        { "x": 18, "y": 2, "scaleX": 1.04, "scaleY": 0.96, "rotation": -0.01, "duration": 22, "ease": "power2.out" },
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 28, "ease": "power2.out" }
+    ]
+}
+

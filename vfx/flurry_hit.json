@@ -1,0 +1,30 @@
+{
+    "id": "flurry_hit",
+    "name": "세검 적중",
+    "shake": 2,
+    "particles": [
+        {
+            "type": "flash",
+            "size": 25,
+            "color": "#ffffff",
+            "life": 30
+        },
+        {
+            "type": "ring",
+            "size": 10,
+            "maxSize": 35,
+            "color": "#a78bfa",
+            "life": 80
+        },
+        {
+            "type": "spark",
+            "count": 5,
+            "spread": 30,
+            "speed": [6, 12],
+            "size": [2, 4],
+            "colors": ["#a78bfa", "#ef4444", "#ffffff"],
+            "life": [100, 180]
+        }
+    ]
+}
+
