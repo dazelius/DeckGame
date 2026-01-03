@@ -1189,8 +1189,13 @@ const DDOOAction = {
     },
     
     drawSlashParticle(p, alpha, progress) {
-        const rad = p.angle * Math.PI / 180;
-        const len = p.startLength * (1 - progress * 0.3);
+        // NaN/Infinity 체크
+        if (!isFinite(p.x) || !isFinite(p.y) || !isFinite(p.startLength) || p.startLength <= 0) {
+            return;
+        }
+        
+        const rad = (p.angle || 0) * Math.PI / 180;
+        const len = Math.max(1, p.startLength * (1 - progress * 0.3));
         
         this.vfxCtx.translate(p.x, p.y);
         this.vfxCtx.rotate(rad);
@@ -1200,25 +1205,31 @@ const DDOOAction = {
             this.vfxCtx.shadowBlur = 20;
         }
         
-        const grad = this.vfxCtx.createLinearGradient(-len/2, 0, len/2, 0);
+        const halfLen = len / 2;
+        const grad = this.vfxCtx.createLinearGradient(-halfLen, 0, halfLen, 0);
         grad.addColorStop(0, 'transparent');
-        grad.addColorStop(0.3, p.color);
-        grad.addColorStop(0.7, p.color);
+        grad.addColorStop(0.3, p.color || '#ffffff');
+        grad.addColorStop(0.7, p.color || '#ffffff');
         grad.addColorStop(1, 'transparent');
         
         this.vfxCtx.strokeStyle = grad;
-        this.vfxCtx.lineWidth = p.startWidth * alpha;
+        this.vfxCtx.lineWidth = Math.max(1, (p.startWidth || 5) * alpha);
         this.vfxCtx.lineCap = 'round';
         
         this.vfxCtx.beginPath();
-        this.vfxCtx.moveTo(-len/2, 0);
-        this.vfxCtx.lineTo(len/2, 0);
+        this.vfxCtx.moveTo(-halfLen, 0);
+        this.vfxCtx.lineTo(halfLen, 0);
         this.vfxCtx.stroke();
     },
     
     drawArrowParticle(p, alpha, progress) {
-        const len = p.startLength * (1 - progress * 0.4);
-        const width = p.startWidth * (1 - progress * 0.3);
+        // NaN/Infinity 체크
+        if (!isFinite(p.x) || !isFinite(p.y) || !isFinite(p.startLength) || p.startLength <= 0) {
+            return;
+        }
+        
+        const len = Math.max(1, (p.startLength || 50) * (1 - progress * 0.4));
+        const width = Math.max(1, (p.startWidth || 30) * (1 - progress * 0.3));
         const tipRad = (p.tipAngle || 35) * Math.PI / 180;
         const dir = p.dir || 1;
         
@@ -1229,7 +1240,7 @@ const DDOOAction = {
             this.vfxCtx.shadowColor = p.glow;
             this.vfxCtx.shadowBlur = 25;
         }
-        this.vfxCtx.globalAlpha = alpha;
+        this.vfxCtx.globalAlpha = Math.max(0, Math.min(1, alpha));
         
         // 내부 채우기
         if (p.innerColor) {
@@ -1244,7 +1255,7 @@ const DDOOAction = {
         }
         
         // 외곽선
-        this.vfxCtx.strokeStyle = p.color;
+        this.vfxCtx.strokeStyle = p.color || '#ffffff';
         this.vfxCtx.lineWidth = 3 * alpha;
         this.vfxCtx.lineCap = 'round';
         this.vfxCtx.lineJoin = 'round';
@@ -1265,25 +1276,35 @@ const DDOOAction = {
     },
     
     drawSparkParticle(p, alpha) {
-        this.vfxCtx.fillStyle = p.color;
-        this.vfxCtx.globalAlpha = alpha;
-        this.vfxCtx.shadowColor = p.color;
+        if (!isFinite(p.x) || !isFinite(p.y)) return;
+        
+        const size = Math.max(1, (p.startSize || 5) * alpha);
+        
+        this.vfxCtx.fillStyle = p.color || '#fbbf24';
+        this.vfxCtx.globalAlpha = Math.max(0, Math.min(1, alpha));
+        this.vfxCtx.shadowColor = p.color || '#fbbf24';
         this.vfxCtx.shadowBlur = 8;
         
         this.vfxCtx.beginPath();
-        this.vfxCtx.arc(p.x, p.y, p.startSize * alpha, 0, Math.PI * 2);
+        this.vfxCtx.arc(p.x, p.y, size, 0, Math.PI * 2);
         this.vfxCtx.fill();
     },
     
     drawFlashParticle(p, alpha, progress) {
-        const size = p.startSize * (1 + progress * 0.5);
+        if (!isFinite(p.x) || !isFinite(p.y) || !isFinite(p.startSize) || p.startSize <= 0) {
+            return;
+        }
+        
+        const size = Math.max(1, p.startSize * (1 + progress * 0.5));
+        const color = p.color || '#ffffff';
+        
         const grad = this.vfxCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size);
-        grad.addColorStop(0, p.color);
-        grad.addColorStop(0.5, p.color.replace(')', ', 0.5)').replace('rgb', 'rgba'));
+        grad.addColorStop(0, color);
+        grad.addColorStop(0.5, 'rgba(255,255,255,0.5)');
         grad.addColorStop(1, 'transparent');
         
         this.vfxCtx.fillStyle = grad;
-        this.vfxCtx.globalAlpha = alpha * 0.8;
+        this.vfxCtx.globalAlpha = Math.max(0, Math.min(1, alpha * 0.8));
         
         this.vfxCtx.beginPath();
         this.vfxCtx.arc(p.x, p.y, size, 0, Math.PI * 2);
@@ -1291,12 +1312,14 @@ const DDOOAction = {
     },
     
     drawRingParticle(p, alpha, progress) {
-        const currentSize = p.startSize + (p.maxSize - p.startSize) * progress;
+        if (!isFinite(p.x) || !isFinite(p.y) || !isFinite(p.startSize)) return;
         
-        this.vfxCtx.strokeStyle = p.color;
+        const currentSize = Math.max(1, (p.startSize || 10) + ((p.maxSize || 50) - (p.startSize || 10)) * progress);
+        
+        this.vfxCtx.strokeStyle = p.color || '#ef4444';
         this.vfxCtx.lineWidth = 3 * alpha;
-        this.vfxCtx.globalAlpha = alpha * 0.7;
-        this.vfxCtx.shadowColor = p.color;
+        this.vfxCtx.globalAlpha = Math.max(0, Math.min(1, alpha * 0.7));
+        this.vfxCtx.shadowColor = p.color || '#ef4444';
         this.vfxCtx.shadowBlur = 10;
         
         this.vfxCtx.beginPath();
@@ -1305,14 +1328,18 @@ const DDOOAction = {
     },
     
     drawLineParticle(p, alpha, progress) {
-        const rad = p.angle * Math.PI / 180;
-        const len = p.startLength * (1 - progress * 0.3);
+        if (!isFinite(p.x) || !isFinite(p.y) || !isFinite(p.startLength) || p.startLength <= 0) {
+            return;
+        }
         
-        this.vfxCtx.strokeStyle = p.color;
-        this.vfxCtx.lineWidth = p.startWidth * alpha;
-        this.vfxCtx.globalAlpha = alpha;
+        const rad = (p.angle || 0) * Math.PI / 180;
+        const len = Math.max(1, p.startLength * (1 - progress * 0.3));
+        
+        this.vfxCtx.strokeStyle = p.color || '#fbbf24';
+        this.vfxCtx.lineWidth = Math.max(1, (p.startWidth || 3) * alpha);
+        this.vfxCtx.globalAlpha = Math.max(0, Math.min(1, alpha));
         this.vfxCtx.lineCap = 'round';
-        this.vfxCtx.shadowColor = p.color;
+        this.vfxCtx.shadowColor = p.color || '#fbbf24';
         this.vfxCtx.shadowBlur = 8;
         
         const sx = p.x;
@@ -1327,13 +1354,17 @@ const DDOOAction = {
     },
     
     drawDebrisParticle(p, alpha) {
-        this.vfxCtx.fillStyle = p.color;
-        this.vfxCtx.globalAlpha = alpha;
-        this.vfxCtx.shadowColor = p.color;
+        if (!isFinite(p.x) || !isFinite(p.y)) return;
+        
+        const size = Math.max(1, (p.startSize || 5) * alpha);
+        
+        this.vfxCtx.fillStyle = p.color || '#ef4444';
+        this.vfxCtx.globalAlpha = Math.max(0, Math.min(1, alpha));
+        this.vfxCtx.shadowColor = p.color || '#ef4444';
         this.vfxCtx.shadowBlur = 5;
         
         this.vfxCtx.beginPath();
-        this.vfxCtx.arc(p.x, p.y, p.startSize * alpha, 0, Math.PI * 2);
+        this.vfxCtx.arc(p.x, p.y, size, 0, Math.PI * 2);
         this.vfxCtx.fill();
     },
     
