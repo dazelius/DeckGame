@@ -237,13 +237,9 @@
         const animCache = new Map();
         const vfxCache = new Map();
         
-        const ANIM_FILES = [
-            'player.attack', 'player.dash', 'player.defend', 'player.hit', 'player.return', 'player.stab', 'player.throw',
-            'enemy.attack', 'enemy.dash', 'enemy.hit', 'enemy.dagger_hit',
-            'card.strike', 'card.bash', 'card.flurry', 'card.flurryP', 'card.dagger'
-        ];
-        
-        const VFX_FILES = ['slash', 'hit', 'spark', 'dash', 'stab', 'critical', 'block', 'throw', 'dagger_hit'];
+        // 동적으로 index.json에서 로드
+        let ANIM_FILES = [];
+        let VFX_FILES = [];
         
         // VFX 파티클 풀
         const particles = [];
@@ -399,37 +395,63 @@
             gsap.to(enemySprite.scale, { y: 1.02, duration: 1.5, repeat: -1, yoyo: true, ease: 'sine.inOut' });
         }
         
-        // ==================== JSON 로드 ====================
+        // ==================== JSON 로드 (동적) ====================
         async function loadAllVFX() {
             log('info', '💥 Loading VFX...');
+            
+            // index.json에서 파일 목록 로드
+            try {
+                const indexRes = await fetch('vfx/index.json');
+                if (indexRes.ok) {
+                    VFX_FILES = await indexRes.json();
+                    log('info', `📋 vfx/index.json: ${VFX_FILES.length}개 발견`);
+                }
+            } catch (e) {
+                log('warn', '⚠️ vfx/index.json 없음, 기본 목록 사용');
+                VFX_FILES = ['slash', 'hit', 'spark', 'dash', 'stab', 'critical', 'block'];
+            }
+            
+            // 각 VFX 로드
             for (const id of VFX_FILES) {
                 try {
                     const res = await fetch(`vfx/${id}.json`);
                     if (res.ok) {
                         vfxCache.set(id, await res.json());
-                        log('success', `✅ vfx/${id}`);
                     }
                 } catch (e) {
                     log('warn', `⚠️ vfx/${id} failed`);
                 }
             }
-            log('info', `Loaded: ${vfxCache.size} VFX`);
+            log('success', `✅ VFX 로드 완료: ${vfxCache.size}개`);
         }
         
         async function loadAllAnimations() {
             log('info', '📁 Loading animations...');
+            
+            // index.json에서 파일 목록 로드
+            try {
+                const indexRes = await fetch('anim/index.json');
+                if (indexRes.ok) {
+                    ANIM_FILES = await indexRes.json();
+                    log('info', `📋 anim/index.json: ${ANIM_FILES.length}개 발견`);
+                }
+            } catch (e) {
+                log('warn', '⚠️ anim/index.json 없음, 기본 목록 사용');
+                ANIM_FILES = ['player.attack', 'player.hit', 'enemy.attack', 'enemy.hit'];
+            }
+            
+            // 각 애니메이션 로드
             for (const id of ANIM_FILES) {
                 try {
                     const res = await fetch(`anim/${id}.json`);
                     if (res.ok) {
                         animCache.set(id, await res.json());
-                        log('success', `✅ ${id}`);
                     }
                 } catch (e) {
-                    log('warn', `⚠️ ${id} failed`);
+                    log('warn', `⚠️ anim/${id} failed`);
                 }
             }
-            log('info', `Loaded: ${animCache.size} animations`);
+            log('success', `✅ 애니메이션 로드 완료: ${animCache.size}개`);
         }
         
         function renderAnimList() {

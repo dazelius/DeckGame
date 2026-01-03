@@ -1,0 +1,18 @@
+[
+  "card.bash",
+  "card.dagger",
+  "card.flurry",
+  "card.flurryP",
+  "card.strike",
+  "enemy.attack",
+  "enemy.dagger_hit",
+  "enemy.dash",
+  "enemy.hit",
+  "player.attack",
+  "player.dash",
+  "player.defend",
+  "player.hit",
+  "player.return",
+  "player.stab",
+  "player.throw"
+]
