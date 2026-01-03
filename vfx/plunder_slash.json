@@ -1,48 +1,53 @@
 {
     "id": "plunder_slash",
-    "name": "강탈 슬래시 - 잔인한 베기",
-    "shake": 8,
+    "name": "강탈 베기 - 난도질",
+    "shake": 12,
     "particles": [
         {
             "type": "slash",
-            "count": 3,
-            "angle": [-40, 0, 40],
-            "length": [70, 110],
-            "width": 10,
+            "count": 4,
+            "angle": [-50, -20, 20, 50],
+            "length": [80, 130],
+            "width": 12,
             "color": "#dc2626",
-            "glow": "#991b1b",
-            "life": 160
+            "glow": "#7f1d1d",
+            "life": 180
         },
         {
-            "type": "flash",
-            "size": 60,
-            "color": "#fef2f2",
-            "life": 50
+            "type": "arrow",
+            "count": 2,
+            "length": [60, 90],
+            "width": 50,
+            "tipAngle": 40,
+            "color": "#ef4444",
+            "glow": "#dc2626",
+            "innerColor": "rgba(220, 38, 38, 0.4)",
+            "life": 120
         },
         {
             "type": "ring",
-            "size": 20,
-            "maxSize": 90,
-            "color": "#ef4444",
-            "life": 140
+            "size": 25,
+            "maxSize": 100,
+            "color": "#b91c1c",
+            "life": 150
         },
         {
             "type": "spark",
-            "count": 18,
-            "spread": 55,
-            "speed": [8, 18],
-            "size": [3, 7],
-            "colors": ["#dc2626", "#ef4444", "#b91c1c", "#7f1d1d"],
-            "life": [140, 280]
+            "count": 30,
+            "spread": 70,
+            "speed": [8, 22],
+            "size": [3, 9],
+            "colors": ["#dc2626", "#ef4444", "#b91c1c", "#991b1b", "#ffffff"],
+            "life": [150, 320]
         },
         {
             "type": "debris",
-            "count": 12,
-            "speed": [6, 16],
-            "size": [2, 6],
-            "colors": ["#991b1b", "#7f1d1d", "#450a0a", "#dc2626"],
-            "gravity": 0.4,
-            "life": [180, 350]
+            "count": 20,
+            "speed": [6, 18],
+            "size": [2, 7],
+            "colors": ["#991b1b", "#7f1d1d", "#450a0a", "#1f2937"],
+            "gravity": 0.45,
+            "life": [200, 400]
         }
     ]
 }

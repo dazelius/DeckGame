@@ -1,57 +1,79 @@
 {
     "id": "plunder_critical",
-    "name": "강탈 크리티컬 - 취약 학살",
-    "shake": 18,
+    "name": "강탈 크리티컬 - 학살",
+    "shake": 25,
     "particles": [
         {
             "type": "slash",
-            "count": 5,
-            "angle": [-60, -30, 0, 30, 60],
-            "length": [100, 150],
-            "width": 14,
+            "count": 6,
+            "angle": [-70, -45, -15, 15, 45, 70],
+            "length": [120, 180],
+            "width": 16,
             "color": "#dc2626",
-            "glow": "#7f1d1d",
-            "life": 200
+            "glow": "#450a0a",
+            "life": 220
         },
         {
             "type": "flash",
-            "size": 100,
+            "size": 120,
             "color": "#ffffff",
-            "life": 70
+            "life": 80
         },
         {
             "type": "ring",
-            "size": 25,
-            "maxSize": 130,
-            "color": "#b91c1c",
-            "life": 180
+            "size": 30,
+            "maxSize": 160,
+            "color": "#7f1d1d",
+            "life": 200
+        },
+        {
+            "type": "arrow",
+            "count": 3,
+            "length": [80, 120],
+            "width": 70,
+            "tipAngle": 35,
+            "color": "#ef4444",
+            "glow": "#991b1b",
+            "innerColor": "rgba(185, 28, 28, 0.5)",
+            "life": 150
         },
         {
             "type": "spark",
-            "count": 35,
-            "spread": 80,
-            "speed": [10, 28],
-            "size": [4, 10],
-            "colors": ["#dc2626", "#ef4444", "#b91c1c", "#991b1b", "#7f1d1d"],
-            "life": [180, 400]
+            "count": 50,
+            "spread": 100,
+            "speed": [12, 35],
+            "size": [4, 12],
+            "colors": ["#dc2626", "#ef4444", "#b91c1c", "#991b1b", "#7f1d1d", "#ffffff"],
+            "life": [200, 500]
         },
         {
             "type": "debris",
-            "count": 25,
-            "speed": [8, 22],
-            "size": [3, 8],
-            "colors": ["#991b1b", "#7f1d1d", "#450a0a", "#1f2937"],
+            "count": 40,
+            "speed": [10, 30],
+            "size": [3, 10],
+            "colors": ["#991b1b", "#7f1d1d", "#450a0a", "#1f2937", "#0f172a"],
             "gravity": 0.5,
-            "life": [220, 500]
+            "life": [250, 600]
         },
         {
             "type": "line",
-            "count": 12,
-            "angleStep": 30,
-            "length": [50, 90],
+            "count": 16,
+            "angleStep": 22.5,
+            "length": [60, 110],
             "width": 5,
             "color": "#dc2626",
-            "life": 180
+            "life": 200
+        },
+        {
+            "type": "smoke",
+            "count": 15,
+            "spread": 60,
+            "size": [25, 50],
+            "speed": [3, 8],
+            "angle": { "min": -180, "max": 180 },
+            "color": "#450a0a",
+            "gravity": -0.1,
+            "life": [300, 600]
         }
     ]
 }
