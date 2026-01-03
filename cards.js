@@ -136,14 +136,12 @@ Object.assign(cardDatabase, {
         animationId: 'strike',  // 🎬 DDOO Action 연결!
         effect: (state) => {
             // 🎬 CardAnimations 사용 (DDOOAction 연결)
+            // ⚠️ 대미지는 DDOOAction의 onDamage에서만 적용됨!
             if (typeof CardAnimations !== 'undefined' && CardAnimations.has('strike')) {
                 CardAnimations.play('strike', {
                     target: state.enemy,
                     targetEl: typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : null,
                     damage: 6,
-                    onHit: () => {
-                        dealDamage(state.enemy, 6);
-                    },
                     onComplete: () => {}
                 });
             } else {
@@ -232,18 +230,15 @@ Object.assign(cardDatabase, {
         animationId: 'bash',  // 🎬 DDOO Action 연결!
         effect: (state) => {
             // 🎬 CardAnimations 사용 (DDOOAction 연결)
+            // ⚠️ 대미지/디버프는 DDOOAction의 onDamage/onDebuff에서 적용됨!
             if (typeof CardAnimations !== 'undefined' && CardAnimations.has('bash')) {
                 CardAnimations.play('bash', {
                     target: state.enemy,
                     targetEl: typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : null,
                     damage: 12,
-                    onHit: () => {
-                        dealDamage(state.enemy, 12);
-                        // 취약 부여
-                        state.enemy.vulnerable = (state.enemy.vulnerable || 0) + 2;
+                    onComplete: () => {
                         addLog(`${state.enemy.name}에게 취약 2턴!`, 'debuff');
-                    },
-                    onComplete: () => {}
+                    }
                 });
             } else {
                 // 폴백
@@ -817,6 +812,7 @@ Object.assign(cardDatabase, {
             const damage = 2;
             
             // 🎬 CardAnimations 사용 (고유 애니메이션!)
+            // ⚠️ 대미지는 DDOOAction의 onDamage에서만 적용됨!
             if (typeof CardAnimations !== 'undefined' && CardAnimations.has('flurry')) {
                 CardAnimations.play('flurry', {
                     target: state.enemy,
@@ -825,14 +821,10 @@ Object.assign(cardDatabase, {
                     damage: damage,
                     interval: 120,
                     onHit: (hitIndex, dmg) => {
-                        // 각 타격마다 데미지 적용
-                        if (state.enemy.hp > 0) {
-                            dealDamage(state.enemy, dmg);
-                            
-                            // 추가 콤보 카운트 (2번째, 3번째 타격)
-                            if (hitIndex > 0 && typeof RelicSystem !== 'undefined') {
-                                RelicSystem.onCardPlayed({ type: CardType.ATTACK }, state);
-                            }
+                        // 대미지는 DDOOAction에서 이미 적용됨
+                        // 추가 콤보 카운트 (2번째, 3번째 타격)
+                        if (hitIndex > 0 && state.enemy.hp > 0 && typeof RelicSystem !== 'undefined') {
+                            RelicSystem.onCardPlayed({ type: CardType.ATTACK }, state);
                         }
                     },
                     onComplete: () => {
@@ -946,21 +938,15 @@ Object.assign(cardDatabase, {
             const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
             
             // 🎮 DDOO Action 엔진 사용!
+            // ⚠️ 대미지/디버프는 DDOOAction의 onDamage/onDebuff에서 적용됨!
             if (typeof CardAnimations !== 'undefined' && CardAnimations.play) {
                 CardAnimations.play('dirtyStrike', {
                     target: state.enemy,
                     targetEl: enemyEl,
                     damage: 4,
-                    onHit: () => {
-                        dealDamage(state.enemy, 4);
-                        
-                        // 취약 상태 부여
-                        if (!state.enemy.vulnerable) state.enemy.vulnerable = 0;
-                        state.enemy.vulnerable += 1;
-                        
+                    onComplete: () => {
                         // 취약 이펙트
                         showVulnerableEffect(enemyEl);
-                        
                         // UI 업데이트
                         if (typeof updateEnemiesUI === 'function') updateEnemiesUI();
                     }
@@ -3704,6 +3690,7 @@ const upgradedCardDatabase = {
             const damage = 3;
             
             // 🎬 CardAnimations 사용 (강화 버전!)
+            // ⚠️ 대미지는 DDOOAction의 onDamage에서만 적용됨!
             if (typeof CardAnimations !== 'undefined' && CardAnimations.has('flurryP')) {
                 CardAnimations.play('flurryP', {
                     target: state.enemy,
@@ -3712,15 +3699,11 @@ const upgradedCardDatabase = {
                     damage: damage,
                     interval: 160,  // 더 빠른 간격 (기본 200ms보다 빠름)
                     onHit: (hitIndex, dmg) => {
-                        // 각 타격마다 데미지 적용
-                        if (state.enemy.hp > 0) {
-                            dealDamage(state.enemy, dmg);
-                            
-                            // 추가 콤보 카운트 (2번째 타격부터)
-                            if (hitIndex > 0 && typeof RelicSystem !== 'undefined') {
-                                RelicSystem.incrementCombo();
-                                RelicSystem.showComboFloater(RelicSystem.combo.count);
-                            }
+                        // 대미지는 DDOOAction에서 이미 적용됨
+                        // 추가 콤보 카운트 (2번째 타격부터)
+                        if (hitIndex > 0 && state.enemy.hp > 0 && typeof RelicSystem !== 'undefined') {
+                            RelicSystem.incrementCombo();
+                            RelicSystem.showComboFloater(RelicSystem.combo.count);
                         }
                     },
                     onComplete: () => {
@@ -3766,18 +3749,14 @@ const upgradedCardDatabase = {
             const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
             
             // 🎮 DDOO Action 엔진 사용!
+            // ⚠️ 대미지/디버프는 DDOOAction의 onDamage/onDebuff에서 적용됨!
             if (typeof CardAnimations !== 'undefined' && CardAnimations.play) {
                 CardAnimations.play('dirtyStrikeP', {
                     target: state.enemy,
                     targetEl: enemyEl,
                     damage: 7,
-                    onHit: () => {
-                        dealDamage(state.enemy, 7);
-                        
-                        // 취약 상태 2턴 부여
-                        state.enemy.vulnerable = (state.enemy.vulnerable || 0) + 2;
+                    onComplete: () => {
                         showVulnerableEffect(enemyEl, 2);
-                        
                         if (typeof updateEnemiesUI === 'function') updateEnemiesUI();
                     }
                 });

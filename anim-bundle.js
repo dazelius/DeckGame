@@ -1,12 +1,12 @@
 /**
  * DDOO Animation Bundle - 자동 생성됨
- * 생성일: 2026-01-03T16:29:24.135Z
+ * 생성일: 2026-01-03T16:35:50.853Z
  * 
  * 이 파일을 포함하면 fetch 없이 모든 애니메이션/VFX 데이터 사용 가능!
  * <script src="anim-bundle.js"></script>
  */
 
-// 애니메이션 데이터 (31개)
+// 애니메이션 데이터 (32개)
 window.ANIM_BUNDLE = {
   "card.bash": {
     "id": "card.bash",
@@ -22,7 +22,7 @@ window.ANIM_BUNDLE = {
       {
         "anim": "player.heavy_slash",
         "wait": false,
-        "damage": 8
+        "damage": 12
       },
       {
         "anim": "enemy.bash_hit",
@@ -73,15 +73,45 @@ window.ANIM_BUNDLE = {
       {
         "anim": "player.backstab_strike",
         "wait": false,
-        "damage": 5
+        "damage": 4
       },
       {
         "anim": "enemy.stabbed",
         "wait": true,
         "delay": 20,
         "debuff": {
-          "name": "poison",
-          "value": 3
+          "name": "vulnerable",
+          "value": 1
+        }
+      }
+    ]
+  },
+  "card.dirtystrikeP": {
+    "id": "card.dirtystrikeP",
+    "name": "비열한 일격+",
+    "type": "sequence",
+    "description": "그림자처럼 사라져 적의 뒤에서 강력하게 급습한다",
+    "returnToBase": true,
+    "steps": [
+      {
+        "anim": "player.sneak",
+        "wait": true
+      },
+      {
+        "delay": 30
+      },
+      {
+        "anim": "player.backstab_strike",
+        "wait": false,
+        "damage": 7
+      },
+      {
+        "anim": "enemy.stabbed",
+        "wait": true,
+        "delay": 20,
+        "debuff": {
+          "name": "vulnerable",
+          "value": 2
         }
       }
     ]
@@ -123,7 +153,7 @@ window.ANIM_BUNDLE = {
       {
         "anim": "player.flurry_stab1",
         "wait": true,
-        "damage": 3
+        "damage": 2
       },
       {
         "anim": "enemy.flurry_hit",
@@ -136,7 +166,7 @@ window.ANIM_BUNDLE = {
       {
         "anim": "player.flurry_stab2",
         "wait": true,
-        "damage": 3
+        "damage": 2
       },
       {
         "anim": "enemy.flurry_hit",
@@ -149,7 +179,7 @@ window.ANIM_BUNDLE = {
       {
         "anim": "player.flurry_stab3",
         "wait": true,
-        "damage": 3
+        "damage": 2
       },
       {
         "anim": "enemy.flurry_hit",
@@ -162,7 +192,7 @@ window.ANIM_BUNDLE = {
     "id": "card.flurryP",
     "name": "연속 찌르기+",
     "type": "sequence",
-    "description": "5번 연속으로 빠르게 찌른다",
+    "description": "4번 연속으로 빠르게 찌른다",
     "returnToBase": true,
     "steps": [
       {
@@ -210,19 +240,6 @@ window.ANIM_BUNDLE = {
       },
       {
         "anim": "player.flurry_stab1",
-        "wait": true,
-        "damage": 3
-      },
-      {
-        "anim": "enemy.flurry_hit",
-        "wait": false,
-        "delay": 10
-      },
-      {
-        "delay": 25
-      },
-      {
-        "anim": "player.flurry_stab2",
         "wait": true,
         "damage": 3
       },
