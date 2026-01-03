@@ -27,6 +27,7 @@
   "player.attack",
   "player.backstab_strike",
   "player.bash",
+  "player.dagger_throw",
   "player.dash",
   "player.defend",
   "player.dodge",

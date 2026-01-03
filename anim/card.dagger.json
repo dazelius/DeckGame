@@ -1,12 +1,12 @@
 {
     "id": "card.dagger",
-    "name": "단검 투척",
+    "name": "단검 투척 - 암살자의 손길",
     "type": "sequence",
-    "description": "단검을 던져 적을 공격한다",
+    "description": "회전하는 단검을 던져 적을 관통한다",
     "returnToBase": true,
     "steps": [
-        { "anim": "player.throw", "wait": true },
-        { "delay": 100 },
-        { "anim": "enemy.dagger_hit", "wait": true, "damage": 4 }
+        { "anim": "player.dagger_throw", "wait": true },
+        { "delay": 180 },
+        { "anim": ["enemy.dagger_hit", "enemy.hit_left", "enemy.hit_right"], "wait": true, "damage": 4 }
     ]
 }
