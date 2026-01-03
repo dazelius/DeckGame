@@ -63,7 +63,7 @@ const CardAnimations = {
             targetEl,         // 타겟 DOM 요소
             hitCount = 3,     // 타격 횟수
             damage = 2,       // 타격당 데미지
-            interval = 150,   // 타격 간격 (ms) - 애니메이션에 맞게 조정
+            interval = 200,   // 타격 간격 (ms) - 애니메이션 완료 후 다음 타격
             onHit,            // 각 타격 시 콜백
             onComplete        // 완료 시 콜백
         } = options;
@@ -128,29 +128,14 @@ const CardAnimations = {
                             // 🔥 화려한 VFX!
                             this.showStabVFX(hitX, hitY, pattern.angle, currentHit, isLastHit);
                             
-                            // 🎯 적 피격 애니메이션 (VFX와 동시!)
-                            if (target && typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
-                                EnemyRenderer.playHitAnimation(target, damage, isLastHit);
-                            }
-                            
-                            // 💥 화면 흔들림
-                            if (typeof SpriteAnimation !== 'undefined') {
-                                const shakeIntensity = isLastHit ? 12 : 5 + currentHit * 2;
-                                SpriteAnimation.screenShake(shakeIntensity, isLastHit ? 0.15 : 0.08);
-                            }
+                            // ✅ 콜백에서 dealDamage 호출 → dealDamage가 피격 애니메이션 + 화면 흔들림 처리
+                            // (중복 호출 모두 제거!)
+                            if (onHit) onHit(currentHit, damage);
                             
                             // 히트 넘버
                             this.showHitNumber(hitX + 60, hitY - 40, currentHit + 1, isLastHit);
-                            
-                            // 🎵 사운드
-                            if (typeof SoundSystem !== 'undefined') {
-                                SoundSystem.play(isLastHit ? 'slash_heavy' : 'slash_light', { volume: 0.6 });
-                            }
-                            
-                            // ✅ 콜백 (데미지와 동기화!)
-                            if (onHit) onHit(currentHit, damage);
                         }
-                    }, 30);  // 찌르기 모션 절정과 동기화
+                    }, 50);  // 찌르기 모션 절정과 동기화 (간격 조정)
                     
                     currentHit++;
                     
@@ -256,8 +241,8 @@ const CardAnimations = {
         return this.flurryAnimation({
             ...options,
             hitCount: options.hitCount || 5,
-            damage: options.damage || 2,
-            interval: options.interval || 100  // 더 빠르게
+            damage: options.damage || 3,
+            interval: options.interval || 160  // 더 빠르게 (기본 200ms보다 빠름)
         });
     },
     
@@ -346,88 +331,47 @@ const CardAnimations = {
             const yShift = p.offsetY * 0.3;
             const rotAngle = p.angle * 0.015 * intensity;
             
-            // 🗡️ 강화된 찌르기 모션!
+            // 🗡️ 강화된 찌르기 모션! (총 120ms)
             const tl = gsap.timeline();
             
-            // 1단계: 힘 모으기 (뒤로 살짝)
+            // 1단계: 힘 모으기 (뒤로 살짝) - 30ms
             tl.to(sprite, {
-                x: -12 * intensity,
-                y: -yShift * 0.5,
-                scaleX: 0.92,
-                scaleY: 1.08,
-                rotation: -rotAngle * 0.5,
-                duration: 0.04,
+                x: -10 * intensity,
+                scaleX: 0.95,
+                scaleY: 1.05,
+                rotation: -rotAngle * 0.3,
+                duration: 0.03,
                 ease: 'power2.in'
             })
-            // 2단계: 찌르기! (빠르게 앞으로)
+            // 2단계: 찌르기! (빠르게 앞으로) - 30ms
             .to(sprite, {
                 x: xThrust,
-                y: yShift,
-                scaleX: 1.15 * p.scale,
-                scaleY: 0.88,
-                rotation: rotAngle,
-                duration: 0.035,
-                ease: 'power4.out'
-            })
-            // 3단계: 임팩트 (잠깐 멈춤)
-            .to(sprite, {
-                x: xThrust * 0.9,
                 scaleX: 1.1 * p.scale,
                 scaleY: 0.92,
-                duration: 0.02,
-                ease: 'none'
+                rotation: rotAngle,
+                duration: 0.03,
+                ease: 'power4.out'
             })
-            // 4단계: 복귀
+            // 3단계: 복귀 - 60ms
             .to(sprite, {
                 x: 0,
-                y: 0,
                 scaleX: 1,
                 scaleY: 1,
                 rotation: 0,
-                duration: 0.08,
+                duration: 0.06,
                 ease: 'power2.out'
             });
             
-            // 컨테이너 흔들림 (임팩트 느낌)
-            if (isLastHit) {
-                gsap.to(container, {
-                    x: container.x + 8,
-                    duration: 0.03,
-                    yoyo: true,
-                    repeat: 1,
-                    ease: 'power2.inOut'
-                });
-            }
-            
-            // ⚡ 틴트 플래시 (찌르는 순간, 더 강렬하게)
+            // ⚡ 틴트 플래시 (찌르는 순간)
             const originalTint = sprite.tint || 0xffffff;
-            sprite.tint = isLastHit ? 0xffffcc : 0xaaddff;
+            sprite.tint = isLastHit ? 0xffffcc : 0xccddff;
             
-            // 그라데이션 페이드아웃
-            gsap.to({ progress: 0 }, {
-                progress: 1,
-                duration: 0.08,
-                onUpdate: function() {
-                    const t = this.targets()[0].progress;
-                    const r = Math.floor(255 - (255 - ((originalTint >> 16) & 0xFF)) * t);
-                    const g = Math.floor(255 - (255 - ((originalTint >> 8) & 0xFF)) * t);
-                    const b = Math.floor(255 - (255 - (originalTint & 0xFF)) * t);
-                    sprite.tint = (r << 16) | (g << 8) | b;
-                },
-                onComplete: () => {
+            // 50ms 후 원래 색으로 복귀
+            setTimeout(() => {
+                if (sprite && !sprite.destroyed) {
                     sprite.tint = originalTint;
                 }
-            });
-            
-            // 🌀 알파 펄스 (마지막 타격)
-            if (isLastHit) {
-                gsap.to(sprite, {
-                    alpha: 1.3,
-                    duration: 0.03,
-                    yoyo: true,
-                    repeat: 1
-                });
-            }
+            }, 50);
         }
     },
     
