@@ -19,6 +19,18 @@ const CardAnimations = {
     // 애니메이션 등록
     // ==========================================
     registerAnimations() {
+        // ⚔️ 베기 (Strike) - 기본 공격
+        this.registry['strike'] = {
+            name: '베기',
+            execute: this.strikeAnimation.bind(this)
+        };
+        
+        // 💥 강타 (Bash)
+        this.registry['bash'] = {
+            name: '강타',
+            execute: this.bashAnimation.bind(this)
+        };
+        
         // 🗡️ 연속 찌르기 (Flurry)
         this.registry['flurry'] = {
             name: '연속 찌르기',
@@ -32,6 +44,272 @@ const CardAnimations = {
         };
         
         console.log('[CardAnimations] 등록된 애니메이션:', Object.keys(this.registry));
+    },
+    
+    // ==========================================
+    // ⚔️ 베기 애니메이션 - DDOO Action 엔진 사용!
+    // ==========================================
+    strikeAnimation(options = {}) {
+        const {
+            target,
+            targetEl,
+            damage = 6,
+            onHit,
+            onComplete
+        } = options;
+        
+        return new Promise(async (resolve) => {
+            // 🎮 DDOO Action 엔진 사용
+            if (typeof DDOOAction !== 'undefined' && DDOOAction.initialized) {
+                console.log('[CardAnimations] 🎮 DDOO Action 엔진으로 베기 실행');
+                
+                const playerContainer = PlayerRenderer?.playerContainer;
+                const playerSprite = PlayerRenderer?.sprite;
+                
+                if (!playerContainer || !playerSprite) {
+                    return this.strikeAnimationFallback(options).then(resolve);
+                }
+                
+                const getHitPoint = () => {
+                    if (target && typeof EnemyRenderer !== 'undefined') {
+                        const enemyData = EnemyRenderer.sprites.get(target.pixiId || target.id);
+                        if (enemyData) {
+                            const bounds = enemyData.sprite.getBounds();
+                            return {
+                                x: enemyData.container.x,
+                                y: enemyData.container.y - bounds.height / 2,
+                                scale: enemyData.sprite.scale.x
+                            };
+                        }
+                    }
+                    return { x: playerContainer.x + 200, y: playerContainer.y - 60, scale: 1 };
+                };
+                
+                const baseX = playerContainer.x;
+                const baseY = playerContainer.y;
+                
+                const animOptions = {
+                    container: playerContainer,
+                    sprite: playerSprite,
+                    baseX,
+                    baseY,
+                    dir: 1,
+                    getHitPoint
+                };
+                
+                try {
+                    // 🏃 대시
+                    await DDOOAction.play('player.dash', animOptions);
+                    
+                    // ⚔️ 대검 베기
+                    const attackPromise = DDOOAction.play('player.heavy_slash', {
+                        ...animOptions,
+                        isRelative: true
+                    });
+                    
+                    // 타격 시점에 콜백
+                    setTimeout(() => {
+                        if (onHit) onHit(0, damage);
+                        
+                        // 적 피격 애니메이션
+                        if (target && typeof EnemyRenderer !== 'undefined') {
+                            const enemyData = EnemyRenderer.sprites.get(target.pixiId || target.id);
+                            if (enemyData) {
+                                DDOOAction.play('enemy.hit', {
+                                    container: enemyData.container,
+                                    sprite: enemyData.sprite,
+                                    baseX: enemyData.container.x,
+                                    baseY: enemyData.container.y,
+                                    dir: -1,
+                                    isRelative: true,
+                                    getHitPoint: () => getHitPoint()
+                                });
+                            }
+                        }
+                    }, 65);
+                    
+                    await attackPromise;
+                    await DDOOAction.delay(120);
+                    
+                    // 🏃 복귀
+                    await DDOOAction.play('player.return', animOptions);
+                    
+                    if (onComplete) onComplete();
+                    resolve();
+                    
+                } catch (e) {
+                    console.error('[CardAnimations] Strike 에러:', e);
+                    this.playerReturnFromAttack();
+                    if (onComplete) onComplete();
+                    resolve();
+                }
+                
+            } else {
+                return this.strikeAnimationFallback(options).then(resolve);
+            }
+        });
+    },
+    
+    // 베기 폴백
+    strikeAnimationFallback(options = {}) {
+        const { target, targetEl, damage = 6, onHit, onComplete } = options;
+        
+        return new Promise((resolve) => {
+            this.playerDashAttack(() => {
+                setTimeout(() => {
+                    if (onHit) onHit(0, damage);
+                    
+                    let targetX, targetY;
+                    if (target && typeof EnemyRenderer !== 'undefined') {
+                        const pos = EnemyRenderer.getEnemyPosition(target);
+                        if (pos) { targetX = pos.centerX; targetY = pos.centerY; }
+                    }
+                    if (!targetX && targetEl) {
+                        const rect = targetEl.getBoundingClientRect();
+                        targetX = rect.left + rect.width / 2;
+                        targetY = rect.top + rect.height / 2;
+                    }
+                    
+                    if (targetX && typeof VFX !== 'undefined') {
+                        VFX.slash(targetX, targetY, { color: '#ff4444', length: 200 });
+                    }
+                }, 50);
+                
+                setTimeout(() => {
+                    this.playerReturnFromAttack();
+                    if (onComplete) onComplete();
+                    resolve();
+                }, 300);
+            });
+        });
+    },
+    
+    // ==========================================
+    // 💥 강타 애니메이션 - DDOO Action 엔진 사용!
+    // ==========================================
+    bashAnimation(options = {}) {
+        const {
+            target,
+            targetEl,
+            damage = 15,
+            onHit,
+            onComplete
+        } = options;
+        
+        return new Promise(async (resolve) => {
+            if (typeof DDOOAction !== 'undefined' && DDOOAction.initialized) {
+                console.log('[CardAnimations] 🎮 DDOO Action 엔진으로 강타 실행');
+                
+                const playerContainer = PlayerRenderer?.playerContainer;
+                const playerSprite = PlayerRenderer?.sprite;
+                
+                if (!playerContainer || !playerSprite) {
+                    return this.bashAnimationFallback(options).then(resolve);
+                }
+                
+                const getHitPoint = () => {
+                    if (target && typeof EnemyRenderer !== 'undefined') {
+                        const enemyData = EnemyRenderer.sprites.get(target.pixiId || target.id);
+                        if (enemyData) {
+                            const bounds = enemyData.sprite.getBounds();
+                            return {
+                                x: enemyData.container.x,
+                                y: enemyData.container.y - bounds.height / 2,
+                                scale: enemyData.sprite.scale.x
+                            };
+                        }
+                    }
+                    return { x: playerContainer.x + 200, y: playerContainer.y - 60, scale: 1 };
+                };
+                
+                const animOptions = {
+                    container: playerContainer,
+                    sprite: playerSprite,
+                    baseX: playerContainer.x,
+                    baseY: playerContainer.y,
+                    dir: 1,
+                    getHitPoint
+                };
+                
+                try {
+                    await DDOOAction.play('player.dash', animOptions);
+                    
+                    const attackPromise = DDOOAction.play('player.bash', {
+                        ...animOptions,
+                        isRelative: true
+                    });
+                    
+                    setTimeout(() => {
+                        if (onHit) onHit(0, damage);
+                        
+                        if (target && typeof EnemyRenderer !== 'undefined') {
+                            const enemyData = EnemyRenderer.sprites.get(target.pixiId || target.id);
+                            if (enemyData) {
+                                DDOOAction.play('enemy.bash_hit', {
+                                    container: enemyData.container,
+                                    sprite: enemyData.sprite,
+                                    baseX: enemyData.container.x,
+                                    baseY: enemyData.container.y,
+                                    dir: -1,
+                                    isRelative: true,
+                                    getHitPoint: () => getHitPoint()
+                                });
+                            }
+                        }
+                    }, 55);
+                    
+                    await attackPromise;
+                    await DDOOAction.delay(150);
+                    await DDOOAction.play('player.return', animOptions);
+                    
+                    if (onComplete) onComplete();
+                    resolve();
+                    
+                } catch (e) {
+                    console.error('[CardAnimations] Bash 에러:', e);
+                    this.playerReturnFromAttack();
+                    if (onComplete) onComplete();
+                    resolve();
+                }
+                
+            } else {
+                return this.bashAnimationFallback(options).then(resolve);
+            }
+        });
+    },
+    
+    // 강타 폴백
+    bashAnimationFallback(options = {}) {
+        const { target, targetEl, damage = 15, onHit, onComplete } = options;
+        
+        return new Promise((resolve) => {
+            this.playerDashAttack(() => {
+                setTimeout(() => {
+                    if (onHit) onHit(0, damage);
+                    
+                    let targetX, targetY;
+                    if (target && typeof EnemyRenderer !== 'undefined') {
+                        const pos = EnemyRenderer.getEnemyPosition(target);
+                        if (pos) { targetX = pos.centerX; targetY = pos.centerY; }
+                    }
+                    if (!targetX && targetEl) {
+                        const rect = targetEl.getBoundingClientRect();
+                        targetX = rect.left + rect.width / 2;
+                        targetY = rect.top + rect.height / 2;
+                    }
+                    
+                    if (targetX && typeof VFX !== 'undefined') {
+                        VFX.impact(targetX, targetY, { color: '#ff6b6b', size: 150 });
+                    }
+                }, 50);
+                
+                setTimeout(() => {
+                    this.playerReturnFromAttack();
+                    if (onComplete) onComplete();
+                    resolve();
+                }, 400);
+            });
+        });
     },
     
     // ==========================================
