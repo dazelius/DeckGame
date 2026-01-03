@@ -3,37 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎬 JSON Animation Player - Shadow Deck</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <title>🎬 Animation Studio - FGO Style</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
         body {
             font-family: 'Noto Sans KR', sans-serif;
             background: #0a0a0f;
             color: #e0e0e0;
             min-height: 100vh;
+            overflow: hidden;
         }
-        
         .header {
-            background: linear-gradient(180deg, #1a1a2e 0%, #16162a 100%);
+            background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
             border-bottom: 2px solid #fbbf24;
-            padding: 12px 20px;
+            padding: 10px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
         }
-        
         .header h1 {
             font-family: 'Cinzel', serif;
             color: #fbbf24;
-            font-size: 1.3rem;
-            text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+            font-size: 1.2rem;
+            text-shadow: 0 0 15px rgba(251, 191, 36, 0.6);
         }
-        
         .header-btn {
             background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
             border: none;
@@ -43,114 +44,73 @@
             font-weight: bold;
             color: #000;
         }
-        
         .main-container {
             display: flex;
-            height: calc(100vh - 52px);
+            height: 100vh;
+            padding-top: 50px;
         }
-        
-        /* 왼쪽 패널 */
         .control-panel {
-            width: 300px;
-            background: #12121a;
+            width: 280px;
+            background: #0f0f18;
             border-right: 1px solid #2a2a3a;
             overflow-y: auto;
-            padding: 15px;
+            padding: 12px;
         }
-        
         .panel-section {
             background: #1a1a28;
             border: 1px solid #2a2a4a;
             border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 12px;
+            padding: 10px;
+            margin-bottom: 10px;
         }
-        
         .panel-section h3 {
             color: #fbbf24;
-            font-family: 'Cinzel', serif;
-            font-size: 0.9rem;
-            margin-bottom: 10px;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
             padding-bottom: 5px;
             border-bottom: 1px solid #3a3a5a;
         }
-        
-        .anim-list {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        
+        .anim-list { display: flex; flex-direction: column; gap: 4px; }
         .anim-item {
             background: #252535;
             border: 1px solid #3a3a5a;
-            padding: 10px 12px;
+            padding: 8px 10px;
             border-radius: 5px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.15s;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+            font-size: 0.8rem;
         }
-        
-        .anim-item:hover {
-            background: #353550;
-            border-color: #60a5fa;
-        }
-        
-        .anim-item.playing {
-            background: linear-gradient(90deg, #1e3a5f 0%, #252535 100%);
-            border-color: #60a5fa;
-        }
-        
+        .anim-item:hover { background: #353550; border-color: #60a5fa; }
+        .anim-item.playing { background: #1e3a5f; border-color: #60a5fa; }
         .anim-item .type {
-            font-size: 0.65rem;
-            padding: 2px 6px;
+            font-size: 0.6rem;
+            padding: 2px 5px;
             border-radius: 3px;
             text-transform: uppercase;
+            font-weight: bold;
         }
-        
-        .anim-item .type.player { background: #3b82f6; color: #fff; }
-        .anim-item .type.enemy { background: #ef4444; color: #fff; }
-        .anim-item .type.card { background: #a78bfa; color: #fff; }
-        
-        .anim-item .name {
-            flex: 1;
-            font-size: 0.85rem;
-        }
-        
-        .anim-item .duration {
-            color: #888;
-            font-size: 0.75rem;
-        }
-        
-        /* 스피드 컨트롤 */
+        .anim-item .type.player { background: #3b82f6; }
+        .anim-item .type.enemy { background: #ef4444; }
+        .anim-item .type.card { background: #a855f7; }
+        .anim-item .name { flex: 1; }
         .speed-control {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-top: 10px;
+            gap: 8px;
+            margin-top: 8px;
         }
-        
-        .speed-control label { color: #888; font-size: 0.8rem; }
+        .speed-control label { color: #888; font-size: 0.75rem; }
         .speed-control input { flex: 1; }
-        .speed-control .value { color: #60a5fa; font-size: 0.8rem; min-width: 40px; text-align: right; }
-        
-        /* 스테이지 */
+        .speed-control .value { color: #60a5fa; font-size: 0.75rem; }
         .stage-container {
             flex: 1;
             position: relative;
             background: #0a0a12;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
-        
-        #pixiContainer {
-            width: 100%;
-            height: 100%;
-        }
-        
+        #pixiContainer { width: 100%; height: 100%; }
         #vfxCanvas {
             position: absolute;
             top: 0;
@@ -160,179 +120,111 @@
             pointer-events: none;
             z-index: 10;
         }
-        
         .stage-overlay {
             position: absolute;
-            bottom: 20px;
-            left: 20px;
+            bottom: 15px;
+            left: 15px;
             background: rgba(0,0,0,0.9);
             border: 1px solid #3a3a5a;
-            border-radius: 8px;
-            padding: 12px 15px;
+            border-radius: 6px;
+            padding: 10px;
             font-family: monospace;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             z-index: 20;
         }
-        
-        .stat-row {
-            display: flex;
-            justify-content: space-between;
-            gap: 20px;
-            color: #888;
-            margin-bottom: 3px;
-        }
-        
+        .stat-row { display: flex; justify-content: space-between; gap: 15px; color: #666; margin-bottom: 2px; }
         .stat-row .value { color: #60a5fa; }
-        
-        /* 로그 패널 */
         .log-panel {
-            width: 280px;
-            background: #12121a;
+            width: 260px;
+            background: #0f0f18;
             border-left: 1px solid #2a2a3a;
             display: flex;
             flex-direction: column;
         }
-        
         .log-header {
-            padding: 10px 15px;
+            padding: 8px 12px;
             background: #1a1a28;
             border-bottom: 1px solid #2a2a4a;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: #fbbf24;
             display: flex;
             justify-content: space-between;
         }
-        
         .log-header button {
             background: #3a3a5a;
             border: none;
-            padding: 3px 8px;
+            padding: 2px 6px;
             border-radius: 3px;
             color: #888;
             cursor: pointer;
-            font-size: 0.7rem;
+            font-size: 0.65rem;
         }
-        
         .log-container {
             flex: 1;
             overflow-y: auto;
-            padding: 10px;
+            padding: 8px;
             font-family: monospace;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
         }
-        
-        .log-entry {
-            padding: 4px 0;
-            border-bottom: 1px solid #1a1a2a;
-        }
-        
+        .log-entry { padding: 3px 0; border-bottom: 1px solid #1a1a2a; }
         .log-entry.info { color: #60a5fa; }
         .log-entry.success { color: #34d399; }
         .log-entry.warn { color: #fbbf24; }
         .log-entry.error { color: #ef4444; }
         .log-entry.anim { color: #a78bfa; }
-        
-        .log-time { color: #555; margin-right: 6px; }
-        
-        /* JSON 뷰어 */
-        .json-viewer {
-            background: #0f0f18;
-            border-radius: 6px;
-            padding: 10px;
-            margin-top: 10px;
-            max-height: 200px;
-            overflow-y: auto;
-            font-family: monospace;
-            font-size: 0.7rem;
-            color: #888;
-            white-space: pre-wrap;
-        }
-        
-        .json-viewer .key { color: #a78bfa; }
-        .json-viewer .string { color: #34d399; }
-        .json-viewer .number { color: #60a5fa; }
+        .log-entry.vfx { color: #f472b6; }
+        .log-time { color: #444; margin-right: 5px; }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🎬 JSON Animation Player</h1>
+        <h1>🎬 Animation Studio - FGO Style</h1>
         <button class="header-btn" onclick="location.href='index.html'">🎮 게임으로</button>
     </div>
     
     <div class="main-container">
-        <!-- 왼쪽: JSON 애니메이션 목록 -->
         <div class="control-panel">
             <div class="panel-section">
-                <h3>📁 JSON Animations</h3>
-                <div id="animList" class="anim-list">
-                    <!-- 동적으로 채워짐 -->
-                </div>
+                <h3>📁 Animations</h3>
+                <div id="animList" class="anim-list"></div>
             </div>
-            
             <div class="panel-section">
-                <h3>⚙️ 설정</h3>
+                <h3>⚙️ Settings</h3>
                 <div class="speed-control">
-                    <label>속도</label>
-                    <input type="range" id="speedSlider" min="0.1" max="3" step="0.1" value="1" onchange="updateSpeed()">
+                    <label>Speed</label>
+                    <input type="range" id="speedSlider" min="0.1" max="2" step="0.1" value="1" onchange="updateSpeed()">
                     <span class="value" id="speedValue">1.0x</span>
                 </div>
-                <div class="speed-control">
-                    <label>VFX</label>
-                    <input type="checkbox" id="vfxToggle" checked>
-                </div>
-            </div>
-            
-            <div class="panel-section">
-                <h3>📋 현재 JSON</h3>
-                <div id="jsonViewer" class="json-viewer">선택된 애니메이션 없음</div>
             </div>
         </div>
         
-        <!-- 중앙: 스테이지 -->
         <div class="stage-container">
             <div id="pixiContainer"></div>
             <canvas id="vfxCanvas"></canvas>
-            
             <div class="stage-overlay" id="statsOverlay">
-                <div class="stat-row">
-                    <span>Player X:</span>
-                    <span class="value" id="playerX">0</span>
-                </div>
-                <div class="stat-row">
-                    <span>Player Scale:</span>
-                    <span class="value" id="playerScale">1.0</span>
-                </div>
-                <div class="stat-row">
-                    <span>Enemy X:</span>
-                    <span class="value" id="enemyX">0</span>
-                </div>
-                <div class="stat-row">
-                    <span>FPS:</span>
-                    <span class="value" id="fpsValue">60</span>
-                </div>
+                <div class="stat-row"><span>Player:</span><span class="value" id="playerPos">0, 0</span></div>
+                <div class="stat-row"><span>Enemy:</span><span class="value" id="enemyPos">0, 0</span></div>
+                <div class="stat-row"><span>FPS:</span><span class="value" id="fpsValue">60</span></div>
             </div>
         </div>
         
-        <!-- 오른쪽: 로그 -->
         <div class="log-panel">
             <div class="log-header">
-                <span>📜 실행 로그</span>
-                <button onclick="clearLog()">지우기</button>
+                <span>📜 Log</span>
+                <button onclick="clearLog()">Clear</button>
             </div>
             <div id="logContainer" class="log-container"></div>
         </div>
     </div>
 
     <script>
-        // ========== 전역 변수 ==========
-        let app = null;
-        let playerContainer, playerSprite;
-        let enemyContainer, enemySprite;
-        let vfxCanvas, vfxCtx;
+        // ==================== 전역 변수 ====================
+        let app, vfxCanvas, vfxCtx;
+        let playerContainer, playerSprite, enemyContainer, enemySprite;
+        let stageContainer; // 쉐이크용
         
         const config = {
             speed: 1,
-            vfx: true,
             playerBaseX: 0,
             enemyBaseX: 0,
             baseY: 0
@@ -345,24 +237,28 @@
             'card.strike', 'card.bash', 'card.flurry', 'card.flurryP'
         ];
         
-        // ========== 초기화 ==========
+        // VFX 파티클 풀
+        const particles = [];
+        let animationFrame = null;
+        
+        // ==================== 초기화 ====================
         document.addEventListener('DOMContentLoaded', async () => {
-            log('info', '🎬 Animation Player 초기화...');
+            log('info', '🎬 FGO-Style Animation Studio 초기화...');
             await initPixi();
             await loadAllAnimations();
             renderAnimList();
+            startVFXLoop();
             startUpdateLoop();
-            log('success', '✅ 준비 완료!');
+            log('success', '✅ 준비 완료! 애니메이션을 선택하세요.');
         });
         
         async function initPixi() {
             const container = document.getElementById('pixiContainer');
-            const width = container.clientWidth || 800;
+            const width = container.clientWidth || 900;
             const height = container.clientHeight || 600;
             
             app = new PIXI.Application({
-                width: width,
-                height: height,
+                width, height,
                 backgroundColor: 0x0a0a12,
                 antialias: true,
                 resolution: window.devicePixelRatio || 1,
@@ -370,48 +266,53 @@
             });
             container.appendChild(app.view);
             
-            // VFX 캔버스
             vfxCanvas = document.getElementById('vfxCanvas');
             vfxCanvas.width = width;
             vfxCanvas.height = height;
             vfxCtx = vfxCanvas.getContext('2d');
             
-            // 배경 그리기
-            drawBackground(width, height);
+            // 스테이지 컨테이너 (쉐이크용)
+            stageContainer = new PIXI.Container();
+            app.stage.addChild(stageContainer);
             
-            // 캐릭터 생성
+            drawBackground(width, height);
             await createCharacters(width, height);
             
-            log('info', `PixiJS 초기화 완료 (${width}x${height})`);
+            log('info', `Stage: ${width}x${height}`);
         }
         
         function drawBackground(width, height) {
             const bg = new PIXI.Graphics();
             
-            // 그라데이션 배경 (간단한 색상 블록)
-            bg.beginFill(0x1a1a28);
-            bg.drawRect(0, 0, width, height);
-            bg.endFill();
+            // 그라데이션 효과
+            for (let i = 0; i < 10; i++) {
+                const alpha = 0.03 + (i * 0.01);
+                bg.beginFill(0x1a1a2e, alpha);
+                bg.drawRect(0, height * (i / 10), width, height / 10);
+                bg.endFill();
+            }
             
-            // 바닥선
-            const groundY = height * 0.65;
-            bg.lineStyle(2, 0x3a3a5a, 0.5);
+            // 바닥 라인
+            const groundY = height * 0.7;
+            bg.lineStyle(2, 0x3a3a5a, 0.6);
             bg.moveTo(0, groundY);
             bg.lineTo(width, groundY);
             
-            // 중앙선
-            bg.lineStyle(1, 0x2a2a4a, 0.3);
-            bg.moveTo(width / 2, 0);
-            bg.lineTo(width / 2, height);
+            // 그리드
+            bg.lineStyle(1, 0x2a2a3a, 0.2);
+            for (let x = 0; x < width; x += 100) {
+                bg.moveTo(x, 0);
+                bg.lineTo(x, height);
+            }
             
-            app.stage.addChild(bg);
+            stageContainer.addChild(bg);
         }
         
         async function createCharacters(width, height) {
-            const groundY = height * 0.65;
+            const groundY = height * 0.7;
             config.baseY = groundY;
-            config.playerBaseX = width * 0.3;
-            config.enemyBaseX = width * 0.7;
+            config.playerBaseX = width * 0.28;
+            config.enemyBaseX = width * 0.72;
             
             // 플레이어
             playerContainer = new PIXI.Container();
@@ -419,17 +320,17 @@
             playerContainer.y = groundY;
             
             try {
-                const texture = await PIXI.Assets.load('hero.png');
-                playerSprite = new PIXI.Sprite(texture);
+                const tex = await PIXI.Assets.load('hero.png');
+                playerSprite = new PIXI.Sprite(tex);
                 playerSprite.anchor.set(0.5, 1);
-                playerSprite.scale.set(0.8);
-                log('success', '✅ hero.png 로드');
+                playerSprite.scale.set(1.0);
+                log('success', '✅ hero.png');
             } catch (e) {
-                playerSprite = createFallbackSprite(0x60a5fa, 'P');
-                log('warn', '⚠️ hero.png 폴백 사용');
+                playerSprite = createFallback(0x60a5fa, 'P');
+                log('warn', '⚠️ hero.png fallback');
             }
             playerContainer.addChild(playerSprite);
-            app.stage.addChild(playerContainer);
+            stageContainer.addChild(playerContainer);
             
             // 적
             enemyContainer = new PIXI.Container();
@@ -437,320 +338,212 @@
             enemyContainer.y = groundY;
             
             try {
-                const texture = await PIXI.Assets.load('goblinarcher.png');
-                enemySprite = new PIXI.Sprite(texture);
+                const tex = await PIXI.Assets.load('goblinarcher.png');
+                enemySprite = new PIXI.Sprite(tex);
                 enemySprite.anchor.set(0.5, 1);
-                enemySprite.scale.set(0.8);
-                log('success', '✅ goblinarcher.png 로드');
+                enemySprite.scale.set(1.0);
+                log('success', '✅ goblinarcher.png');
             } catch (e) {
-                enemySprite = createFallbackSprite(0xef4444, 'E');
-                log('warn', '⚠️ goblinarcher.png 폴백 사용');
+                enemySprite = createFallback(0xef4444, 'E');
+                log('warn', '⚠️ goblinarcher.png fallback');
             }
             enemyContainer.addChild(enemySprite);
-            app.stage.addChild(enemyContainer);
+            stageContainer.addChild(enemyContainer);
             
-            // 숨쉬기 애니메이션
             startBreathing();
         }
         
-        function createFallbackSprite(color, letter) {
-            const container = new PIXI.Container();
-            
+        function createFallback(color, letter) {
+            const c = new PIXI.Container();
             const body = new PIXI.Graphics();
             body.beginFill(color);
-            body.drawRoundedRect(-30, -100, 60, 100, 8);
+            body.drawRoundedRect(-35, -120, 70, 120, 10);
             body.endFill();
-            
-            const text = new PIXI.Text(letter, {
-                fontFamily: 'Arial',
-                fontSize: 32,
-                fill: 0xffffff,
-                fontWeight: 'bold'
-            });
+            const text = new PIXI.Text(letter, { fontFamily: 'Arial', fontSize: 40, fill: 0xffffff, fontWeight: 'bold' });
             text.anchor.set(0.5);
-            text.y = -50;
-            
-            container.addChild(body);
-            container.addChild(text);
-            return container;
+            text.y = -60;
+            c.addChild(body);
+            c.addChild(text);
+            return c;
         }
         
         function startBreathing() {
-            // 플레이어 숨쉬기
-            gsap.to(playerSprite.scale, {
-                y: 0.82,
-                duration: 1.5,
-                repeat: -1,
-                yoyo: true,
-                ease: 'sine.inOut'
-            });
-            
-            // 적 숨쉬기
-            gsap.to(enemySprite.scale, {
-                y: 0.82,
-                duration: 1.3,
-                repeat: -1,
-                yoyo: true,
-                ease: 'sine.inOut'
-            });
+            gsap.to(playerSprite.scale, { y: 1.02, duration: 1.8, repeat: -1, yoyo: true, ease: 'sine.inOut' });
+            gsap.to(enemySprite.scale, { y: 1.02, duration: 1.5, repeat: -1, yoyo: true, ease: 'sine.inOut' });
         }
         
-        // ========== JSON 로드 ==========
+        // ==================== JSON 로드 ====================
         async function loadAllAnimations() {
-            log('info', '📁 JSON 애니메이션 로드 중...');
-            
+            log('info', '📁 Loading animations...');
             for (const id of ANIM_FILES) {
                 try {
-                    const response = await fetch(`anim/${id}.json`);
-                    if (response.ok) {
-                        const data = await response.json();
-                        animCache.set(id, data);
-                        log('success', `✅ ${id}.json`);
+                    const res = await fetch(`anim/${id}.json`);
+                    if (res.ok) {
+                        animCache.set(id, await res.json());
+                        log('success', `✅ ${id}`);
                     }
                 } catch (e) {
-                    log('warn', `⚠️ ${id}.json 로드 실패`);
+                    log('warn', `⚠️ ${id} failed`);
                 }
             }
-            
-            log('info', `총 ${animCache.size}개 애니메이션 로드됨`);
+            log('info', `Loaded: ${animCache.size} animations`);
         }
         
         function renderAnimList() {
             const container = document.getElementById('animList');
             container.innerHTML = '';
-            
             animCache.forEach((data, id) => {
                 const type = id.split('.')[0];
                 const name = id.split('.')[1];
-                const duration = calculateDuration(data);
-                
                 const item = document.createElement('div');
                 item.className = 'anim-item';
                 item.dataset.id = id;
-                item.innerHTML = `
-                    <span class="type ${type}">${type}</span>
-                    <span class="name">${name}</span>
-                    <span class="duration">${duration}ms</span>
-                `;
+                item.innerHTML = `<span class="type ${type}">${type}</span><span class="name">${name}</span>`;
                 item.onclick = () => playAnimation(id);
                 container.appendChild(item);
             });
         }
         
-        function calculateDuration(data) {
-            if (data.keyframes) {
-                return data.keyframes.reduce((sum, kf) => sum + (kf.duration || 100), 0);
-            }
-            if (data.steps) {
-                return data.steps.reduce((sum, step) => sum + (step.delay || 0), 0);
-            }
-            return data.duration || 500;
-        }
-        
-        // ========== 애니메이션 재생 ==========
+        // ==================== 메인 재생 ====================
         async function playAnimation(id, skipReset = false) {
             const data = animCache.get(id);
-            if (!data) {
-                log('error', `❌ 애니메이션 없음: ${id}`);
-                return;
-            }
+            if (!data) { log('error', `❌ Not found: ${id}`); return; }
             
-            // UI 업데이트
             document.querySelectorAll('.anim-item').forEach(el => el.classList.remove('playing'));
             document.querySelector(`.anim-item[data-id="${id}"]`)?.classList.add('playing');
             
-            // JSON 표시
-            document.getElementById('jsonViewer').innerHTML = syntaxHighlight(JSON.stringify(data, null, 2));
+            log('anim', `▶️ ${id}`);
             
-            log('anim', `▶️ 재생: ${id}`);
-            
-            // 시퀀스 시작 시에만 캐릭터 리셋
             if (!skipReset) {
                 resetCharacters();
-                await delay(50);
+                await delay(100);
             }
             
             const target = data.target || (id.startsWith('enemy') ? 'enemy' : 'player');
             const container = target === 'player' ? playerContainer : enemyContainer;
             const sprite = target === 'player' ? playerSprite : enemySprite;
             const baseX = target === 'player' ? config.playerBaseX : config.enemyBaseX;
-            const direction = target === 'player' ? 1 : -1;
+            const dir = target === 'player' ? 1 : -1;
             
-            // 시퀀스 타입
             if (data.type === 'sequence' && data.steps) {
                 await playSequence(data);
-                return;
-            }
-            
-            // 키프레임 타입
-            if (data.keyframes) {
-                await playKeyframes(data, container, sprite, baseX, direction);
+            } else if (data.keyframes) {
+                await playKeyframes(data, container, sprite, baseX, dir, false);
             }
         }
         
+        // ==================== 시퀀스 재생 ====================
         async function playSequence(data) {
-            log('anim', `🎬 시퀀스 시작: ${data.id}`);
+            log('anim', `🎬 Sequence: ${data.id}`);
             
             for (const step of data.steps) {
-                // 딜레이
                 if (step.delay && !step.anim) {
                     await delay(step.delay / config.speed);
                     continue;
                 }
                 
-                // 애니메이션 재생 (리셋 없이)
                 if (step.anim) {
                     const animData = animCache.get(step.anim);
-                    if (!animData) {
-                        log('warn', `⚠️ 애니메이션 없음: ${step.anim}`);
-                        continue;
-                    }
+                    if (!animData) { log('warn', `⚠️ ${step.anim} not found`); continue; }
                     
                     log('info', `  → ${step.anim}`);
                     
                     const target = animData.target || (step.anim.startsWith('enemy') ? 'enemy' : 'player');
                     const container = target === 'player' ? playerContainer : enemyContainer;
                     const sprite = target === 'player' ? playerSprite : enemySprite;
-                    const baseX = target === 'player' ? config.playerBaseX : config.enemyBaseX;
-                    const direction = target === 'player' ? 1 : -1;
+                    const dir = target === 'player' ? 1 : -1;
                     
-                    // 스텝 딜레이
-                    if (step.delay) {
-                        await delay(step.delay / config.speed);
-                    }
+                    if (step.delay) await delay(step.delay / config.speed);
                     
-                    // 키프레임 재생 (현재 위치 기준)
                     if (animData.keyframes) {
-                        const promise = playKeyframesRelative(animData, container, sprite, direction);
-                        
-                        if (step.wait) {
-                            await promise;
-                        }
+                        const promise = playKeyframes(animData, container, sprite, container.x, dir, true);
+                        if (step.wait) await promise;
                     }
-                }
-                
-                // VFX
-                if (step.vfx && config.vfx) {
-                    showVFX(step.vfx, playerContainer);
                 }
             }
             
-            log('success', `✅ 시퀀스 완료: ${data.id}`);
+            log('success', `✅ Sequence done: ${data.id}`);
         }
         
-        // 절대 위치 기준 키프레임 (개별 재생용)
-        async function playKeyframes(data, container, sprite, baseX, direction) {
+        // ==================== 키프레임 재생 (FGO 스타일) ====================
+        async function playKeyframes(data, container, sprite, startX, dir, isRelative) {
             return new Promise((resolve) => {
+                const baseScale = 1.0;
+                const returnToBase = data.returnToBase;
+                const targetBaseX = dir === 1 ? config.playerBaseX : config.enemyBaseX;
+                
                 gsap.killTweensOf(container);
+                gsap.killTweensOf(sprite);
                 gsap.killTweensOf(sprite.scale);
                 
                 const tl = gsap.timeline({
                     timeScale: config.speed,
                     onComplete: () => {
-                        log('success', `✅ 완료: ${data.id}`);
-                        resolve();
-                    }
-                });
-                
-                data.keyframes.forEach((kf, index) => {
-                    if (index === 0) return;
-                    
-                    const duration = (kf.duration || 100) / 1000;
-                    const ease = kf.ease || 'power2.out';
-                    
-                    const props = {};
-                    
-                    if (kf.x !== undefined) props.x = baseX + (kf.x * direction);
-                    if (kf.y !== undefined) props.y = config.baseY + kf.y;
-                    
-                    if (kf.scaleX !== undefined || kf.scaleY !== undefined) {
-                        const scaleProps = {};
-                        if (kf.scaleX !== undefined) scaleProps.x = kf.scaleX * 0.8;
-                        if (kf.scaleY !== undefined) scaleProps.y = kf.scaleY * 0.8;
-                        tl.to(sprite.scale, { ...scaleProps, duration, ease }, '<');
-                    }
-                    
-                    if (kf.alpha !== undefined) props.alpha = kf.alpha;
-                    
-                    if (kf.rotation !== undefined) {
-                        tl.to(sprite, { rotation: kf.rotation * direction, duration, ease }, '<');
-                    }
-                    
-                    if (Object.keys(props).length > 0) {
-                        tl.to(container, { ...props, duration, ease }, index === 1 ? 0 : '>');
-                    }
-                    
-                    if (kf.vfx && config.vfx) {
-                        tl.call(() => showVFX(kf.vfx, container), null, '<');
-                    }
-                });
-            });
-        }
-        
-        // 상대 위치 기준 키프레임 (시퀀스 내 재생용)
-        async function playKeyframesRelative(data, container, sprite, direction) {
-            return new Promise((resolve) => {
-                // 현재 위치 저장
-                const currentX = container.x;
-                const currentY = container.y;
-                const baseScale = 0.8;
-                
-                // returnToBase가 있으면 원래 위치로 돌아가기
-                const returnToBase = data.returnToBase;
-                const targetBaseX = direction === 1 ? config.playerBaseX : config.enemyBaseX;
-                
-                const tl = gsap.timeline({
-                    timeScale: config.speed,
-                    onComplete: resolve
-                });
-                
-                data.keyframes.forEach((kf, index) => {
-                    if (index === 0) return;
-                    
-                    const duration = (kf.duration || 100) / 1000;
-                    const ease = kf.ease || 'power2.out';
-                    
-                    const props = {};
-                    
-                    // 위치 (현재 위치 기준 상대 이동)
-                    if (kf.x !== undefined) {
-                        if (returnToBase && index === data.keyframes.length - 1) {
-                            // 마지막 프레임이고 returnToBase면 원래 위치로
-                            props.x = targetBaseX;
+                        if (returnToBase) {
+                            gsap.to(container, {
+                                x: targetBaseX,
+                                duration: 0.25,
+                                ease: 'power2.inOut',
+                                onComplete: resolve
+                            });
                         } else {
-                            props.x = currentX + (kf.x * direction);
+                            resolve();
                         }
                     }
-                    if (kf.y !== undefined) props.y = currentY + kf.y;
-                    
-                    // 스케일
-                    if (kf.scaleX !== undefined || kf.scaleY !== undefined) {
-                        const scaleProps = {};
-                        if (kf.scaleX !== undefined) scaleProps.x = kf.scaleX * baseScale;
-                        if (kf.scaleY !== undefined) scaleProps.y = kf.scaleY * baseScale;
-                        tl.to(sprite.scale, { ...scaleProps, duration, ease }, '<');
-                    }
-                    
-                    if (kf.alpha !== undefined) props.alpha = kf.alpha;
-                    
-                    if (kf.rotation !== undefined) {
-                        tl.to(sprite, { rotation: kf.rotation * direction, duration, ease }, '<');
-                    }
-                    
-                    if (Object.keys(props).length > 0) {
-                        tl.to(container, { ...props, duration, ease }, index === 1 ? 0 : '>');
-                    }
-                    
-                    // VFX
-                    if (kf.vfx && config.vfx) {
-                        tl.call(() => showVFX(kf.vfx, container), null, '<');
-                    }
                 });
                 
-                // returnToBase 처리
-                if (returnToBase) {
-                    tl.to(container, { x: targetBaseX, duration: 0.2, ease: 'power2.out' });
-                }
+                data.keyframes.forEach((kf, idx) => {
+                    if (idx === 0) return;
+                    
+                    const dur = (kf.duration || 100) / 1000;
+                    const ease = kf.ease || 'power2.out';
+                    const pos = idx === 1 ? 0 : '>';
+                    
+                    // 컨테이너 이동
+                    if (kf.x !== undefined) {
+                        const targetX = isRelative ? startX + (kf.x * dir) : config.playerBaseX + (kf.x * dir);
+                        tl.to(container, { x: targetX, duration: dur, ease }, pos);
+                    }
+                    
+                    if (kf.y !== undefined) {
+                        tl.to(container, { y: config.baseY + kf.y, duration: dur, ease }, '<');
+                    }
+                    
+                    // 스케일 (스쿼시/스트레치)
+                    if (kf.scaleX !== undefined || kf.scaleY !== undefined) {
+                        const scaleX = (kf.scaleX ?? 1) * baseScale;
+                        const scaleY = (kf.scaleY ?? 1) * baseScale;
+                        tl.to(sprite.scale, { x: scaleX, y: scaleY, duration: dur, ease }, '<');
+                    }
+                    
+                    // 회전
+                    if (kf.rotation !== undefined) {
+                        tl.to(sprite, { rotation: kf.rotation * dir, duration: dur, ease }, '<');
+                    }
+                    
+                    // 알파
+                    if (kf.alpha !== undefined) {
+                        tl.to(sprite, { alpha: kf.alpha, duration: dur, ease }, '<');
+                    }
+                    
+                    // ========== VFX 트리거 ==========
+                    if (kf.vfx) {
+                        tl.call(() => triggerVFX(kf.vfx, container, dir), null, '<');
+                    }
+                    
+                    // ========== 히트스톱 ==========
+                    if (kf.hitstop) {
+                        tl.call(() => {
+                            tl.pause();
+                            setTimeout(() => tl.resume(), kf.hitstop / config.speed);
+                        }, null, '>');
+                    }
+                    
+                    // ========== 스크린쉐이크 ==========
+                    if (kf.shake) {
+                        tl.call(() => screenShake(kf.shake), null, '<');
+                    }
+                });
             });
         }
         
@@ -761,140 +554,427 @@
             gsap.killTweensOf(enemyContainer);
             gsap.killTweensOf(enemySprite);
             gsap.killTweensOf(enemySprite.scale);
+            gsap.killTweensOf(stageContainer);
             
             playerContainer.x = config.playerBaseX;
             playerContainer.y = config.baseY;
-            playerContainer.alpha = 1;
             playerSprite.rotation = 0;
-            playerSprite.scale.set(0.8);
+            playerSprite.scale.set(1.0);
+            playerSprite.alpha = 1;
             
             enemyContainer.x = config.enemyBaseX;
             enemyContainer.y = config.baseY;
-            enemyContainer.alpha = 1;
             enemySprite.rotation = 0;
-            enemySprite.scale.set(0.8);
+            enemySprite.scale.set(1.0);
+            enemySprite.alpha = 1;
             
+            stageContainer.x = 0;
+            stageContainer.y = 0;
+            
+            clearVFX();
             startBreathing();
         }
         
-        // ========== VFX ==========
-        function showVFX(type, container) {
-            if (!config.vfx) return;
-            
+        // ==================== VFX 시스템 (FGO 스타일) ====================
+        function triggerVFX(type, container, dir) {
             const x = container.x;
-            const y = container.y - 50;
+            const y = container.y - 60;
+            
+            log('vfx', `💥 ${type} at (${x.toFixed(0)}, ${y.toFixed(0)})`);
             
             switch (type) {
                 case 'slash':
-                    drawSlash(x, y);
+                    vfxSlash(x, y, dir);
                     break;
                 case 'hit':
-                    drawHit(x, y);
+                    vfxImpact(x, y);
                     break;
                 case 'spark':
-                    drawSparks(x, y);
+                    vfxSparks(x, y);
+                    break;
+                case 'dash':
+                    vfxDashTrail(container);
                     break;
             }
         }
         
-        function drawSlash(x, y) {
-            vfxCtx.save();
-            vfxCtx.strokeStyle = '#fff';
-            vfxCtx.lineWidth = 3;
-            vfxCtx.shadowColor = '#60a5fa';
+        // 슬래시 VFX (FGO 스타일)
+        function vfxSlash(x, y, dir) {
+            const slashCount = 2;
+            
+            for (let i = 0; i < slashCount; i++) {
+                setTimeout(() => {
+                    const angle = -30 + (i * 60);
+                    const length = 120 + Math.random() * 40;
+                    
+                    // 메인 슬래시
+                    spawnParticle({
+                        type: 'slash',
+                        x, y,
+                        angle: angle * dir,
+                        length: length,
+                        width: 8,
+                        color: '#ffffff',
+                        glow: '#60a5fa',
+                        life: 150
+                    });
+                    
+                    // 글로우 슬래시
+                    spawnParticle({
+                        type: 'slash',
+                        x, y,
+                        angle: angle * dir,
+                        length: length * 0.8,
+                        width: 20,
+                        color: 'rgba(96, 165, 250, 0.5)',
+                        glow: '#60a5fa',
+                        life: 100
+                    });
+                    
+                    // 스파크 파티클
+                    for (let j = 0; j < 8; j++) {
+                        spawnParticle({
+                            type: 'spark',
+                            x: x + (Math.random() - 0.5) * 60,
+                            y: y + (Math.random() - 0.5) * 60,
+                            vx: (Math.random() - 0.5) * 15,
+                            vy: (Math.random() - 0.5) * 15 - 3,
+                            size: 2 + Math.random() * 3,
+                            color: '#fbbf24',
+                            life: 200 + Math.random() * 100
+                        });
+                    }
+                }, i * 50);
+            }
+        }
+        
+        // 임팩트 VFX
+        function vfxImpact(x, y) {
+            // 중심 플래시
+            spawnParticle({
+                type: 'flash',
+                x, y,
+                size: 80,
+                color: '#ffffff',
+                life: 80
+            });
+            
+            // 링 이펙트
+            spawnParticle({
+                type: 'ring',
+                x, y,
+                size: 20,
+                maxSize: 100,
+                color: '#ef4444',
+                life: 200
+            });
+            
+            // 충격파 라인
+            for (let i = 0; i < 12; i++) {
+                const angle = (Math.PI * 2 / 12) * i;
+                spawnParticle({
+                    type: 'line',
+                    x, y,
+                    angle: angle * (180 / Math.PI),
+                    length: 30 + Math.random() * 50,
+                    width: 3,
+                    color: '#fbbf24',
+                    life: 150
+                });
+            }
+            
+            // 파편
+            for (let i = 0; i < 15; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 5 + Math.random() * 10;
+                spawnParticle({
+                    type: 'debris',
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 5,
+                    size: 3 + Math.random() * 5,
+                    color: i % 2 === 0 ? '#ef4444' : '#fbbf24',
+                    gravity: 0.3,
+                    life: 300 + Math.random() * 200
+                });
+            }
+            
+            screenShake(12);
+        }
+        
+        // 스파크 VFX
+        function vfxSparks(x, y) {
+            for (let i = 0; i < 20; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 3 + Math.random() * 8;
+                spawnParticle({
+                    type: 'spark',
+                    x: x + (Math.random() - 0.5) * 30,
+                    y: y + (Math.random() - 0.5) * 30,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    size: 2 + Math.random() * 4,
+                    color: Math.random() > 0.5 ? '#fbbf24' : '#ffffff',
+                    life: 150 + Math.random() * 150
+                });
+            }
+        }
+        
+        // 대시 트레일
+        function vfxDashTrail(container) {
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    spawnParticle({
+                        type: 'trail',
+                        x: container.x - i * 20,
+                        y: container.y - 50,
+                        size: 40 - i * 5,
+                        color: 'rgba(96, 165, 250, 0.3)',
+                        life: 150
+                    });
+                }, i * 20);
+            }
+        }
+        
+        // 파티클 스폰
+        function spawnParticle(config) {
+            particles.push({
+                ...config,
+                startLife: config.life,
+                startSize: config.size || 10,
+                startLength: config.length || 50,
+                born: performance.now()
+            });
+        }
+        
+        // VFX 렌더 루프
+        function startVFXLoop() {
+            function render() {
+                vfxCtx.clearRect(0, 0, vfxCanvas.width, vfxCanvas.height);
+                
+                const now = performance.now();
+                
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    const age = now - p.born;
+                    const progress = age / p.startLife;
+                    
+                    if (progress >= 1) {
+                        particles.splice(i, 1);
+                        continue;
+                    }
+                    
+                    const alpha = 1 - progress;
+                    
+                    vfxCtx.save();
+                    
+                    switch (p.type) {
+                        case 'slash':
+                            drawSlashParticle(p, alpha, progress);
+                            break;
+                        case 'spark':
+                            p.x += p.vx || 0;
+                            p.y += p.vy || 0;
+                            if (p.gravity) p.vy += p.gravity;
+                            drawSparkParticle(p, alpha);
+                            break;
+                        case 'flash':
+                            drawFlashParticle(p, alpha, progress);
+                            break;
+                        case 'ring':
+                            drawRingParticle(p, alpha, progress);
+                            break;
+                        case 'line':
+                            drawLineParticle(p, alpha, progress);
+                            break;
+                        case 'debris':
+                            p.x += p.vx;
+                            p.y += p.vy;
+                            p.vy += p.gravity;
+                            drawDebrisParticle(p, alpha);
+                            break;
+                        case 'trail':
+                            drawTrailParticle(p, alpha);
+                            break;
+                    }
+                    
+                    vfxCtx.restore();
+                }
+                
+                animationFrame = requestAnimationFrame(render);
+            }
+            render();
+        }
+        
+        function drawSlashParticle(p, alpha, progress) {
+            const rad = p.angle * Math.PI / 180;
+            const len = p.startLength * (1 - progress * 0.3);
+            
+            vfxCtx.translate(p.x, p.y);
+            vfxCtx.rotate(rad);
+            
+            // 글로우
+            if (p.glow) {
+                vfxCtx.shadowColor = p.glow;
+                vfxCtx.shadowBlur = 20;
+            }
+            
+            // 그라데이션 슬래시
+            const grad = vfxCtx.createLinearGradient(-len/2, 0, len/2, 0);
+            grad.addColorStop(0, 'transparent');
+            grad.addColorStop(0.3, p.color);
+            grad.addColorStop(0.7, p.color);
+            grad.addColorStop(1, 'transparent');
+            
+            vfxCtx.strokeStyle = grad;
+            vfxCtx.lineWidth = p.width * alpha;
+            vfxCtx.lineCap = 'round';
+            
+            vfxCtx.beginPath();
+            vfxCtx.moveTo(-len/2, 0);
+            vfxCtx.lineTo(len/2, 0);
+            vfxCtx.stroke();
+        }
+        
+        function drawSparkParticle(p, alpha) {
+            vfxCtx.fillStyle = p.color;
+            vfxCtx.globalAlpha = alpha;
+            vfxCtx.shadowColor = p.color;
+            vfxCtx.shadowBlur = 8;
+            
+            vfxCtx.beginPath();
+            vfxCtx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+            vfxCtx.fill();
+        }
+        
+        function drawFlashParticle(p, alpha, progress) {
+            const size = p.startSize * (1 + progress);
+            const grad = vfxCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size);
+            grad.addColorStop(0, `rgba(255,255,255,${alpha})`);
+            grad.addColorStop(0.5, `rgba(255,255,255,${alpha * 0.5})`);
+            grad.addColorStop(1, 'transparent');
+            
+            vfxCtx.fillStyle = grad;
+            vfxCtx.beginPath();
+            vfxCtx.arc(p.x, p.y, size, 0, Math.PI * 2);
+            vfxCtx.fill();
+        }
+        
+        function drawRingParticle(p, alpha, progress) {
+            const size = p.size + (p.maxSize - p.size) * progress;
+            vfxCtx.strokeStyle = p.color;
+            vfxCtx.lineWidth = 4 * alpha;
+            vfxCtx.globalAlpha = alpha;
+            vfxCtx.shadowColor = p.color;
             vfxCtx.shadowBlur = 15;
             
             vfxCtx.beginPath();
-            vfxCtx.moveTo(x - 40, y + 30);
-            vfxCtx.lineTo(x + 40, y - 30);
+            vfxCtx.arc(p.x, p.y, size, 0, Math.PI * 2);
             vfxCtx.stroke();
-            vfxCtx.restore();
-            
-            setTimeout(() => clearVFX(), 150);
         }
         
-        function drawHit(x, y) {
-            vfxCtx.save();
-            vfxCtx.fillStyle = '#ef4444';
-            vfxCtx.shadowColor = '#ef4444';
-            vfxCtx.shadowBlur = 20;
+        function drawLineParticle(p, alpha, progress) {
+            const rad = p.angle * Math.PI / 180;
+            const len = p.startLength * (1 - progress * 0.5);
+            const startOffset = p.startLength * progress * 0.3;
+            
+            vfxCtx.strokeStyle = p.color;
+            vfxCtx.lineWidth = p.width * alpha;
+            vfxCtx.globalAlpha = alpha;
+            vfxCtx.lineCap = 'round';
+            vfxCtx.shadowColor = p.color;
+            vfxCtx.shadowBlur = 8;
+            
+            const sx = p.x + Math.cos(rad) * startOffset;
+            const sy = p.y + Math.sin(rad) * startOffset;
+            const ex = p.x + Math.cos(rad) * (startOffset + len);
+            const ey = p.y + Math.sin(rad) * (startOffset + len);
             
             vfxCtx.beginPath();
-            vfxCtx.arc(x, y, 20, 0, Math.PI * 2);
-            vfxCtx.fill();
-            vfxCtx.restore();
-            
-            setTimeout(() => clearVFX(), 100);
+            vfxCtx.moveTo(sx, sy);
+            vfxCtx.lineTo(ex, ey);
+            vfxCtx.stroke();
         }
         
-        function drawSparks(x, y) {
-            for (let i = 0; i < 8; i++) {
-                const angle = (Math.PI * 2 / 8) * i;
-                const len = 20 + Math.random() * 20;
-                
-                vfxCtx.save();
-                vfxCtx.strokeStyle = '#fbbf24';
-                vfxCtx.lineWidth = 2;
-                vfxCtx.shadowColor = '#fbbf24';
-                vfxCtx.shadowBlur = 10;
-                
-                vfxCtx.beginPath();
-                vfxCtx.moveTo(x, y);
-                vfxCtx.lineTo(x + Math.cos(angle) * len, y + Math.sin(angle) * len);
-                vfxCtx.stroke();
-                vfxCtx.restore();
-            }
+        function drawDebrisParticle(p, alpha) {
+            vfxCtx.fillStyle = p.color;
+            vfxCtx.globalAlpha = alpha;
+            vfxCtx.shadowColor = p.color;
+            vfxCtx.shadowBlur = 5;
             
-            setTimeout(() => clearVFX(), 150);
+            vfxCtx.beginPath();
+            vfxCtx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+            vfxCtx.fill();
+        }
+        
+        function drawTrailParticle(p, alpha) {
+            const grad = vfxCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+            grad.addColorStop(0, p.color.replace('0.3', String(0.3 * alpha)));
+            grad.addColorStop(1, 'transparent');
+            
+            vfxCtx.fillStyle = grad;
+            vfxCtx.beginPath();
+            vfxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            vfxCtx.fill();
+        }
+        
+        // 스크린쉐이크
+        function screenShake(intensity) {
+            const duration = 150;
+            const startTime = performance.now();
+            
+            function shake() {
+                const elapsed = performance.now() - startTime;
+                const progress = elapsed / duration;
+                
+                if (progress >= 1) {
+                    stageContainer.x = 0;
+                    stageContainer.y = 0;
+                    return;
+                }
+                
+                const decay = 1 - progress;
+                const offsetX = (Math.random() - 0.5) * intensity * decay;
+                const offsetY = (Math.random() - 0.5) * intensity * decay;
+                
+                stageContainer.x = offsetX;
+                stageContainer.y = offsetY;
+                
+                requestAnimationFrame(shake);
+            }
+            shake();
         }
         
         function clearVFX() {
+            particles.length = 0;
             vfxCtx.clearRect(0, 0, vfxCanvas.width, vfxCanvas.height);
         }
         
-        // ========== 유틸 ==========
-        function delay(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-        }
+        // ==================== 유틸 ====================
+        function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
         
         function updateSpeed() {
             config.speed = parseFloat(document.getElementById('speedSlider').value);
             document.getElementById('speedValue').textContent = config.speed.toFixed(1) + 'x';
         }
         
-        function log(type, message) {
-            const container = document.getElementById('logContainer');
+        function log(type, msg) {
+            const c = document.getElementById('logContainer');
             const time = new Date().toLocaleTimeString('ko-KR', { hour12: false });
-            
             const entry = document.createElement('div');
             entry.className = `log-entry ${type}`;
-            entry.innerHTML = `<span class="log-time">${time}</span>${message}`;
-            container.appendChild(entry);
-            container.scrollTop = container.scrollHeight;
+            entry.innerHTML = `<span class="log-time">${time}</span>${msg}`;
+            c.appendChild(entry);
+            c.scrollTop = c.scrollHeight;
         }
         
-        function clearLog() {
-            document.getElementById('logContainer').innerHTML = '';
-        }
-        
-        function syntaxHighlight(json) {
-            return json
-                .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?)/g, (match) => {
-                    if (/:$/.test(match)) {
-                        return `<span class="key">${match}</span>`;
-                    }
-                    return `<span class="string">${match}</span>`;
-                })
-                .replace(/\b(-?\d+\.?\d*)\b/g, '<span class="number">$1</span>');
-        }
+        function clearLog() { document.getElementById('logContainer').innerHTML = ''; }
         
         function startUpdateLoop() {
             setInterval(() => {
-                if (!playerContainer || !enemyContainer) return;
-                
-                document.getElementById('playerX').textContent = playerContainer.x.toFixed(0);
-                document.getElementById('playerScale').textContent = playerSprite.scale.x.toFixed(2);
-                document.getElementById('enemyX').textContent = enemyContainer.x.toFixed(0);
+                if (!playerContainer) return;
+                document.getElementById('playerPos').textContent = `${playerContainer.x.toFixed(0)}, ${playerContainer.y.toFixed(0)}`;
+                document.getElementById('enemyPos').textContent = `${enemyContainer.x.toFixed(0)}, ${enemyContainer.y.toFixed(0)}`;
                 document.getElementById('fpsValue').textContent = Math.round(app.ticker.FPS);
             }, 100);
         }

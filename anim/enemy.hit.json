@@ -6,17 +6,10 @@
     "priority": 20,
     "duration": 250,
     "keyframes": [
-        { "x": 0, "scaleX": 1, "scaleY": 1, "tint": "0xffffff", "duration": 0 },
-        { "x": 20, "scaleX": 0.8, "scaleY": 1.2, "tint": "0xff4444", "duration": 40, "ease": "power4.out" },
-        { "x": 20, "scaleX": 0.8, "scaleY": 1.2, "tint": "0xff4444", "duration": 80 },
-        { "x": 0, "scaleX": 1, "scaleY": 1, "tint": "0xffffff", "duration": 130, "ease": "elastic.out(1,0.5)" }
-    ],
-    "events": {
-        "onStart": {
-            "vfx": "blood",
-            "shake": 8,
-            "sound": "hit"
-        }
-    }
+        { "x": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "duration": 0 },
+        { "x": 30, "scaleX": 0.85, "scaleY": 1.1, "alpha": 0.7, "duration": 30, "ease": "power4.out", "vfx": "hit" },
+        { "x": 50, "scaleX": 0.9, "scaleY": 1.05, "alpha": 0.8, "duration": 40, "ease": "power2.out" },
+        { "x": 40, "scaleX": 0.95, "scaleY": 1.02, "alpha": 0.9, "duration": 60, "ease": "power2.inOut" },
+        { "x": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "duration": 120, "ease": "power2.out" }
+    ]
 }
-

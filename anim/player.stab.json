@@ -1,23 +1,15 @@
 {
     "id": "player.stab",
-    "name": "플레이어 찌르기",
+    "name": "찌르기",
     "target": "player",
     "type": "once",
-    "priority": 10,
+    "priority": 12,
     "duration": 120,
     "keyframes": [
         { "x": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 0 },
-        { "x": -10, "scaleX": 0.95, "scaleY": 1.05, "rotation": -0.02, "duration": 30, "ease": "power2.in" },
-        { "x": 25, "scaleX": 1.1, "scaleY": 0.92, "rotation": 0.01, "duration": 30, "ease": "power4.out" },
-        { "x": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 60, "ease": "power2.out" }
-    ],
-    "events": {
-        "onPeak": {
-            "frame": 2,
-            "vfx": "stab",
-            "shake": 5,
-            "sound": "stab"
-        }
-    }
+        { "x": -10, "scaleX": 0.85, "scaleY": 1.1, "rotation": -0.05, "duration": 25, "ease": "power2.in" },
+        { "x": 40, "scaleX": 1.25, "scaleY": 0.8, "rotation": 0.1, "duration": 35, "ease": "power4.out", "vfx": "slash", "shake": 6 },
+        { "x": 20, "scaleX": 1.1, "scaleY": 0.9, "rotation": 0.05, "duration": 30, "ease": "power2.out" },
+        { "x": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 30, "ease": "power2.inOut" }
+    ]
 }
-
