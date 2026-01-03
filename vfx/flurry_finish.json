@@ -5,73 +5,70 @@
     "particles": [
         {
             "type": "flash",
-            "size": 180,
+            "size": 150,
             "color": "#ffffff",
-            "life": 80
+            "life": 70
         },
         {
             "type": "flash",
-            "size": 130,
+            "size": 100,
             "color": "#c4b5fd",
-            "life": 100
+            "life": 90
         },
         {
-            "type": "flash",
-            "size": 90,
-            "color": "#8b5cf6",
+            "type": "thrust",
+            "count": 3,
+            "angle": [-5, 0, 5],
+            "length": [550, 650],
+            "width": 8,
+            "color": "#ffffff",
+            "glow": "#a78bfa",
+            "life": 150
+        },
+        {
+            "type": "thrust",
+            "count": 3,
+            "angle": [-5, 0, 5],
+            "length": [480, 580],
+            "width": 4,
+            "color": "#e0e7ff",
+            "glow": "#8b5cf6",
             "life": 120
         },
         {
             "type": "thrust",
             "count": 3,
-            "angle": [-10, 0, 10],
+            "angle": [-5, 0, 5],
             "length": [400, 500],
-            "width": 14,
-            "color": "#e0e7ff",
-            "glow": "#8b5cf6",
-            "life": 180
-        },
-        {
-            "type": "thrust",
-            "count": 3,
-            "angle": [-10, 0, 10],
-            "length": [320, 400],
-            "width": 45,
-            "color": "rgba(139, 92, 246, 0.5)",
+            "width": 30,
+            "color": "rgba(139, 92, 246, 0.35)",
             "glow": "#7c3aed",
-            "life": 150
-        },
-        {
-            "type": "ring",
-            "size": 40,
-            "maxSize": 200,
-            "color": "#a78bfa",
-            "life": 220
+            "life": 100
         },
         {
             "type": "ring",
             "size": 30,
-            "maxSize": 140,
-            "color": "#c4b5fd",
-            "life": 180
+            "maxSize": 180,
+            "color": "#a78bfa",
+            "life": 200
         },
         {
             "type": "spark",
-            "count": 30,
-            "spread": 120,
-            "speed": [18, 45],
-            "size": [5, 14],
+            "count": 25,
+            "spread": 100,
+            "speed": [20, 45],
+            "size": [4, 12],
             "colors": ["#a78bfa", "#c4b5fd", "#f0abfc", "#ffffff"],
-            "life": [150, 280]
+            "life": [120, 220]
         },
         {
             "type": "line",
-            "count": 16,
-            "angleStep": 22.5,
-            "length": [70, 150],
-            "width": 5,
+            "count": 8,
+            "angleStep": 45,
+            "length": [80, 140],
+            "width": 3,
             "color": "#a78bfa",
-            "life": 150
+            "life": 120
         }
     ]
 }
