@@ -1,0 +1,16 @@
+{
+    "id": "spark",
+    "name": "스파크",
+    "particles": [
+        {
+            "type": "spark",
+            "count": 20,
+            "spread": 30,
+            "speed": [3, 11],
+            "size": [2, 6],
+            "colors": ["#fbbf24", "#ffffff"],
+            "life": [150, 300]
+        }
+    ]
+}
+

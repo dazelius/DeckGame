@@ -1,0 +1,16 @@
+{
+    "id": "dash",
+    "name": "대시 트레일",
+    "particles": [
+        {
+            "type": "trail",
+            "count": 5,
+            "delay": 20,
+            "offsetX": -20,
+            "size": [20, 40],
+            "color": "rgba(96, 165, 250, 0.3)",
+            "life": 150
+        }
+    ]
+}
+

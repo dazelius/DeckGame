@@ -1,0 +1,25 @@
+{
+    "id": "stab",
+    "name": "찌르기",
+    "particles": [
+        {
+            "type": "thrust",
+            "angle": 0,
+            "length": [80, 120],
+            "width": 6,
+            "color": "#ffffff",
+            "glow": "#60a5fa",
+            "life": 100
+        },
+        {
+            "type": "spark",
+            "count": 6,
+            "spread": 40,
+            "speed": [8, 15],
+            "size": [2, 4],
+            "color": "#60a5fa",
+            "life": [150, 250]
+        }
+    ]
+}
+

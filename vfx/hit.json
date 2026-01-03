@@ -1,0 +1,39 @@
+{
+    "id": "hit",
+    "name": "임팩트",
+    "shake": 12,
+    "particles": [
+        {
+            "type": "flash",
+            "size": 80,
+            "color": "#ffffff",
+            "life": 80
+        },
+        {
+            "type": "ring",
+            "size": 20,
+            "maxSize": 100,
+            "color": "#ef4444",
+            "life": 200
+        },
+        {
+            "type": "line",
+            "count": 12,
+            "angleStep": 30,
+            "length": [30, 80],
+            "width": 3,
+            "color": "#fbbf24",
+            "life": 150
+        },
+        {
+            "type": "debris",
+            "count": 15,
+            "speed": [5, 15],
+            "size": [3, 8],
+            "colors": ["#ef4444", "#fbbf24"],
+            "gravity": 0.3,
+            "life": [300, 500]
+        }
+    ]
+}
+
