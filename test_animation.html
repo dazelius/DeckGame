@@ -549,6 +549,10 @@
                 return this.cache.get(id) || null;
             },
             
+            has(id) {
+                return this.cache.has(id);
+            },
+            
             async preload(ids) {
                 await Promise.all(ids.map(id => this.load(id)));
             }
@@ -640,8 +644,8 @@
             // 배경 그리드
             drawBackground();
             
-            // 캐릭터 생성
-            createCharacters(width, height);
+            // 캐릭터 생성 (스프라이트 로드 대기)
+            await createCharacters(width, height);
             
             // 리사이즈 핸들러
             window.addEventListener('resize', () => {
@@ -691,7 +695,7 @@
         }
         
         // 캐릭터 생성
-        function createCharacters(width, height) {
+        async function createCharacters(width, height) {
             const groundY = height * 0.65;
             config.baseY = groundY;
             
@@ -701,8 +705,16 @@
             playerContainer.y = groundY;
             config.playerBaseX = playerContainer.x;
             
-            // 플레이어 스프라이트 (임시 그래픽)
-            playerSprite = createCharacterGraphic(0x60a5fa, '🧙', 'PLAYER');
+            // 플레이어 스프라이트 (실제 이미지 로드)
+            try {
+                const playerTexture = await PIXI.Assets.load('player.png');
+                playerSprite = new PIXI.Sprite(playerTexture);
+                playerSprite.anchor.set(0.5, 1);
+                playerSprite.scale.set(0.8);
+            } catch (e) {
+                console.warn('[Sprite] player.png 로드 실패, 폴백 사용');
+                playerSprite = createCharacterGraphic(0x60a5fa, '🧙', 'PLAYER');
+            }
             playerContainer.addChild(playerSprite);
             app.stage.addChild(playerContainer);
             
@@ -712,13 +724,23 @@
             enemyContainer.y = groundY;
             config.enemyBaseX = enemyContainer.x;
             
-            // 적 스프라이트
-            enemySprite = createCharacterGraphic(0xef4444, '👹', 'ENEMY');
+            // 적 스프라이트 (실제 이미지 로드)
+            try {
+                const enemyTexture = await PIXI.Assets.load('goblin_archer.png');
+                enemySprite = new PIXI.Sprite(enemyTexture);
+                enemySprite.anchor.set(0.5, 1);
+                enemySprite.scale.set(0.8);
+            } catch (e) {
+                console.warn('[Sprite] goblin_archer.png 로드 실패, 폴백 사용');
+                enemySprite = createCharacterGraphic(0xef4444, '👹', 'ENEMY');
+            }
             enemyContainer.addChild(enemySprite);
             app.stage.addChild(enemyContainer);
             
             // 숨쉬기 애니메이션 시작
             startBreathing();
+            
+            log('success', '캐릭터 스프라이트 로드 완료');
         }
         
         // 캐릭터 그래픽 생성 (PixiJS 7 스타일)
