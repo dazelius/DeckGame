@@ -55,6 +55,18 @@ const CardAnimations = {
             execute: this.dirtyStrikePlusAnimation.bind(this)
         };
         
+        // 💨 닷지 (Dodge) - 민첩한 회피!
+        this.registry['dodge'] = {
+            name: '닷지',
+            execute: this.dodgeAnimation.bind(this)
+        };
+        
+        // 💨 닷지+ (Dodge+)
+        this.registry['dodgeP'] = {
+            name: '닷지+',
+            execute: this.dodgePlusAnimation.bind(this)
+        };
+        
         console.log('[CardAnimations] 등록된 애니메이션:', Object.keys(this.registry));
     },
     
@@ -1092,6 +1104,81 @@ const CardAnimations = {
             ...options,
             damage: options.damage || 7
         });
+    },
+    
+    // ==========================================
+    // 💨 닷지 애니메이션 - 민첩한 회피!
+    // ==========================================
+    dodgeAnimation(options = {}) {
+        const { onComplete } = options;
+        
+        return new Promise(async (resolve) => {
+            // 🎮 DDOO Action 엔진 사용
+            if (typeof DDOOAction !== 'undefined' && DDOOAction.initialized) {
+                console.log('[CardAnimations] 💨 닷지 - 민첩한 회피!');
+                
+                const playerContainer = PlayerRenderer?.playerContainer;
+                const playerSprite = PlayerRenderer?.sprite;
+                
+                if (!playerContainer || !playerSprite) {
+                    console.warn('[CardAnimations] PlayerRenderer 없음, 폴백 사용');
+                    return this.dodgeFallback(options).then(resolve);
+                }
+                
+                const baseX = playerContainer.x;
+                const baseY = playerContainer.y;
+                
+                try {
+                    await DDOOAction.play('card.dodge', {
+                        container: playerContainer,
+                        sprite: playerSprite,
+                        baseX,
+                        baseY,
+                        dir: 1,
+                        isRelative: false
+                    });
+                    
+                    console.log('[CardAnimations] 💨 닷지 완료!');
+                    if (onComplete) onComplete();
+                    resolve();
+                    
+                } catch (e) {
+                    console.error('[CardAnimations] 닷지 오류:', e);
+                    this.dodgeFallback(options).then(resolve);
+                }
+                
+            } else {
+                this.dodgeFallback(options).then(resolve);
+            }
+        });
+    },
+    
+    // 닷지 폴백
+    dodgeFallback(options) {
+        const { onComplete } = options;
+        
+        return new Promise((resolve) => {
+            // 기존 VFX 사용
+            if (typeof VFX !== 'undefined') {
+                const playerPos = typeof getPlayerScreenPosition === 'function' 
+                    ? getPlayerScreenPosition() 
+                    : null;
+                    
+                if (playerPos?.valid) {
+                    VFX.smoke(playerPos.centerX, playerPos.centerY, {
+                        color: '#667788', size: 150, duration: 700, count: 12
+                    });
+                }
+            }
+            
+            if (onComplete) onComplete();
+            resolve();
+        });
+    },
+    
+    // 💨 닷지+ 애니메이션
+    dodgePlusAnimation(options = {}) {
+        return this.dodgeAnimation(options);
     }
 };
 

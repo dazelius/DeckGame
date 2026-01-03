@@ -1,0 +1,10 @@
+{
+    "id": "card.dodge",
+    "name": "닷지",
+    "type": "sequence",
+    "description": "옆으로 민첩하게 피하며 연막을 남긴다",
+    "steps": [
+        { "anim": "player.dodge", "wait": true }
+    ]
+}
+
