@@ -1,51 +1,82 @@
 {
     "id": "critical",
     "name": "크리티컬",
-    "shake": 15,
-    "hitstop": 80,
+    "shake": 25,
     "particles": [
         {
             "type": "flash",
-            "size": 120,
+            "size": 200,
+            "color": "#ffffff",
+            "life": 80
+        },
+        {
+            "type": "flash",
+            "size": 150,
             "color": "#fbbf24",
-            "life": 100
+            "life": 120
         },
         {
             "type": "slash",
-            "count": 3,
-            "delay": 30,
-            "angle": [-45, 0, 45],
-            "length": [150, 180],
-            "width": 10,
+            "count": 5,
+            "delay": 20,
+            "angle": [-60, -30, 0, 30, 60],
+            "length": [250, 350],
+            "width": 15,
             "color": "#ffffff",
             "glow": "#fbbf24",
-            "life": 180
+            "life": 220
+        },
+        {
+            "type": "slash",
+            "count": 5,
+            "delay": 20,
+            "angle": [-60, -30, 0, 30, 60],
+            "length": [200, 280],
+            "width": 35,
+            "color": "rgba(251, 191, 36, 0.6)",
+            "glow": "#f59e0b",
+            "life": 150
+        },
+        {
+            "type": "ring",
+            "size": 40,
+            "maxSize": 250,
+            "color": "#fbbf24",
+            "life": 300
         },
         {
             "type": "ring",
             "size": 30,
-            "maxSize": 150,
+            "maxSize": 180,
+            "color": "#ffffff",
+            "life": 250
+        },
+        {
+            "type": "line",
+            "count": 24,
+            "angleStep": 15,
+            "length": [80, 160],
+            "width": 5,
             "color": "#fbbf24",
             "life": 250
         },
         {
             "type": "spark",
-            "count": 25,
-            "spread": 80,
-            "speed": [8, 20],
-            "size": [3, 7],
-            "colors": ["#fbbf24", "#ffffff", "#f59e0b"],
-            "life": [250, 400]
+            "count": 50,
+            "spread": 150,
+            "speed": [15, 35],
+            "size": [5, 15],
+            "colors": ["#fbbf24", "#ffffff", "#f59e0b", "#fcd34d"],
+            "life": [300, 600]
         },
         {
             "type": "debris",
-            "count": 20,
-            "speed": [8, 18],
-            "size": [4, 10],
-            "colors": ["#fbbf24", "#ef4444"],
-            "gravity": 0.4,
-            "life": [400, 600]
+            "count": 35,
+            "speed": [12, 30],
+            "size": [5, 15],
+            "colors": ["#fbbf24", "#ef4444", "#f59e0b"],
+            "gravity": 0.5,
+            "life": [500, 800]
         }
     ]
 }
-

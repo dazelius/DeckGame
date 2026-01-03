@@ -2,27 +2,27 @@
     "id": "card.flurryP",
     "name": "연속 찌르기+",
     "type": "sequence",
-    "priority": 15,
-    "description": "4회 연속 찌르기 공격 (강화)",
+    "target": "player",
+    "priority": 18,
+    "description": "초고속 5연타: 대시 → 찌르기x5 → 피니시 → 복귀",
     "steps": [
         { "anim": "player.dash", "wait": true },
-        { "anim": "player.stab", "wait": true, "callback": "onHit", "callbackArg": 0 },
-        { "anim": "enemy.hit", "wait": false },
+        { "delay": 15 },
+        { "anim": "player.stab", "wait": false },
+        { "anim": "enemy.hit", "wait": true, "delay": 25 },
         { "delay": 60 },
-        { "anim": "player.stab", "wait": true, "callback": "onHit", "callbackArg": 1 },
-        { "anim": "enemy.hit", "wait": false },
+        { "anim": "player.stab", "wait": false },
+        { "anim": "enemy.hit", "wait": true, "delay": 25 },
         { "delay": 60 },
-        { "anim": "player.stab", "wait": true, "callback": "onHit", "callbackArg": 2 },
-        { "anim": "enemy.hit", "wait": false },
+        { "anim": "player.stab", "wait": false },
+        { "anim": "enemy.hit", "wait": true, "delay": 25 },
         { "delay": 60 },
-        { "anim": "player.stab", "wait": true, "callback": "onHit", "callbackArg": 3 },
-        { "anim": "enemy.hit", "wait": false },
-        { "delay": 80 },
+        { "anim": "player.stab", "wait": false },
+        { "anim": "enemy.hit", "wait": true, "delay": 25 },
+        { "delay": 60 },
+        { "anim": "player.attack", "wait": false },
+        { "anim": "enemy.hit", "wait": true, "delay": 40 },
+        { "delay": 200 },
         { "anim": "player.return", "wait": true }
-    ],
-    "vfx": {
-        "color": "#818cf8",
-        "hitNumbers": true
-    }
+    ]
 }
-

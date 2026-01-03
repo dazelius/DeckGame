@@ -4,20 +4,13 @@
     "target": "enemy",
     "type": "once",
     "priority": 10,
-    "duration": 200,
+    "duration": 300,
     "keyframes": [
-        { "x": 0, "scaleX": 1, "scaleY": 1, "duration": 0 },
-        { "x": 10, "scaleX": 1.05, "scaleY": 0.95, "duration": 50, "ease": "power2.in" },
-        { "x": -40, "scaleX": 1.15, "scaleY": 0.88, "duration": 80, "ease": "power4.out" },
-        { "x": 0, "scaleX": 1, "scaleY": 1, "duration": 70, "ease": "power2.out" }
-    ],
-    "events": {
-        "onPeak": {
-            "frame": 2,
-            "vfx": "slash",
-            "shake": 10,
-            "sound": "enemy_attack"
-        }
-    }
+        { "x": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 0 },
+        { "x": 30, "scaleX": 0.75, "scaleY": 1.25, "rotation": 0.15, "duration": 60, "ease": "power2.in" },
+        { "x": -80, "scaleX": 1.4, "scaleY": 0.7, "rotation": -0.25, "duration": 50, "ease": "power4.out", "vfx": "slash", "shake": 15, "hitstop": 80 },
+        { "x": -50, "scaleX": 1.15, "scaleY": 0.85, "rotation": -0.1, "duration": 60, "ease": "power2.out" },
+        { "x": -20, "scaleX": 1.05, "scaleY": 0.95, "rotation": -0.03, "duration": 60, "ease": "power2.inOut" },
+        { "x": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 70, "ease": "power2.out" }
+    ]
 }
-

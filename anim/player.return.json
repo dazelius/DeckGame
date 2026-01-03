@@ -4,11 +4,11 @@
     "target": "player",
     "type": "once",
     "priority": 5,
-    "duration": 300,
+    "duration": 350,
     "returnToBase": true,
     "keyframes": [
-        { "x": 0, "scaleX": 1.1, "scaleY": 0.92, "duration": 0 },
-        { "x": -30, "scaleX": 0.95, "scaleY": 1.02, "duration": 80, "ease": "power2.in" },
-        { "x": 0, "scaleX": 1, "scaleY": 1, "duration": 220, "ease": "power2.out" }
+        { "x": 0, "scaleX": 1.2, "scaleY": 0.85, "rotation": 0.05, "duration": 0 },
+        { "x": -50, "scaleX": 0.9, "scaleY": 1.08, "rotation": -0.03, "duration": 100, "ease": "power2.in" },
+        { "x": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 250, "ease": "power2.out" }
     ]
 }

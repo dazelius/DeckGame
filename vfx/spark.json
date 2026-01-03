@@ -1,16 +1,29 @@
 {
     "id": "spark",
     "name": "스파크",
+    "shake": 3,
     "particles": [
         {
+            "type": "flash",
+            "size": 40,
+            "color": "#fbbf24",
+            "life": 50
+        },
+        {
             "type": "spark",
-            "count": 20,
-            "spread": 30,
-            "speed": [3, 11],
-            "size": [2, 6],
-            "colors": ["#fbbf24", "#ffffff"],
-            "life": [150, 300]
+            "count": 35,
+            "spread": 60,
+            "speed": [8, 20],
+            "size": [3, 10],
+            "colors": ["#fbbf24", "#ffffff", "#f59e0b", "#fcd34d"],
+            "life": [200, 400]
+        },
+        {
+            "type": "ring",
+            "size": 15,
+            "maxSize": 60,
+            "color": "#fbbf24",
+            "life": 120
         }
     ]
 }
-
