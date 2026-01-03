@@ -550,6 +550,23 @@ const DebugSystem = {
             </div>
             
             <div class="debug-section">
+                <h3>🔧 개발자 테스트 도구</h3>
+                <div class="debug-tool-row">
+                    <button class="debug-btn" onclick="window.open('test_animation.html', '_blank')" style="background: linear-gradient(180deg, #8b5cf6 0%, #6d28d9 100%);">
+                        🎬 애니메이션 테스트
+                    </button>
+                    <button class="debug-btn" onclick="window.open('testvfx.html', '_blank')" style="background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);">
+                        ✨ VFX 테스트
+                    </button>
+                </div>
+                <div class="debug-tool-row">
+                    <button class="debug-btn" onclick="window.open('cardtest.html', '_blank')">🃏 카드 테스트</button>
+                    <button class="debug-btn" onclick="window.open('memory.html', '_blank')">🧠 메모리 테스트</button>
+                </div>
+                <div class="debug-hint">별도 창에서 테스트 도구를 열어 사용할 수 있습니다</div>
+            </div>
+            
+            <div class="debug-section">
                 <h3>⚠️ 위험 도구</h3>
                 <div class="debug-tool-row">
                     <button class="debug-btn danger" onclick="DebugSystem.resetAllData()">전체 데이터 초기화</button>
