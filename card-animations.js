@@ -94,18 +94,26 @@ const CardAnimations = {
         const baseX = playerContainer.x;
         const baseY = playerContainer.y;
         
+        // 🎯 적 컨테이너/스프라이트 가져오기 (dashToTarget용!)
+        let targetContainer = null;
+        let targetSprite = null;
+        if (target && typeof EnemyRenderer !== 'undefined') {
+            const enemyData = EnemyRenderer.sprites.get(target.pixiId || target.id);
+            if (enemyData) {
+                targetContainer = enemyData.container;
+                targetSprite = enemyData.sprite;
+            }
+        }
+        
         // 타격점 계산 함수
         const getHitPoint = () => {
-            if (target && typeof EnemyRenderer !== 'undefined') {
-                const enemyData = EnemyRenderer.sprites.get(target.pixiId || target.id);
-                if (enemyData) {
-                    const bounds = enemyData.sprite.getBounds();
-                    return {
-                        x: enemyData.container.x,
-                        y: enemyData.container.y - bounds.height / 2,
-                        scale: enemyData.sprite.scale.x
-                    };
-                }
+            if (targetContainer && targetSprite) {
+                const bounds = targetSprite.getBounds();
+                return {
+                    x: targetContainer.x,
+                    y: targetContainer.y - bounds.height / 2,
+                    scale: targetSprite.scale.x
+                };
             }
             return { x: baseX + 200, y: baseY - 60, scale: 1 };
         };
@@ -120,6 +128,9 @@ const CardAnimations = {
                 baseX,
                 baseY,
                 dir: 1,
+                // 🎯 적 정보 전달 (dashToTarget용!)
+                targetContainer,
+                targetSprite,
                 getHitPoint,
                 
                 // 🎯 대미지 콜백 - JSON에서 정의된 타이밍에 호출됨!
@@ -132,10 +143,14 @@ const CardAnimations = {
                     }
                     
                     // 🎬 DDOOAction을 통한 적 피격 애니메이션! (배열로 랜덤!)
-                    if (target && typeof DDOOAction !== 'undefined') {
+                    if (target && typeof DDOOAction !== 'undefined' && targetContainer && targetSprite) {
                         DDOOAction.play(['enemy.hit_left', 'enemy.hit_right'], {
-                            target: target,
-                            targetEl: targetEl
+                            container: targetContainer,
+                            sprite: targetSprite,
+                            baseX: targetContainer.x,
+                            baseY: targetContainer.y,
+                            dir: -1,  // 적은 왼쪽 방향
+                            isRelative: true
                         }).catch(e => console.warn('[CardAnimations] 히트 애님 실패:', e));
                     }
                     
