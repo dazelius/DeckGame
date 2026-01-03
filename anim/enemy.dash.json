@@ -4,10 +4,19 @@
     "target": "enemy",
     "type": "once",
     "priority": 15,
-    "duration": 200,
+    "duration": 280,
     "keyframes": [
-        { "x": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 0 },
-        { "x": 30, "scaleX": 0.7, "scaleY": 1.3, "rotation": 0.1, "duration": 50, "ease": "power2.in" },
-        { "x": -300, "scaleX": 1.25, "scaleY": 0.8, "rotation": -0.08, "duration": 150, "ease": "power3.out", "vfx": "dash" }
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 0 },
+        
+        { "x": 5, "y": 3, "scaleX": 0.97, "scaleY": 1.03, "rotation": 0.02, "duration": 30, "ease": "power1.out" },
+        { "x": 15, "y": 8, "scaleX": 0.90, "scaleY": 1.10, "rotation": 0.05, "duration": 40, "ease": "power2.in" },
+        { "x": 25, "y": 15, "scaleX": 0.82, "scaleY": 1.18, "rotation": 0.08, "duration": 35, "ease": "power2.in" },
+        
+        { "x": -30, "y": -5, "scaleX": 1.05, "scaleY": 0.95, "rotation": -0.02, "duration": 20, "ease": "power3.out", "vfx": "dash" },
+        { "x": -120, "y": -10, "scaleX": 1.15, "scaleY": 0.88, "rotation": -0.05, "duration": 35, "ease": "power3.out" },
+        { "x": -220, "y": -8, "scaleX": 1.18, "scaleY": 0.85, "rotation": -0.06, "duration": 40, "ease": "power2.out" },
+        { "x": -280, "y": -5, "scaleX": 1.15, "scaleY": 0.88, "rotation": -0.04, "duration": 35, "ease": "power2.out" },
+        { "x": -310, "y": -2, "scaleX": 1.10, "scaleY": 0.92, "rotation": -0.02, "duration": 25, "ease": "power2.out" },
+        { "x": -320, "y": 0, "scaleX": 1.05, "scaleY": 0.96, "rotation": -0.01, "duration": 20, "ease": "power2.out" }
     ]
 }

@@ -4,13 +4,22 @@
     "target": "enemy",
     "type": "once",
     "priority": 20,
-    "duration": 350,
+    "duration": 450,
     "keyframes": [
-        { "x": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 0 },
-        { "x": 50, "scaleX": 0.65, "scaleY": 1.35, "alpha": 0.4, "rotation": 0.2, "duration": 35, "ease": "power4.out", "vfx": "hit" },
-        { "x": 80, "scaleX": 0.75, "scaleY": 1.2, "alpha": 0.55, "rotation": 0.15, "duration": 50, "ease": "power2.out" },
-        { "x": 60, "scaleX": 0.85, "scaleY": 1.1, "alpha": 0.7, "rotation": 0.08, "duration": 70, "ease": "power2.inOut" },
-        { "x": 30, "scaleX": 0.95, "scaleY": 1.03, "alpha": 0.85, "rotation": 0.03, "duration": 80, "ease": "power2.out" },
-        { "x": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 115, "ease": "power2.out" }
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 0 },
+        
+        { "x": 18, "y": -4, "scaleX": 0.85, "scaleY": 1.15, "alpha": 0.7, "rotation": 0.08, "duration": 22, "ease": "power4.out", "vfx": "hit" },
+        { "x": 40, "y": -6, "scaleX": 0.78, "scaleY": 1.22, "alpha": 0.5, "rotation": 0.14, "duration": 28, "ease": "power3.out" },
+        { "x": 58, "y": -4, "scaleX": 0.75, "scaleY": 1.25, "alpha": 0.45, "rotation": 0.17, "duration": 32, "ease": "power2.out" },
+        { "x": 68, "y": 0, "scaleX": 0.78, "scaleY": 1.22, "alpha": 0.5, "rotation": 0.15, "duration": 28, "ease": "power2.out" },
+        
+        { "x": 64, "y": 2, "scaleX": 0.82, "scaleY": 1.18, "alpha": 0.55, "rotation": 0.13, "duration": 32, "ease": "power2.inOut" },
+        { "x": 56, "y": 3, "scaleX": 0.86, "scaleY": 1.14, "alpha": 0.62, "rotation": 0.10, "duration": 38, "ease": "power2.inOut" },
+        { "x": 46, "y": 3, "scaleX": 0.90, "scaleY": 1.10, "alpha": 0.70, "rotation": 0.07, "duration": 42, "ease": "power2.inOut" },
+        { "x": 35, "y": 2, "scaleX": 0.93, "scaleY": 1.07, "alpha": 0.78, "rotation": 0.05, "duration": 45, "ease": "power2.out" },
+        { "x": 24, "y": 1, "scaleX": 0.96, "scaleY": 1.04, "alpha": 0.85, "rotation": 0.03, "duration": 45, "ease": "power2.out" },
+        { "x": 14, "y": 0, "scaleX": 0.98, "scaleY": 1.02, "alpha": 0.92, "rotation": 0.01, "duration": 40, "ease": "power2.out" },
+        { "x": 5, "y": 0, "scaleX": 0.99, "scaleY": 1.01, "alpha": 0.97, "rotation": 0, "duration": 35, "ease": "power2.out" },
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 30, "ease": "power2.out" }
     ]
 }

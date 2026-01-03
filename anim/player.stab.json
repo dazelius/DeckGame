@@ -4,12 +4,21 @@
     "target": "player",
     "type": "once",
     "priority": 12,
-    "duration": 150,
+    "duration": 220,
     "keyframes": [
-        { "x": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 0 },
-        { "x": -15, "scaleX": 0.75, "scaleY": 1.2, "rotation": -0.08, "duration": 30, "ease": "power2.in" },
-        { "x": 60, "scaleX": 1.35, "scaleY": 0.7, "rotation": 0.15, "duration": 40, "ease": "power4.out", "vfx": "stab", "shake": 10, "hitstop": 40 },
-        { "x": 35, "scaleX": 1.15, "scaleY": 0.85, "rotation": 0.08, "duration": 35, "ease": "power2.out" },
-        { "x": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 45, "ease": "power2.inOut" }
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 0 },
+        
+        { "x": -5, "y": 2, "scaleX": 0.96, "scaleY": 1.04, "rotation": -0.02, "duration": 25, "ease": "power1.out" },
+        { "x": -12, "y": 6, "scaleX": 0.88, "scaleY": 1.12, "rotation": -0.06, "duration": 30, "ease": "power2.in" },
+        
+        { "x": 8, "y": -4, "scaleX": 1.05, "scaleY": 0.95, "rotation": 0.03, "duration": 18, "ease": "power3.out" },
+        { "x": 40, "y": -8, "scaleX": 1.22, "scaleY": 0.80, "rotation": 0.10, "duration": 22, "ease": "power4.out", "vfx": "stab", "shake": 4, "hitstop": 35 },
+        { "x": 48, "y": -6, "scaleX": 1.25, "scaleY": 0.78, "rotation": 0.12, "duration": 18, "ease": "power2.out" },
+        
+        { "x": 42, "y": -4, "scaleX": 1.18, "scaleY": 0.84, "rotation": 0.09, "duration": 22, "ease": "power2.inOut" },
+        { "x": 32, "y": -2, "scaleX": 1.10, "scaleY": 0.90, "rotation": 0.06, "duration": 25, "ease": "power2.inOut" },
+        { "x": 18, "y": 0, "scaleX": 1.04, "scaleY": 0.96, "rotation": 0.03, "duration": 25, "ease": "power2.out" },
+        { "x": 8, "y": 1, "scaleX": 1.01, "scaleY": 0.99, "rotation": 0.01, "duration": 20, "ease": "power2.out" },
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 17, "ease": "power2.out" }
     ]
 }
