@@ -468,14 +468,13 @@ const PlayerRenderer = {
         `;
         this.bottomUI.appendChild(hpBar);
         
-        // 쉴드 표시
+        // 🛡️ 쉴드/방어도 표시 (항상 요소 생성, 값 있을 때만 표시)
         const block = gameState?.player?.block || 0;
-        if (block > 0) {
-            const shieldEl = document.createElement('div');
-            shieldEl.className = 'player-shield pixi-player-shield';
-            shieldEl.innerHTML = `🛡️ ${block}`;
-            this.bottomUI.appendChild(shieldEl);
-        }
+        const shieldEl = document.createElement('div');
+        shieldEl.className = 'player-shield pixi-player-shield';
+        shieldEl.innerHTML = `<span class="shield-icon">🛡️</span><span class="shield-value">${block}</span>`;
+        shieldEl.style.display = block > 0 ? 'flex' : 'none';
+        this.bottomUI.appendChild(shieldEl);
         
         // 상태 효과
         const statusEl = document.createElement('div');
@@ -554,6 +553,28 @@ const PlayerRenderer = {
         }
         if (hpText) {
             hpText.textContent = `${hp}/${maxHp}`;
+        }
+    },
+    
+    // 🛡️ 방어도 UI 업데이트
+    updatePlayerBlock() {
+        if (!this.bottomUI) return;
+        
+        const shieldEl = this.bottomUI.querySelector('.pixi-player-shield');
+        if (shieldEl) {
+            const block = gameState?.player?.block || 0;
+            const shieldValue = shieldEl.querySelector('.shield-value');
+            
+            if (block > 0) {
+                shieldEl.style.display = 'flex';
+                if (shieldValue) shieldValue.textContent = block;
+                
+                // 방어도 있을 때 외곽선 효과
+                this.setBlockEffect(true);
+            } else {
+                shieldEl.style.display = 'none';
+                this.setBlockEffect(false);
+            }
         }
     },
     
