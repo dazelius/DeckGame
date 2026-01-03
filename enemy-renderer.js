@@ -727,7 +727,13 @@ const EnemyRenderer = {
         
         const shieldValue = document.createElement('div');
         shieldValue.className = 'enemy-shield-value';
-        shieldValue.innerHTML = `<span class="shield-icon">🛡️</span><span class="shield-num">${block}</span>`;
+        shieldValue.innerHTML = `
+            <span class="shield-num">${block}</span>
+            <div class="shield-emblem">
+                <div class="shield-shape"></div>
+                <div class="shield-cross"></div>
+            </div>
+        `;
         shieldWrapper.appendChild(shieldValue);
         
         hpContainer.appendChild(shieldWrapper);
@@ -2774,13 +2780,17 @@ enemyRendererStyles.textContent = `
         transition: all 0.3s ease;
     }
     
-    /* 🛡️ 쉴드 있을 때 HP 바 테두리 변경 */
+    /* 🛡️ 다크소울 스타일: 쉴드 있을 때 HP 바 테두리 */
     .enemy-hp-container.has-shield .enemy-hp-bar .hp-bg {
-        border: 2px solid #60a5fa;
+        border: 2px solid;
+        border-image: linear-gradient(180deg, 
+            #6a9dcd 0%, 
+            #4a7dad 50%,
+            #3a6d9d 100%) 1;
         box-shadow: 
             inset 0 2px 4px rgba(0,0,0,0.8),
-            0 0 8px rgba(96, 165, 250, 0.6),
-            0 0 16px rgba(96, 165, 250, 0.3);
+            0 0 6px rgba(90, 125, 181, 0.5),
+            0 0 12px rgba(90, 125, 181, 0.3);
     }
     
     .enemy-hp-bar .hp-fill {
@@ -2811,10 +2821,13 @@ enemyRendererStyles.textContent = `
         letter-spacing: 0.5px;
     }
     
-    /* 🛡️ 쉴드 래퍼 (HP 바 오른쪽) */
+    /* ========================================
+       🛡️ 다크소울 스타일 적 쉴드 디자인
+       ======================================== */
+    
     .enemy-shield-wrapper {
         position: absolute;
-        right: -32px;
+        right: -38px;
         top: 50%;
         transform: translateY(-50%);
         display: flex;
@@ -2822,57 +2835,117 @@ enemyRendererStyles.textContent = `
         z-index: 5;
     }
     
-    /* 🛡️ 쉴드 수치 표시 */
     .enemy-shield-value {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 2px;
-        min-width: 28px;
-        height: 22px;
-        padding: 0 4px;
+        gap: 3px;
+        min-width: 36px;
+        height: 28px;
+        padding: 0 6px;
         background: linear-gradient(180deg, 
-            #4a8fe8 0%, 
-            #3b7dd8 30%,
-            #2a6ac8 70%,
-            #1a5ab8 100%);
-        border: 2px solid #7cb8ff;
-        border-radius: 4px;
+            rgba(45, 40, 35, 0.98) 0%,
+            rgba(30, 28, 25, 0.99) 40%,
+            rgba(20, 18, 15, 1) 100%);
+        border: 2px solid;
+        border-image: linear-gradient(180deg, 
+            #c9a54e 0%, 
+            #a67c3d 30%,
+            #8b6934 60%,
+            #6b4f2a 100%) 1;
+        position: relative;
         box-shadow: 
-            0 2px 6px rgba(0,0,0,0.6),
-            inset 0 1px 0 rgba(255,255,255,0.3),
-            0 0 10px rgba(96, 165, 250, 0.5);
-        font-family: 'Cinzel', serif;
-        animation: enemyShieldPulse 2s ease-in-out infinite;
+            0 4px 12px rgba(0,0,0,0.9),
+            inset 0 1px 0 rgba(201, 165, 78, 0.2),
+            inset 0 -1px 0 rgba(0,0,0,0.8);
+        animation: enemyShieldGlow 3s ease-in-out infinite;
     }
     
-    .enemy-shield-value .shield-icon {
-        font-size: 10px;
-        filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+    /* 다크소울 스타일 코너 장식 */
+    .enemy-shield-value::before,
+    .enemy-shield-value::after {
+        content: '◆';
+        position: absolute;
+        font-size: 5px;
+        color: #c9a54e;
+        text-shadow: 0 0 4px rgba(201, 165, 78, 0.6);
+    }
+    .enemy-shield-value::before { top: -1px; left: 2px; }
+    .enemy-shield-value::after { top: -1px; right: 2px; }
+    
+    /* CSS 쉴드 아이콘 (다크소울 방패) */
+    .enemy-shield-value .shield-emblem {
+        position: relative;
+        width: 14px;
+        height: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .enemy-shield-value .shield-shape {
+        width: 12px;
+        height: 14px;
+        background: linear-gradient(180deg,
+            #5a7db5 0%,
+            #4a6ca5 30%,
+            #3a5c95 60%,
+            #2a4c85 100%);
+        clip-path: polygon(
+            50% 0%,
+            100% 15%,
+            100% 60%,
+            50% 100%,
+            0% 60%,
+            0% 15%
+        );
+        border: 1px solid #7a9dc5;
+        box-shadow: 
+            inset 0 2px 4px rgba(255,255,255,0.2),
+            inset 0 -2px 4px rgba(0,0,0,0.4),
+            0 2px 4px rgba(0,0,0,0.5);
+    }
+    
+    .enemy-shield-value .shield-cross {
+        position: absolute;
+        width: 2px;
+        height: 8px;
+        background: linear-gradient(180deg, #d4af37, #b8860b);
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 0 2px rgba(212, 175, 55, 0.5);
+    }
+    
+    .enemy-shield-value .shield-cross::after {
+        content: '';
+        position: absolute;
+        width: 6px;
+        height: 2px;
+        background: linear-gradient(90deg, #b8860b, #d4af37, #b8860b);
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
     }
     
     .enemy-shield-value .shield-num {
-        font-size: 11px;
+        font-size: 13px;
         font-weight: bold;
-        color: #fff;
+        font-family: 'Cinzel', serif;
+        color: #d4c4a8;
         text-shadow: 
-            0 1px 2px rgba(0,0,0,0.8),
-            0 0 4px rgba(0,0,0,0.5);
+            0 0 6px rgba(90, 125, 181, 0.8),
+            0 2px 4px rgba(0,0,0,1),
+            1px 1px 0 rgba(0,0,0,0.8);
+        letter-spacing: 1px;
     }
     
-    @keyframes enemyShieldPulse {
+    @keyframes enemyShieldGlow {
         0%, 100% {
-            box-shadow: 
-                0 2px 6px rgba(0,0,0,0.6),
-                inset 0 1px 0 rgba(255,255,255,0.3),
-                0 0 10px rgba(96, 165, 250, 0.5);
+            filter: drop-shadow(0 0 3px rgba(90, 125, 181, 0.4));
         }
         50% {
-            box-shadow: 
-                0 2px 6px rgba(0,0,0,0.6),
-                inset 0 1px 0 rgba(255,255,255,0.3),
-                0 0 16px rgba(96, 165, 250, 0.8),
-                0 0 24px rgba(96, 165, 250, 0.4);
+            filter: drop-shadow(0 0 8px rgba(90, 125, 181, 0.7));
         }
     }
     
