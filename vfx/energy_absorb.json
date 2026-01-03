@@ -1,0 +1,46 @@
+{
+    "id": "energy_absorb",
+    "name": "에너지 흡수 - 플레이어에게 들어옴",
+    "particles": [
+        {
+            "type": "flash",
+            "size": 60,
+            "color": "#22c55e",
+            "life": 100
+        },
+        {
+            "type": "ring",
+            "size": 50,
+            "maxSize": 10,
+            "color": "#4ade80",
+            "life": 180
+        },
+        {
+            "type": "spark",
+            "count": 12,
+            "spread": 30,
+            "speed": [2, 6],
+            "size": [2, 5],
+            "colors": ["#22c55e", "#fbbf24", "#ffffff"],
+            "life": [150, 280]
+        },
+        {
+            "type": "symbol",
+            "symbol": "✨",
+            "count": 4,
+            "size": 20,
+            "floatUp": true,
+            "life": 400
+        },
+        {
+            "type": "line",
+            "count": 6,
+            "angleStep": 60,
+            "length": [25, 45],
+            "width": 3,
+            "color": "#4ade80",
+            "life": 120
+        }
+    ]
+}
+

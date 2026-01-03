@@ -1,0 +1,15 @@
+{
+    "id": "card.plunder_drain",
+    "name": "강탈 - 취약 보너스 발동",
+    "type": "sequence",
+    "description": "취약한 적을 공격하여 에너지를 흡수한다",
+    "returnToBase": true,
+    "steps": [
+        { "anim": "player.plunder_drain", "wait": true },
+        { "delay": 60 },
+        { "anim": "enemy.plunder_hit", "wait": true, "damage": 8 },
+        { "delay": 100 },
+        { "event": { "type": "energy", "value": 2 } }
+    ]
+}
+

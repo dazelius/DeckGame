@@ -1,0 +1,42 @@
+{
+    "id": "energy_drain",
+    "name": "에너지 흡수 - 적에서 에너지 빠짐",
+    "particles": [
+        {
+            "type": "ring",
+            "size": 30,
+            "maxSize": 80,
+            "color": "#22c55e",
+            "life": 200
+        },
+        {
+            "type": "spark",
+            "count": 15,
+            "spread": 50,
+            "speed": [4, 10],
+            "size": [3, 6],
+            "colors": ["#22c55e", "#4ade80", "#86efac", "#fbbf24"],
+            "life": [180, 350]
+        },
+        {
+            "type": "symbol",
+            "symbol": "⚡",
+            "count": 5,
+            "size": 24,
+            "floatUp": true,
+            "life": 500
+        },
+        {
+            "type": "smoke",
+            "count": 8,
+            "spread": 40,
+            "size": [15, 30],
+            "speed": [2, 5],
+            "angle": { "min": -60, "max": -120 },
+            "color": "#22c55e",
+            "gravity": -0.2,
+            "life": [200, 400]
+        }
+    ]
+}
+

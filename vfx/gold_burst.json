@@ -1,0 +1,40 @@
+{
+    "id": "gold_burst",
+    "name": "황금 폭발 - 강탈 피격",
+    "shake": 4,
+    "particles": [
+        {
+            "type": "flash",
+            "size": 45,
+            "color": "#fef3c7",
+            "life": 50
+        },
+        {
+            "type": "spark",
+            "count": 18,
+            "spread": 55,
+            "speed": [5, 15],
+            "size": [2, 6],
+            "colors": ["#fbbf24", "#f59e0b", "#d97706", "#ffffff"],
+            "life": [120, 250]
+        },
+        {
+            "type": "debris",
+            "count": 8,
+            "speed": [4, 12],
+            "size": [2, 5],
+            "colors": ["#fbbf24", "#f59e0b", "#ef4444"],
+            "gravity": 0.35,
+            "life": [180, 320]
+        },
+        {
+            "type": "symbol",
+            "symbol": "💫",
+            "count": 2,
+            "size": 22,
+            "floatUp": true,
+            "life": 450
+        }
+    ]
+}
+

@@ -1,0 +1,24 @@
+{
+    "id": "enemy.plunder_hit",
+    "name": "강탈 피격 - 에너지 흡수됨",
+    "target": "enemy",
+    "type": "once",
+    "priority": 18,
+    "duration": 500,
+    "keyframes": [
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 0 },
+        
+        { "x": 25, "y": -10, "scaleX": 0.82, "scaleY": 1.18, "alpha": 0.65, "rotation": 0.1, "duration": 30, "ease": "power4.out", "color": "hit" },
+        { "x": 55, "y": -15, "scaleX": 0.75, "scaleY": 1.25, "alpha": 0.5, "rotation": 0.18, "duration": 40, "ease": "power3.out", "vfx": "gold_burst" },
+        { "x": 70, "y": -10, "scaleX": 0.72, "scaleY": 1.28, "alpha": 0.45, "rotation": 0.22, "duration": 35, "ease": "power2.out" },
+        { "x": 75, "y": -5, "scaleX": 0.75, "scaleY": 1.25, "alpha": 0.5, "rotation": 0.2, "duration": 30, "ease": "power2.out" },
+        
+        { "x": 65, "y": 2, "scaleX": 0.8, "scaleY": 1.2, "alpha": 0.58, "rotation": 0.15, "duration": 40, "ease": "power2.inOut" },
+        { "x": 50, "y": 5, "scaleX": 0.85, "scaleY": 1.15, "alpha": 0.68, "rotation": 0.1, "duration": 50, "ease": "power2.inOut" },
+        { "x": 35, "y": 5, "scaleX": 0.9, "scaleY": 1.1, "alpha": 0.78, "rotation": 0.06, "duration": 55, "ease": "power2.out" },
+        { "x": 20, "y": 3, "scaleX": 0.94, "scaleY": 1.06, "alpha": 0.88, "rotation": 0.03, "duration": 50, "ease": "power2.out" },
+        { "x": 8, "y": 1, "scaleX": 0.98, "scaleY": 1.02, "alpha": 0.95, "rotation": 0.01, "duration": 40, "ease": "power2.out" },
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 35, "ease": "power2.out" }
+    ]
+}
+
