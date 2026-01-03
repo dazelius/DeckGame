@@ -5,38 +5,18 @@
         {
             "type": "flash",
             "count": 1,
-            "color": "#60a5fa",
-            "size": 120,
-            "life": 80
-        },
-        {
-            "type": "ring",
-            "count": 3,
-            "color": "#3b82f6",
-            "size": 15,
-            "maxSize": 100,
-            "life": 180,
-            "delay": 20
-        },
-        {
-            "type": "spark",
-            "count": 25,
-            "colors": ["#ffffff", "#93c5fd", "#60a5fa", "#3b82f6"],
-            "size": { "min": 4, "max": 10 },
-            "speed": { "min": 10, "max": 22 },
-            "angle": { "min": -180, "max": 180 },
-            "life": { "min": 120, "max": 250 },
-            "fadeOut": true
+            "size": 100,
+            "color": "#ffffff",
+            "life": 100
         },
         {
             "type": "line",
-            "count": 12,
-            "color": "#bfdbfe",
-            "length": { "min": 50, "max": 90 },
+            "count": 8,
+            "angleStep": 45,
+            "length": [60, 100],
             "width": 3,
-            "angleStep": 30,
-            "life": 150
+            "color": "#60a5fa",
+            "life": 120
         }
-    ],
-    "offset": { "x": 0, "y": 0 }
+    ]
 }
