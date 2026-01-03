@@ -205,10 +205,54 @@ const CardAnimations = {
                 }
             });
             
+            // ⚠️ 애니메이션 완료 후 플레이어 상태 강제 복원
+            this.forceRestorePlayer(playerContainer, playerSprite, baseX, baseY);
+            
         } catch (e) {
             console.error('[CardAnimations] 에러:', e);
+            // 에러 시에도 플레이어 복원
+            this.forceRestorePlayer(playerContainer, playerSprite, baseX, baseY);
             return this.fallbackAnimation(options);
         }
+    },
+    
+    // ⚠️ 플레이어 상태 강제 복원 (안전장치)
+    forceRestorePlayer(container, sprite, baseX, baseY) {
+        if (!container || !sprite) return;
+        
+        // 500ms 후 상태 확인 및 복원
+        setTimeout(() => {
+            // alpha가 0.5 미만이면 강제 복원
+            if (sprite.alpha < 0.5) {
+                console.warn('[CardAnimations] ⚠️ 플레이어 alpha 비정상, 복원:', sprite.alpha);
+                gsap.to(sprite, { alpha: 1, duration: 0.2 });
+            }
+            
+            // scale이 비정상이면 복원
+            if (sprite.scale.x < 0.5 || sprite.scale.x > 2 || sprite.scale.y < 0.5 || sprite.scale.y > 2) {
+                console.warn('[CardAnimations] ⚠️ 플레이어 scale 비정상, 복원:', sprite.scale.x, sprite.scale.y);
+                gsap.to(sprite.scale, { x: 1, y: 1, duration: 0.2 });
+            }
+            
+            // 위치가 원점에서 너무 멀면 복원
+            const dx = Math.abs(container.x - baseX);
+            const dy = Math.abs(container.y - baseY);
+            if (dx > 400 || dy > 200) {
+                console.warn('[CardAnimations] ⚠️ 플레이어 위치 비정상, 복원:', container.x, container.y);
+                gsap.to(container, { x: baseX, y: baseY, duration: 0.3 });
+            }
+        }, 500);
+        
+        // 1초 후 최종 확인
+        setTimeout(() => {
+            if (sprite.alpha !== 1) {
+                sprite.alpha = 1;
+            }
+            if (sprite.scale.x !== 1 || sprite.scale.y !== 1) {
+                sprite.scale.set(1, 1);
+            }
+            sprite.rotation = 0;
+        }, 1000);
     },
     
     // ==========================================

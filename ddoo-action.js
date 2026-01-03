@@ -508,52 +508,67 @@ const DDOOAction = {
         
         const { container, sprite, originX, originY, dir = 1 } = options;
         
-        for (const step of data.steps) {
-            // 순수 딜레이
-            if (step.delay && !step.anim) {
-                await this.delay(step.delay);
-                continue;
-            }
-            
-            // 📍 게임 이벤트 처리 (애니메이션 없이 이벤트만)
-            if (!step.anim) {
-                await this.processStepEvents(step, options);
-                continue;
-            }
-            
-            // 애니메이션 재생
-            if (step.anim) {
-                const animData = this.animCache.get(step.anim);
-                if (!animData) {
-                    if (this.config.debug) console.warn(`[DDOOAction] 애니메이션 없음: ${step.anim}`);
+        try {
+            for (const step of data.steps) {
+                // 순수 딜레이
+                if (step.delay && !step.anim) {
+                    await this.delay(step.delay);
                     continue;
                 }
                 
-                // 딜레이가 있으면 적용
-                if (step.delay) {
-                    await this.delay(step.delay);
+                // 📍 게임 이벤트 처리 (애니메이션 없이 이벤트만)
+                if (!step.anim) {
+                    await this.processStepEvents(step, options);
+                    continue;
                 }
                 
                 // 애니메이션 재생
-                const promise = this.playKeyframes(animData, {
-                    ...options,
-                    isRelative: true,  // 시퀀스 내에서는 상대 좌표
-                    stepEvents: step   // 스텝에 정의된 이벤트 전달
-                });
-                
-                // wait가 true면 완료까지 대기
-                if (step.wait) {
-                    await promise;
+                if (step.anim) {
+                    const animData = this.animCache.get(step.anim);
+                    if (!animData) {
+                        if (this.config.debug) console.warn(`[DDOOAction] 애니메이션 없음: ${step.anim}`);
+                        continue;
+                    }
+                    
+                    // 딜레이가 있으면 적용
+                    if (step.delay) {
+                        await this.delay(step.delay);
+                    }
+                    
+                    // 애니메이션 재생
+                    const promise = this.playKeyframes(animData, {
+                        ...options,
+                        isRelative: true,  // 시퀀스 내에서는 상대 좌표
+                        stepEvents: step   // 스텝에 정의된 이벤트 전달
+                    });
+                    
+                    // wait가 true면 완료까지 대기
+                    if (step.wait) {
+                        await promise;
+                    }
+                    
+                    // 📍 스텝 완료 후 이벤트 처리
+                    await this.processStepEvents(step, options);
                 }
-                
-                // 📍 스텝 완료 후 이벤트 처리
-                await this.processStepEvents(step, options);
             }
+        } catch (e) {
+            console.error(`[DDOOAction] ❌ Sequence 에러 (${data.id}):`, e);
         }
         
-        // ⭐ returnToBase: 원점으로 복귀!
+        // ⭐ returnToBase: 원점으로 복귀! (에러 발생해도 무조건 실행)
         if (data.returnToBase !== false) {
             await this.returnToOrigin(container, sprite, originX, originY);
+        }
+        
+        // ⚠️ 최종 안전장치: sprite 상태 확실히 복원
+        if (sprite) {
+            sprite.alpha = 1;
+            sprite.rotation = 0;
+            if (sprite.scale) sprite.scale.set(1, 1);
+        }
+        if (container) {
+            container.x = originX;
+            container.y = originY;
         }
         
         if (options.onComplete) options.onComplete();
@@ -679,6 +694,15 @@ const DDOOAction = {
                     }
                 },
                 onComplete: () => {
+                    // ⚠️ 마지막 키프레임 상태로 확실히 설정
+                    const lastKf = data.keyframes[data.keyframes.length - 1];
+                    if (lastKf) {
+                        if (lastKf.alpha !== undefined) sprite.alpha = lastKf.alpha;
+                        if (lastKf.scaleX !== undefined && lastKf.scaleY !== undefined) {
+                            sprite.scale.set(lastKf.scaleX, lastKf.scaleY);
+                        }
+                        if (lastKf.rotation !== undefined) sprite.rotation = lastKf.rotation;
+                    }
                     resolve();
                 }
             });
