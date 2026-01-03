@@ -1,0 +1,15 @@
+{
+    "id": "card.strike",
+    "name": "베기",
+    "type": "sequence",
+    "priority": 10,
+    "description": "기본 공격",
+    "steps": [
+        { "anim": "player.attack", "wait": true, "callback": "onHit", "callbackArg": 0 },
+        { "anim": "enemy.hit", "wait": false }
+    ],
+    "vfx": {
+        "color": "#fbbf24"
+    }
+}
+

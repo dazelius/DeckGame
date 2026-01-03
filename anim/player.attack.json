@@ -1,0 +1,23 @@
+{
+    "id": "player.attack",
+    "name": "플레이어 공격",
+    "target": "player",
+    "type": "once",
+    "priority": 10,
+    "duration": 150,
+    "keyframes": [
+        { "x": 0, "scaleX": 1, "scaleY": 1, "duration": 0 },
+        { "x": -10, "scaleX": 0.95, "scaleY": 1.05, "duration": 30, "ease": "power2.in" },
+        { "x": 30, "scaleX": 1.15, "scaleY": 0.9, "duration": 40, "ease": "power4.out" },
+        { "x": 0, "scaleX": 1, "scaleY": 1, "duration": 80, "ease": "power2.out" }
+    ],
+    "events": {
+        "onPeak": {
+            "frame": 2,
+            "vfx": "slash",
+            "shake": 8,
+            "sound": "slash"
+        }
+    }
+}
+
