@@ -1,0 +1,38 @@
+{
+    "id": "shadow_dissolve",
+    "name": "그림자 분해",
+    "particles": [
+        {
+            "type": "smoke",
+            "count": 25,
+            "color": "#1a0a2e",
+            "size": { "min": 30, "max": 80 },
+            "speed": { "min": 1, "max": 4 },
+            "angle": { "min": -180, "max": 180 },
+            "life": { "min": 300, "max": 600 },
+            "fadeOut": true,
+            "gravity": -0.3
+        },
+        {
+            "type": "spark",
+            "count": 15,
+            "color": "#6b21a8",
+            "size": { "min": 3, "max": 8 },
+            "speed": { "min": 2, "max": 6 },
+            "angle": { "min": -180, "max": 180 },
+            "life": { "min": 200, "max": 400 },
+            "fadeOut": true
+        },
+        {
+            "type": "ring",
+            "count": 1,
+            "color": "#9333ea",
+            "size": 60,
+            "growSpeed": 3,
+            "life": 250,
+            "fadeOut": true
+        }
+    ],
+    "offset": { "x": 0, "y": -60 }
+}
+

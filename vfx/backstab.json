@@ -1,0 +1,69 @@
+{
+    "id": "backstab",
+    "name": "비열한 찌르기",
+    "particles": [
+        {
+            "type": "arrow",
+            "count": 3,
+            "color": "#c084fc",
+            "length": 120,
+            "width": 25,
+            "angle": 0,
+            "life": 180,
+            "fadeOut": true,
+            "delay": 0
+        },
+        {
+            "type": "arrow",
+            "count": 2,
+            "color": "#9333ea",
+            "length": 90,
+            "width": 18,
+            "angle": 15,
+            "life": 150,
+            "fadeOut": true,
+            "delay": 20
+        },
+        {
+            "type": "arrow",
+            "count": 2,
+            "color": "#9333ea",
+            "length": 90,
+            "width": 18,
+            "angle": -15,
+            "life": 150,
+            "fadeOut": true,
+            "delay": 20
+        },
+        {
+            "type": "spark",
+            "count": 30,
+            "color": "#e879f9",
+            "size": { "min": 4, "max": 12 },
+            "speed": { "min": 6, "max": 15 },
+            "angle": { "min": -45, "max": 45 },
+            "life": { "min": 120, "max": 280 },
+            "fadeOut": true
+        },
+        {
+            "type": "flash",
+            "count": 1,
+            "color": "#f5d0fe",
+            "size": 150,
+            "life": 80,
+            "fadeOut": true
+        },
+        {
+            "type": "debris",
+            "count": 8,
+            "color": "#6b21a8",
+            "size": { "min": 5, "max": 15 },
+            "speed": { "min": 4, "max": 10 },
+            "angle": { "min": -90, "max": 90 },
+            "life": { "min": 200, "max": 400 },
+            "gravity": 0.2
+        }
+    ],
+    "offset": { "x": 30, "y": -60 }
+}
+

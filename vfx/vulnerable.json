@@ -1,0 +1,52 @@
+{
+    "id": "vulnerable",
+    "name": "취약 부여",
+    "particles": [
+        {
+            "type": "ring",
+            "count": 3,
+            "color": "#dc2626",
+            "size": 40,
+            "growSpeed": 2.5,
+            "life": 400,
+            "fadeOut": true,
+            "delay": 0
+        },
+        {
+            "type": "ring",
+            "count": 2,
+            "color": "#ef4444",
+            "size": 60,
+            "growSpeed": 3,
+            "life": 350,
+            "fadeOut": true,
+            "delay": 80
+        },
+        {
+            "type": "spark",
+            "count": 20,
+            "color": "#f87171",
+            "size": { "min": 5, "max": 12 },
+            "speed": { "min": 1, "max": 3 },
+            "angle": { "min": -180, "max": 180 },
+            "life": { "min": 300, "max": 600 },
+            "fadeOut": true
+        },
+        {
+            "type": "symbol",
+            "symbol": "💀",
+            "count": 1,
+            "size": 50,
+            "life": 600,
+            "floatUp": true,
+            "fadeOut": true
+        }
+    ],
+    "screenTint": {
+        "color": "#7f1d1d",
+        "alpha": 0.15,
+        "duration": 300
+    },
+    "offset": { "x": 0, "y": -80 }
+}
+

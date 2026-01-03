@@ -924,7 +924,7 @@ Object.assign(cardDatabase, {
         }
     },
     
-    // 비열한 일격
+    // 💀 비열한 일격 - 그림자 백스탭!
     dirtyStrike: {
         id: 'dirtyStrike',
         name: '비열한 일격',
@@ -933,27 +933,45 @@ Object.assign(cardDatabase, {
         cost: 1,
         icon: '<img src="skill_biyul.png" alt="Dirty Strike" class="card-icon-img">',
         description: '<span class="damage">4</span> 데미지.<br><span class="debuff">취약</span> 1턴 부여.',
+        animationId: 'dirtyStrike',
         effect: (state) => {
-            const playerEl = document.getElementById('player');
             const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
             
-            // 플레이어 돌진
-            EffectSystem.playerAttack(playerEl, enemyEl, () => {
-                EffectSystem.slash(enemyEl, { color: '#9333ea', count: 1 });
-                dealDamage(state.enemy, 4);
-                
-                // 취약 상태 부여
-                if (!state.enemy.vulnerable) state.enemy.vulnerable = 0;
-                state.enemy.vulnerable += 1;
-                
-                // 취약 이펙트
-                showVulnerableEffect(enemyEl);
-                
-                // UI 업데이트
-                if (typeof updateEnemiesUI === 'function') updateEnemiesUI();
-            });
+            // 🎮 DDOO Action 엔진 사용!
+            if (typeof CardAnimations !== 'undefined' && CardAnimations.play) {
+                CardAnimations.play('dirtyStrike', {
+                    target: state.enemy,
+                    targetEl: enemyEl,
+                    damage: 4,
+                    onHit: () => {
+                        dealDamage(state.enemy, 4);
+                        
+                        // 취약 상태 부여
+                        if (!state.enemy.vulnerable) state.enemy.vulnerable = 0;
+                        state.enemy.vulnerable += 1;
+                        
+                        // 취약 이펙트
+                        showVulnerableEffect(enemyEl);
+                        
+                        // UI 업데이트
+                        if (typeof updateEnemiesUI === 'function') updateEnemiesUI();
+                    }
+                });
+            } else {
+                // 폴백
+                const playerEl = document.getElementById('player');
+                EffectSystem.playerAttack(playerEl, enemyEl, () => {
+                    EffectSystem.slash(enemyEl, { color: '#9333ea', count: 1 });
+                    dealDamage(state.enemy, 4);
+                    
+                    if (!state.enemy.vulnerable) state.enemy.vulnerable = 0;
+                    state.enemy.vulnerable += 1;
+                    showVulnerableEffect(enemyEl);
+                    if (typeof updateEnemiesUI === 'function') updateEnemiesUI();
+                });
+            }
             
-            addLog('비열한 일격! 4 데미지 + 취약 부여!', 'damage');
+            addLog('💀 비열한 일격! 4 데미지 + 취약 부여!', 'damage');
         }
     },
     
@@ -3725,7 +3743,7 @@ const upgradedCardDatabase = {
         }
     },
     
-    // 비열한 일격 -> 비열한 일격+
+    // 💀 비열한 일격+ - 강화된 그림자 백스탭!
     dirtyStrikeP: {
         id: 'dirtyStrikeP',
         name: '비열한 일격+',
@@ -3735,19 +3753,38 @@ const upgradedCardDatabase = {
         icon: '<img src="skill_biyul.png" alt="Dirty Strike" class="card-icon-img">',
         description: '<span class="damage">7</span> 데미지.<br>적에게 <span class="debuff">취약</span> 2턴.',
         upgraded: true,
+        animationId: 'dirtyStrikeP',
         effect: (state) => {
-            const playerEl = document.getElementById('player');
             const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
             
-            EffectSystem.playerAttack(playerEl, enemyEl, () => {
-                EffectSystem.slash(enemyEl, { color: '#9b59b6', count: 1 });
-                dealDamage(state.enemy, 7);
-                
-                state.enemy.vulnerable = (state.enemy.vulnerable || 0) + 2;
-                showVulnerableEffect(enemyEl, 2);
-            });
+            // 🎮 DDOO Action 엔진 사용!
+            if (typeof CardAnimations !== 'undefined' && CardAnimations.play) {
+                CardAnimations.play('dirtyStrikeP', {
+                    target: state.enemy,
+                    targetEl: enemyEl,
+                    damage: 7,
+                    onHit: () => {
+                        dealDamage(state.enemy, 7);
+                        
+                        // 취약 상태 2턴 부여
+                        state.enemy.vulnerable = (state.enemy.vulnerable || 0) + 2;
+                        showVulnerableEffect(enemyEl, 2);
+                        
+                        if (typeof updateEnemiesUI === 'function') updateEnemiesUI();
+                    }
+                });
+            } else {
+                // 폴백
+                const playerEl = document.getElementById('player');
+                EffectSystem.playerAttack(playerEl, enemyEl, () => {
+                    EffectSystem.slash(enemyEl, { color: '#9b59b6', count: 1 });
+                    dealDamage(state.enemy, 7);
+                    state.enemy.vulnerable = (state.enemy.vulnerable || 0) + 2;
+                    showVulnerableEffect(enemyEl, 2);
+                });
+            }
             
-            addLog('비열한 일격+! 7 데미지 + 취약 2턴!', 'damage');
+            addLog('💀 비열한 일격+! 7 데미지 + 취약 2턴!', 'damage');
         }
     },
     
