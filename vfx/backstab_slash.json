@@ -1,0 +1,47 @@
+{
+    "id": "backstab_slash",
+    "name": "뒤치기 베기",
+    "particles": [
+        {
+            "type": "slash",
+            "count": 3,
+            "color": "#f8fafc",
+            "glow": "#6366f1",
+            "angle": [-25, -10, 5],
+            "length": { "min": 100, "max": 140 },
+            "width": 12,
+            "life": 120
+        },
+        {
+            "type": "arrow",
+            "count": 2,
+            "color": "#c7d2fe",
+            "glow": "#4f46e5",
+            "length": { "min": 70, "max": 90 },
+            "width": 45,
+            "tipAngle": 30,
+            "innerColor": "rgba(99, 102, 241, 0.4)",
+            "life": 100
+        },
+        {
+            "type": "spark",
+            "count": 20,
+            "colors": ["#ffffff", "#c7d2fe", "#a5b4fc"],
+            "size": { "min": 3, "max": 8 },
+            "speed": { "min": 8, "max": 18 },
+            "angle": { "min": 120, "max": 240 },
+            "life": { "min": 100, "max": 200 },
+            "fadeOut": true
+        },
+        {
+            "type": "flash",
+            "count": 1,
+            "color": "#ffffff",
+            "size": 100,
+            "life": 60
+        }
+    ],
+    "shake": { "intensity": 5, "duration": 80 },
+    "offset": { "x": -30, "y": -50 }
+}
+

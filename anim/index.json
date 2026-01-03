@@ -19,6 +19,7 @@
   "player.dash",
   "player.defend",
   "player.dodge",
+  "player.dodge_flip",
   "player.flurry_stab1",
   "player.flurry_stab2",
   "player.flurry_stab3",

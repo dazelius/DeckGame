@@ -1,0 +1,29 @@
+{
+    "id": "blood_drip",
+    "name": "피 낙하",
+    "particles": [
+        {
+            "type": "debris",
+            "count": 12,
+            "colors": ["#ef4444", "#dc2626", "#b91c1c"],
+            "size": { "min": 3, "max": 8 },
+            "speed": { "min": 2, "max": 5 },
+            "angle": { "min": 60, "max": 120 },
+            "life": { "min": 300, "max": 500 },
+            "gravity": 0.4,
+            "fadeOut": true
+        },
+        {
+            "type": "spark",
+            "count": 6,
+            "color": "#fca5a5",
+            "size": { "min": 2, "max": 4 },
+            "speed": { "min": 1, "max": 3 },
+            "angle": { "min": 70, "max": 110 },
+            "life": { "min": 200, "max": 350 },
+            "fadeOut": true
+        }
+    ],
+    "offset": { "x": -15, "y": -40 }
+}
+

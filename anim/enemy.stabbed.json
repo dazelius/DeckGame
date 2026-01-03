@@ -3,10 +3,11 @@
     "name": "뒤에서 찔림",
     "target": "enemy",
     "keyframes": [
-        { "time": 0, "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0 },
-        { "time": 25, "x": 12, "y": -5, "scaleX": 0.88, "scaleY": 1.1, "rotation": 0.08, "duration": 25, "ease": "power4.out" },
-        { "time": 60, "x": 20, "y": 5, "scaleX": 1.12, "scaleY": 0.92, "rotation": -0.05, "duration": 35, "ease": "power2.out", "vfx": "blood_splat" },
-        { "time": 120, "x": 12, "y": 3, "scaleX": 1.05, "scaleY": 0.97, "rotation": -0.02, "duration": 60, "ease": "power2.out" },
-        { "time": 200, "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 80, "ease": "power1.out" }
+        { "time": 0, "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0 },
+        { "time": 20, "x": -15, "y": 0, "scaleX": 1.15, "scaleY": 0.9, "alpha": 1, "rotation": -0.15, "duration": 20, "ease": "power4.out" },
+        { "time": 50, "x": -35, "y": 5, "scaleX": 1.25, "scaleY": 0.85, "alpha": 1, "rotation": -0.25, "duration": 30, "ease": "power2.out", "vfx": "blood_drip" },
+        { "time": 100, "x": -30, "y": 10, "scaleX": 1.1, "scaleY": 0.92, "alpha": 1, "rotation": -0.18, "duration": 50, "ease": "power2.inOut" },
+        { "time": 180, "x": -15, "y": 5, "scaleX": 1.03, "scaleY": 0.98, "alpha": 1, "rotation": -0.08, "duration": 80, "ease": "power2.out" },
+        { "time": 280, "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 100, "ease": "power2.out" }
     ]
 }

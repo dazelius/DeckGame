@@ -1,0 +1,39 @@
+{
+    "id": "landing_dust",
+    "name": "착지 먼지",
+    "particles": [
+        {
+            "type": "smoke",
+            "count": 15,
+            "color": "#a8a29e",
+            "size": { "min": 20, "max": 40 },
+            "speed": { "min": 3, "max": 8 },
+            "angle": { "min": 150, "max": 210 },
+            "life": { "min": 200, "max": 400 },
+            "gravity": -0.05,
+            "fadeOut": true
+        },
+        {
+            "type": "debris",
+            "count": 10,
+            "colors": ["#78716c", "#a8a29e", "#d6d3d1"],
+            "size": { "min": 2, "max": 5 },
+            "speed": { "min": 4, "max": 10 },
+            "angle": { "min": 140, "max": 220 },
+            "life": { "min": 150, "max": 300 },
+            "gravity": 0.2,
+            "fadeOut": true
+        },
+        {
+            "type": "ring",
+            "count": 1,
+            "color": "#78716c",
+            "size": 10,
+            "maxSize": 50,
+            "life": 150
+        }
+    ],
+    "offset": { "x": 0, "y": 0 },
+    "shake": { "intensity": 3, "duration": 50 }
+}
+
