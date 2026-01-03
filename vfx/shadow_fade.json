@@ -3,35 +3,21 @@
     "name": "그림자 소멸",
     "particles": [
         {
-            "type": "smoke",
-            "count": 15,
-            "color": "#1a1a2e",
-            "size": { "min": 20, "max": 45 },
-            "speed": { "min": 2, "max": 5 },
-            "angle": { "min": -180, "max": 180 },
-            "life": { "min": 200, "max": 400 },
-            "gravity": -0.08,
-            "fadeOut": true
+            "type": "ring",
+            "count": 1,
+            "size": 20,
+            "maxSize": 80,
+            "color": "#1e1b4b",
+            "life": 120
         },
         {
             "type": "spark",
-            "count": 12,
-            "color": "#6366f1",
-            "size": { "min": 3, "max": 8 },
-            "speed": { "min": 4, "max": 10 },
-            "angle": { "min": -180, "max": 180 },
-            "life": { "min": 150, "max": 300 },
-            "fadeOut": true
-        },
-        {
-            "type": "ring",
-            "count": 2,
-            "color": "#4f46e5",
-            "size": 10,
-            "maxSize": 80,
-            "life": 250
+            "count": 8,
+            "spread": 30,
+            "speed": [2, 5],
+            "size": [4, 8],
+            "colors": ["#312e81", "#4c1d95", "#1e1b4b"],
+            "life": [100, 140]
         }
-    ],
-    "offset": { "x": 0, "y": -50 }
+    ]
 }
-

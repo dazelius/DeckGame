@@ -1,6 +1,6 @@
 /**
  * DDOO Animation Bundle - 자동 생성됨
- * 생성일: 2026-01-03T17:29:35.037Z
+ * 생성일: 2026-01-03T18:07:43.438Z
  * 
  * 이 파일을 포함하면 fetch 없이 모든 애니메이션/VFX 데이터 사용 가능!
  * <script src="anim-bundle.js"></script>
@@ -115,7 +115,7 @@ window.ANIM_BUNDLE = {
     "id": "card.dirtystrike",
     "name": "비열한 일격",
     "type": "sequence",
-    "description": "그림자처럼 사라져 적의 뒤에서 급습한다",
+    "description": "그림자처럼 접근해 급소를 찌른다",
     "returnToBase": true,
     "steps": [
       {
@@ -123,24 +123,23 @@ window.ANIM_BUNDLE = {
         "wait": true
       },
       {
-        "delay": 20
-      },
-      {
         "anim": "player.backstab_strike",
         "wait": true,
         "damage": 4
       },
       {
-        "anim": "enemy.stabbed",
-        "wait": false,
-        "delay": 10,
+        "anim": [
+          "enemy.stabbed"
+        ],
+        "wait": true,
+        "delay": 5,
         "debuff": {
           "name": "vulnerable",
           "value": 1
         }
       },
       {
-        "delay": 100
+        "delay": 50
       },
       {
         "anim": "player.sneak_return",
@@ -189,7 +188,7 @@ window.ANIM_BUNDLE = {
     "id": "card.dodge",
     "name": "닷지",
     "type": "sequence",
-    "description": "민첩하게 뒤로 물러서며 공격을 회피한다",
+    "description": "민첩하게 백스텝하며 공격을 회피한다",
     "returnToBase": true,
     "steps": [
       {
@@ -1792,11 +1791,11 @@ window.ANIM_BUNDLE = {
   },
   "enemy.stabbed": {
     "id": "enemy.stabbed",
-    "name": "뒤에서 찔림 - 극적인 반응",
+    "name": "급소 피격",
     "target": "enemy",
     "type": "once",
     "priority": 20,
-    "duration": 350,
+    "duration": 300,
     "keyframes": [
       {
         "x": 0,
@@ -1808,75 +1807,75 @@ window.ANIM_BUNDLE = {
         "duration": 0
       },
       {
-        "x": -25,
-        "y": -10,
-        "scaleX": 1.2,
-        "scaleY": 0.85,
-        "alpha": 0.8,
-        "rotation": -0.18,
+        "x": 25,
+        "y": -15,
+        "scaleX": 0.7,
+        "scaleY": 1.35,
+        "alpha": 0.7,
+        "rotation": 0.2,
         "duration": 25,
         "ease": "power4.out",
-        "vfx": "blood_drip",
+        "vfx": "blood_burst",
         "vfxTarget": "self"
       },
       {
-        "x": -45,
-        "y": -5,
-        "scaleX": 1.3,
-        "scaleY": 0.78,
+        "x": 45,
+        "y": -8,
+        "scaleX": 0.65,
+        "scaleY": 1.4,
+        "alpha": 0.6,
+        "rotation": 0.25,
+        "duration": 30,
+        "ease": "power2.out"
+      },
+      {
+        "x": 55,
+        "y": 0,
+        "scaleX": 0.7,
+        "scaleY": 1.35,
         "alpha": 0.65,
-        "rotation": -0.28,
+        "rotation": 0.2,
+        "duration": 25,
+        "ease": "power2.out"
+      },
+      {
+        "x": 45,
+        "y": 5,
+        "scaleX": 0.8,
+        "scaleY": 1.2,
+        "alpha": 0.75,
+        "rotation": 0.12,
         "duration": 35,
         "ease": "power2.out"
       },
       {
-        "x": -55,
-        "y": 5,
-        "scaleX": 1.25,
-        "scaleY": 0.82,
-        "alpha": 0.55,
-        "rotation": -0.32,
+        "x": 30,
+        "y": 3,
+        "scaleX": 0.9,
+        "scaleY": 1.1,
+        "alpha": 0.85,
+        "rotation": 0.06,
         "duration": 40,
         "ease": "power2.out"
       },
       {
-        "x": 20,
-        "y": 8,
-        "scaleX": 0.88,
-        "scaleY": 1.12,
-        "alpha": 0.7,
-        "rotation": 0.1,
-        "duration": 50,
+        "x": 15,
+        "y": 1,
+        "scaleX": 0.95,
+        "scaleY": 1.05,
+        "alpha": 0.92,
+        "rotation": 0.02,
+        "duration": 40,
         "ease": "power2.out"
-      },
-      {
-        "x": -10,
-        "y": 4,
-        "scaleX": 1.05,
-        "scaleY": 0.96,
-        "alpha": 0.82,
-        "rotation": -0.05,
-        "duration": 50,
-        "ease": "elastic.out(1, 0.6)"
       },
       {
         "x": 5,
-        "y": 2,
+        "y": 0,
         "scaleX": 0.98,
         "scaleY": 1.02,
-        "alpha": 0.9,
-        "rotation": 0.02,
-        "duration": 45,
-        "ease": "power2.out"
-      },
-      {
-        "x": -2,
-        "y": 0,
-        "scaleX": 1.01,
-        "scaleY": 0.99,
-        "alpha": 0.96,
-        "rotation": -0.01,
-        "duration": 40,
+        "alpha": 0.97,
+        "rotation": 0.01,
+        "duration": 35,
         "ease": "power2.out"
       },
       {
@@ -1886,7 +1885,7 @@ window.ANIM_BUNDLE = {
         "scaleY": 1,
         "alpha": 1,
         "rotation": 0,
-        "duration": 35,
+        "duration": 30,
         "ease": "power2.out"
       }
     ]
@@ -2023,11 +2022,11 @@ window.ANIM_BUNDLE = {
   },
   "player.backstab_strike": {
     "id": "player.backstab_strike",
-    "name": "뒤치기 일격",
+    "name": "급소 찌르기",
     "target": "player",
     "type": "once",
     "priority": 18,
-    "duration": 280,
+    "duration": 220,
     "keyframes": [
       {
         "x": 0,
@@ -2039,70 +2038,68 @@ window.ANIM_BUNDLE = {
         "duration": 0
       },
       {
-        "x": -8,
-        "y": 3,
-        "scaleX": 0.88,
-        "scaleY": 1.12,
+        "x": 5,
+        "y": -8,
+        "scaleX": 0.9,
+        "scaleY": 1.1,
         "alpha": 1,
-        "rotation": -0.08,
-        "duration": 30,
-        "ease": "power3.in"
+        "rotation": -0.05,
+        "duration": 20,
+        "ease": "power2.in"
       },
       {
-        "x": -25,
-        "y": -5,
-        "scaleX": 1.35,
-        "scaleY": 0.72,
+        "x": -30,
+        "y": 5,
+        "scaleX": 1.3,
+        "scaleY": 0.7,
         "alpha": 1,
-        "rotation": 0.35,
+        "rotation": 0.2,
         "duration": 25,
         "ease": "power4.out",
-        "afterimage": true,
         "vfx": "backstab_slash",
-        "vfxTarget": "target"
-      },
-      {
-        "x": -38,
-        "y": 0,
-        "scaleX": 1.45,
-        "scaleY": 0.68,
-        "alpha": 1,
-        "rotation": 0.45,
-        "duration": 20,
-        "ease": "linear",
-        "vfx": "blood_burst",
         "vfxTarget": "target",
-        "shake": 15,
-        "hitstop": 100
+        "shake": 12,
+        "hitstop": 80
       },
       {
-        "x": -32,
-        "y": 3,
+        "x": -45,
+        "y": 0,
         "scaleX": 1.25,
-        "scaleY": 0.82,
-        "alpha": 1,
-        "rotation": 0.28,
-        "duration": 45,
-        "ease": "power2.out"
-      },
-      {
-        "x": -22,
-        "y": 2,
-        "scaleX": 1.12,
-        "scaleY": 0.92,
+        "scaleY": 0.75,
         "alpha": 1,
         "rotation": 0.15,
-        "duration": 50,
+        "duration": 20,
+        "ease": "power2.out",
+        "afterimage": true
+      },
+      {
+        "x": -35,
+        "y": 3,
+        "scaleX": 1.1,
+        "scaleY": 0.9,
+        "alpha": 1,
+        "rotation": 0.08,
+        "duration": 35,
         "ease": "power2.out"
       },
       {
-        "x": -10,
-        "y": 0,
+        "x": -20,
+        "y": 2,
         "scaleX": 1.05,
+        "scaleY": 0.95,
+        "alpha": 1,
+        "rotation": 0.04,
+        "duration": 35,
+        "ease": "power2.out"
+      },
+      {
+        "x": -8,
+        "y": 0,
+        "scaleX": 1.02,
         "scaleY": 0.98,
         "alpha": 1,
-        "rotation": 0.05,
-        "duration": 45,
+        "rotation": 0.01,
+        "duration": 30,
         "ease": "power2.out"
       },
       {
@@ -2112,7 +2109,7 @@ window.ANIM_BUNDLE = {
         "scaleY": 1,
         "alpha": 1,
         "rotation": 0,
-        "duration": 35,
+        "duration": 25,
         "ease": "power2.out"
       }
     ]
@@ -2578,11 +2575,11 @@ window.ANIM_BUNDLE = {
   },
   "player.dodge_flip": {
     "id": "player.dodge_flip",
-    "name": "공중 회전 회피",
+    "name": "백스텝 회피",
     "target": "player",
     "type": "once",
     "priority": 16,
-    "duration": 400,
+    "duration": 320,
     "keyframes": [
       {
         "x": 0,
@@ -2594,82 +2591,90 @@ window.ANIM_BUNDLE = {
         "duration": 0
       },
       {
-        "x": -8,
-        "y": -6,
-        "scaleX": 0.92,
-        "scaleY": 1.08,
+        "x": -5,
+        "y": 5,
+        "scaleX": 0.9,
+        "scaleY": 1.1,
         "alpha": 1,
-        "rotation": 0.08,
-        "duration": 30,
+        "rotation": 0,
+        "duration": 25,
         "ease": "power2.in"
       },
       {
-        "x": -30,
-        "y": -40,
-        "scaleX": 0.88,
-        "scaleY": 1.12,
+        "x": -50,
+        "y": -30,
+        "scaleX": 1.1,
+        "scaleY": 0.9,
         "alpha": 1,
-        "rotation": 0.6,
-        "duration": 40,
+        "rotation": -0.15,
+        "duration": 35,
         "ease": "power3.out",
-        "afterimage": true,
         "vfx": "dodge_flash",
         "vfxTarget": "self"
       },
       {
-        "x": -60,
-        "y": -60,
-        "scaleX": 0.85,
-        "scaleY": 1.15,
-        "alpha": 0.95,
-        "rotation": 1.4,
-        "duration": 45,
-        "ease": "power2.inOut",
-        "afterimage": true
-      },
-      {
-        "x": -85,
-        "y": -50,
-        "scaleX": 0.88,
-        "scaleY": 1.12,
-        "alpha": 0.9,
-        "rotation": 2.5,
-        "duration": 50,
-        "ease": "power2.inOut",
-        "afterimage": true,
-        "vfx": "wind_spiral",
-        "vfxTarget": "self"
-      },
-      {
-        "x": -75,
-        "y": -25,
-        "scaleX": 0.92,
-        "scaleY": 1.08,
-        "alpha": 0.95,
-        "rotation": 3.8,
-        "duration": 55,
+        "x": -90,
+        "y": -15,
+        "scaleX": 1.15,
+        "scaleY": 0.85,
+        "alpha": 1,
+        "rotation": -0.1,
+        "duration": 40,
         "ease": "power2.out",
         "afterimage": true
       },
       {
-        "x": -55,
-        "y": -8,
-        "scaleX": 0.96,
-        "scaleY": 1.04,
-        "alpha": 0.98,
-        "rotation": 5.2,
-        "duration": 50,
+        "x": -120,
+        "y": 0,
+        "scaleX": 1.1,
+        "scaleY": 0.9,
+        "alpha": 1,
+        "rotation": -0.05,
+        "duration": 45,
+        "ease": "power2.out",
+        "afterimage": true,
+        "vfx": "wind_burst",
+        "vfxTarget": "self"
+      },
+      {
+        "x": -110,
+        "y": 5,
+        "scaleX": 0.95,
+        "scaleY": 1.05,
+        "alpha": 1,
+        "rotation": 0.02,
+        "duration": 40,
         "ease": "power2.out"
       },
       {
-        "x": -25,
-        "y": -2,
+        "x": -100,
+        "y": 3,
         "scaleX": 0.98,
         "scaleY": 1.02,
         "alpha": 1,
-        "rotation": 5.9,
-        "duration": 45,
+        "rotation": 0.01,
+        "duration": 35,
         "ease": "power2.out"
+      },
+      {
+        "x": -90,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "alpha": 1,
+        "rotation": 0,
+        "duration": 30,
+        "ease": "power2.out"
+      },
+      {
+        "x": -45,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "alpha": 1,
+        "rotation": 0,
+        "duration": 35,
+        "ease": "power2.inOut"
       },
       {
         "x": 0,
@@ -2677,11 +2682,9 @@ window.ANIM_BUNDLE = {
         "scaleX": 1,
         "scaleY": 1,
         "alpha": 1,
-        "rotation": 6.28,
-        "duration": 45,
-        "ease": "power3.out",
-        "vfx": "landing_dust",
-        "vfxTarget": "self"
+        "rotation": 0,
+        "duration": 35,
+        "ease": "power2.out"
       }
     ]
   },
@@ -3686,116 +3689,10 @@ window.ANIM_BUNDLE = {
   },
   "player.sneak": {
     "id": "player.sneak",
-    "name": "그림자 잠입",
+    "name": "그림자 접근",
     "target": "player",
     "type": "once",
     "priority": 15,
-    "duration": 350,
-    "keyframes": [
-      {
-        "x": 0,
-        "y": 0,
-        "scaleX": 1,
-        "scaleY": 1,
-        "alpha": 1,
-        "rotation": 0,
-        "duration": 0
-      },
-      {
-        "x": 5,
-        "y": -5,
-        "scaleX": 0.92,
-        "scaleY": 1.08,
-        "alpha": 1,
-        "rotation": -0.05,
-        "duration": 35,
-        "ease": "power2.in"
-      },
-      {
-        "x": 20,
-        "y": -12,
-        "scaleX": 0.88,
-        "scaleY": 1.12,
-        "alpha": 0.85,
-        "rotation": -0.1,
-        "duration": 40,
-        "ease": "power3.out",
-        "afterimage": true,
-        "vfx": "shadow_fade",
-        "vfxTarget": "self"
-      },
-      {
-        "x": 50,
-        "y": -18,
-        "scaleX": 0.85,
-        "scaleY": 1.15,
-        "alpha": 0.7,
-        "rotation": -0.15,
-        "duration": 35,
-        "ease": "power2.in",
-        "afterimage": true
-      },
-      {
-        "x": 90,
-        "y": -22,
-        "scaleX": 0.82,
-        "scaleY": 1.18,
-        "alpha": 0.55,
-        "rotation": -0.18,
-        "duration": 30,
-        "ease": "power4.in",
-        "afterimage": true
-      },
-      {
-        "x": 220,
-        "y": 5,
-        "scaleX": 0.85,
-        "scaleY": 1.15,
-        "alpha": 0.6,
-        "rotation": 0.05,
-        "duration": 40,
-        "ease": "power4.out",
-        "vfx": "shadow_appear",
-        "vfxTarget": "self"
-      },
-      {
-        "x": 260,
-        "y": 2,
-        "scaleX": 0.92,
-        "scaleY": 1.08,
-        "alpha": 0.8,
-        "rotation": 0.03,
-        "duration": 35,
-        "ease": "power2.out"
-      },
-      {
-        "x": 280,
-        "y": 0,
-        "scaleX": 0.96,
-        "scaleY": 1.04,
-        "alpha": 0.9,
-        "rotation": 0.01,
-        "duration": 35,
-        "ease": "power2.out"
-      },
-      {
-        "x": 290,
-        "y": 0,
-        "scaleX": 1,
-        "scaleY": 1,
-        "alpha": 1,
-        "rotation": 0,
-        "duration": 30,
-        "ease": "power2.out"
-      }
-    ]
-  },
-  "player.sneak_return": {
-    "id": "player.sneak_return",
-    "name": "그림자 귀환",
-    "target": "player",
-    "type": "once",
-    "priority": 12,
     "duration": 280,
     "keyframes": [
       {
@@ -3808,70 +3705,144 @@ window.ANIM_BUNDLE = {
         "duration": 0
       },
       {
-        "x": -15,
-        "y": -5,
-        "scaleX": 0.92,
-        "scaleY": 1.08,
-        "alpha": 0.85,
-        "rotation": 0.05,
-        "duration": 35,
+        "x": -10,
+        "y": 8,
+        "scaleX": 0.85,
+        "scaleY": 1.15,
+        "alpha": 1,
+        "rotation": 0,
+        "duration": 30,
         "ease": "power2.in"
       },
       {
-        "x": -60,
-        "y": -12,
-        "scaleX": 0.88,
-        "scaleY": 1.12,
+        "x": -5,
+        "y": 15,
+        "scaleX": 0.75,
+        "scaleY": 1.25,
+        "alpha": 0.9,
+        "rotation": 0,
+        "duration": 25,
+        "ease": "power3.in",
+        "vfx": "shadow_fade",
+        "vfxTarget": "self"
+      },
+      {
+        "x": 150,
+        "y": -20,
+        "scaleX": 1.2,
+        "scaleY": 0.8,
         "alpha": 0.7,
-        "rotation": 0.08,
+        "rotation": 0.1,
         "duration": 40,
+        "ease": "power4.out",
+        "afterimage": true
+      },
+      {
+        "x": 280,
+        "y": -5,
+        "scaleX": 1.1,
+        "scaleY": 0.9,
+        "alpha": 0.8,
+        "rotation": 0.05,
+        "duration": 45,
         "ease": "power3.out",
         "afterimage": true,
+        "vfx": "shadow_appear",
+        "vfxTarget": "self"
+      },
+      {
+        "x": 290,
+        "y": 0,
+        "scaleX": 1.05,
+        "scaleY": 0.95,
+        "alpha": 0.9,
+        "rotation": 0.02,
+        "duration": 35,
+        "ease": "power2.out"
+      },
+      {
+        "x": 295,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "alpha": 1,
+        "rotation": 0,
+        "duration": 30,
+        "ease": "power2.out"
+      }
+    ]
+  },
+  "player.sneak_return": {
+    "id": "player.sneak_return",
+    "name": "그림자 이탈",
+    "target": "player",
+    "type": "once",
+    "priority": 15,
+    "duration": 250,
+    "keyframes": [
+      {
+        "x": 0,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "alpha": 1,
+        "rotation": 0,
+        "duration": 0
+      },
+      {
+        "x": 10,
+        "y": 8,
+        "scaleX": 0.85,
+        "scaleY": 1.15,
+        "alpha": 0.9,
+        "rotation": 0,
+        "duration": 25,
+        "ease": "power2.in",
         "vfx": "shadow_fade",
         "vfxTarget": "self"
       },
       {
         "x": -150,
         "y": -15,
-        "scaleX": 0.85,
-        "scaleY": 1.15,
-        "alpha": 0.6,
-        "rotation": 0.06,
-        "duration": 45,
-        "ease": "power4.in",
-        "afterimage": true
-      },
-      {
-        "x": -220,
-        "y": -8,
-        "scaleX": 0.88,
-        "scaleY": 1.12,
-        "alpha": 0.7,
-        "rotation": 0.03,
+        "scaleX": 1.15,
+        "scaleY": 0.85,
+        "alpha": 0.75,
+        "rotation": -0.08,
         "duration": 45,
         "ease": "power4.out",
         "afterimage": true
       },
       {
-        "x": -265,
-        "y": -3,
-        "scaleX": 0.94,
-        "scaleY": 1.06,
+        "x": -280,
+        "y": -5,
+        "scaleX": 1.1,
+        "scaleY": 0.9,
         "alpha": 0.85,
-        "rotation": 0.01,
-        "duration": 40,
-        "ease": "power2.out",
+        "rotation": -0.04,
+        "duration": 50,
+        "ease": "power3.out",
+        "afterimage": true,
         "vfx": "shadow_appear",
         "vfxTarget": "self"
       },
       {
         "x": -290,
         "y": 0,
+        "scaleX": 1.02,
+        "scaleY": 0.98,
+        "alpha": 0.95,
+        "rotation": -0.01,
+        "duration": 35,
+        "ease": "power2.out"
+      },
+      {
+        "x": -295,
+        "y": 0,
         "scaleX": 1,
         "scaleY": 1,
         "alpha": 1,
         "rotation": 0,
-        "duration": 35,
+        "duration": 30,
         "ease": "power2.out"
       }
     ]
@@ -4111,54 +4082,53 @@ window.ANIM_BUNDLE = {
 window.VFX_BUNDLE = {
   "backstab_slash": {
     "id": "backstab_slash",
-    "name": "뒤치기 베기",
-    "duration": 200,
-    "offset": {
-      "x": 0,
-      "y": -40
-    },
+    "name": "급소 베기",
+    "shake": 10,
     "particles": [
       {
         "type": "slash",
-        "count": 3,
-        "color": "#f8fafc",
-        "glow": "#6366f1",
-        "angle": [
-          -25,
-          -10,
-          5
-        ],
-        "length": 130,
-        "width": 14,
-        "alpha": 1,
-        "lifetime": 150
-      },
-      {
-        "type": "arrow",
         "count": 2,
-        "color": "#c7d2fe",
-        "glow": "#4f46e5",
-        "length": 85,
-        "width": 50,
-        "alpha": 0.9,
-        "lifetime": 120
-      },
-      {
-        "type": "spark",
-        "count": 25,
+        "angle": [
+          -20,
+          25
+        ],
+        "length": [
+          80,
+          120
+        ],
+        "width": 10,
         "color": "#ffffff",
-        "size": 6,
-        "speed": 150,
-        "angle": "radial",
-        "alpha": 1,
-        "lifetime": 180
+        "glow": "#ef4444",
+        "life": 120
       },
       {
         "type": "flash",
-        "color": "#ffffff",
-        "size": 120,
-        "alpha": 0.9,
-        "fadeOut": true
+        "count": 1,
+        "size": 80,
+        "color": "#fef3c7",
+        "life": 60
+      },
+      {
+        "type": "spark",
+        "count": 15,
+        "spread": 50,
+        "speed": [
+          5,
+          12
+        ],
+        "size": [
+          3,
+          7
+        ],
+        "colors": [
+          "#fbbf24",
+          "#ffffff",
+          "#ef4444"
+        ],
+        "life": [
+          100,
+          160
+        ]
       }
     ]
   },
@@ -4341,51 +4311,49 @@ window.VFX_BUNDLE = {
   "blood_burst": {
     "id": "blood_burst",
     "name": "피 분출",
-    "duration": 400,
-    "offset": {
-      "x": 0,
-      "y": -35
-    },
     "particles": [
       {
-        "type": "flash",
-        "color": "#ef4444",
-        "size": 100,
-        "alpha": 0.9,
-        "fadeOut": true
-      },
-      {
-        "type": "ring",
-        "count": 2,
-        "color": "#dc2626",
-        "size": 20,
-        "maxSize": 90,
-        "alpha": 0.8,
-        "fadeOut": true,
-        "delay": [
-          0,
-          50
+        "type": "debris",
+        "count": 12,
+        "speed": [
+          4,
+          10
+        ],
+        "size": [
+          4,
+          8
+        ],
+        "colors": [
+          "#ef4444",
+          "#dc2626",
+          "#991b1b"
+        ],
+        "gravity": 0.4,
+        "life": [
+          120,
+          180
         ]
       },
       {
-        "type": "debris",
-        "count": 30,
-        "color": "#ef4444",
-        "size": 10,
-        "speed": 140,
-        "angle": "radial",
-        "gravity": 3,
-        "alpha": 1,
-        "lifetime": 350
-      },
-      {
         "type": "spark",
-        "count": 20,
-        "color": "#fca5a5",
-        "size": 5,
-        "speed": 180,
-        "alpha": 0.9,
-        "lifetime": 280
+        "count": 8,
+        "spread": 40,
+        "speed": [
+          3,
+          6
+        ],
+        "size": [
+          2,
+          5
+        ],
+        "colors": [
+          "#ef4444",
+          "#f87171"
+        ],
+        "life": [
+          80,
+          120
+        ]
       }
     ]
   },
@@ -4830,63 +4798,23 @@ window.VFX_BUNDLE = {
       {
         "type": "flash",
         "count": 1,
-        "color": "#60a5fa",
-        "size": 120,
-        "life": 80
-      },
-      {
-        "type": "ring",
-        "count": 3,
-        "color": "#3b82f6",
-        "size": 15,
-        "maxSize": 100,
-        "life": 180,
-        "delay": 20
-      },
-      {
-        "type": "spark",
-        "count": 25,
-        "colors": [
-          "#ffffff",
-          "#93c5fd",
-          "#60a5fa",
-          "#3b82f6"
-        ],
-        "size": {
-          "min": 4,
-          "max": 10
-        },
-        "speed": {
-          "min": 10,
-          "max": 22
-        },
-        "angle": {
-          "min": -180,
-          "max": 180
-        },
-        "life": {
-          "min": 120,
-          "max": 250
-        },
-        "fadeOut": true
+        "size": 100,
+        "color": "#ffffff",
+        "life": 100
       },
       {
         "type": "line",
-        "count": 12,
-        "color": "#bfdbfe",
-        "length": {
-          "min": 50,
-          "max": 90
-        },
+        "count": 8,
+        "angleStep": 45,
+        "length": [
+          60,
+          100
+        ],
         "width": 3,
-        "angleStep": 30,
-        "life": 150
+        "color": "#60a5fa",
+        "life": 120
       }
-    ],
-    "offset": {
-      "x": 0,
-      "y": 0
-    }
+    ]
   },
   "flurry_finish": {
     "id": "flurry_finish",
@@ -5654,131 +5582,77 @@ window.VFX_BUNDLE = {
       {
         "type": "flash",
         "count": 1,
-        "color": "#6366f1",
         "size": 60,
-        "life": 100
-      },
-      {
-        "type": "smoke",
-        "count": 10,
-        "color": "#0f0f23",
-        "size": {
-          "min": 30,
-          "max": 50
-        },
-        "speed": {
-          "min": 1,
-          "max": 3
-        },
-        "angle": {
-          "min": 180,
-          "max": 360
-        },
-        "life": {
-          "min": 200,
-          "max": 350
-        },
-        "gravity": 0.05,
-        "fadeOut": true
+        "color": "#4c1d95",
+        "life": 80
       },
       {
         "type": "ring",
         "count": 1,
-        "color": "#818cf8",
-        "size": 5,
-        "maxSize": 100,
-        "life": 200
+        "size": 10,
+        "maxSize": 60,
+        "color": "#7c3aed",
+        "life": 100
       },
       {
         "type": "spark",
-        "count": 8,
-        "color": "#a5b4fc",
-        "size": {
-          "min": 2,
-          "max": 5
-        },
-        "speed": {
-          "min": 3,
-          "max": 8
-        },
-        "angle": {
-          "min": -180,
-          "max": 180
-        },
-        "life": {
-          "min": 100,
-          "max": 200
-        },
-        "fadeOut": true
+        "count": 10,
+        "spread": 35,
+        "speed": [
+          3,
+          7
+        ],
+        "size": [
+          3,
+          6
+        ],
+        "colors": [
+          "#7c3aed",
+          "#a78bfa",
+          "#6366f1"
+        ],
+        "life": [
+          80,
+          120
+        ]
       }
-    ],
-    "offset": {
-      "x": 0,
-      "y": -50
-    }
+    ]
   },
   "shadow_fade": {
     "id": "shadow_fade",
     "name": "그림자 소멸",
     "particles": [
       {
-        "type": "smoke",
-        "count": 15,
-        "color": "#1a1a2e",
-        "size": {
-          "min": 20,
-          "max": 45
-        },
-        "speed": {
-          "min": 2,
-          "max": 5
-        },
-        "angle": {
-          "min": -180,
-          "max": 180
-        },
-        "life": {
-          "min": 200,
-          "max": 400
-        },
-        "gravity": -0.08,
-        "fadeOut": true
+        "type": "ring",
+        "count": 1,
+        "size": 20,
+        "maxSize": 80,
+        "color": "#1e1b4b",
+        "life": 120
       },
       {
         "type": "spark",
-        "count": 12,
-        "color": "#6366f1",
-        "size": {
-          "min": 3,
-          "max": 8
-        },
-        "speed": {
-          "min": 4,
-          "max": 10
-        },
-        "angle": {
-          "min": -180,
-          "max": 180
-        },
-        "life": {
-          "min": 150,
-          "max": 300
-        },
-        "fadeOut": true
-      },
-      {
-        "type": "ring",
-        "count": 2,
-        "color": "#4f46e5",
-        "size": 10,
-        "maxSize": 80,
-        "life": 250
+        "count": 8,
+        "spread": 30,
+        "speed": [
+          2,
+          5
+        ],
+        "size": [
+          4,
+          8
+        ],
+        "colors": [
+          "#312e81",
+          "#4c1d95",
+          "#1e1b4b"
+        ],
+        "life": [
+          100,
+          140
+        ]
       }
-    ],
-    "offset": {
-      "x": 0,
-      "y": -50
-    }
+    ]
   },
   "slash": {
     "id": "slash",
@@ -6292,77 +6166,35 @@ window.VFX_BUNDLE = {
   },
   "wind_burst": {
     "id": "wind_burst",
-    "name": "바람 분출",
+    "name": "바람 폭발",
     "particles": [
       {
-        "type": "slash",
-        "count": 5,
-        "color": "#e0f2fe",
-        "glow": "#38bdf8",
-        "angle": [
-          0,
-          30,
-          60,
-          90,
-          120
-        ],
-        "length": {
-          "min": 40,
-          "max": 70
-        },
-        "width": 6,
-        "life": 100
-      },
-      {
-        "type": "smoke",
-        "count": 10,
-        "color": "#bae6fd",
-        "size": {
-          "min": 15,
-          "max": 35
-        },
-        "speed": {
-          "min": 4,
-          "max": 10
-        },
-        "angle": {
-          "min": 150,
-          "max": 210
-        },
-        "life": {
-          "min": 150,
-          "max": 300
-        },
-        "gravity": -0.1,
-        "fadeOut": true
+        "type": "ring",
+        "count": 1,
+        "size": 30,
+        "maxSize": 120,
+        "color": "#94a3b8",
+        "life": 150
       },
       {
         "type": "spark",
         "count": 12,
-        "color": "#7dd3fc",
-        "size": {
-          "min": 2,
-          "max": 5
-        },
-        "speed": {
-          "min": 6,
-          "max": 14
-        },
-        "angle": {
-          "min": 140,
-          "max": 220
-        },
-        "life": {
-          "min": 80,
-          "max": 180
-        },
-        "fadeOut": true
+        "spread": 40,
+        "speed": [
+          4,
+          8
+        ],
+        "size": [
+          3,
+          6
+        ],
+        "color": "#60a5fa",
+        "life": [
+          100,
+          150
+        ]
       }
-    ],
-    "offset": {
-      "x": 20,
-      "y": -50
-    }
+    ]
   },
   "wind_spiral": {
     "id": "wind_spiral",

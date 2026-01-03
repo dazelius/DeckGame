@@ -1,21 +1,21 @@
 {
     "id": "enemy.stabbed",
-    "name": "뒤에서 찔림 - 극적인 반응",
+    "name": "급소 피격",
     "target": "enemy",
     "type": "once",
     "priority": 20,
-    "duration": 350,
+    "duration": 300,
     "keyframes": [
         { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 0 },
         
-        { "x": -25, "y": -10, "scaleX": 1.2, "scaleY": 0.85, "alpha": 0.8, "rotation": -0.18, "duration": 25, "ease": "power4.out", "vfx": "blood_drip", "vfxTarget": "self" },
-        { "x": -45, "y": -5, "scaleX": 1.3, "scaleY": 0.78, "alpha": 0.65, "rotation": -0.28, "duration": 35, "ease": "power2.out" },
-        { "x": -55, "y": 5, "scaleX": 1.25, "scaleY": 0.82, "alpha": 0.55, "rotation": -0.32, "duration": 40, "ease": "power2.out" },
+        { "x": 25, "y": -15, "scaleX": 0.7, "scaleY": 1.35, "alpha": 0.7, "rotation": 0.2, "duration": 25, "ease": "power4.out", "vfx": "blood_burst", "vfxTarget": "self" },
+        { "x": 45, "y": -8, "scaleX": 0.65, "scaleY": 1.4, "alpha": 0.6, "rotation": 0.25, "duration": 30, "ease": "power2.out" },
+        { "x": 55, "y": 0, "scaleX": 0.7, "scaleY": 1.35, "alpha": 0.65, "rotation": 0.2, "duration": 25, "ease": "power2.out" },
         
-        { "x": 20, "y": 8, "scaleX": 0.88, "scaleY": 1.12, "alpha": 0.7, "rotation": 0.1, "duration": 50, "ease": "power2.out" },
-        { "x": -10, "y": 4, "scaleX": 1.05, "scaleY": 0.96, "alpha": 0.82, "rotation": -0.05, "duration": 50, "ease": "elastic.out(1, 0.6)" },
-        { "x": 5, "y": 2, "scaleX": 0.98, "scaleY": 1.02, "alpha": 0.9, "rotation": 0.02, "duration": 45, "ease": "power2.out" },
-        { "x": -2, "y": 0, "scaleX": 1.01, "scaleY": 0.99, "alpha": 0.96, "rotation": -0.01, "duration": 40, "ease": "power2.out" },
-        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 35, "ease": "power2.out" }
+        { "x": 45, "y": 5, "scaleX": 0.8, "scaleY": 1.2, "alpha": 0.75, "rotation": 0.12, "duration": 35, "ease": "power2.out" },
+        { "x": 30, "y": 3, "scaleX": 0.9, "scaleY": 1.1, "alpha": 0.85, "rotation": 0.06, "duration": 40, "ease": "power2.out" },
+        { "x": 15, "y": 1, "scaleX": 0.95, "scaleY": 1.05, "alpha": 0.92, "rotation": 0.02, "duration": 40, "ease": "power2.out" },
+        { "x": 5, "y": 0, "scaleX": 0.98, "scaleY": 1.02, "alpha": 0.97, "rotation": 0.01, "duration": 35, "ease": "power2.out" },
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 30, "ease": "power2.out" }
     ]
 }
