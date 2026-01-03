@@ -5,48 +5,67 @@
     "particles": [
         {
             "type": "flash",
-            "size": 50,
+            "size": 70,
             "color": "#ffffff",
-            "life": 50
+            "life": 60
+        },
+        {
+            "type": "flash",
+            "size": 50,
+            "color": "#c4b5fd",
+            "life": 80
         },
         {
             "type": "thrust",
             "count": 3,
-            "delay": 15,
-            "angle": [-15, 0, 15],
-            "length": [120, 150],
-            "width": 5,
-            "color": "#ffffff",
-            "glow": "#a78bfa",
+            "angle": [-8, 0, 8],
+            "length": [180, 220],
+            "width": 8,
+            "color": "#e0e7ff",
+            "glow": "#8b5cf6",
+            "life": 150
+        },
+        {
+            "type": "thrust",
+            "count": 3,
+            "angle": [-8, 0, 8],
+            "length": [140, 180],
+            "width": 25,
+            "color": "rgba(139, 92, 246, 0.4)",
+            "glow": "#7c3aed",
             "life": 120
         },
         {
-            "type": "thrust",
-            "count": 3,
-            "delay": 15,
-            "angle": [-15, 0, 15],
-            "length": [90, 120],
-            "width": 16,
-            "color": "rgba(167, 139, 250, 0.5)",
-            "glow": "#8b5cf6",
-            "life": 90
+            "type": "ring",
+            "size": 20,
+            "maxSize": 100,
+            "color": "#a78bfa",
+            "life": 180
         },
         {
             "type": "ring",
             "size": 15,
-            "maxSize": 60,
-            "color": "#a78bfa",
+            "maxSize": 70,
+            "color": "#c4b5fd",
             "life": 140
         },
         {
             "type": "spark",
+            "count": 18,
+            "spread": 70,
+            "speed": [12, 28],
+            "size": [3, 7],
+            "colors": ["#a78bfa", "#c4b5fd", "#f0abfc", "#ffffff"],
+            "life": [120, 220]
+        },
+        {
+            "type": "line",
             "count": 12,
-            "spread": 50,
-            "speed": [8, 18],
-            "size": [2, 6],
-            "colors": ["#a78bfa", "#c4b5fd", "#ffffff"],
-            "life": [150, 280]
+            "angleStep": 30,
+            "length": [40, 80],
+            "width": 3,
+            "color": "#a78bfa",
+            "life": 120
         }
     ]
 }
-

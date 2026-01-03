@@ -1,19 +1,21 @@
 {
     "id": "player.flurry_stab1",
-    "name": "연속찌르기 1타",
+    "name": "세검 1타 - 상단 찌르기",
     "target": "player",
     "type": "once",
     "priority": 14,
-    "duration": 120,
+    "duration": 95,
     "keyframes": [
         { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 0 },
         
-        { "x": -5, "y": -8, "scaleX": 0.92, "scaleY": 1.08, "rotation": -0.05, "duration": 15, "ease": "power2.in" },
-        { "x": 35, "y": -15, "scaleX": 1.25, "scaleY": 0.78, "rotation": 0.12, "duration": 18, "ease": "power4.out", "vfx": "flurry_stab", "shake": 2 },
-        { "x": 40, "y": -12, "scaleX": 1.20, "scaleY": 0.82, "rotation": 0.10, "duration": 15, "ease": "power2.out" },
-        { "x": 30, "y": -8, "scaleX": 1.10, "scaleY": 0.90, "rotation": 0.06, "duration": 20, "ease": "power2.out" },
-        { "x": 15, "y": -3, "scaleX": 1.03, "scaleY": 0.97, "rotation": 0.02, "duration": 25, "ease": "power2.out" },
-        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 27, "ease": "power2.out" }
+        { "x": -12, "y": -25, "scaleX": 0.75, "scaleY": 1.30, "rotation": -0.15, "duration": 8, "ease": "power2.in" },
+        
+        { "x": 85, "y": -40, "scaleX": 1.55, "scaleY": 0.55, "rotation": 0.25, "duration": 12, "ease": "power4.out", "vfx": "flurry_stab", "shake": 3, "hitstop": 25 },
+        
+        { "x": 95, "y": -35, "scaleX": 1.45, "scaleY": 0.60, "rotation": 0.22, "duration": 10, "ease": "power2.out" },
+        { "x": 75, "y": -25, "scaleX": 1.25, "scaleY": 0.78, "rotation": 0.15, "duration": 15, "ease": "power2.out" },
+        { "x": 45, "y": -12, "scaleX": 1.10, "scaleY": 0.92, "rotation": 0.08, "duration": 18, "ease": "power2.out" },
+        { "x": 15, "y": -3, "scaleX": 1.02, "scaleY": 0.98, "rotation": 0.02, "duration": 16, "ease": "power2.out" },
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 16, "ease": "power2.out" }
     ]
 }
-

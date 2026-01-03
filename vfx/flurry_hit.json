@@ -5,26 +5,34 @@
     "particles": [
         {
             "type": "flash",
-            "size": 25,
+            "size": 35,
             "color": "#ffffff",
-            "life": 30
+            "life": 35
         },
         {
             "type": "ring",
-            "size": 10,
-            "maxSize": 35,
-            "color": "#a78bfa",
-            "life": 80
+            "size": 15,
+            "maxSize": 55,
+            "color": "#a5b4fc",
+            "life": 100
         },
         {
             "type": "spark",
-            "count": 5,
-            "spread": 30,
-            "speed": [6, 12],
-            "size": [2, 4],
-            "colors": ["#a78bfa", "#ef4444", "#ffffff"],
-            "life": [100, 180]
+            "count": 10,
+            "spread": 50,
+            "speed": [10, 20],
+            "size": [2, 5],
+            "colors": ["#a5b4fc", "#c4b5fd", "#f0abfc", "#ffffff"],
+            "life": [70, 140]
+        },
+        {
+            "type": "line",
+            "count": 8,
+            "angleStep": 45,
+            "length": [20, 45],
+            "width": 2,
+            "color": "#c4b5fd",
+            "life": 70
         }
     ]
 }
-
