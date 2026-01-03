@@ -1,57 +1,57 @@
 {
     "id": "plunder_critical",
-    "name": "강탈 크리티컬 - 취약 보너스",
-    "shake": 12,
+    "name": "강탈 크리티컬 - 취약 학살",
+    "shake": 18,
     "particles": [
         {
             "type": "slash",
-            "count": 3,
-            "angle": [-35, 0, 35],
-            "length": [80, 120],
-            "width": 12,
-            "color": "#fbbf24",
-            "glow": "#f59e0b",
-            "life": 180
+            "count": 5,
+            "angle": [-60, -30, 0, 30, 60],
+            "length": [100, 150],
+            "width": 14,
+            "color": "#dc2626",
+            "glow": "#7f1d1d",
+            "life": 200
         },
         {
             "type": "flash",
-            "size": 80,
+            "size": 100,
             "color": "#ffffff",
-            "life": 80
+            "life": 70
         },
         {
             "type": "ring",
-            "size": 20,
-            "maxSize": 100,
-            "color": "#fbbf24",
-            "life": 160
+            "size": 25,
+            "maxSize": 130,
+            "color": "#b91c1c",
+            "life": 180
         },
         {
             "type": "spark",
-            "count": 20,
-            "spread": 60,
-            "speed": [8, 20],
-            "size": [3, 7],
-            "colors": ["#fbbf24", "#f59e0b", "#ffffff", "#22c55e"],
-            "life": [150, 300]
+            "count": 35,
+            "spread": 80,
+            "speed": [10, 28],
+            "size": [4, 10],
+            "colors": ["#dc2626", "#ef4444", "#b91c1c", "#991b1b", "#7f1d1d"],
+            "life": [180, 400]
         },
         {
-            "type": "symbol",
-            "symbol": "💰",
-            "count": 3,
-            "size": 28,
-            "floatUp": true,
-            "life": 600
+            "type": "debris",
+            "count": 25,
+            "speed": [8, 22],
+            "size": [3, 8],
+            "colors": ["#991b1b", "#7f1d1d", "#450a0a", "#1f2937"],
+            "gravity": 0.5,
+            "life": [220, 500]
         },
         {
             "type": "line",
-            "count": 10,
-            "angleStep": 36,
-            "length": [40, 70],
-            "width": 4,
-            "color": "#fbbf24",
-            "life": 150
+            "count": 12,
+            "angleStep": 30,
+            "length": [50, 90],
+            "width": 5,
+            "color": "#dc2626",
+            "life": 180
         }
     ]
 }
-

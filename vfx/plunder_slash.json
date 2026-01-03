@@ -1,49 +1,48 @@
 {
     "id": "plunder_slash",
-    "name": "강탈 슬래시 - 황금빛 베기",
-    "shake": 6,
+    "name": "강탈 슬래시 - 잔인한 베기",
+    "shake": 8,
     "particles": [
         {
             "type": "slash",
-            "count": 2,
-            "angle": [-25, 25],
-            "length": [60, 90],
-            "width": 8,
-            "color": "#fbbf24",
-            "glow": "#f59e0b",
-            "life": 150
+            "count": 3,
+            "angle": [-40, 0, 40],
+            "length": [70, 110],
+            "width": 10,
+            "color": "#dc2626",
+            "glow": "#991b1b",
+            "life": 160
         },
         {
             "type": "flash",
-            "size": 50,
-            "color": "#fef3c7",
-            "life": 60
+            "size": 60,
+            "color": "#fef2f2",
+            "life": 50
         },
         {
             "type": "ring",
-            "size": 15,
-            "maxSize": 70,
-            "color": "#f59e0b",
-            "life": 130
+            "size": 20,
+            "maxSize": 90,
+            "color": "#ef4444",
+            "life": 140
         },
         {
             "type": "spark",
-            "count": 12,
-            "spread": 45,
-            "speed": [6, 14],
-            "size": [2, 5],
-            "colors": ["#fbbf24", "#f59e0b", "#ffffff", "#fef3c7"],
-            "life": [120, 220]
+            "count": 18,
+            "spread": 55,
+            "speed": [8, 18],
+            "size": [3, 7],
+            "colors": ["#dc2626", "#ef4444", "#b91c1c", "#7f1d1d"],
+            "life": [140, 280]
         },
         {
             "type": "debris",
-            "count": 6,
-            "speed": [5, 12],
-            "size": [2, 4],
-            "colors": ["#f59e0b", "#d97706", "#fbbf24"],
-            "gravity": 0.3,
-            "life": [150, 280]
+            "count": 12,
+            "speed": [6, 16],
+            "size": [2, 6],
+            "colors": ["#991b1b", "#7f1d1d", "#450a0a", "#dc2626"],
+            "gravity": 0.4,
+            "life": [180, 350]
         }
     ]
 }
-
