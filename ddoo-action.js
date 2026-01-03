@@ -538,8 +538,17 @@ const DDOOAction = {
                 getHitPoint
             } = options;
             
-            const baseScale = sprite.scale.x;
+            // ⚠️ 중요: baseScale은 항상 1.0으로 고정!
+            // 이전: const baseScale = sprite.scale.x; (누적 버그 원인)
+            const baseScale = 1.0;
             const startX = container.x;
+            
+            // 애니메이션 시작 전 스케일 정규화
+            // (이전 애니메이션에서 스케일이 변경된 경우 대비)
+            if (data.keyframes && data.keyframes[0]) {
+                const firstKf = data.keyframes[0];
+                sprite.scale.set(firstKf.scaleX ?? 1, firstKf.scaleY ?? 1);
+            }
             
             const tl = gsap.timeline({
                 onComplete: () => {
