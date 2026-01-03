@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="ddoo-action.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -281,6 +282,17 @@
             app.stage.addChild(stageContainer);
             
             drawBackground(width, height);
+            
+            // DDOOAction 엔진 초기화 (컨테이너/애니메이션/VFX 로드) - 캐릭터 생성 전에!
+            if (typeof DDOOAction !== 'undefined') {
+                await DDOOAction.init(app, stageContainer);
+                log('success', '✅ DDOOAction 엔진 초기화 완료');
+                
+                // DDOOAction의 animCache를 test_animation에서도 사용
+                animCache = DDOOAction.animCache;
+                vfxCache = DDOOAction.vfxCache;
+            }
+            
             await createCharacters(width, height);
             
             log('info', `Stage: ${width}x${height}`);
@@ -319,49 +331,109 @@
             config.playerBaseX = width * 0.28;
             config.enemyBaseX = width * 0.72;
             
-            // 플레이어
-            playerContainer = new PIXI.Container();
-            playerContainer.x = config.playerBaseX;
-            playerContainer.y = groundY;
+            // 🎮 DDOOAction 엔진 사용!
+            const useDDOOEngine = typeof DDOOAction !== 'undefined';
             
-            try {
-                const tex = await PIXI.Assets.load('hero.png');
-                playerSprite = new PIXI.Sprite(tex);
-                playerSprite.anchor.set(0.5, 1);
-                playerSprite.scale.set(1.0);
-                log('success', `✅ hero.png (${tex.width}x${tex.height})`);
-            } catch (e) {
-                playerSprite = createFallback(0x60a5fa, 'P');
-                log('warn', '⚠️ hero.png fallback');
+            if (useDDOOEngine && DDOOAction.initialized) {
+                log('info', '🎮 DDOOAction 엔진으로 캐릭터 생성...');
+                
+                // 플레이어 텍스처 로드
+                let playerTex;
+                try {
+                    playerTex = await PIXI.Assets.load('hero.png');
+                    log('success', `✅ hero.png (${playerTex.width}x${playerTex.height})`);
+                } catch (e) {
+                    playerTex = createFallbackTexture(0x60a5fa, 'P');
+                    log('warn', '⚠️ hero.png fallback');
+                }
+                
+                // DDOOAction으로 플레이어 생성 (그림자, 아웃라인, 브레싱 포함!)
+                const playerData = DDOOAction.createCharacter('player', {
+                    texture: playerTex,
+                    x: config.playerBaseX,
+                    y: groundY,
+                    scale: 1.0,
+                    team: 'player',
+                    enableEffects: true
+                });
+                playerContainer = playerData.container;
+                playerSprite = playerData.sprite;
+                
+                // 적 텍스처 로드
+                let enemyTex;
+                try {
+                    enemyTex = await PIXI.Assets.load('goblinarcher.png');
+                    log('success', `✅ goblinarcher.png (${enemyTex.width}x${enemyTex.height})`);
+                } catch (e) {
+                    enemyTex = createFallbackTexture(0xef4444, 'E');
+                    log('warn', '⚠️ goblinarcher.png fallback');
+                }
+                
+                // DDOOAction으로 적 생성
+                const enemyData = DDOOAction.createCharacter('enemy', {
+                    texture: enemyTex,
+                    x: config.enemyBaseX,
+                    y: groundY,
+                    scale: 1.0,
+                    team: 'enemy',
+                    enableEffects: true
+                });
+                enemyContainer = enemyData.container;
+                enemySprite = enemyData.sprite;
+                
+                log('success', '✅ DDOOAction 캐릭터 생성 완료 (그림자, 아웃라인, 브레싱)');
+                
+            } else {
+                // 폴백: 기존 방식
+                log('warn', '⚠️ DDOOAction 없음, 기존 방식 사용');
+                
+                // 플레이어
+                playerContainer = new PIXI.Container();
+                playerContainer.x = config.playerBaseX;
+                playerContainer.y = groundY;
+                
+                try {
+                    const tex = await PIXI.Assets.load('hero.png');
+                    playerSprite = new PIXI.Sprite(tex);
+                    playerSprite.anchor.set(0.5, 1);
+                    playerSprite.scale.set(1.0);
+                } catch (e) {
+                    playerSprite = createFallback(0x60a5fa, 'P');
+                }
+                playerContainer.addChild(playerSprite);
+                stageContainer.addChild(playerContainer);
+                
+                // 적
+                enemyContainer = new PIXI.Container();
+                enemyContainer.x = config.enemyBaseX;
+                enemyContainer.y = groundY;
+                
+                try {
+                    const tex = await PIXI.Assets.load('goblinarcher.png');
+                    enemySprite = new PIXI.Sprite(tex);
+                    enemySprite.anchor.set(0.5, 1);
+                    enemySprite.scale.set(1.0);
+                } catch (e) {
+                    enemySprite = createFallback(0xef4444, 'E');
+                }
+                enemyContainer.addChild(enemySprite);
+                stageContainer.addChild(enemyContainer);
+                
+                initAfterimageSystem();
+                startBreathing();
             }
-            playerContainer.addChild(playerSprite);
-            stageContainer.addChild(playerContainer);
-            
-            // 적
-            enemyContainer = new PIXI.Container();
-            enemyContainer.x = config.enemyBaseX;
-            enemyContainer.y = groundY;
-            
-            try {
-                const tex = await PIXI.Assets.load('goblinarcher.png');
-                enemySprite = new PIXI.Sprite(tex);
-                enemySprite.anchor.set(0.5, 1);
-                enemySprite.scale.set(1.0);
-                log('success', `✅ goblinarcher.png (${tex.width}x${tex.height})`);
-            } catch (e) {
-                enemySprite = createFallback(0xef4444, 'E');
-                log('warn', '⚠️ goblinarcher.png fallback');
-            }
-            enemyContainer.addChild(enemySprite);
-            stageContainer.addChild(enemyContainer);
             
             // 캐릭터 크기 저장
             updateCharacterInfo();
-            
-            // 잔상 시스템 초기화
-            initAfterimageSystem();
-            
-            startBreathing();
+        }
+        
+        // 폴백 텍스처 생성
+        function createFallbackTexture(color, letter) {
+            const g = new PIXI.Graphics();
+            g.beginFill(color);
+            g.drawRoundedRect(0, 0, 70, 120, 10);
+            g.endFill();
+            return app.renderer.generateTexture(g);
         }
         
         function updateCharacterInfo() {
@@ -551,6 +623,30 @@
             const baseX = target === 'player' ? config.playerBaseX : config.enemyBaseX;
             const dir = target === 'player' ? 1 : -1;
             
+            // 🎮 DDOOAction 엔진 사용!
+            if (typeof DDOOAction !== 'undefined' && DDOOAction.initialized) {
+                await DDOOAction.play(id, {
+                    container,
+                    sprite,
+                    baseX,
+                    baseY: config.baseY,
+                    dir,
+                    isRelative: false,
+                    onComplete: () => log('success', `✅ ${id} 완료`),
+                    onHit: (kf) => log('info', `💥 히트! ${kf.vfx || ''}`),
+                    getHitPoint: () => {
+                        // 적 타격점
+                        const ec = DDOOAction.getCharacter('enemy');
+                        if (ec) {
+                            return { x: ec.container.x, y: ec.container.y - (config.enemyHeight || 100) / 2 };
+                        }
+                        return { x: enemyContainer.x, y: config.baseY - 60 };
+                    }
+                });
+                return;
+            }
+            
+            // 폴백: 기존 방식
             if (data.type === 'sequence' && data.steps) {
                 await playSequence(data);
             } else if (data.keyframes) {
