@@ -14,7 +14,7 @@
         { "x": -30, "y": 30, "scaleX": 0.80, "scaleY": 1.20, "rotation": -0.20, "duration": 35, "ease": "power2.in" },
         
         { "x": 20, "y": -15, "scaleX": 1.15, "scaleY": 0.85, "rotation": 0.12, "duration": 35, "ease": "power3.out" },
-        { "x": 70, "y": -25, "scaleX": 1.35, "scaleY": 0.70, "rotation": 0.25, "duration": 40, "ease": "power4.out", "vfx": "heavy_slash", "shake": 10, "hitstop": 80 },
+        { "x": 70, "y": -25, "scaleX": 1.35, "scaleY": 0.70, "rotation": 0.25, "duration": 40, "ease": "power4.out", "vfx": "heavy_slash", "vfxTarget": "target", "shake": 10, "hitstop": 80 },
         { "x": 80, "y": -20, "scaleX": 1.30, "scaleY": 0.75, "rotation": 0.22, "duration": 35, "ease": "power2.out" },
         
         { "x": 70, "y": -12, "scaleX": 1.20, "scaleY": 0.82, "rotation": 0.16, "duration": 40, "ease": "power2.inOut" },
@@ -25,4 +25,3 @@
         { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 25, "ease": "power2.out" }
     ]
 }
-

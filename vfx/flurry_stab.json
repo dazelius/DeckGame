@@ -1,54 +1,56 @@
 {
     "id": "flurry_stab",
     "name": "세검 찌르기",
-    "shake": 3,
+    "duration": 150,
+    "offset": { "x": 0, "y": -30 },
     "particles": [
         {
             "type": "flash",
-            "size": 60,
             "color": "#ffffff",
-            "life": 35
+            "size": 80,
+            "alpha": 0.9,
+            "fadeOut": true
         },
         {
             "type": "arrow",
             "count": 1,
-            "length": [180, 220],
-            "width": 50,
-            "tipAngle": 30,
             "color": "#e0e7ff",
             "glow": "#a78bfa",
-            "innerColor": "rgba(167, 139, 250, 0.5)",
-            "life": 100
+            "length": 200,
+            "width": 55,
+            "alpha": 0.95,
+            "lifetime": 120
         },
         {
             "type": "arrow",
             "count": 1,
-            "length": [140, 180],
-            "width": 35,
-            "tipAngle": 25,
             "color": "#ffffff",
             "glow": "#818cf8",
-            "innerColor": "rgba(129, 140, 248, 0.3)",
-            "life": 80
+            "length": 160,
+            "width": 40,
+            "alpha": 0.85,
+            "lifetime": 100
         },
         {
-            "type": "thrust",
+            "type": "line",
             "count": 1,
-            "angle": 0,
-            "length": [300, 380],
-            "width": 4,
             "color": "#ffffff",
             "glow": "#a78bfa",
-            "life": 90
+            "length": 350,
+            "width": 6,
+            "angle": 0,
+            "alpha": 1,
+            "lifetime": 100
         },
         {
             "type": "spark",
-            "count": 10,
-            "spread": 35,
-            "speed": [12, 25],
-            "size": [2, 6],
-            "colors": ["#a5b4fc", "#c4b5fd", "#ffffff"],
-            "life": [70, 130]
+            "count": 15,
+            "color": "#c4b5fd",
+            "size": 5,
+            "speed": 140,
+            "spread": 40,
+            "alpha": 0.9,
+            "lifetime": 120
         }
     ]
 }

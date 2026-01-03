@@ -10,7 +10,7 @@
         
         { "x": -6, "y": 12, "scaleX": 0.90, "scaleY": 1.10, "rotation": 0.06, "duration": 7, "ease": "power2.in", "afterimage": true },
         
-        { "x": 65, "y": 22, "scaleX": 1.22, "scaleY": 0.82, "rotation": -0.10, "duration": 11, "ease": "power4.out", "vfx": "flurry_stab", "shake": 3, "hitstop": 22, "afterimage": true },
+        { "x": 65, "y": 22, "scaleX": 1.22, "scaleY": 0.82, "rotation": -0.10, "duration": 11, "ease": "power4.out", "vfx": "flurry_stab", "vfxTarget": "target", "shake": 3, "hitstop": 22, "afterimage": true },
         
         { "x": 72, "y": 18, "scaleX": 1.18, "scaleY": 0.84, "rotation": -0.08, "duration": 10, "ease": "power2.out", "afterimage": true },
         { "x": 55, "y": 12, "scaleX": 1.10, "scaleY": 0.92, "rotation": -0.05, "duration": 14, "ease": "power2.out" },
