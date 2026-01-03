@@ -4,15 +4,10 @@
     "target": "player",
     "type": "once",
     "priority": 15,
-    "duration": 150,
+    "duration": 180,
     "keyframes": [
         { "x": 0, "scaleX": 1, "scaleY": 1, "duration": 0 },
-        { "x": 200, "scaleX": 1.1, "scaleY": 0.95, "duration": 150, "ease": "power2.out" }
-    ],
-    "events": {
-        "onStart": {
-            "sound": "dash"
-        }
-    }
+        { "x": -20, "scaleX": 0.85, "scaleY": 1.15, "duration": 40, "ease": "power2.in" },
+        { "x": 250, "scaleX": 1.15, "scaleY": 0.9, "duration": 140, "ease": "power2.out", "vfx": "dash" }
+    ]
 }
-
