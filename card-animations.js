@@ -55,7 +55,7 @@ const CardAnimations = {
     },
     
     // ==========================================
-    // 🗡️ 연속 찌르기 애니메이션 (3회 공격) - 강화 버전!
+    // 🗡️ 연속 찌르기 애니메이션 (3회 공격) - DDOO Action 엔진 사용!
     // ==========================================
     flurryAnimation(options = {}) {
         const {
@@ -63,15 +63,140 @@ const CardAnimations = {
             targetEl,         // 타겟 DOM 요소
             hitCount = 3,     // 타격 횟수
             damage = 2,       // 타격당 데미지
-            interval = 200,   // 타격 간격 (ms) - 애니메이션 완료 후 다음 타격
+            interval = 200,   // 타격 간격 (ms)
             onHit,            // 각 타격 시 콜백
             onComplete        // 완료 시 콜백
+        } = options;
+        
+        return new Promise(async (resolve) => {
+            // 🎮 DDOO Action 엔진 사용 가능 여부 확인
+            if (typeof DDOOAction !== 'undefined' && DDOOAction.initialized) {
+                console.log('[CardAnimations] 🎮 DDOO Action 엔진으로 연속찌르기 실행');
+                
+                // 플레이어/적 컨테이너 가져오기
+                const playerContainer = PlayerRenderer?.playerContainer;
+                const playerSprite = PlayerRenderer?.sprite;
+                
+                if (!playerContainer || !playerSprite) {
+                    console.warn('[CardAnimations] PlayerRenderer 없음, 폴백 사용');
+                    return this.flurryAnimationFallback(options).then(resolve);
+                }
+                
+                // 적 위치 계산
+                const getHitPoint = () => {
+                    if (target && typeof EnemyRenderer !== 'undefined') {
+                        const enemyData = EnemyRenderer.sprites.get(target.pixiId || target.id);
+                        if (enemyData) {
+                            const bounds = enemyData.sprite.getBounds();
+                            return {
+                                x: enemyData.container.x,
+                                y: enemyData.container.y - bounds.height / 2,
+                                scale: enemyData.sprite.scale.x
+                            };
+                        }
+                    }
+                    // 폴백
+                    return { x: playerContainer.x + 200, y: playerContainer.y - 60, scale: 1 };
+                };
+                
+                const baseX = playerContainer.x;
+                const baseY = playerContainer.y;
+                
+                // 애니메이션 옵션
+                const animOptions = {
+                    container: playerContainer,
+                    sprite: playerSprite,
+                    baseX,
+                    baseY,
+                    dir: 1,
+                    getHitPoint
+                };
+                
+                try {
+                    // 🏃 대시
+                    await DDOOAction.play('player.dash', animOptions);
+                    
+                    // 🗡️ 연속 찌르기 (3회)
+                    const stabAnims = ['player.flurry_stab1', 'player.flurry_stab2', 'player.flurry_stab3'];
+                    
+                    for (let i = 0; i < hitCount; i++) {
+                        const stabAnim = stabAnims[i % stabAnims.length];
+                        
+                        // 찌르기 애니메이션 (상대 좌표)
+                        const stabPromise = DDOOAction.play(stabAnim, {
+                            ...animOptions,
+                            isRelative: true
+                        });
+                        
+                        // 타격 시점에 콜백 (약간의 딜레이 후)
+                        setTimeout(() => {
+                            if (onHit) onHit(i, damage);
+                            
+                            // 적 피격 애니메이션
+                            if (target && typeof EnemyRenderer !== 'undefined') {
+                                const enemyData = EnemyRenderer.sprites.get(target.pixiId || target.id);
+                                if (enemyData) {
+                                    DDOOAction.play('enemy.flurry_hit', {
+                                        container: enemyData.container,
+                                        sprite: enemyData.sprite,
+                                        baseX: enemyData.container.x,
+                                        baseY: enemyData.container.y,
+                                        dir: -1,
+                                        isRelative: true,
+                                        getHitPoint: () => getHitPoint()
+                                    });
+                                }
+                            }
+                        }, 20);
+                        
+                        await stabPromise;
+                        
+                        // 타격 사이 딜레이
+                        if (i < hitCount - 1) {
+                            await DDOOAction.delay(40);
+                        }
+                    }
+                    
+                    // 잠시 대기 후 복귀
+                    await DDOOAction.delay(80);
+                    
+                    // 🏃 복귀
+                    await DDOOAction.play('player.return', animOptions);
+                    
+                    if (onComplete) onComplete();
+                    resolve();
+                    
+                } catch (e) {
+                    console.error('[CardAnimations] DDOOAction 에러:', e);
+                    // 폴백
+                    this.playerReturnFromAttack();
+                    if (onComplete) onComplete();
+                    resolve();
+                }
+                
+            } else {
+                // 폴백: 기존 애니메이션
+                console.log('[CardAnimations] DDOOAction 없음, 폴백 사용');
+                return this.flurryAnimationFallback(options).then(resolve);
+            }
+        });
+    },
+    
+    // 기존 애니메이션 (폴백)
+    flurryAnimationFallback(options = {}) {
+        const {
+            target,
+            targetEl,
+            hitCount = 3,
+            damage = 2,
+            interval = 200,
+            onHit,
+            onComplete
         } = options;
         
         return new Promise((resolve) => {
             let currentHit = 0;
             
-            // 🎯 타겟 위치 계산
             let targetX, targetY;
             if (target && typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
                 const pos = EnemyRenderer.getEnemyPosition(target);
@@ -86,27 +211,20 @@ const CardAnimations = {
                 targetY = rect.top + rect.height / 2;
             }
             
-            // 🗡️ 찌르기 패턴 정의 (다이나믹한 위치/각도)
             const stabPatterns = [
-                { offsetX: -20, offsetY: -15, angle: -35, scale: 1.0 },   // 좌상단 대각선
-                { offsetX: 15, offsetY: 5, angle: 10, scale: 1.1 },       // 중앙 정면
-                { offsetX: -10, offsetY: 20, angle: -15, scale: 1.05 },   // 좌하단
-                { offsetX: 25, offsetY: -10, angle: 25, scale: 1.0 },     // 우상단
-                { offsetX: 0, offsetY: 0, angle: 0, scale: 1.2 }          // 피니시 중앙
+                { offsetX: -20, offsetY: -15, angle: -35, scale: 1.0 },
+                { offsetX: 15, offsetY: 5, angle: 10, scale: 1.1 },
+                { offsetX: -10, offsetY: 20, angle: -15, scale: 1.05 },
+                { offsetX: 25, offsetY: -10, angle: 25, scale: 1.0 },
+                { offsetX: 0, offsetY: 0, angle: 0, scale: 1.2 }
             ];
             
-            // 🏃 플레이어 돌진 (첫 번째)
             this.playerDashAttack(() => {
-                // 돌진 완료 후 연속 찌르기 시작
                 const doStab = () => {
                     if (currentHit >= hitCount) {
-                        // 🎬 마지막 피니시 이펙트!
                         this.showFinishEffect(targetX, targetY);
-                        
                         setTimeout(() => {
-                            // 🏃 플레이어 복귀
                             this.playerReturnFromAttack();
-                            
                             if (onComplete) onComplete();
                             resolve();
                         }, 200);
@@ -116,36 +234,25 @@ const CardAnimations = {
                     const pattern = stabPatterns[currentHit % stabPatterns.length];
                     const isLastHit = currentHit === hitCount - 1;
                     
-                    // 🗡️ 강화된 찌르기 모션!
                     this.playerStabMotion(currentHit, hitCount, pattern);
                     
-                    // ⚡ 30ms 후 임팩트 (찌르기 모션과 동기화)
                     setTimeout(() => {
                         if (targetX) {
                             const hitX = targetX + pattern.offsetX;
                             const hitY = targetY + pattern.offsetY;
-                            
-                            // 🔥 화려한 VFX!
                             this.showStabVFX(hitX, hitY, pattern.angle, currentHit, isLastHit);
-                            
-                            // ✅ 콜백에서 dealDamage 호출 → dealDamage가 피격 애니메이션 + 화면 흔들림 처리
-                            // (중복 호출 모두 제거!)
                             if (onHit) onHit(currentHit, damage);
-                            
-                            // 히트 넘버
                             this.showHitNumber(hitX + 60, hitY - 40, currentHit + 1, isLastHit);
                         }
-                    }, 50);  // 찌르기 모션 절정과 동기화 (간격 조정)
+                    }, 50);
                     
                     currentHit++;
                     
-                    // 다음 타격
                     if (currentHit < hitCount) {
                         setTimeout(doStab, interval);
                     }
                 };
                 
-                // 첫 번째 찌르기 시작
                 doStab();
             });
         });
