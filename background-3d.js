@@ -148,6 +148,9 @@ const Background3D = {
     updateAutoZoom() {
         if (!this.autoZoom?.enabled || !this.camera) return;
         
+        // gameState가 없으면 스킵 (test_animation.html 등)
+        if (typeof gameState === 'undefined') return;
+        
         // 살아있는 적들의 실제 위치 수집
         const enemies = gameState?.enemies?.filter(e => e.hp > 0) || [];
         const enemyCount = enemies.length;
