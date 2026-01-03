@@ -1,12 +1,12 @@
 /**
  * DDOO Animation Bundle - 자동 생성됨
- * 생성일: 2026-01-03T16:56:28.267Z
+ * 생성일: 2026-01-03T16:59:19.246Z
  * 
  * 이 파일을 포함하면 fetch 없이 모든 애니메이션/VFX 데이터 사용 가능!
  * <script src="anim-bundle.js"></script>
  */
 
-// 애니메이션 데이터 (39개)
+// 애니메이션 데이터 (41개)
 window.ANIM_BUNDLE = {
   "card.bash": {
     "id": "card.bash",
@@ -897,6 +897,188 @@ window.ANIM_BUNDLE = {
     "type": "once",
     "priority": 20,
     "duration": 380,
+    "keyframes": [
+      {
+        "x": 0,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "alpha": 1,
+        "rotation": 0,
+        "duration": 0
+      },
+      {
+        "x": 35,
+        "y": -8,
+        "scaleX": 0.75,
+        "scaleY": 1.28,
+        "alpha": 0.6,
+        "rotation": 0.15,
+        "duration": 30,
+        "ease": "power4.out",
+        "vfx": "hit",
+        "vfxTarget": "self"
+      },
+      {
+        "x": 55,
+        "y": -5,
+        "scaleX": 0.7,
+        "scaleY": 1.32,
+        "alpha": 0.5,
+        "rotation": 0.2,
+        "duration": 35,
+        "ease": "power3.out"
+      },
+      {
+        "x": -18,
+        "y": 3,
+        "scaleX": 1.08,
+        "scaleY": 0.94,
+        "alpha": 0.7,
+        "rotation": -0.08,
+        "duration": 40,
+        "ease": "power2.out"
+      },
+      {
+        "x": -8,
+        "y": 2,
+        "scaleX": 1.04,
+        "scaleY": 0.97,
+        "alpha": 0.82,
+        "rotation": -0.04,
+        "duration": 45,
+        "ease": "power2.out"
+      },
+      {
+        "x": 5,
+        "y": 0,
+        "scaleX": 0.98,
+        "scaleY": 1.02,
+        "alpha": 0.9,
+        "rotation": 0.02,
+        "duration": 50,
+        "ease": "elastic.out(1, 0.6)"
+      },
+      {
+        "x": -2,
+        "y": 0,
+        "scaleX": 1.01,
+        "scaleY": 0.99,
+        "alpha": 0.95,
+        "rotation": -0.01,
+        "duration": 45,
+        "ease": "power2.out"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "alpha": 1,
+        "rotation": 0,
+        "duration": 35,
+        "ease": "power2.out"
+      }
+    ]
+  },
+  "enemy.hit_left": {
+    "id": "enemy.hit_left",
+    "name": "적 피격 - 왼쪽으로 밀림",
+    "target": "enemy",
+    "type": "once",
+    "priority": 20,
+    "duration": 350,
+    "keyframes": [
+      {
+        "x": 0,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "alpha": 1,
+        "rotation": 0,
+        "duration": 0
+      },
+      {
+        "x": -35,
+        "y": -8,
+        "scaleX": 0.75,
+        "scaleY": 1.28,
+        "alpha": 0.6,
+        "rotation": -0.15,
+        "duration": 30,
+        "ease": "power4.out",
+        "vfx": "hit",
+        "vfxTarget": "self"
+      },
+      {
+        "x": -55,
+        "y": -5,
+        "scaleX": 0.7,
+        "scaleY": 1.32,
+        "alpha": 0.5,
+        "rotation": -0.2,
+        "duration": 35,
+        "ease": "power3.out"
+      },
+      {
+        "x": 18,
+        "y": 3,
+        "scaleX": 1.08,
+        "scaleY": 0.94,
+        "alpha": 0.7,
+        "rotation": 0.08,
+        "duration": 40,
+        "ease": "power2.out"
+      },
+      {
+        "x": 8,
+        "y": 2,
+        "scaleX": 1.04,
+        "scaleY": 0.97,
+        "alpha": 0.82,
+        "rotation": 0.04,
+        "duration": 45,
+        "ease": "power2.out"
+      },
+      {
+        "x": -5,
+        "y": 0,
+        "scaleX": 0.98,
+        "scaleY": 1.02,
+        "alpha": 0.9,
+        "rotation": -0.02,
+        "duration": 50,
+        "ease": "elastic.out(1, 0.6)"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "scaleX": 1.01,
+        "scaleY": 0.99,
+        "alpha": 0.95,
+        "rotation": 0.01,
+        "duration": 45,
+        "ease": "power2.out"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "alpha": 1,
+        "rotation": 0,
+        "duration": 35,
+        "ease": "power2.out"
+      }
+    ]
+  },
+  "enemy.hit_right": {
+    "id": "enemy.hit_right",
+    "name": "적 피격 - 오른쪽으로 밀림",
+    "target": "enemy",
+    "type": "once",
+    "priority": 20,
+    "duration": 350,
     "keyframes": [
       {
         "x": 0,

@@ -535,16 +535,20 @@ const DDOOAction = {
                         await this.delay(step.delay);
                     }
                     
-                    // 🎲 적 피격 애니메이션은 랜덤 방향 적용!
-                    let animDir = dir;
-                    if (animData.target === 'enemy' && animData.id?.includes('hit')) {
-                        animDir = Math.random() > 0.5 ? 1 : -1;
+                    // 🎲 적 피격 애니메이션 랜덤 좌우 선택!
+                    let actualAnimData = animData;
+                    if (step.anim === 'enemy.hit') {
+                        const randomHit = Math.random() > 0.5 ? 'enemy.hit_left' : 'enemy.hit_right';
+                        const randomAnimData = this.animCache.get(randomHit);
+                        if (randomAnimData) {
+                            actualAnimData = randomAnimData;
+                            if (this.config.debug) console.log(`[DDOOAction] 🎲 랜덤 피격: ${randomHit}`);
+                        }
                     }
                     
                     // 애니메이션 재생
-                    const promise = this.playKeyframes(animData, {
+                    const promise = this.playKeyframes(actualAnimData, {
                         ...options,
-                        dir: animDir,
                         isRelative: true,  // 시퀀스 내에서는 상대 좌표
                         stepEvents: step   // 스텝에 정의된 이벤트 전달
                     });
