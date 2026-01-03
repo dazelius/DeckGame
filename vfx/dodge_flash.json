@@ -1,0 +1,42 @@
+{
+    "id": "dodge_flash",
+    "name": "회피 섬광",
+    "particles": [
+        {
+            "type": "flash",
+            "count": 1,
+            "color": "#60a5fa",
+            "size": 70,
+            "life": 60
+        },
+        {
+            "type": "ring",
+            "count": 2,
+            "color": "#3b82f6",
+            "size": 8,
+            "maxSize": 60,
+            "life": 150
+        },
+        {
+            "type": "spark",
+            "count": 18,
+            "colors": ["#ffffff", "#93c5fd", "#60a5fa"],
+            "size": { "min": 3, "max": 7 },
+            "speed": { "min": 8, "max": 16 },
+            "angle": { "min": -180, "max": 180 },
+            "life": { "min": 100, "max": 200 },
+            "fadeOut": true
+        },
+        {
+            "type": "line",
+            "count": 8,
+            "color": "#bfdbfe",
+            "length": { "min": 30, "max": 60 },
+            "width": 2,
+            "angleStep": 45,
+            "life": 120
+        }
+    ],
+    "offset": { "x": 0, "y": -60 }
+}
+

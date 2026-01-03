@@ -2,9 +2,8 @@
     "id": "card.dodge",
     "name": "닷지",
     "type": "sequence",
-    "description": "옆으로 민첩하게 피하며 연막을 남긴다",
+    "description": "민첩하게 뒤로 물러서며 공격을 회피한다",
     "steps": [
-        { "anim": "player.dodge", "wait": true }
+        { "anim": "player.dodge_flip", "wait": true }
     ]
 }
-

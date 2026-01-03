@@ -1,0 +1,39 @@
+{
+    "id": "wind_burst",
+    "name": "바람 분출",
+    "particles": [
+        {
+            "type": "slash",
+            "count": 5,
+            "color": "#e0f2fe",
+            "glow": "#38bdf8",
+            "angle": [0, 30, 60, 90, 120],
+            "length": { "min": 40, "max": 70 },
+            "width": 6,
+            "life": 100
+        },
+        {
+            "type": "smoke",
+            "count": 10,
+            "color": "#bae6fd",
+            "size": { "min": 15, "max": 35 },
+            "speed": { "min": 4, "max": 10 },
+            "angle": { "min": 150, "max": 210 },
+            "life": { "min": 150, "max": 300 },
+            "gravity": -0.1,
+            "fadeOut": true
+        },
+        {
+            "type": "spark",
+            "count": 12,
+            "color": "#7dd3fc",
+            "size": { "min": 2, "max": 5 },
+            "speed": { "min": 6, "max": 14 },
+            "angle": { "min": 140, "max": 220 },
+            "life": { "min": 80, "max": 180 },
+            "fadeOut": true
+        }
+    ],
+    "offset": { "x": 20, "y": -50 }
+}
+
