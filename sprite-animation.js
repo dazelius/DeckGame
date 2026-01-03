@@ -964,12 +964,28 @@ const SpriteAnimation = {
         }
         
         // 🎆 PixiJS 히트 이펙트!
-        const playerEl = document.getElementById('player');
-        if (playerEl && typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized) {
-            const rect = playerEl.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2 - 20;
-            
+        let centerX, centerY;
+        
+        // 🎯 PlayerRenderer 우선!
+        if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.initialized) {
+            const pos = PlayerRenderer.getPlayerPosition();
+            if (pos) {
+                centerX = pos.screenX || pos.centerX;
+                centerY = (pos.screenY || pos.centerY) - 20;
+            }
+        }
+        
+        // DOM 폴백
+        if (!centerX) {
+            const playerEl = document.getElementById('player');
+            if (playerEl) {
+                const rect = playerEl.getBoundingClientRect();
+                centerX = rect.left + rect.width / 2;
+                centerY = rect.top + rect.height / 2 - 20;
+            }
+        }
+        
+        if (centerX && typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized) {
             if (hitType === 'heavy') {
                 PixiRenderer.createHitImpact(centerX, centerY, damage, '#ff6666');
                 PixiRenderer.hitFlash('#ff0000', 100);

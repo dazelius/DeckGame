@@ -466,14 +466,31 @@ function showDamagePopup(element, value, type, enemy = null) {
         popup.style.fontSize = `${fontSize}rem`;
     }
     
-    // 🎮 PixiJS 적 렌더링 사용 시 EnemyRenderer에서 좌표 가져오기
+    // 🎮 PixiJS 렌더링 사용 시 좌표 가져오기
     let centerX, topY;
     
+    // 🎯 적 대미지 - EnemyRenderer에서 좌표
     if (enemy && typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
         const pos = EnemyRenderer.getEnemyPosition(enemy);
         if (pos) {
             centerX = pos.centerX;
             topY = pos.top - 20;
+        }
+    }
+    
+    // 🎯 플레이어 대미지 - PlayerRenderer에서 좌표
+    const isPlayerElement = element && (
+        element.classList?.contains('player-character') ||
+        element.classList?.contains('player-container') ||
+        element.id === 'player-character' ||
+        element.closest?.('.player-character')
+    );
+    
+    if (!centerX && isPlayerElement && typeof PlayerRenderer !== 'undefined' && PlayerRenderer.initialized) {
+        const pos = PlayerRenderer.getPlayerPosition();
+        if (pos) {
+            centerX = pos.screenX || pos.centerX;
+            topY = (pos.screenY || pos.top) - 80;  // 플레이어 머리 위
         }
     }
     
