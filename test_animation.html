@@ -793,6 +793,10 @@
                         case 'thrust':
                             spawnSlashParticle(def, x, y, dir, i, scale);
                             break;
+                        case 'arrow':
+                        case 'wedge':
+                            spawnArrowParticle(def, x, y, dir, i, scale);
+                            break;
                         case 'spark':
                             spawnSparkParticle(def, x, y, scale);
                             break;
@@ -835,6 +839,27 @@
                 glow: def.glow || '#60a5fa',
                 life: def.life || 150
             });
+        }
+        
+        // ">" 모양 화살표 이펙트
+        function spawnArrowParticle(def, x, y, dir, index, scale) {
+            const length = getRandValue(def.length) * scale;
+            const width = (def.width || 60) * scale;
+            const tipAngle = def.tipAngle || 35; // 화살촉 각도
+            
+            const p = {
+                type: 'arrow',
+                x, y,
+                dir: dir,
+                startLength: length,
+                startWidth: width,
+                tipAngle: tipAngle,
+                color: def.color || '#ffffff',
+                glow: def.glow || '#a78bfa',
+                innerColor: def.innerColor || 'rgba(167, 139, 250, 0.5)',
+                life: def.life || 120
+            };
+            spawnParticle(p);
         }
         
         function spawnSparkParticle(def, x, y, scale) {
@@ -1002,6 +1027,9 @@
                         case 'slash':
                             drawSlashParticle(p, alpha, progress);
                             break;
+                        case 'arrow':
+                            drawArrowParticle(p, alpha, progress);
+                            break;
                         case 'spark':
                             p.x += p.vx || 0;
                             p.y += p.vy || 0;
@@ -1066,6 +1094,58 @@
             vfxCtx.beginPath();
             vfxCtx.moveTo(-len/2, 0);
             vfxCtx.lineTo(len/2, 0);
+            vfxCtx.stroke();
+        }
+        
+        // ">" 화살표 모양 그리기
+        function drawArrowParticle(p, alpha, progress) {
+            const len = p.startLength * (1 - progress * 0.4);
+            const width = p.startWidth * (1 - progress * 0.3);
+            const tipRad = (p.tipAngle || 35) * Math.PI / 180;
+            
+            // 화살표 방향 (dir: 1 = 오른쪽, -1 = 왼쪽)
+            const dir = p.dir || 1;
+            
+            vfxCtx.translate(p.x, p.y);
+            if (dir < 0) vfxCtx.scale(-1, 1);
+            
+            // 글로우
+            if (p.glow) {
+                vfxCtx.shadowColor = p.glow;
+                vfxCtx.shadowBlur = 25;
+            }
+            vfxCtx.globalAlpha = alpha;
+            
+            // 내부 채우기 (반투명)
+            if (p.innerColor) {
+                vfxCtx.fillStyle = p.innerColor;
+                vfxCtx.beginPath();
+                vfxCtx.moveTo(len, 0);                          // 뾰족한 끝
+                vfxCtx.lineTo(0, -width * Math.sin(tipRad));    // 위쪽 날개
+                vfxCtx.lineTo(len * 0.3, 0);                    // 안쪽 꺾임
+                vfxCtx.lineTo(0, width * Math.sin(tipRad));     // 아래쪽 날개
+                vfxCtx.closePath();
+                vfxCtx.fill();
+            }
+            
+            // 외곽선 (밝은 색)
+            vfxCtx.strokeStyle = p.color;
+            vfxCtx.lineWidth = 3 * alpha;
+            vfxCtx.lineCap = 'round';
+            vfxCtx.lineJoin = 'round';
+            
+            vfxCtx.beginPath();
+            vfxCtx.moveTo(0, -width * Math.sin(tipRad));  // 위쪽 날개
+            vfxCtx.lineTo(len, 0);                         // 뾰족한 끝
+            vfxCtx.lineTo(0, width * Math.sin(tipRad));   // 아래쪽 날개
+            vfxCtx.stroke();
+            
+            // 중앙 강조선
+            vfxCtx.strokeStyle = '#ffffff';
+            vfxCtx.lineWidth = 2 * alpha;
+            vfxCtx.beginPath();
+            vfxCtx.moveTo(len * 0.2, 0);
+            vfxCtx.lineTo(len * 0.9, 0);
             vfxCtx.stroke();
         }
         

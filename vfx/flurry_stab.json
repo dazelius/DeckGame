@@ -5,59 +5,50 @@
     "particles": [
         {
             "type": "flash",
-            "size": 80,
+            "size": 60,
             "color": "#ffffff",
-            "life": 40
+            "life": 35
         },
         {
-            "type": "thrust",
+            "type": "arrow",
             "count": 1,
-            "angle": 0,
-            "length": [400, 500],
-            "width": 6,
-            "color": "#ffffff",
+            "length": [180, 220],
+            "width": 50,
+            "tipAngle": 30,
+            "color": "#e0e7ff",
             "glow": "#a78bfa",
+            "innerColor": "rgba(167, 139, 250, 0.5)",
             "life": 100
         },
         {
-            "type": "thrust",
+            "type": "arrow",
             "count": 1,
-            "delay": 0,
-            "angle": 0,
-            "length": [350, 450],
-            "width": 3,
-            "color": "#e0e7ff",
+            "length": [140, 180],
+            "width": 35,
+            "tipAngle": 25,
+            "color": "#ffffff",
             "glow": "#818cf8",
+            "innerColor": "rgba(129, 140, 248, 0.3)",
             "life": 80
         },
         {
             "type": "thrust",
             "count": 1,
-            "delay": 0,
             "angle": 0,
-            "length": [280, 380],
-            "width": 20,
-            "color": "rgba(167, 139, 250, 0.4)",
-            "glow": "#6366f1",
-            "life": 70
+            "length": [300, 380],
+            "width": 4,
+            "color": "#ffffff",
+            "glow": "#a78bfa",
+            "life": 90
         },
         {
             "type": "spark",
-            "count": 12,
-            "spread": 40,
-            "speed": [15, 30],
-            "size": [3, 8],
+            "count": 10,
+            "spread": 35,
+            "speed": [12, 25],
+            "size": [2, 6],
             "colors": ["#a5b4fc", "#c4b5fd", "#ffffff"],
-            "life": [80, 150]
-        },
-        {
-            "type": "line",
-            "count": 4,
-            "angleStep": 15,
-            "length": [60, 100],
-            "width": 2,
-            "color": "#a5b4fc",
-            "life": 60
+            "life": [70, 130]
         }
     ]
 }

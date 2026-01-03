@@ -8,16 +8,16 @@
     "keyframes": [
         { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 0 },
         
-        { "x": -20, "y": 0, "scaleX": 0.65, "scaleY": 1.40, "rotation": -0.10, "duration": 12, "ease": "power2.in", "afterimage": true },
-        { "x": -30, "y": 0, "scaleX": 0.55, "scaleY": 1.50, "rotation": -0.12, "duration": 8, "ease": "power2.in", "afterimage": true },
+        { "x": -15, "y": 0, "scaleX": 0.82, "scaleY": 1.18, "rotation": -0.06, "duration": 12, "ease": "power2.in", "afterimage": true },
+        { "x": -22, "y": 0, "scaleX": 0.78, "scaleY": 1.22, "rotation": -0.08, "duration": 8, "ease": "power2.in", "afterimage": true },
         
-        { "x": 120, "y": -8, "scaleX": 1.70, "scaleY": 0.45, "rotation": 0.08, "duration": 14, "ease": "power4.out", "vfx": "flurry_finish", "shake": 6, "hitstop": 50, "afterimage": true },
+        { "x": 95, "y": -5, "scaleX": 1.35, "scaleY": 0.72, "rotation": 0.05, "duration": 14, "ease": "power4.out", "vfx": "flurry_finish", "shake": 6, "hitstop": 50, "afterimage": true },
         
-        { "x": 135, "y": -5, "scaleX": 1.60, "scaleY": 0.50, "rotation": 0.06, "duration": 12, "ease": "power2.out", "afterimage": true },
-        { "x": 120, "y": 0, "scaleX": 1.40, "scaleY": 0.65, "rotation": 0.04, "duration": 16, "ease": "power2.out" },
-        { "x": 85, "y": 5, "scaleX": 1.20, "scaleY": 0.82, "rotation": 0.02, "duration": 20, "ease": "power2.out" },
-        { "x": 50, "y": 5, "scaleX": 1.08, "scaleY": 0.92, "rotation": 0.01, "duration": 22, "ease": "power2.out" },
-        { "x": 20, "y": 2, "scaleX": 1.02, "scaleY": 0.98, "rotation": 0, "duration": 18, "ease": "power2.out" },
+        { "x": 105, "y": -3, "scaleX": 1.28, "scaleY": 0.76, "rotation": 0.04, "duration": 12, "ease": "power2.out", "afterimage": true },
+        { "x": 90, "y": 0, "scaleX": 1.18, "scaleY": 0.84, "rotation": 0.02, "duration": 16, "ease": "power2.out" },
+        { "x": 65, "y": 3, "scaleX": 1.10, "scaleY": 0.92, "rotation": 0.01, "duration": 20, "ease": "power2.out" },
+        { "x": 38, "y": 3, "scaleX": 1.04, "scaleY": 0.97, "rotation": 0, "duration": 22, "ease": "power2.out" },
+        { "x": 15, "y": 1, "scaleX": 1.01, "scaleY": 0.99, "rotation": 0, "duration": 18, "ease": "power2.out" },
         { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 18, "ease": "power2.out" }
     ]
 }
