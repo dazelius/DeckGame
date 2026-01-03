@@ -6,8 +6,10 @@
     "returnToBase": true,
     "steps": [
         { "anim": "player.sneak", "wait": true },
-        { "delay": 30 },
-        { "anim": "player.backstab_strike", "wait": false, "damage": 4 },
-        { "anim": "enemy.stabbed", "wait": true, "delay": 20, "debuff": { "name": "vulnerable", "value": 1 } }
+        { "delay": 20 },
+        { "anim": "player.backstab_strike", "wait": true, "damage": 4 },
+        { "anim": "enemy.stabbed", "wait": false, "delay": 10, "debuff": { "name": "vulnerable", "value": 1 } },
+        { "delay": 100 },
+        { "anim": "player.sneak_return", "wait": true }
     ]
 }
