@@ -55,7 +55,7 @@ const CardAnimations = {
     },
     
     // ==========================================
-    // 🗡️ 연속 찌르기 애니메이션 (3회 공격)
+    // 🗡️ 연속 찌르기 애니메이션 (3회 공격) - 강화 버전!
     // ==========================================
     flurryAnimation(options = {}) {
         const {
@@ -63,7 +63,7 @@ const CardAnimations = {
             targetEl,         // 타겟 DOM 요소
             hitCount = 3,     // 타격 횟수
             damage = 2,       // 타격당 데미지
-            interval = 120,   // 타격 간격 (ms)
+            interval = 150,   // 타격 간격 (ms) - 애니메이션에 맞게 조정
             onHit,            // 각 타격 시 콜백
             onComplete        // 완료 시 콜백
         } = options;
@@ -86,75 +86,77 @@ const CardAnimations = {
                 targetY = rect.top + rect.height / 2;
             }
             
+            // 🗡️ 찌르기 패턴 정의 (다이나믹한 위치/각도)
+            const stabPatterns = [
+                { offsetX: -20, offsetY: -15, angle: -35, scale: 1.0 },   // 좌상단 대각선
+                { offsetX: 15, offsetY: 5, angle: 10, scale: 1.1 },       // 중앙 정면
+                { offsetX: -10, offsetY: 20, angle: -15, scale: 1.05 },   // 좌하단
+                { offsetX: 25, offsetY: -10, angle: 25, scale: 1.0 },     // 우상단
+                { offsetX: 0, offsetY: 0, angle: 0, scale: 1.2 }          // 피니시 중앙
+            ];
+            
             // 🏃 플레이어 돌진 (첫 번째)
             this.playerDashAttack(() => {
                 // 돌진 완료 후 연속 찌르기 시작
                 const doStab = () => {
                     if (currentHit >= hitCount) {
-                        // 모든 타격 완료
-                        setTimeout(() => {
-                            if (onComplete) onComplete();
-                            resolve();
-                        }, 100);
-                        return;
-                    }
-                    
-                    // 🗡️ 찌르기 모션!
-                    this.playerStabMotion(currentHit, hitCount);
-                    
-                    // ⚡ 슬래시 이펙트
-                    if (targetX) {
-                        const offsetY = (currentHit - 1) * 30;
-                        const offsetX = (Math.random() - 0.5) * 40;
+                        // 🎬 마지막 피니시 이펙트!
+                        this.showFinishEffect(targetX, targetY);
                         
-                        if (typeof VFX !== 'undefined') {
-                            // 빠른 찌르기 슬래시
-                            VFX.slash(targetX + offsetX, targetY + offsetY, {
-                                color: '#60a5fa',
-                                length: 180,
-                                width: 8,
-                                angle: -10 + Math.random() * 20
-                            });
-                            
-                            // 스파크
-                            VFX.sparks(targetX + offsetX + 20, targetY + offsetY, { 
-                                color: '#60a5fa', 
-                                count: 6,
-                                speed: 10
-                            });
-                        }
-                        
-                        // 히트 넘버
-                        this.showHitNumber(targetX + 50, targetY + offsetY - 30, currentHit + 1);
-                    }
-                    
-                    // 🎯 적 피격 애니메이션
-                    if (target && typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
-                        EnemyRenderer.playHitAnimation(target, damage, false);
-                    }
-                    
-                    // 💥 화면 흔들림 (가벼운)
-                    if (typeof SpriteAnimation !== 'undefined') {
-                        SpriteAnimation.screenShake(4 + currentHit * 2, 0.08);
-                    }
-                    
-                    // 콜백
-                    if (onHit) onHit(currentHit, damage);
-                    
-                    currentHit++;
-                    
-                    // 다음 타격
-                    if (currentHit < hitCount) {
-                        setTimeout(doStab, interval);
-                    } else {
-                        // 마지막 타격 후 약간의 딜레이
                         setTimeout(() => {
                             // 🏃 플레이어 복귀
                             this.playerReturnFromAttack();
                             
                             if (onComplete) onComplete();
                             resolve();
-                        }, 150);
+                        }, 200);
+                        return;
+                    }
+                    
+                    const pattern = stabPatterns[currentHit % stabPatterns.length];
+                    const isLastHit = currentHit === hitCount - 1;
+                    
+                    // 🗡️ 강화된 찌르기 모션!
+                    this.playerStabMotion(currentHit, hitCount, pattern);
+                    
+                    // ⚡ 30ms 후 임팩트 (찌르기 모션과 동기화)
+                    setTimeout(() => {
+                        if (targetX) {
+                            const hitX = targetX + pattern.offsetX;
+                            const hitY = targetY + pattern.offsetY;
+                            
+                            // 🔥 화려한 VFX!
+                            this.showStabVFX(hitX, hitY, pattern.angle, currentHit, isLastHit);
+                            
+                            // 🎯 적 피격 애니메이션 (VFX와 동시!)
+                            if (target && typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                                EnemyRenderer.playHitAnimation(target, damage, isLastHit);
+                            }
+                            
+                            // 💥 화면 흔들림
+                            if (typeof SpriteAnimation !== 'undefined') {
+                                const shakeIntensity = isLastHit ? 12 : 5 + currentHit * 2;
+                                SpriteAnimation.screenShake(shakeIntensity, isLastHit ? 0.15 : 0.08);
+                            }
+                            
+                            // 히트 넘버
+                            this.showHitNumber(hitX + 60, hitY - 40, currentHit + 1, isLastHit);
+                            
+                            // 🎵 사운드
+                            if (typeof SoundSystem !== 'undefined') {
+                                SoundSystem.play(isLastHit ? 'slash_heavy' : 'slash_light', { volume: 0.6 });
+                            }
+                            
+                            // ✅ 콜백 (데미지와 동기화!)
+                            if (onHit) onHit(currentHit, damage);
+                        }
+                    }, 30);  // 찌르기 모션 절정과 동기화
+                    
+                    currentHit++;
+                    
+                    // 다음 타격
+                    if (currentHit < hitCount) {
+                        setTimeout(doStab, interval);
                     }
                 };
                 
@@ -162,6 +164,89 @@ const CardAnimations = {
                 doStab();
             });
         });
+    },
+    
+    // ==========================================
+    // 🔥 찌르기 VFX (강화)
+    // ==========================================
+    showStabVFX(x, y, angle, hitIndex, isLast) {
+        if (typeof VFX === 'undefined') return;
+        
+        const colors = ['#60a5fa', '#38bdf8', '#818cf8'];
+        const color = colors[hitIndex % colors.length];
+        
+        // 🗡️ 메인 슬래시 (찌르기 방향)
+        VFX.slash(x, y, {
+            color: color,
+            length: isLast ? 250 : 180,
+            width: isLast ? 15 : 10,
+            angle: angle,
+            duration: 200
+        });
+        
+        // ⚡ 속도선 (찌르기 잔상)
+        for (let i = 0; i < 3; i++) {
+            setTimeout(() => {
+                VFX.slash(x - 30 - i * 15, y + (Math.random() - 0.5) * 20, {
+                    color: '#ffffff',
+                    length: 60 + Math.random() * 30,
+                    width: 2,
+                    angle: angle + (Math.random() - 0.5) * 10,
+                    duration: 100,
+                    opacity: 0.6 - i * 0.15
+                });
+            }, i * 15);
+        }
+        
+        // 💥 임팩트 스파크
+        VFX.sparks(x, y, { 
+            color: color, 
+            count: isLast ? 15 : 8,
+            speed: isLast ? 20 : 12,
+            spread: isLast ? 120 : 80
+        });
+        
+        // ✨ 타격점 플래시
+        if (typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized) {
+            PixiRenderer.createHitImpact(x, y, isLast ? 8 : 4, color);
+        }
+        
+        // 🌟 마지막 타격은 더 화려하게!
+        if (isLast) {
+            // 십자 슬래시
+            VFX.crossSlash?.(x, y, { color: '#fbbf24', size: 180 });
+            
+            // 충격파
+            VFX.shockwave?.(x, y, { color: color, size: 120, duration: 200 });
+            
+            // 추가 스파크 버스트
+            setTimeout(() => {
+                VFX.sparks(x, y, { color: '#fbbf24', count: 12, speed: 25 });
+            }, 50);
+        }
+    },
+    
+    // ==========================================
+    // 🎬 피니시 이펙트
+    // ==========================================
+    showFinishEffect(x, y) {
+        if (!x || !y) return;
+        
+        // 잔상 슬래시들
+        if (typeof VFX !== 'undefined') {
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    VFX.slash(x + (Math.random() - 0.5) * 60, y + (Math.random() - 0.5) * 60, {
+                        color: '#60a5fa',
+                        length: 80 + Math.random() * 40,
+                        width: 4,
+                        angle: Math.random() * 360,
+                        duration: 150,
+                        opacity: 0.4
+                    });
+                }, i * 20);
+            }
+        }
     },
     
     // ==========================================
@@ -230,9 +315,9 @@ const CardAnimations = {
     },
     
     // ==========================================
-    // 플레이어 찌르기 모션 (각 타격)
+    // 플레이어 찌르기 모션 (각 타격) - 강화!
     // ==========================================
-    playerStabMotion(hitIndex, totalHits) {
+    playerStabMotion(hitIndex, totalHits, pattern = null) {
         if (typeof PlayerRenderer === 'undefined' || !PlayerRenderer.initialized) return;
         
         const container = PlayerRenderer.playerContainer;
@@ -240,51 +325,109 @@ const CardAnimations = {
         if (!container || !sprite) return;
         
         const baseScale = container.breathingBaseScale || PlayerRenderer.getPlayerScale();
+        const isLastHit = hitIndex === totalHits - 1;
+        
+        // 패턴이 없으면 기본 패턴 사용
+        const p = pattern || {
+            offsetX: 15,
+            offsetY: 0,
+            angle: 0,
+            scale: 1.0
+        };
         
         if (typeof gsap !== 'undefined') {
             // 이전 찌르기 애니메이션 킬
             gsap.killTweensOf(sprite);
+            gsap.killTweensOf(container);
             
-            // 각 타격마다 다른 각도/방향
-            const angles = [-5, 0, 5, -3, 3];
-            const xOffsets = [10, 15, 12, 8, 14];
-            const angle = angles[hitIndex % angles.length];
-            const xOffset = xOffsets[hitIndex % xOffsets.length];
+            // 찌르기 강도 (마지막은 더 강하게)
+            const intensity = isLastHit ? 1.5 : 1.0;
+            const xThrust = (25 + p.offsetX * 0.5) * intensity;
+            const yShift = p.offsetY * 0.3;
+            const rotAngle = p.angle * 0.015 * intensity;
             
-            // 🗡️ 빠른 찌르기 모션
-            gsap.timeline()
-                // 찌르기 준비 (짧게)
-                .to(sprite, {
-                    x: -5,
-                    rotation: angle * 0.02,
+            // 🗡️ 강화된 찌르기 모션!
+            const tl = gsap.timeline();
+            
+            // 1단계: 힘 모으기 (뒤로 살짝)
+            tl.to(sprite, {
+                x: -12 * intensity,
+                y: -yShift * 0.5,
+                scaleX: 0.92,
+                scaleY: 1.08,
+                rotation: -rotAngle * 0.5,
+                duration: 0.04,
+                ease: 'power2.in'
+            })
+            // 2단계: 찌르기! (빠르게 앞으로)
+            .to(sprite, {
+                x: xThrust,
+                y: yShift,
+                scaleX: 1.15 * p.scale,
+                scaleY: 0.88,
+                rotation: rotAngle,
+                duration: 0.035,
+                ease: 'power4.out'
+            })
+            // 3단계: 임팩트 (잠깐 멈춤)
+            .to(sprite, {
+                x: xThrust * 0.9,
+                scaleX: 1.1 * p.scale,
+                scaleY: 0.92,
+                duration: 0.02,
+                ease: 'none'
+            })
+            // 4단계: 복귀
+            .to(sprite, {
+                x: 0,
+                y: 0,
+                scaleX: 1,
+                scaleY: 1,
+                rotation: 0,
+                duration: 0.08,
+                ease: 'power2.out'
+            });
+            
+            // 컨테이너 흔들림 (임팩트 느낌)
+            if (isLastHit) {
+                gsap.to(container, {
+                    x: container.x + 8,
                     duration: 0.03,
-                    ease: 'power2.in'
-                })
-                // 찌르기! (빠르게 앞으로)
-                .to(sprite, {
-                    x: xOffset,
-                    scaleX: 1.1,
-                    scaleY: 0.95,
-                    rotation: angle * 0.01,
-                    duration: 0.04,
-                    ease: 'power3.out'
-                })
-                // 복귀 (약간 느리게)
-                .to(sprite, {
-                    x: 0,
-                    scaleX: 1,
-                    scaleY: 1,
-                    rotation: 0,
-                    duration: 0.06,
-                    ease: 'power2.out'
+                    yoyo: true,
+                    repeat: 1,
+                    ease: 'power2.inOut'
                 });
+            }
             
-            // ⚡ 틴트 플래시 (찌르는 순간)
-            const originalTint = sprite.tint;
-            sprite.tint = 0xaaddff;
-            setTimeout(() => {
-                sprite.tint = originalTint;
-            }, 40);
+            // ⚡ 틴트 플래시 (찌르는 순간, 더 강렬하게)
+            const originalTint = sprite.tint || 0xffffff;
+            sprite.tint = isLastHit ? 0xffffcc : 0xaaddff;
+            
+            // 그라데이션 페이드아웃
+            gsap.to({ progress: 0 }, {
+                progress: 1,
+                duration: 0.08,
+                onUpdate: function() {
+                    const t = this.targets()[0].progress;
+                    const r = Math.floor(255 - (255 - ((originalTint >> 16) & 0xFF)) * t);
+                    const g = Math.floor(255 - (255 - ((originalTint >> 8) & 0xFF)) * t);
+                    const b = Math.floor(255 - (255 - (originalTint & 0xFF)) * t);
+                    sprite.tint = (r << 16) | (g << 8) | b;
+                },
+                onComplete: () => {
+                    sprite.tint = originalTint;
+                }
+            });
+            
+            // 🌀 알파 펄스 (마지막 타격)
+            if (isLastHit) {
+                gsap.to(sprite, {
+                    alpha: 1.3,
+                    duration: 0.03,
+                    yoyo: true,
+                    repeat: 1
+                });
+            }
         }
     },
     
@@ -331,52 +474,165 @@ const CardAnimations = {
     },
     
     // ==========================================
-    // 히트 넘버 표시
+    // 히트 넘버 표시 (강화!)
     // ==========================================
-    showHitNumber(x, y, hitNum) {
-        const number = document.createElement('div');
-        number.textContent = hitNum;
-        number.style.cssText = `
+    showHitNumber(x, y, hitNum, isLast = false) {
+        // 컨테이너 (히트 넘버 + 이펙트)
+        const container = document.createElement('div');
+        container.className = 'flurry-hit-container';
+        container.style.cssText = `
             position: fixed;
             left: ${x}px;
             top: ${y}px;
-            font-family: 'Cinzel', serif;
-            font-size: 2rem;
-            font-weight: 900;
-            color: #60a5fa;
-            text-shadow: 
-                0 0 10px rgba(96, 165, 250, 1),
-                0 0 20px rgba(96, 165, 250, 0.6),
-                2px 2px 0 #000;
-            transform: translate(-50%, -50%) scale(0);
+            transform: translate(-50%, -50%);
             z-index: 10002;
             pointer-events: none;
         `;
-        document.body.appendChild(number);
+        
+        // 히트 넘버
+        const number = document.createElement('div');
+        number.textContent = hitNum;
+        const fontSize = isLast ? '3rem' : '2.2rem';
+        const color = isLast ? '#fbbf24' : '#60a5fa';
+        number.style.cssText = `
+            font-family: 'Cinzel', serif;
+            font-size: ${fontSize};
+            font-weight: 900;
+            color: ${color};
+            text-shadow: 
+                0 0 15px ${color},
+                0 0 30px ${color}80,
+                3px 3px 0 #000,
+                -1px -1px 0 #000;
+            transform: scale(0);
+        `;
+        container.appendChild(number);
+        
+        // 임팩트 링 (마지막 타격)
+        if (isLast) {
+            const ring = document.createElement('div');
+            ring.style.cssText = `
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                width: 60px;
+                height: 60px;
+                border: 3px solid #fbbf24;
+                border-radius: 50%;
+                transform: translate(-50%, -50%) scale(0);
+                opacity: 0.8;
+            `;
+            container.appendChild(ring);
+            
+            if (typeof gsap !== 'undefined') {
+                gsap.to(ring, {
+                    scale: 2,
+                    opacity: 0,
+                    duration: 0.3,
+                    ease: 'power2.out'
+                });
+            }
+        }
+        
+        // 스파크 라인들
+        for (let i = 0; i < (isLast ? 8 : 4); i++) {
+            const spark = document.createElement('div');
+            const angle = (360 / (isLast ? 8 : 4)) * i;
+            spark.style.cssText = `
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                width: ${isLast ? 25 : 15}px;
+                height: 2px;
+                background: linear-gradient(90deg, ${color}, transparent);
+                transform-origin: left center;
+                transform: rotate(${angle}deg) scaleX(0);
+            `;
+            container.appendChild(spark);
+            
+            if (typeof gsap !== 'undefined') {
+                gsap.to(spark, {
+                    scaleX: 1,
+                    opacity: 0,
+                    duration: 0.2,
+                    ease: 'power2.out',
+                    delay: 0.02
+                });
+            }
+        }
+        
+        document.body.appendChild(container);
         
         // GSAP 애니메이션
         if (typeof gsap !== 'undefined') {
-            gsap.timeline()
-                .to(number, {
-                    scale: 1.3,
-                    duration: 0.08,
-                    ease: 'back.out(3)'
-                })
-                .to(number, {
-                    scale: 1,
-                    duration: 0.05
-                })
-                .to(number, {
-                    y: -30,
-                    opacity: 0,
-                    duration: 0.25,
-                    delay: 0.1,
-                    ease: 'power2.in',
-                    onComplete: () => number.remove()
-                });
+            const tl = gsap.timeline();
+            
+            // 팝업!
+            tl.to(number, {
+                scale: isLast ? 1.6 : 1.3,
+                duration: 0.06,
+                ease: 'back.out(4)'
+            })
+            // 흔들림
+            .to(number, {
+                x: isLast ? 5 : 2,
+                duration: 0.02,
+                yoyo: true,
+                repeat: isLast ? 3 : 1
+            })
+            // 안정화
+            .to(number, {
+                scale: isLast ? 1.3 : 1,
+                x: 0,
+                duration: 0.04
+            })
+            // 위로 날아가며 사라짐
+            .to(container, {
+                y: isLast ? -60 : -40,
+                opacity: 0,
+                duration: 0.35,
+                delay: 0.08,
+                ease: 'power2.in',
+                onComplete: () => container.remove()
+            });
         } else {
-            number.style.animation = 'hitNumberPop 0.4s ease-out forwards';
-            setTimeout(() => number.remove(), 400);
+            number.style.transform = 'scale(1)';
+            setTimeout(() => container.remove(), 500);
+        }
+    },
+    
+    // ==========================================
+    // 🗡️ PixiJS 히트 임팩트 (보조)
+    // ==========================================
+    createPixiImpact(x, y, isLast = false) {
+        if (typeof PixiRenderer === 'undefined' || !PixiRenderer.initialized) return;
+        
+        const container = PixiRenderer.particleContainer || PixiRenderer.container;
+        if (!container) return;
+        
+        const color = isLast ? 0xfbbf24 : 0x60a5fa;
+        
+        // 임팩트 원
+        const impact = new PIXI.Graphics();
+        impact.beginFill(color, 0.8);
+        impact.drawCircle(0, 0, isLast ? 20 : 10);
+        impact.endFill();
+        impact.position.set(x, y);
+        container.addChild(impact);
+        
+        // 확장 + 페이드아웃
+        if (typeof gsap !== 'undefined') {
+            gsap.to(impact, {
+                pixi: { scaleX: 3, scaleY: 3 },
+                alpha: 0,
+                duration: 0.2,
+                ease: 'power2.out',
+                onComplete: () => {
+                    impact.destroy();
+                }
+            });
+        } else {
+            setTimeout(() => impact.destroy(), 200);
         }
     }
 };

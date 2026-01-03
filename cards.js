@@ -3645,50 +3645,54 @@ const upgradedCardDatabase = {
         hitCount: 4,
         hitInterval: 80,
         upgraded: true,
+        animationId: 'flurryP',  // 🎬 카드 애니메이션 ID!
         effect: (state) => {
-            const playerEl = document.getElementById('player');
-            const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
             const totalHits = 4;
-            const interval = 80; // 업그레이드라 더 빠르게!
+            const damage = 3;
             
-            // 플레이어 돌진 → 콜백 안에서 공격!
-            EffectSystem.playerAttack(playerEl, enemyEl, () => {
-                let hits = 0;
-                const doHit = () => {
-                    if (hits >= totalHits) return;
-                    if (state.enemy.hp <= 0) return;
-                    
-                    // 슬래시 이펙트 + 데미지 동시에!
-                    const rect = enemyEl.getBoundingClientRect();
-                    const centerX = rect.left + rect.width / 2;
-                    const centerY = rect.top + rect.height / 2;
-                    const offsetY = (hits - 1) * 20;
-                    
-                    if (typeof VFX !== 'undefined') {
-                        VFX.slash(centerX, centerY + offsetY, {
-                            color: '#60a5fa',
-                            length: 180,
-                            width: 8,
-                            angle: (Math.random() - 0.5) * 25
-                        });
-                        VFX.sparks(centerX + 25, centerY + offsetY, { color: '#60a5fa', count: 6 });
+            // 🎬 CardAnimations 사용 (강화 버전!)
+            if (typeof CardAnimations !== 'undefined' && CardAnimations.has('flurryP')) {
+                CardAnimations.play('flurryP', {
+                    target: state.enemy,
+                    targetEl: typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : null,
+                    hitCount: totalHits,
+                    damage: damage,
+                    interval: 100,  // 더 빠른 간격
+                    onHit: (hitIndex, dmg) => {
+                        // 각 타격마다 데미지 적용
+                        if (state.enemy.hp > 0) {
+                            dealDamage(state.enemy, dmg);
+                            
+                            // 추가 콤보 카운트 (2번째 타격부터)
+                            if (hitIndex > 0 && typeof RelicSystem !== 'undefined') {
+                                RelicSystem.incrementCombo();
+                                RelicSystem.showComboFloater(RelicSystem.combo.count);
+                            }
+                        }
+                    },
+                    onComplete: () => {
+                        console.log('[FlurryP] 연속 찌르기+ 완료!');
                     }
-                    
-                    dealDamage(state.enemy, 3);
-                    
-                    if (hits > 0 && typeof RelicSystem !== 'undefined') {
-                        RelicSystem.incrementCombo();
-                        RelicSystem.showComboFloater(RelicSystem.combo.count);
-                    }
-                    
-                    hits++;
-                    if (hits < totalHits && state.enemy.hp > 0) {
-                        setTimeout(doHit, interval);
-                    }
-                };
+                });
+            } else {
+                // 폴백: 기존 방식
+                const playerEl = document.getElementById('player');
+                const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
                 
-                doHit();
-            });
+                EffectSystem.playerAttack(playerEl, enemyEl, () => {
+                    let hits = 0;
+                    const doHit = () => {
+                        if (hits >= totalHits) return;
+                        if (state.enemy.hp <= 0) return;
+                        dealDamage(state.enemy, damage);
+                        hits++;
+                        if (hits < totalHits && state.enemy.hp > 0) {
+                            setTimeout(doHit, 80);
+                        }
+                    };
+                    doHit();
+                });
+            }
             
             addLog('연속 찌르기+! 3x4 데미지!', 'damage');
         }
