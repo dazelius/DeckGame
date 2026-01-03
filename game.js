@@ -4752,11 +4752,27 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
             
             // 불꽃 파티클
             if (typeof VFX !== 'undefined') {
-                const rect = playerEl.getBoundingClientRect();
-                VFX.fire(rect.left + rect.width / 2, rect.top + rect.height / 2, {
-                    count: 25,
-                    spread: 80
-                });
+                let fireX, fireY;
+                // 🎯 PlayerRenderer 우선!
+                if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.initialized) {
+                    const pos = PlayerRenderer.getPlayerPosition();
+                    if (pos) {
+                        fireX = pos.screenX || pos.centerX;
+                        fireY = pos.screenY || pos.centerY;
+                    }
+                }
+                // DOM 폴백
+                if (!fireX && playerEl) {
+                    const rect = playerEl.getBoundingClientRect();
+                    fireX = rect.left + rect.width / 2;
+                    fireY = rect.top + rect.height / 2;
+                }
+                if (fireX) {
+                    VFX.fire(fireX, fireY, {
+                        count: 25,
+                        spread: 80
+                    });
+                }
             }
         }
         
