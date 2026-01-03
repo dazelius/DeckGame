@@ -715,13 +715,13 @@ const EnemyRenderer = {
         `;
         bottomUI.appendChild(hpBar);
         
-        // 쉴드 표시
-        if (enemy.shield && enemy.shield > 0) {
-            const shieldEl = document.createElement('div');
-            shieldEl.className = 'enemy-shield pixi-shield';
-            shieldEl.innerHTML = `🛡️ ${enemy.shield}`;
-            bottomUI.appendChild(shieldEl);
-        }
+        // 🛡️ 쉴드/방어도 표시 (block 사용!)
+        const block = enemy.block || 0;
+        const shieldEl = document.createElement('div');
+        shieldEl.className = 'enemy-shield pixi-shield';
+        shieldEl.innerHTML = `<span class="shield-icon">🛡️</span><span class="shield-value">${block}</span>`;
+        shieldEl.style.display = block > 0 ? 'flex' : 'none';
+        bottomUI.appendChild(shieldEl);
         
         // 상태 효과
         const statusEl = document.createElement('div');
@@ -996,6 +996,27 @@ const EnemyRenderer = {
             }
             if (hpText) {
                 hpText.textContent = `${enemy.hp}/${enemy.maxHp}`;
+            }
+        }
+    },
+    
+    // 🛡️ 방어도 UI 업데이트
+    updateEnemyBlock(enemy) {
+        const enemyId = enemy.pixiId || enemy.id || enemy.name;
+        const data = this.sprites.get(enemyId);
+        
+        if (data && data.bottomUI) {
+            const shieldEl = data.bottomUI.querySelector('.pixi-shield');
+            if (shieldEl) {
+                const block = enemy.block || 0;
+                const shieldValue = shieldEl.querySelector('.shield-value');
+                
+                if (block > 0) {
+                    shieldEl.style.display = 'flex';
+                    if (shieldValue) shieldValue.textContent = block;
+                } else {
+                    shieldEl.style.display = 'none';
+                }
             }
         }
     },
@@ -2755,6 +2776,37 @@ enemyRendererStyles.textContent = `
         z-index: 2;
         letter-spacing: 0.5px;
         text-shadow: 1px 1px 2px #000;
+    }
+    
+    /* 🛡️ 적 쉴드/방어도 표시 */
+    .enemy-shield.pixi-shield {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        font-size: 11px;
+        font-weight: bold;
+        font-family: 'Cinzel', serif;
+        color: #60a5fa;
+        text-shadow: 0 0 5px #60a5fa, 0 1px 3px rgba(0,0,0,0.9);
+        padding: 3px 8px;
+        background: linear-gradient(180deg, 
+            rgba(40, 50, 80, 0.9) 0%, 
+            rgba(25, 35, 60, 0.95) 100%);
+        border: 1px solid rgba(100, 165, 250, 0.5);
+        border-radius: 4px;
+        box-shadow: 
+            0 2px 6px rgba(0,0,0,0.7),
+            inset 0 1px 0 rgba(150, 200, 255, 0.15);
+    }
+    
+    .enemy-shield .shield-icon {
+        font-size: 12px;
+    }
+    
+    .enemy-shield .shield-value {
+        font-size: 12px;
+        font-weight: bold;
+        color: #93c5fd;
     }
     
     /* ========================================

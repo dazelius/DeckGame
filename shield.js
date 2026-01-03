@@ -59,9 +59,10 @@ const ShieldSystem = {
                 if (playerChar) playerChar.classList.add('has-block');
                 setTimeout(() => targetEl.classList.remove('block-flash'), 300);
             }
-            // 🎯 PixiJS 플레이어 방어막 효과!
+            // 🎯 PixiJS 플레이어 방어막 효과 + UI 업데이트!
             if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.initialized) {
                 PlayerRenderer.setBlockEffect(true);
+                PlayerRenderer.updatePlayerBlock();
             }
         } else {
             // 🛡️ 적에게도 has-block 클래스 추가!
@@ -77,6 +78,10 @@ const ShieldSystem = {
             if (targetEl) {
                 targetEl.classList.add('block-flash', 'has-block');
                 setTimeout(() => targetEl.classList.remove('block-flash'), 300);
+            }
+            // 🎯 PixiJS 적 방어막 UI 업데이트!
+            if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                EnemyRenderer.updateEnemyBlock(target);
             }
         }
         
@@ -106,6 +111,21 @@ const ShieldSystem = {
             // 방어도 차감 UI 효과
             this.updateBlockUI(target, 'damage', blockedDamage);
             this.showBlockBreakEffect(target, blockedDamage, previousBlock);
+            
+            // 🎯 PixiJS UI 업데이트!
+            const isPlayer = target === gameState.player;
+            if (isPlayer) {
+                if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.initialized) {
+                    PlayerRenderer.updatePlayerBlock();
+                    if (target.block <= 0) {
+                        PlayerRenderer.setBlockEffect(false);
+                    }
+                }
+            } else {
+                if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                    EnemyRenderer.updateEnemyBlock(target);
+                }
+            }
             
             console.log(`[Shield] 방어도로 ${blockedDamage} 데미지 흡수 (${previousBlock} -> ${target.block})`);
         }
