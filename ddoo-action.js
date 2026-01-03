@@ -536,6 +536,9 @@ const DDOOAction = {
         this.resetColorGradeImmediate();
         this.resetSlowmoImmediate();
         
+        // ⏳ 한 프레임 대기 (리셋이 렌더링에 반영되도록)
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        
         // 🎲 배열이면 랜덤 선택!
         let actualAnimId = animId;
         if (Array.isArray(animId)) {
