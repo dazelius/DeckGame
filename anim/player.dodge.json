@@ -1,0 +1,15 @@
+{
+    "id": "player.dodge",
+    "name": "닷지 - 민첩한 회피",
+    "target": "player",
+    "keyframes": [
+        { "time": 0, "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0 },
+        { "time": 30, "x": -5, "y": -3, "scaleX": 0.95, "scaleY": 1.03, "alpha": 1, "rotation": -0.02, "duration": 30, "ease": "power2.in" },
+        { "time": 70, "x": -50, "y": -8, "scaleX": 0.85, "scaleY": 1.1, "alpha": 0.9, "rotation": -0.1, "duration": 40, "ease": "power3.out", "afterimage": true, "vfx": "smoke_puff" },
+        { "time": 110, "x": -70, "y": -5, "scaleX": 0.88, "scaleY": 1.08, "alpha": 0.7, "rotation": -0.08, "duration": 40, "ease": "power2.inOut", "afterimage": true },
+        { "time": 160, "x": -50, "y": -3, "scaleX": 0.92, "scaleY": 1.05, "alpha": 0.85, "rotation": -0.05, "duration": 50, "ease": "power2.inOut", "afterimage": true },
+        { "time": 220, "x": -20, "y": -1, "scaleX": 0.97, "scaleY": 1.02, "alpha": 0.95, "rotation": -0.02, "duration": 60, "ease": "power2.out" },
+        { "time": 280, "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 60, "ease": "power2.out" }
+    ]
+}
+

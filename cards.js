@@ -176,7 +176,7 @@ Object.assign(cardDatabase, {
         }
     },
     
-    // 닷지
+    // 💨 닷지 - 민첩한 회피!
     dodge: {
         id: 'dodge',
         name: '닷지',
@@ -185,30 +185,38 @@ Object.assign(cardDatabase, {
         cost: 0,
         icon: '<img src="dodge.png" alt="Dodge" class="card-icon-img">',
         description: '<span class="block-val">3</span> 방어도. 카드 1장 드로우.',
+        animationId: 'dodge',
         effect: (state) => {
-            // 🎯 PixiJS 좌표 우선 사용
-            const playerPos = typeof getPlayerScreenPosition === 'function' 
-                ? getPlayerScreenPosition() 
-                : null;
-            
-            // 연막 VFX
-            if (playerPos?.valid && typeof VFX !== 'undefined') {
-                VFX.smoke(
-                    playerPos.centerX,
-                    playerPos.centerY,
-                    { color: '#667788', size: 150, duration: 700, count: 12 }
-                );
+            // 🎮 DDOO Action 엔진 사용!
+            if (typeof CardAnimations !== 'undefined' && CardAnimations.play) {
+                CardAnimations.play('dodge', {
+                    onComplete: () => {
+                        // 방어도 획득
+                        gainBlock(state.player, 3);
+                        
+                        // 카드 1장 드로우 (딜레이 후)
+                        setTimeout(() => {
+                            drawCards(1, true);
+                        }, 200);
+                    }
+                });
+            } else {
+                // 폴백
+                const playerPos = typeof getPlayerScreenPosition === 'function' 
+                    ? getPlayerScreenPosition() 
+                    : null;
+                
+                if (playerPos?.valid && typeof VFX !== 'undefined') {
+                    VFX.smoke(playerPos.centerX, playerPos.centerY, {
+                        color: '#667788', size: 150, duration: 700, count: 12
+                    });
+                }
+                
+                gainBlock(state.player, 3);
+                setTimeout(() => drawCards(1, true), 400);
             }
             
-            // 방어도 획득
-            gainBlock(state.player, 3);
-            
-            // 카드 1장 드로우 (딜레이 후)
-            setTimeout(() => {
-                drawCards(1, true);
-            }, 400);
-            
-            addLog('닷지! 3 방어도 + 1 드로우!', 'block');
+            addLog('💨 닷지! 3 방어도 + 1 드로우!', 'block');
         }
     },
     
