@@ -550,7 +550,21 @@ const DDOOAction = {
                 sprite.scale.set(firstKf.scaleX ?? 1, firstKf.scaleY ?? 1);
             }
             
+            // 그림자 찾기 (캐릭터 ID로)
+            const charId = Object.keys(this.characters ? Object.fromEntries(this.characters) : {})
+                .find(id => this.characters.get(id)?.container === container);
+            const charData = charId ? this.characters.get(charId) : null;
+            const shadow = charData?.shadow;
+            
             const tl = gsap.timeline({
+                onUpdate: () => {
+                    // 그림자 위치 동기화
+                    if (shadow) {
+                        shadow.x = container.x;
+                        shadow.y = container.y + (this.config.character.shadowOffsetY || 5);
+                        shadow.alpha = sprite.alpha * (this.config.character.shadowAlpha || 0.4);
+                    }
+                },
                 onComplete: () => {
                     resolve();
                 }

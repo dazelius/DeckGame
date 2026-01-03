@@ -1,23 +1,19 @@
 [
-  "backstab",
-  "backstab_hit",
   "bash_hit",
   "bash_impact",
   "block",
+  "blood_splat",
   "critical",
   "dagger_hit",
+  "dagger_stab",
   "dash",
   "flurry_finish",
   "flurry_hit",
   "flurry_stab",
   "heavy_slash",
   "hit",
-  "shadow_appear",
-  "shadow_dissolve",
-  "shadow_vanish",
   "slash",
   "spark",
   "stab",
-  "throw",
-  "vulnerable"
+  "throw"
 ]

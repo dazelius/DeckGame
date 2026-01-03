@@ -1,0 +1,28 @@
+{
+    "id": "dagger_stab",
+    "name": "단검 찌르기",
+    "particles": [
+        {
+            "type": "arrow",
+            "count": 1,
+            "color": "#94a3b8",
+            "length": 60,
+            "width": 12,
+            "angle": 0,
+            "life": 100,
+            "fadeOut": true
+        },
+        {
+            "type": "spark",
+            "count": 8,
+            "color": "#e2e8f0",
+            "size": { "min": 2, "max": 5 },
+            "speed": { "min": 3, "max": 6 },
+            "angle": { "min": -30, "max": 30 },
+            "life": { "min": 80, "max": 150 },
+            "fadeOut": true
+        }
+    ],
+    "offset": { "x": 20, "y": -50 }
+}
+

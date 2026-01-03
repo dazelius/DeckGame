@@ -1,0 +1,13 @@
+{
+    "id": "enemy.stabbed",
+    "name": "뒤에서 찔림",
+    "target": "enemy",
+    "keyframes": [
+        { "time": 0, "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0 },
+        { "time": 30, "x": 8, "y": -2, "scaleX": 0.92, "scaleY": 1.06, "rotation": 0.05, "duration": 30, "ease": "power3.out" },
+        { "time": 60, "x": 15, "y": 3, "scaleX": 1.08, "scaleY": 0.94, "rotation": -0.03, "duration": 30, "ease": "power2.out", "vfx": "blood_splat" },
+        { "time": 120, "x": 10, "y": 2, "scaleX": 1.03, "scaleY": 0.98, "rotation": -0.02, "duration": 60, "ease": "power2.out" },
+        { "time": 200, "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 80, "ease": "power1.out" }
+    ]
+}
+

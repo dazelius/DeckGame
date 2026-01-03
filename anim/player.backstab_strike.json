@@ -1,0 +1,15 @@
+{
+    "id": "player.backstab_strike",
+    "name": "뒷치기",
+    "target": "player",
+    "keyframes": [
+        { "time": 0, "x": 280, "y": 0, "scaleX": 0.8, "scaleY": 1.1, "alpha": 0.15, "rotation": 0 },
+        { "time": 30, "x": 275, "y": 0, "scaleX": 0.85, "scaleY": 1.05, "alpha": 0.5, "rotation": 0, "duration": 30, "ease": "power2.out" },
+        { "time": 60, "x": 270, "y": -2, "scaleX": 0.92, "scaleY": 1.02, "alpha": 0.85, "rotation": 0.02, "duration": 30, "ease": "power2.out" },
+        { "time": 80, "x": 265, "y": -5, "scaleX": 0.88, "scaleY": 1.06, "alpha": 1, "rotation": -0.05, "duration": 20, "ease": "power2.in" },
+        { "time": 100, "x": 285, "y": -3, "scaleX": 1.15, "scaleY": 0.9, "alpha": 1, "rotation": 0.08, "duration": 20, "ease": "power4.out", "vfx": "dagger_stab", "shake": { "intensity": 6, "duration": 80 }, "hitstop": 50 },
+        { "time": 140, "x": 280, "y": -1, "scaleX": 1.05, "scaleY": 0.96, "alpha": 1, "rotation": 0.03, "duration": 40, "ease": "power2.out" },
+        { "time": 200, "x": 275, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 60, "ease": "power2.out" }
+    ]
+}
+

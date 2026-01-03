@@ -1,0 +1,14 @@
+{
+    "id": "player.sneak_return",
+    "name": "은밀한 귀환",
+    "target": "player",
+    "returnToBase": true,
+    "keyframes": [
+        { "time": 0, "x": 275, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0 },
+        { "time": 50, "x": 220, "y": -3, "scaleX": 0.95, "scaleY": 1.02, "alpha": 0.8, "rotation": -0.03, "duration": 50, "ease": "power2.in" },
+        { "time": 100, "x": 140, "y": -5, "scaleX": 0.9, "scaleY": 1.05, "alpha": 0.5, "rotation": -0.05, "duration": 50, "ease": "power2.in" },
+        { "time": 150, "x": 60, "y": -3, "scaleX": 0.92, "scaleY": 1.03, "alpha": 0.6, "rotation": -0.03, "duration": 50, "ease": "power2.out" },
+        { "time": 200, "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 50, "ease": "power2.out" }
+    ]
+}
+
