@@ -43,6 +43,18 @@ const CardAnimations = {
             execute: this.flurryPlusAnimation.bind(this)
         };
         
+        // 💀 비열한 일격 (Dirty Strike) - 그림자 백스탭!
+        this.registry['dirtyStrike'] = {
+            name: '비열한 일격',
+            execute: this.dirtyStrikeAnimation.bind(this)
+        };
+        
+        // 💀 비열한 일격+ (Dirty Strike+)
+        this.registry['dirtyStrikeP'] = {
+            name: '비열한 일격+',
+            execute: this.dirtyStrikePlusAnimation.bind(this)
+        };
+        
         console.log('[CardAnimations] 등록된 애니메이션:', Object.keys(this.registry));
     },
     
@@ -963,6 +975,123 @@ const CardAnimations = {
         } else {
             setTimeout(() => impact.destroy(), 200);
         }
+    },
+    
+    // ==========================================
+    // 💀 비열한 일격 애니메이션 - 그림자 백스탭!
+    // ==========================================
+    dirtyStrikeAnimation(options = {}) {
+        const {
+            target,
+            targetEl,
+            damage = 4,
+            onHit,
+            onComplete
+        } = options;
+        
+        return new Promise(async (resolve) => {
+            // 🎮 DDOO Action 엔진 사용
+            if (typeof DDOOAction !== 'undefined' && DDOOAction.initialized) {
+                console.log('[CardAnimations] 💀 비열한 일격 - 그림자 백스탭!');
+                
+                const playerContainer = PlayerRenderer?.playerContainer;
+                const playerSprite = PlayerRenderer?.sprite;
+                
+                if (!playerContainer || !playerSprite) {
+                    console.warn('[CardAnimations] PlayerRenderer 없음, 폴백 사용');
+                    return this.dirtyStrikeFallback(options).then(resolve);
+                }
+                
+                const getHitPoint = () => {
+                    if (target && typeof EnemyRenderer !== 'undefined') {
+                        const enemyData = EnemyRenderer.sprites.get(target.pixiId || target.id);
+                        if (enemyData) {
+                            const bounds = enemyData.sprite.getBounds();
+                            return {
+                                x: enemyData.container.x,
+                                y: enemyData.container.y - bounds.height / 2,
+                                scale: enemyData.sprite.scale.x
+                            };
+                        }
+                    }
+                    return { x: playerContainer.x + 300, y: playerContainer.y - 60, scale: 1 };
+                };
+                
+                const baseX = playerContainer.x;
+                const baseY = playerContainer.y;
+                
+                const animOptions = {
+                    container: playerContainer,
+                    sprite: playerSprite,
+                    baseX,
+                    baseY,
+                    dir: 1,
+                    getHitPoint,
+                    onHit: (kf) => {
+                        console.log('[CardAnimations] 💀 비열한 일격 히트!');
+                        
+                        // 적 히트 애니메이션
+                        if (target && typeof EnemyRenderer !== 'undefined') {
+                            const enemyData = EnemyRenderer.sprites.get(target.pixiId || target.id);
+                            if (enemyData) {
+                                DDOOAction.hitFlash('enemy_' + target.pixiId);
+                            }
+                        }
+                        
+                        // 대미지 콜백
+                        if (onHit) onHit();
+                    }
+                };
+                
+                try {
+                    // card.dirtystrike 시퀀스 실행
+                    await DDOOAction.play('card.dirtystrike', animOptions);
+                    
+                    console.log('[CardAnimations] 💀 비열한 일격 완료!');
+                    if (onComplete) onComplete();
+                    resolve();
+                    
+                } catch (e) {
+                    console.error('[CardAnimations] 비열한 일격 오류:', e);
+                    this.dirtyStrikeFallback(options).then(resolve);
+                }
+                
+            } else {
+                // 폴백
+                this.dirtyStrikeFallback(options).then(resolve);
+            }
+        });
+    },
+    
+    // 비열한 일격 폴백 (기존 EffectSystem 사용)
+    dirtyStrikeFallback(options) {
+        const { targetEl, onComplete } = options;
+        
+        return new Promise((resolve) => {
+            const playerEl = document.getElementById('player');
+            
+            if (typeof EffectSystem !== 'undefined' && EffectSystem.playerAttack) {
+                EffectSystem.playerAttack(playerEl, targetEl, () => {
+                    if (targetEl) {
+                        EffectSystem.slash(targetEl, { color: '#9333ea', count: 1 });
+                    }
+                    if (onComplete) onComplete();
+                    resolve();
+                });
+            } else {
+                if (onComplete) onComplete();
+                resolve();
+            }
+        });
+    },
+    
+    // 💀 비열한 일격+ 애니메이션
+    dirtyStrikePlusAnimation(options = {}) {
+        // 강화된 버전 - 같은 시퀀스, 더 강한 대미지
+        return this.dirtyStrikeAnimation({
+            ...options,
+            damage: options.damage || 7
+        });
     }
 };
 

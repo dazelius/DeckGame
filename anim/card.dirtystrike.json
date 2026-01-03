@@ -1,0 +1,16 @@
+{
+    "id": "card.dirtystrike",
+    "name": "비열한 일격",
+    "type": "sequence",
+    "steps": [
+        { "anim": "player.shadowstep", "wait": true },
+        { "delay": 50 },
+        { "anim": "player.shadowappear", "wait": false },
+        { "delay": 120 },
+        { "anim": "player.backstab", "wait": false },
+        { "anim": "enemy.backstabbed", "wait": true },
+        { "delay": 100 },
+        { "anim": "player.shadowreturn", "wait": true }
+    ]
+}
+

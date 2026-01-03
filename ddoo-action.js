@@ -712,12 +712,56 @@ const DDOOAction = {
                     case 'debris':
                         this.spawnDebrisParticle(def, x, y, scale);
                         break;
+                    case 'smoke':
+                        this.spawnSmokeParticle(def, x, y, scale);
+                        break;
+                    case 'symbol':
+                        this.spawnSymbolParticle(def, x, y, scale);
+                        break;
                     case 'trail':
                         // trail은 잔상 시스템 사용
                         break;
                 }
             }, delayBetween * i);
         }
+    },
+    
+    // 연기 파티클 생성
+    spawnSmokeParticle(def, x, y, scale) {
+        const spread = (def.spread || 30) * scale;
+        const size = this.getRandValue(def.size) * scale;
+        const speed = this.getRandValue(def.speed) * scale;
+        const angleRange = def.angle || { min: -180, max: 180 };
+        const angleDeg = angleRange.min + Math.random() * (angleRange.max - angleRange.min);
+        const angleRad = angleDeg * Math.PI / 180;
+        
+        this.spawnParticle({
+            type: 'smoke',
+            x: x + (Math.random() - 0.5) * spread,
+            y: y + (Math.random() - 0.5) * spread,
+            vx: Math.cos(angleRad) * speed,
+            vy: Math.sin(angleRad) * speed,
+            size: size,
+            startSize: size,
+            gravity: def.gravity || -0.1,
+            color: def.color || '#333333',
+            life: this.getRandValue(def.life),
+            rotation: Math.random() * Math.PI * 2,
+            rotationSpeed: (Math.random() - 0.5) * 0.05
+        });
+    },
+    
+    // 심볼(이모지) 파티클 생성
+    spawnSymbolParticle(def, x, y, scale) {
+        this.spawnParticle({
+            type: 'symbol',
+            x: x,
+            y: y,
+            vy: def.floatUp ? -1.5 : 0,
+            symbol: def.symbol || '⭐',
+            size: (def.size || 30) * scale,
+            life: def.life || 500
+        });
     },
     
     spawnParticle(p) {
@@ -918,7 +962,62 @@ const DDOOAction = {
                 if (p.gravity) p.vy += p.gravity;
                 this.drawDebrisParticle(p, alpha);
                 break;
+            case 'smoke':
+                p.x += p.vx || 0;
+                p.y += p.vy || 0;
+                if (p.gravity) p.vy += p.gravity;
+                p.rotation += p.rotationSpeed || 0;
+                p.size = p.startSize * (1 + progress * 0.5);
+                this.drawSmokeParticle(p, alpha * 0.7);
+                break;
+            case 'symbol':
+                p.y += p.vy || 0;
+                this.drawSymbolParticle(p, alpha, progress);
+                break;
         }
+    },
+    
+    // 연기 파티클 렌더링
+    drawSmokeParticle(p, alpha) {
+        const ctx = this.vfxCtx;
+        if (!ctx) return;
+        
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation || 0);
+        ctx.globalAlpha = alpha;
+        
+        // 부드러운 원형 연기
+        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, p.size);
+        gradient.addColorStop(0, p.color);
+        gradient.addColorStop(0.5, p.color + 'aa');
+        gradient.addColorStop(1, 'transparent');
+        
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    },
+    
+    // 심볼 파티클 렌더링
+    drawSymbolParticle(p, alpha, progress) {
+        const ctx = this.vfxCtx;
+        if (!ctx) return;
+        
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.font = `${p.size}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // 글로우 효과
+        ctx.shadowColor = '#fbbf24';
+        ctx.shadowBlur = 15;
+        
+        ctx.fillText(p.symbol, p.x, p.y);
+        ctx.restore();
     },
     
     drawSlashParticle(p, alpha, progress) {

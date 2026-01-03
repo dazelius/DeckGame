@@ -1,0 +1,14 @@
+{
+    "id": "enemy.backstabbed",
+    "name": "뒤치기 피격",
+    "target": "enemy",
+    "keyframes": [
+        { "time": 0, "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "alpha": 1 },
+        { "time": 40, "scaleX": 0.75, "scaleY": 1.25, "rotation": 0.2, "x": 25, "duration": 40, "ease": "power4.out" },
+        { "time": 100, "scaleX": 1.2, "scaleY": 0.85, "rotation": -0.15, "x": 40, "y": 10, "duration": 60, "ease": "power2.out", "vfx": "backstab_hit" },
+        { "time": 160, "scaleX": 0.9, "scaleY": 1.08, "rotation": 0.08, "x": 30, "y": 5, "duration": 60, "ease": "power2.inOut" },
+        { "time": 240, "scaleX": 0.95, "scaleY": 1.03, "rotation": 0.03, "x": 15, "y": 2, "duration": 80, "ease": "power1.out" },
+        { "time": 350, "scaleX": 1, "scaleY": 1, "rotation": 0, "x": 0, "y": 0, "duration": 110, "ease": "power1.out" }
+    ]
+}
+

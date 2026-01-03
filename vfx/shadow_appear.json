@@ -1,0 +1,38 @@
+{
+    "id": "shadow_appear",
+    "name": "그림자 출현",
+    "particles": [
+        {
+            "type": "smoke",
+            "count": 30,
+            "color": "#1a0a2e",
+            "size": { "min": 25, "max": 70 },
+            "speed": { "min": 2, "max": 5 },
+            "angle": { "min": 160, "max": 200 },
+            "life": { "min": 250, "max": 500 },
+            "fadeOut": true,
+            "gravity": -0.2
+        },
+        {
+            "type": "spark",
+            "count": 20,
+            "color": "#a855f7",
+            "size": { "min": 4, "max": 10 },
+            "speed": { "min": 3, "max": 7 },
+            "angle": { "min": -180, "max": 180 },
+            "life": { "min": 150, "max": 350 },
+            "fadeOut": true
+        },
+        {
+            "type": "ring",
+            "count": 1,
+            "color": "#c084fc",
+            "size": 30,
+            "growSpeed": 4,
+            "life": 200,
+            "fadeOut": true
+        }
+    ],
+    "offset": { "x": 0, "y": -60 }
+}
+
