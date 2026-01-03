@@ -7,19 +7,19 @@
     "description": "나비처럼 날아 벌처럼 쏜다! 세검 3연타",
     "steps": [
         { "anim": "player.dash", "wait": true },
-        { "delay": 30 },
+        { "delay": 15 },
         
         { "anim": "player.flurry_stab1", "wait": false },
-        { "anim": "enemy.flurry_hit", "wait": true, "delay": 18 },
-        { "delay": 40 },
+        { "anim": "enemy.flurry_hit", "wait": true, "delay": 12 },
+        { "delay": 20 },
         
         { "anim": "player.flurry_stab2", "wait": false },
-        { "anim": "enemy.flurry_hit", "wait": true, "delay": 16 },
-        { "delay": 40 },
+        { "anim": "enemy.flurry_hit", "wait": true, "delay": 11 },
+        { "delay": 20 },
         
         { "anim": "player.flurry_stab3", "wait": false },
-        { "anim": "enemy.flurry_hit", "wait": true, "delay": 22 },
-        { "delay": 120 },
+        { "anim": "enemy.flurry_hit", "wait": true, "delay": 14 },
+        { "delay": 80 },
         
         { "anim": "player.return", "wait": true }
     ]

@@ -7,27 +7,27 @@
     "description": "초고속 5연타! 정신없이 몰아친다",
     "steps": [
         { "anim": "player.dash", "wait": true },
-        { "delay": 20 },
+        { "delay": 10 },
         
         { "anim": "player.flurry_stab1", "wait": false },
-        { "anim": "enemy.flurry_hit", "wait": true, "delay": 15 },
-        { "delay": 25 },
+        { "anim": "enemy.flurry_hit", "wait": true, "delay": 10 },
+        { "delay": 12 },
         
         { "anim": "player.flurry_stab2", "wait": false },
-        { "anim": "enemy.flurry_hit", "wait": true, "delay": 12 },
-        { "delay": 25 },
+        { "anim": "enemy.flurry_hit", "wait": true, "delay": 9 },
+        { "delay": 12 },
         
         { "anim": "player.flurry_stab1", "wait": false },
-        { "anim": "enemy.flurry_hit", "wait": true, "delay": 15 },
-        { "delay": 25 },
+        { "anim": "enemy.flurry_hit", "wait": true, "delay": 10 },
+        { "delay": 12 },
         
         { "anim": "player.flurry_stab2", "wait": false },
-        { "anim": "enemy.flurry_hit", "wait": true, "delay": 12 },
-        { "delay": 30 },
+        { "anim": "enemy.flurry_hit", "wait": true, "delay": 9 },
+        { "delay": 15 },
         
         { "anim": "player.flurry_stab3", "wait": false },
-        { "anim": "enemy.flurry_hit", "wait": true, "delay": 22 },
-        { "delay": 150 },
+        { "anim": "enemy.flurry_hit", "wait": true, "delay": 14 },
+        { "delay": 100 },
         
         { "anim": "player.return", "wait": true }
     ]
