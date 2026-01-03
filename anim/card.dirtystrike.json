@@ -2,15 +2,13 @@
     "id": "card.dirtystrike",
     "name": "비열한 일격",
     "type": "sequence",
+    "description": "은밀하게 접근하여 뒤에서 찌른다",
     "steps": [
-        { "anim": "player.shadowstep", "wait": true },
-        { "delay": 50 },
-        { "anim": "player.shadowappear", "wait": false },
-        { "delay": 120 },
-        { "anim": "player.backstab", "wait": false },
-        { "anim": "enemy.backstabbed", "wait": true },
-        { "delay": 100 },
-        { "anim": "player.shadowreturn", "wait": true }
+        { "anim": "player.sneak", "wait": true },
+        { "delay": 30 },
+        { "anim": "player.backstab_strike", "wait": false },
+        { "anim": "enemy.stabbed", "wait": true, "delay": 20 },
+        { "delay": 60 },
+        { "anim": "player.sneak_return", "wait": true }
     ]
 }
-
