@@ -131,9 +131,9 @@ const CardAnimations = {
                         onHit(hitCount++, dmgValue);
                     }
                     
-                    // 적 피격 애니메이션
+                    // 적 피격 애니메이션 (target 객체 전체 전달!)
                     if (target && typeof EnemyRenderer !== 'undefined') {
-                        EnemyRenderer.playHitAnimation(target.pixiId || target.id);
+                        EnemyRenderer.playHitAnimation(target, dmgValue, false);
                     }
                     
                     // 실제 대미지 적용

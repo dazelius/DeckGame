@@ -1,25 +1,21 @@
 {
     "id": "enemy.hit",
-    "name": "적 피격",
+    "name": "적 피격 - 좌우 타격",
     "target": "enemy",
     "type": "once",
     "priority": 20,
-    "duration": 450,
+    "duration": 380,
     "keyframes": [
         { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 0 },
         
-        { "x": 18, "y": -4, "scaleX": 0.85, "scaleY": 1.15, "alpha": 0.7, "rotation": 0.08, "duration": 22, "ease": "power4.out", "vfx": "hit" },
-        { "x": 40, "y": -6, "scaleX": 0.78, "scaleY": 1.22, "alpha": 0.5, "rotation": 0.14, "duration": 28, "ease": "power3.out" },
-        { "x": 58, "y": -4, "scaleX": 0.75, "scaleY": 1.25, "alpha": 0.45, "rotation": 0.17, "duration": 32, "ease": "power2.out" },
-        { "x": 68, "y": 0, "scaleX": 0.78, "scaleY": 1.22, "alpha": 0.5, "rotation": 0.15, "duration": 28, "ease": "power2.out" },
+        { "x": 35, "y": -8, "scaleX": 0.75, "scaleY": 1.28, "alpha": 0.6, "rotation": 0.15, "duration": 30, "ease": "power4.out", "vfx": "hit", "vfxTarget": "self" },
+        { "x": 55, "y": -5, "scaleX": 0.7, "scaleY": 1.32, "alpha": 0.5, "rotation": 0.2, "duration": 35, "ease": "power3.out" },
         
-        { "x": 64, "y": 2, "scaleX": 0.82, "scaleY": 1.18, "alpha": 0.55, "rotation": 0.13, "duration": 32, "ease": "power2.inOut" },
-        { "x": 56, "y": 3, "scaleX": 0.86, "scaleY": 1.14, "alpha": 0.62, "rotation": 0.10, "duration": 38, "ease": "power2.inOut" },
-        { "x": 46, "y": 3, "scaleX": 0.90, "scaleY": 1.10, "alpha": 0.70, "rotation": 0.07, "duration": 42, "ease": "power2.inOut" },
-        { "x": 35, "y": 2, "scaleX": 0.93, "scaleY": 1.07, "alpha": 0.78, "rotation": 0.05, "duration": 45, "ease": "power2.out" },
-        { "x": 24, "y": 1, "scaleX": 0.96, "scaleY": 1.04, "alpha": 0.85, "rotation": 0.03, "duration": 45, "ease": "power2.out" },
-        { "x": 14, "y": 0, "scaleX": 0.98, "scaleY": 1.02, "alpha": 0.92, "rotation": 0.01, "duration": 40, "ease": "power2.out" },
-        { "x": 5, "y": 0, "scaleX": 0.99, "scaleY": 1.01, "alpha": 0.97, "rotation": 0, "duration": 35, "ease": "power2.out" },
-        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 30, "ease": "power2.out" }
+        { "x": -18, "y": 3, "scaleX": 1.08, "scaleY": 0.94, "alpha": 0.7, "rotation": -0.08, "duration": 40, "ease": "power2.out" },
+        
+        { "x": -8, "y": 2, "scaleX": 1.04, "scaleY": 0.97, "alpha": 0.82, "rotation": -0.04, "duration": 45, "ease": "power2.out" },
+        { "x": 5, "y": 0, "scaleX": 0.98, "scaleY": 1.02, "alpha": 0.9, "rotation": 0.02, "duration": 50, "ease": "elastic.out(1, 0.6)" },
+        { "x": -2, "y": 0, "scaleX": 1.01, "scaleY": 0.99, "alpha": 0.95, "rotation": -0.01, "duration": 45, "ease": "power2.out" },
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 35, "ease": "power2.out" }
     ]
 }

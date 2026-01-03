@@ -1,6 +1,6 @@
 /**
  * DDOO Animation Bundle - 자동 생성됨
- * 생성일: 2026-01-03T16:52:46.622Z
+ * 생성일: 2026-01-03T16:56:28.267Z
  * 
  * 이 파일을 포함하면 fetch 없이 모든 애니메이션/VFX 데이터 사용 가능!
  * <script src="anim-bundle.js"></script>
@@ -470,11 +470,11 @@ window.ANIM_BUNDLE = {
   },
   "enemy.bash_hit": {
     "id": "enemy.bash_hit",
-    "name": "강타 피격",
+    "name": "강타 피격 - 강렬한 좌우",
     "target": "enemy",
     "type": "once",
     "priority": 22,
-    "duration": 550,
+    "duration": 480,
     "keyframes": [
       {
         "x": 0,
@@ -486,104 +486,65 @@ window.ANIM_BUNDLE = {
         "duration": 0
       },
       {
-        "x": 25,
-        "y": -8,
-        "scaleX": 0.75,
-        "scaleY": 1.25,
-        "alpha": 0.6,
-        "rotation": 0.12,
-        "duration": 25,
+        "x": 50,
+        "y": -15,
+        "scaleX": 0.65,
+        "scaleY": 1.38,
+        "alpha": 0.45,
+        "rotation": 0.22,
+        "duration": 30,
         "ease": "power4.out",
-        "vfx": "bash_hit"
+        "vfx": "bash_hit",
+        "vfxTarget": "self"
       },
       {
-        "x": 55,
-        "y": -12,
-        "scaleX": 0.68,
-        "scaleY": 1.32,
-        "alpha": 0.45,
-        "rotation": 0.2,
-        "duration": 35,
+        "x": 85,
+        "y": -10,
+        "scaleX": 0.58,
+        "scaleY": 1.45,
+        "alpha": 0.35,
+        "rotation": 0.28,
+        "duration": 40,
         "ease": "power3.out"
       },
       {
-        "x": 80,
-        "y": -8,
-        "scaleX": 0.65,
-        "scaleY": 1.35,
-        "alpha": 0.4,
-        "rotation": 0.25,
-        "duration": 40,
-        "ease": "power2.out"
-      },
-      {
-        "x": 95,
+        "x": 100,
         "y": 0,
-        "scaleX": 0.7,
-        "scaleY": 1.3,
-        "alpha": 0.45,
-        "rotation": 0.22,
+        "scaleX": 0.6,
+        "scaleY": 1.42,
+        "alpha": 0.38,
+        "rotation": 0.25,
         "duration": 35,
         "ease": "power2.out"
       },
       {
-        "x": 88,
-        "y": 5,
-        "scaleX": 0.75,
-        "scaleY": 1.25,
-        "alpha": 0.52,
-        "rotation": 0.18,
-        "duration": 40,
-        "ease": "power2.inOut"
+        "x": -30,
+        "y": 8,
+        "scaleX": 1.12,
+        "scaleY": 0.9,
+        "alpha": 0.55,
+        "rotation": -0.12,
+        "duration": 50,
+        "ease": "power2.out"
       },
       {
-        "x": 75,
-        "y": 5,
-        "scaleX": 0.82,
-        "scaleY": 1.18,
-        "alpha": 0.6,
-        "rotation": 0.14,
-        "duration": 45,
-        "ease": "power2.inOut"
-      },
-      {
-        "x": 60,
+        "x": 15,
         "y": 4,
-        "scaleX": 0.88,
-        "scaleY": 1.12,
-        "alpha": 0.7,
-        "rotation": 0.1,
-        "duration": 50,
-        "ease": "power2.out"
+        "scaleX": 0.95,
+        "scaleY": 1.06,
+        "alpha": 0.72,
+        "rotation": 0.05,
+        "duration": 55,
+        "ease": "elastic.out(1, 0.5)"
       },
       {
-        "x": 42,
-        "y": 3,
-        "scaleX": 0.92,
-        "scaleY": 1.08,
-        "alpha": 0.8,
-        "rotation": 0.06,
-        "duration": 50,
-        "ease": "power2.out"
-      },
-      {
-        "x": 25,
+        "x": -8,
         "y": 2,
-        "scaleX": 0.96,
-        "scaleY": 1.04,
-        "alpha": 0.9,
-        "rotation": 0.03,
-        "duration": 45,
-        "ease": "power2.out"
-      },
-      {
-        "x": 12,
-        "y": 1,
-        "scaleX": 0.98,
-        "scaleY": 1.02,
-        "alpha": 0.95,
-        "rotation": 0.01,
-        "duration": 40,
+        "scaleX": 1.03,
+        "scaleY": 0.97,
+        "alpha": 0.85,
+        "rotation": -0.03,
+        "duration": 50,
         "ease": "power2.out"
       },
       {
@@ -591,9 +552,19 @@ window.ANIM_BUNDLE = {
         "y": 0,
         "scaleX": 0.99,
         "scaleY": 1.01,
-        "alpha": 0.98,
+        "alpha": 0.93,
+        "rotation": 0.01,
+        "duration": 45,
+        "ease": "power2.out"
+      },
+      {
+        "x": -1,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "alpha": 0.97,
         "rotation": 0,
-        "duration": 35,
+        "duration": 40,
         "ease": "power2.out"
       },
       {
@@ -603,7 +574,7 @@ window.ANIM_BUNDLE = {
         "scaleY": 1,
         "alpha": 1,
         "rotation": 0,
-        "duration": 30,
+        "duration": 35,
         "ease": "power2.out"
       }
     ]
@@ -844,7 +815,7 @@ window.ANIM_BUNDLE = {
     "target": "enemy",
     "type": "once",
     "priority": 16,
-    "duration": 80,
+    "duration": 85,
     "keyframes": [
       {
         "x": 0,
@@ -856,53 +827,54 @@ window.ANIM_BUNDLE = {
         "duration": 0
       },
       {
-        "x": 25,
-        "y": -5,
-        "scaleX": 0.8,
-        "scaleY": 1.25,
+        "x": 30,
+        "y": -8,
+        "scaleX": 0.75,
+        "scaleY": 1.28,
         "alpha": 0.5,
-        "rotation": 0.08,
-        "duration": 8,
+        "rotation": 0.12,
+        "duration": 10,
         "ease": "power4.out",
-        "vfx": "flurry_hit"
+        "vfx": "flurry_hit",
+        "vfxTarget": "self"
       },
       {
-        "x": 35,
-        "y": 0,
-        "scaleX": 0.75,
-        "scaleY": 1.3,
+        "x": 40,
+        "y": -3,
+        "scaleX": 0.72,
+        "scaleY": 1.32,
         "alpha": 0.45,
-        "rotation": 0.1,
+        "rotation": 0.15,
         "duration": 12,
         "ease": "power2.out"
       },
       {
-        "x": 28,
-        "y": 3,
-        "scaleX": 0.82,
-        "scaleY": 1.22,
-        "alpha": 0.55,
-        "rotation": 0.08,
+        "x": -12,
+        "y": 4,
+        "scaleX": 1.05,
+        "scaleY": 0.96,
+        "alpha": 0.65,
+        "rotation": -0.06,
         "duration": 15,
         "ease": "power2.out"
       },
       {
-        "x": 18,
+        "x": 5,
         "y": 2,
-        "scaleX": 0.9,
-        "scaleY": 1.12,
-        "alpha": 0.7,
-        "rotation": 0.05,
-        "duration": 15,
-        "ease": "power2.out"
+        "scaleX": 0.97,
+        "scaleY": 1.03,
+        "alpha": 0.8,
+        "rotation": 0.02,
+        "duration": 18,
+        "ease": "elastic.out(1, 0.7)"
       },
       {
-        "x": 8,
-        "y": 1,
-        "scaleX": 0.96,
-        "scaleY": 1.05,
-        "alpha": 0.88,
-        "rotation": 0.02,
+        "x": -2,
+        "y": 0,
+        "scaleX": 1.01,
+        "scaleY": 0.99,
+        "alpha": 0.92,
+        "rotation": -0.01,
         "duration": 15,
         "ease": "power2.out"
       },
@@ -920,11 +892,11 @@ window.ANIM_BUNDLE = {
   },
   "enemy.hit": {
     "id": "enemy.hit",
-    "name": "적 피격",
+    "name": "적 피격 - 좌우 타격",
     "target": "enemy",
     "type": "once",
     "priority": 20,
-    "duration": 450,
+    "duration": 380,
     "keyframes": [
       {
         "x": 0,
@@ -936,114 +908,65 @@ window.ANIM_BUNDLE = {
         "duration": 0
       },
       {
-        "x": 18,
-        "y": -4,
-        "scaleX": 0.85,
-        "scaleY": 1.15,
-        "alpha": 0.7,
-        "rotation": 0.08,
-        "duration": 22,
+        "x": 35,
+        "y": -8,
+        "scaleX": 0.75,
+        "scaleY": 1.28,
+        "alpha": 0.6,
+        "rotation": 0.15,
+        "duration": 30,
         "ease": "power4.out",
-        "vfx": "hit"
+        "vfx": "hit",
+        "vfxTarget": "self"
       },
       {
-        "x": 40,
-        "y": -6,
-        "scaleX": 0.78,
-        "scaleY": 1.22,
+        "x": 55,
+        "y": -5,
+        "scaleX": 0.7,
+        "scaleY": 1.32,
         "alpha": 0.5,
-        "rotation": 0.14,
-        "duration": 28,
+        "rotation": 0.2,
+        "duration": 35,
         "ease": "power3.out"
       },
       {
-        "x": 58,
-        "y": -4,
-        "scaleX": 0.75,
-        "scaleY": 1.25,
-        "alpha": 0.45,
-        "rotation": 0.17,
-        "duration": 32,
-        "ease": "power2.out"
-      },
-      {
-        "x": 68,
-        "y": 0,
-        "scaleX": 0.78,
-        "scaleY": 1.22,
-        "alpha": 0.5,
-        "rotation": 0.15,
-        "duration": 28,
-        "ease": "power2.out"
-      },
-      {
-        "x": 64,
-        "y": 2,
-        "scaleX": 0.82,
-        "scaleY": 1.18,
-        "alpha": 0.55,
-        "rotation": 0.13,
-        "duration": 32,
-        "ease": "power2.inOut"
-      },
-      {
-        "x": 56,
+        "x": -18,
         "y": 3,
-        "scaleX": 0.86,
-        "scaleY": 1.14,
-        "alpha": 0.62,
-        "rotation": 0.1,
-        "duration": 38,
-        "ease": "power2.inOut"
-      },
-      {
-        "x": 46,
-        "y": 3,
-        "scaleX": 0.9,
-        "scaleY": 1.1,
+        "scaleX": 1.08,
+        "scaleY": 0.94,
         "alpha": 0.7,
-        "rotation": 0.07,
-        "duration": 42,
-        "ease": "power2.inOut"
-      },
-      {
-        "x": 35,
-        "y": 2,
-        "scaleX": 0.93,
-        "scaleY": 1.07,
-        "alpha": 0.78,
-        "rotation": 0.05,
-        "duration": 45,
-        "ease": "power2.out"
-      },
-      {
-        "x": 24,
-        "y": 1,
-        "scaleX": 0.96,
-        "scaleY": 1.04,
-        "alpha": 0.85,
-        "rotation": 0.03,
-        "duration": 45,
-        "ease": "power2.out"
-      },
-      {
-        "x": 14,
-        "y": 0,
-        "scaleX": 0.98,
-        "scaleY": 1.02,
-        "alpha": 0.92,
-        "rotation": 0.01,
+        "rotation": -0.08,
         "duration": 40,
+        "ease": "power2.out"
+      },
+      {
+        "x": -8,
+        "y": 2,
+        "scaleX": 1.04,
+        "scaleY": 0.97,
+        "alpha": 0.82,
+        "rotation": -0.04,
+        "duration": 45,
         "ease": "power2.out"
       },
       {
         "x": 5,
         "y": 0,
-        "scaleX": 0.99,
-        "scaleY": 1.01,
-        "alpha": 0.97,
-        "rotation": 0,
-        "duration": 35,
+        "scaleX": 0.98,
+        "scaleY": 1.02,
+        "alpha": 0.9,
+        "rotation": 0.02,
+        "duration": 50,
+        "ease": "elastic.out(1, 0.6)"
+      },
+      {
+        "x": -2,
+        "y": 0,
+        "scaleX": 1.01,
+        "scaleY": 0.99,
+        "alpha": 0.95,
+        "rotation": -0.01,
+        "duration": 45,
         "ease": "power2.out"
       },
       {
@@ -1053,7 +976,7 @@ window.ANIM_BUNDLE = {
         "scaleY": 1,
         "alpha": 1,
         "rotation": 0,
-        "duration": 30,
+        "duration": 35,
         "ease": "power2.out"
       }
     ]
@@ -1260,72 +1183,101 @@ window.ANIM_BUNDLE = {
   },
   "enemy.stabbed": {
     "id": "enemy.stabbed",
-    "name": "뒤에서 찔림",
+    "name": "뒤에서 찔림 - 극적인 반응",
     "target": "enemy",
+    "type": "once",
+    "priority": 20,
+    "duration": 350,
     "keyframes": [
       {
-        "time": 0,
-        "x": 0,
-        "y": 0,
-        "scaleX": 1,
-        "scaleY": 1,
-        "alpha": 1,
-        "rotation": 0
-      },
-      {
-        "time": 20,
-        "x": -15,
-        "y": 0,
-        "scaleX": 1.15,
-        "scaleY": 0.9,
-        "alpha": 1,
-        "rotation": -0.15,
-        "duration": 20,
-        "ease": "power4.out"
-      },
-      {
-        "time": 50,
-        "x": -35,
-        "y": 5,
-        "scaleX": 1.25,
-        "scaleY": 0.85,
-        "alpha": 1,
-        "rotation": -0.25,
-        "duration": 30,
-        "ease": "power2.out",
-        "vfx": "blood_drip"
-      },
-      {
-        "time": 100,
-        "x": -30,
-        "y": 10,
-        "scaleX": 1.1,
-        "scaleY": 0.92,
-        "alpha": 1,
-        "rotation": -0.18,
-        "duration": 50,
-        "ease": "power2.inOut"
-      },
-      {
-        "time": 180,
-        "x": -15,
-        "y": 5,
-        "scaleX": 1.03,
-        "scaleY": 0.98,
-        "alpha": 1,
-        "rotation": -0.08,
-        "duration": 80,
-        "ease": "power2.out"
-      },
-      {
-        "time": 280,
         "x": 0,
         "y": 0,
         "scaleX": 1,
         "scaleY": 1,
         "alpha": 1,
         "rotation": 0,
-        "duration": 100,
+        "duration": 0
+      },
+      {
+        "x": -25,
+        "y": -10,
+        "scaleX": 1.2,
+        "scaleY": 0.85,
+        "alpha": 0.8,
+        "rotation": -0.18,
+        "duration": 25,
+        "ease": "power4.out",
+        "vfx": "blood_drip",
+        "vfxTarget": "self"
+      },
+      {
+        "x": -45,
+        "y": -5,
+        "scaleX": 1.3,
+        "scaleY": 0.78,
+        "alpha": 0.65,
+        "rotation": -0.28,
+        "duration": 35,
+        "ease": "power2.out"
+      },
+      {
+        "x": -55,
+        "y": 5,
+        "scaleX": 1.25,
+        "scaleY": 0.82,
+        "alpha": 0.55,
+        "rotation": -0.32,
+        "duration": 40,
+        "ease": "power2.out"
+      },
+      {
+        "x": 20,
+        "y": 8,
+        "scaleX": 0.88,
+        "scaleY": 1.12,
+        "alpha": 0.7,
+        "rotation": 0.1,
+        "duration": 50,
+        "ease": "power2.out"
+      },
+      {
+        "x": -10,
+        "y": 4,
+        "scaleX": 1.05,
+        "scaleY": 0.96,
+        "alpha": 0.82,
+        "rotation": -0.05,
+        "duration": 50,
+        "ease": "elastic.out(1, 0.6)"
+      },
+      {
+        "x": 5,
+        "y": 2,
+        "scaleX": 0.98,
+        "scaleY": 1.02,
+        "alpha": 0.9,
+        "rotation": 0.02,
+        "duration": 45,
+        "ease": "power2.out"
+      },
+      {
+        "x": -2,
+        "y": 0,
+        "scaleX": 1.01,
+        "scaleY": 0.99,
+        "alpha": 0.96,
+        "rotation": -0.01,
+        "duration": 40,
+        "ease": "power2.out"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "alpha": 1,
+        "rotation": 0,
+        "duration": 35,
         "ease": "power2.out"
       }
     ]

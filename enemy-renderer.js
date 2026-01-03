@@ -2256,41 +2256,64 @@ const EnemyRenderer = {
             
             const freezeTime = Math.min(0.04 + damage * 0.003, 0.12);  // 히트스탑
             
-            // 🎬 피격 애니메이션 타임라인 (x 이동은 3D 넉백에 맡김!)
+            // 🎬 피격 애니메이션 타임라인 - 랜덤 좌우 타격감!
             const tl = gsap.timeline();
             
             // 🔧 현재 timeline 저장 (나중에 정리용)
             data.currentHitTween = tl;
             
-            // 1️⃣ 스쿼시 (찌그러짐) + 회전
-            tl.to(container.scale, {
-                x: baseScale * 0.8,
-                y: baseScale * 1.2,
-                duration: 0.04,
+            // 🎲 랜덤 방향 결정 (좌우로 얻어터지는 느낌!)
+            const hitDir = Math.random() > 0.5 ? 1 : -1;
+            const hitX = (15 + intensity * 6) * hitDir;  // 강도에 따른 밀림
+            const hitRotation = (0.08 + intensity * 0.02) * hitDir;  // 방향에 맞는 회전
+            const originalX = container.x;
+            
+            // 1️⃣ 충격 (밀림 + 스쿼시 + 회전)
+            tl.to(container, {
+                x: originalX + hitX,
+                rotation: hitRotation,
+                duration: 0.05,
                 ease: "power4.out"
             }, 0);
             
-            tl.to(container, {
-                rotation: (Math.random() - 0.5) * 0.15,  // 약간 회전
-                duration: 0.04,
+            tl.to(container.scale, {
+                x: baseScale * (hitDir > 0 ? 0.75 : 0.85),  // 방향에 따른 찌그러짐
+                y: baseScale * 1.25,
+                duration: 0.05,
                 ease: "power4.out"
             }, 0);
             
             // 2️⃣ 히트스탑 (프리즈!)
             tl.to({}, { duration: freezeTime });
             
-            // 3️⃣ 복귀 (탄성있게) - 스케일, 회전만!
+            // 3️⃣ 반동 (반대로 약간)
+            tl.to(container, {
+                x: originalX - hitX * 0.3,
+                rotation: -hitRotation * 0.3,
+                duration: 0.08,
+                ease: "power2.out"
+            });
+            
             tl.to(container.scale, {
-                x: baseScale,
-                y: baseScale,
-                duration: 0.25,
+                x: baseScale * 1.05,
+                y: baseScale * 0.95,
+                duration: 0.08,
+                ease: "power2.out"
+            }, "<");
+            
+            // 4️⃣ 복귀 (탄성있게)
+            tl.to(container, {
+                x: originalX,
+                rotation: 0,
+                duration: 0.2,
                 ease: "elastic.out(1, 0.5)"
             });
             
-            tl.to(container, {
-                rotation: 0,
+            tl.to(container.scale, {
+                x: baseScale,
+                y: baseScale,
                 duration: 0.2,
-                ease: "elastic.out(1, 0.4)"
+                ease: "elastic.out(1, 0.5)"
             }, "<");
             
             // 4️⃣ 숨쉬기 재개 + 애니메이션 종료
