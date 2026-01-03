@@ -2,6 +2,76 @@
 // Shadow Deck - 이펙트 시스템 (VFX 기반)
 // ==========================================
 
+// 🎯 전역 좌표 헬퍼 함수들 (PixiJS 우선, DOM 폴백)
+function getPlayerScreenPosition() {
+    // PixiJS PlayerRenderer 우선!
+    if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.initialized) {
+        const pos = PlayerRenderer.getPlayerPosition();
+        if (pos) {
+            return {
+                x: pos.screenX || pos.centerX,
+                y: pos.screenY || pos.centerY,
+                centerX: pos.screenX || pos.centerX,
+                centerY: pos.screenY || pos.centerY,
+                top: (pos.screenY || pos.centerY) - 80,
+                valid: true
+            };
+        }
+    }
+    
+    // DOM 폴백
+    const playerEl = document.getElementById('player');
+    if (playerEl) {
+        const rect = playerEl.getBoundingClientRect();
+        return {
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2,
+            centerX: rect.left + rect.width / 2,
+            centerY: rect.top + rect.height / 2,
+            top: rect.top,
+            valid: true
+        };
+    }
+    
+    return { x: 0, y: 0, centerX: 0, centerY: 0, top: 0, valid: false };
+}
+
+function getEnemyScreenPosition(enemy, enemyEl = null) {
+    // PixiJS EnemyRenderer 우선!
+    if (enemy && typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+        const pos = EnemyRenderer.getEnemyPosition(enemy);
+        if (pos) {
+            return {
+                x: pos.centerX,
+                y: pos.centerY,
+                centerX: pos.centerX,
+                centerY: pos.centerY,
+                top: pos.top,
+                valid: true
+            };
+        }
+    }
+    
+    // DOM 폴백
+    if (enemyEl) {
+        const rect = enemyEl.getBoundingClientRect();
+        return {
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2,
+            centerX: rect.left + rect.width / 2,
+            centerY: rect.top + rect.height / 2,
+            top: rect.top,
+            valid: true
+        };
+    }
+    
+    return { x: 0, y: 0, centerX: 0, centerY: 0, top: 0, valid: false };
+}
+
+// 전역 노출
+window.getPlayerScreenPosition = getPlayerScreenPosition;
+window.getEnemyScreenPosition = getEnemyScreenPosition;
+
 const EffectSystem = {
     // 초기화 - VFX 시스템 초기화
     init() {
