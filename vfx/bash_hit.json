@@ -1,39 +1,44 @@
 {
     "id": "bash_hit",
     "name": "강타 피격",
-    "shake": 8,
+    "shake": 10,
     "particles": [
         {
             "type": "flash",
-            "size": 80,
+            "size": 160,
             "color": "#ffffff",
-            "life": 50
+            "life": 60
+        },
+        {
+            "type": "flash",
+            "size": 110,
+            "color": "#ef4444",
+            "life": 80
         },
         {
             "type": "ring",
-            "size": 25,
-            "maxSize": 100,
+            "size": 40,
+            "maxSize": 200,
             "color": "#ef4444",
-            "life": 180
+            "life": 220
         },
         {
             "type": "line",
-            "count": 8,
-            "angleStep": 45,
-            "length": [40, 80],
-            "width": 4,
+            "count": 12,
+            "angleStep": 30,
+            "length": [60, 140],
+            "width": 6,
             "color": "#fbbf24",
-            "life": 150
+            "life": 180
         },
         {
             "type": "spark",
-            "count": 15,
-            "spread": 70,
-            "speed": [8, 18],
-            "size": [3, 8],
+            "count": 25,
+            "spread": 110,
+            "speed": [16, 40],
+            "size": [5, 14],
             "colors": ["#ef4444", "#fbbf24", "#ffffff"],
-            "life": [160, 300]
+            "life": [150, 300]
         }
     ]
 }
-
