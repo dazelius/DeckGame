@@ -235,8 +235,8 @@
             vfxScale: 1.0       // VFX 스케일
         };
         
-        const animCache = new Map();
-        const vfxCache = new Map();
+        let animCache = new Map();
+        let vfxCache = new Map();
         
         // 동적으로 index.json에서 로드
         let ANIM_FILES = [];
