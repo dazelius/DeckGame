@@ -2,13 +2,17 @@
     "id": "player.backstab_strike",
     "name": "뒤치기 일격",
     "target": "player",
+    "type": "once",
+    "priority": 18,
+    "duration": 280,
     "keyframes": [
-        { "time": 0, "x": 300, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0.02 },
-        { "time": 15, "x": 290, "y": 0, "scaleX": 0.85, "scaleY": 1.15, "alpha": 1, "rotation": -0.1, "duration": 15, "ease": "power3.in" },
-        { "time": 35, "x": 270, "y": -5, "scaleX": 1.4, "scaleY": 0.7, "alpha": 1, "rotation": 0.4, "duration": 20, "ease": "power4.out", "afterimage": true, "vfx": "backstab_slash" },
-        { "time": 50, "x": 255, "y": 0, "scaleX": 1.5, "scaleY": 0.65, "alpha": 1, "rotation": 0.5, "duration": 15, "ease": "linear", "vfx": "blood_burst", "shake": { "intensity": 15, "duration": 150 }, "hitstop": 100 },
-        { "time": 90, "x": 260, "y": 3, "scaleX": 1.2, "scaleY": 0.85, "alpha": 1, "rotation": 0.25, "duration": 40, "ease": "power2.out" },
-        { "time": 140, "x": 270, "y": 0, "scaleX": 1.05, "scaleY": 0.98, "alpha": 1, "rotation": 0.1, "duration": 50, "ease": "power2.out" },
-        { "time": 180, "x": 275, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 40, "ease": "power2.out" }
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 0 },
+        { "x": -8, "y": 3, "scaleX": 0.88, "scaleY": 1.12, "alpha": 1, "rotation": -0.08, "duration": 30, "ease": "power3.in" },
+        { "x": -25, "y": -5, "scaleX": 1.35, "scaleY": 0.72, "alpha": 1, "rotation": 0.35, "duration": 25, "ease": "power4.out", "afterimage": true, "vfx": "backstab_slash" },
+        { "x": -38, "y": 0, "scaleX": 1.45, "scaleY": 0.68, "alpha": 1, "rotation": 0.45, "duration": 20, "ease": "linear", "vfx": "blood_burst", "shake": 15, "hitstop": 100 },
+        { "x": -32, "y": 3, "scaleX": 1.25, "scaleY": 0.82, "alpha": 1, "rotation": 0.28, "duration": 45, "ease": "power2.out" },
+        { "x": -22, "y": 2, "scaleX": 1.12, "scaleY": 0.92, "alpha": 1, "rotation": 0.15, "duration": 50, "ease": "power2.out" },
+        { "x": -10, "y": 0, "scaleX": 1.05, "scaleY": 0.98, "alpha": 1, "rotation": 0.05, "duration": 45, "ease": "power2.out" },
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 35, "ease": "power2.out" }
     ]
 }

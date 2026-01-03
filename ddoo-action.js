@@ -571,6 +571,11 @@ const DDOOAction = {
             );
             const shadow = charId ? this.characters.get(charId)?.shadow : null;
             
+            // ⚠️ 기존 트윈 정리
+            gsap.killTweensOf(container);
+            gsap.killTweensOf(sprite);
+            gsap.killTweensOf(sprite.scale);
+            
             gsap.to(container, {
                 x: originX,
                 y: originY,
@@ -580,12 +585,21 @@ const DDOOAction = {
                     if (shadow) {
                         shadow.x = container.x;
                         shadow.y = container.y + (this.config.character.shadowOffsetY || 5);
+                        shadow.alpha = sprite.alpha * (this.config.character.shadowAlpha || 0.4);
                     }
                 },
-                onComplete: resolve
+                onComplete: () => {
+                    // ⚠️ 최종 확실한 복원
+                    sprite.alpha = 1;
+                    sprite.rotation = 0;
+                    sprite.scale.set(1, 1);
+                    container.x = originX;
+                    container.y = originY;
+                    resolve();
+                }
             });
             
-            // 스케일/회전도 정규화
+            // 스케일/회전/알파 정규화
             gsap.to(sprite.scale, { x: 1, y: 1, duration, ease });
             gsap.to(sprite, { rotation: 0, alpha: 1, duration, ease });
         });

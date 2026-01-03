@@ -2,14 +2,18 @@
     "id": "player.sneak",
     "name": "그림자 잠입",
     "target": "player",
+    "type": "once",
+    "priority": 15,
+    "duration": 350,
     "keyframes": [
-        { "time": 0, "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0 },
-        { "time": 20, "x": 5, "y": -5, "scaleX": 0.9, "scaleY": 1.08, "alpha": 1, "rotation": -0.05, "duration": 20, "ease": "power2.in" },
-        { "time": 50, "x": 20, "y": -15, "scaleX": 0.85, "scaleY": 1.12, "alpha": 0.9, "rotation": -0.15, "duration": 30, "ease": "power3.out", "afterimage": true, "vfx": "shadow_fade", "vfxTarget": "self" },
-        { "time": 80, "x": 60, "y": -25, "scaleX": 0.8, "scaleY": 1.15, "alpha": 0.7, "rotation": -0.2, "duration": 30, "ease": "power2.in", "afterimage": true },
-        { "time": 100, "x": 100, "y": -30, "scaleX": 0.75, "scaleY": 1.2, "alpha": 0.5, "rotation": -0.25, "duration": 20, "ease": "power4.in", "afterimage": true },
-        { "time": 130, "x": 280, "y": 15, "scaleX": 0.8, "scaleY": 1.15, "alpha": 0.6, "rotation": 0.1, "duration": 30, "ease": "power4.out", "vfx": "shadow_appear", "vfxTarget": "self" },
-        { "time": 160, "x": 295, "y": 5, "scaleX": 0.9, "scaleY": 1.08, "alpha": 0.85, "rotation": 0.05, "duration": 30, "ease": "power2.out", "afterimage": true },
-        { "time": 190, "x": 300, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 30, "ease": "power2.out" }
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 0 },
+        { "x": 5, "y": -5, "scaleX": 0.92, "scaleY": 1.08, "alpha": 1, "rotation": -0.05, "duration": 35, "ease": "power2.in" },
+        { "x": 20, "y": -12, "scaleX": 0.88, "scaleY": 1.12, "alpha": 0.85, "rotation": -0.1, "duration": 40, "ease": "power3.out", "afterimage": true, "vfx": "shadow_fade", "vfxTarget": "self" },
+        { "x": 50, "y": -18, "scaleX": 0.85, "scaleY": 1.15, "alpha": 0.7, "rotation": -0.15, "duration": 35, "ease": "power2.in", "afterimage": true },
+        { "x": 90, "y": -22, "scaleX": 0.82, "scaleY": 1.18, "alpha": 0.55, "rotation": -0.18, "duration": 30, "ease": "power4.in", "afterimage": true },
+        { "x": 220, "y": 5, "scaleX": 0.85, "scaleY": 1.15, "alpha": 0.6, "rotation": 0.05, "duration": 40, "ease": "power4.out", "vfx": "shadow_appear", "vfxTarget": "self" },
+        { "x": 260, "y": 2, "scaleX": 0.92, "scaleY": 1.08, "alpha": 0.8, "rotation": 0.03, "duration": 35, "ease": "power2.out" },
+        { "x": 280, "y": 0, "scaleX": 0.96, "scaleY": 1.04, "alpha": 0.9, "rotation": 0.01, "duration": 35, "ease": "power2.out" },
+        { "x": 290, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 30, "ease": "power2.out" }
     ]
 }
