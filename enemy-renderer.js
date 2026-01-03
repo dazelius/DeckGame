@@ -704,6 +704,11 @@ const EnemyRenderer = {
             z-index: 10000;
         `;
         
+        // 🛡️ HP + 쉴드 통합 컨테이너
+        const block = enemy.block || 0;
+        const hpContainer = document.createElement('div');
+        hpContainer.className = `enemy-hp-container ${block > 0 ? 'has-shield' : ''}`;
+        
         // HP 바 (폴리싱된 디자인)
         const hpBar = document.createElement('div');
         hpBar.className = 'enemy-hp-bar pixi-hp';
@@ -713,15 +718,20 @@ const EnemyRenderer = {
             <div class="hp-fill" style="width: ${hpPercent}%;"></div>
             <span class="hp-text">${enemy.hp}/${enemy.maxHp}</span>
         `;
-        bottomUI.appendChild(hpBar);
+        hpContainer.appendChild(hpBar);
         
-        // 🛡️ 쉴드/방어도 표시 (block 사용!)
-        const block = enemy.block || 0;
-        const shieldEl = document.createElement('div');
-        shieldEl.className = 'enemy-shield pixi-shield';
-        shieldEl.innerHTML = `<span class="shield-icon">🛡️</span><span class="shield-value">${block}</span>`;
-        shieldEl.style.display = block > 0 ? 'flex' : 'none';
-        bottomUI.appendChild(shieldEl);
+        // 🛡️ 쉴드 래퍼 (HP 바를 감싸는 테두리 + 숫자)
+        const shieldWrapper = document.createElement('div');
+        shieldWrapper.className = 'enemy-shield-wrapper';
+        shieldWrapper.style.display = block > 0 ? '' : 'none';
+        
+        const shieldValue = document.createElement('div');
+        shieldValue.className = 'enemy-shield-value';
+        shieldValue.innerHTML = `<span class="shield-icon">🛡️</span><span class="shield-num">${block}</span>`;
+        shieldWrapper.appendChild(shieldValue);
+        
+        hpContainer.appendChild(shieldWrapper);
+        bottomUI.appendChild(hpContainer);
         
         // 상태 효과
         const statusEl = document.createElement('div');
@@ -1006,17 +1016,18 @@ const EnemyRenderer = {
         const data = this.sprites.get(enemyId);
         
         if (data && data.bottomUI) {
-            const shieldEl = data.bottomUI.querySelector('.pixi-shield');
-            if (shieldEl) {
-                const block = enemy.block || 0;
-                const shieldValue = shieldEl.querySelector('.shield-value');
-                
-                if (block > 0) {
-                    shieldEl.style.display = 'flex';
-                    if (shieldValue) shieldValue.textContent = block;
-                } else {
-                    shieldEl.style.display = 'none';
-                }
+            const block = enemy.block || 0;
+            const hpContainer = data.bottomUI.querySelector('.enemy-hp-container');
+            const shieldWrapper = data.bottomUI.querySelector('.enemy-shield-wrapper');
+            const shieldNum = data.bottomUI.querySelector('.shield-num');
+            
+            if (block > 0) {
+                if (hpContainer) hpContainer.classList.add('has-shield');
+                if (shieldWrapper) shieldWrapper.style.display = '';
+                if (shieldNum) shieldNum.textContent = block;
+            } else {
+                if (hpContainer) hpContainer.classList.remove('has-shield');
+                if (shieldWrapper) shieldWrapper.style.display = 'none';
             }
         }
     },
@@ -2745,6 +2756,14 @@ enemyRendererStyles.textContent = `
         background: transparent;
     }
     
+    /* 🛡️ HP + 쉴드 통합 컨테이너 */
+    .enemy-hp-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 0;
+    }
+    
     .enemy-hp-bar .hp-bg {
         position: absolute;
         top: 0; left: 0; right: 0; bottom: 0;
@@ -2752,6 +2771,16 @@ enemyRendererStyles.textContent = `
         border: 1px solid #333;
         border-radius: 6px;
         box-shadow: inset 0 2px 4px rgba(0,0,0,0.8), 0 1px 2px rgba(0,0,0,0.5);
+        transition: all 0.3s ease;
+    }
+    
+    /* 🛡️ 쉴드 있을 때 HP 바 테두리 변경 */
+    .enemy-hp-container.has-shield .enemy-hp-bar .hp-bg {
+        border: 2px solid #60a5fa;
+        box-shadow: 
+            inset 0 2px 4px rgba(0,0,0,0.8),
+            0 0 8px rgba(96, 165, 250, 0.6),
+            0 0 16px rgba(96, 165, 250, 0.3);
     }
     
     .enemy-hp-bar .hp-fill {
@@ -2761,6 +2790,11 @@ enemyRendererStyles.textContent = `
         border-radius: 5px;
         transition: width 0.3s ease;
         box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+    }
+    
+    .enemy-hp-container.has-shield .enemy-hp-bar .hp-fill {
+        top: 2px; left: 2px; bottom: 2px;
+        border-radius: 4px;
     }
     
     .enemy-hp-bar .hp-text {
@@ -2775,38 +2809,71 @@ enemyRendererStyles.textContent = `
         text-shadow: 0 1px 2px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.5);
         z-index: 2;
         letter-spacing: 0.5px;
-        text-shadow: 1px 1px 2px #000;
     }
     
-    /* 🛡️ 적 쉴드/방어도 표시 */
-    .enemy-shield.pixi-shield {
+    /* 🛡️ 쉴드 래퍼 (HP 바 오른쪽) */
+    .enemy-shield-wrapper {
+        position: absolute;
+        right: -32px;
+        top: 50%;
+        transform: translateY(-50%);
         display: flex;
         align-items: center;
-        gap: 3px;
-        font-size: 11px;
-        font-weight: bold;
-        font-family: 'Cinzel', serif;
-        color: #60a5fa;
-        text-shadow: 0 0 5px #60a5fa, 0 1px 3px rgba(0,0,0,0.9);
-        padding: 3px 8px;
+        z-index: 5;
+    }
+    
+    /* 🛡️ 쉴드 수치 표시 */
+    .enemy-shield-value {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        min-width: 28px;
+        height: 22px;
+        padding: 0 4px;
         background: linear-gradient(180deg, 
-            rgba(40, 50, 80, 0.9) 0%, 
-            rgba(25, 35, 60, 0.95) 100%);
-        border: 1px solid rgba(100, 165, 250, 0.5);
+            #4a8fe8 0%, 
+            #3b7dd8 30%,
+            #2a6ac8 70%,
+            #1a5ab8 100%);
+        border: 2px solid #7cb8ff;
         border-radius: 4px;
         box-shadow: 
-            0 2px 6px rgba(0,0,0,0.7),
-            inset 0 1px 0 rgba(150, 200, 255, 0.15);
+            0 2px 6px rgba(0,0,0,0.6),
+            inset 0 1px 0 rgba(255,255,255,0.3),
+            0 0 10px rgba(96, 165, 250, 0.5);
+        font-family: 'Cinzel', serif;
+        animation: enemyShieldPulse 2s ease-in-out infinite;
     }
     
-    .enemy-shield .shield-icon {
-        font-size: 12px;
+    .enemy-shield-value .shield-icon {
+        font-size: 10px;
+        filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
     }
     
-    .enemy-shield .shield-value {
-        font-size: 12px;
+    .enemy-shield-value .shield-num {
+        font-size: 11px;
         font-weight: bold;
-        color: #93c5fd;
+        color: #fff;
+        text-shadow: 
+            0 1px 2px rgba(0,0,0,0.8),
+            0 0 4px rgba(0,0,0,0.5);
+    }
+    
+    @keyframes enemyShieldPulse {
+        0%, 100% {
+            box-shadow: 
+                0 2px 6px rgba(0,0,0,0.6),
+                inset 0 1px 0 rgba(255,255,255,0.3),
+                0 0 10px rgba(96, 165, 250, 0.5);
+        }
+        50% {
+            box-shadow: 
+                0 2px 6px rgba(0,0,0,0.6),
+                inset 0 1px 0 rgba(255,255,255,0.3),
+                0 0 16px rgba(96, 165, 250, 0.8),
+                0 0 24px rgba(96, 165, 250, 0.4);
+        }
     }
     
     /* ========================================

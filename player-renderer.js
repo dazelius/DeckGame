@@ -455,6 +455,11 @@ const PlayerRenderer = {
             z-index: 10000;
         `;
         
+        // 🛡️ HP + 쉴드 통합 컨테이너
+        const block = gameState?.player?.block || 0;
+        const hpContainer = document.createElement('div');
+        hpContainer.className = `player-hp-container ${block > 0 ? 'has-shield' : ''}`;
+        
         // HP 바
         const hpBar = document.createElement('div');
         hpBar.className = 'player-hp-bar pixi-player-hp';
@@ -466,15 +471,20 @@ const PlayerRenderer = {
             <div class="hp-fill" style="width: ${hpPercent}%;"></div>
             <span class="hp-text">${hp}/${maxHp}</span>
         `;
-        this.bottomUI.appendChild(hpBar);
+        hpContainer.appendChild(hpBar);
         
-        // 🛡️ 쉴드/방어도 표시 (항상 요소 생성, 값 있을 때만 표시)
-        const block = gameState?.player?.block || 0;
-        const shieldEl = document.createElement('div');
-        shieldEl.className = 'player-shield pixi-player-shield';
-        shieldEl.innerHTML = `<span class="shield-icon">🛡️</span><span class="shield-value">${block}</span>`;
-        shieldEl.style.display = block > 0 ? 'flex' : 'none';
-        this.bottomUI.appendChild(shieldEl);
+        // 🛡️ 쉴드 래퍼 (HP 바를 감싸는 테두리 + 숫자)
+        const shieldWrapper = document.createElement('div');
+        shieldWrapper.className = 'player-shield-wrapper';
+        shieldWrapper.style.display = block > 0 ? '' : 'none';
+        
+        const shieldValue = document.createElement('div');
+        shieldValue.className = 'player-shield-value';
+        shieldValue.innerHTML = `<span class="shield-icon">🛡️</span><span class="shield-num">${block}</span>`;
+        shieldWrapper.appendChild(shieldValue);
+        
+        hpContainer.appendChild(shieldWrapper);
+        this.bottomUI.appendChild(hpContainer);
         
         // 상태 효과
         const statusEl = document.createElement('div');
@@ -560,54 +570,28 @@ const PlayerRenderer = {
     updatePlayerBlock() {
         if (!this.bottomUI) return;
         
-        const shieldEl = this.bottomUI.querySelector('.pixi-player-shield');
-        if (shieldEl) {
-            const block = gameState?.player?.block || 0;
-            const shieldValue = shieldEl.querySelector('.shield-value');
+        const block = gameState?.player?.block || 0;
+        const hpContainer = this.bottomUI.querySelector('.player-hp-container');
+        const shieldWrapper = this.bottomUI.querySelector('.player-shield-wrapper');
+        const shieldNum = this.bottomUI.querySelector('.shield-num');
+        
+        if (block > 0) {
+            if (hpContainer) hpContainer.classList.add('has-shield');
+            if (shieldWrapper) shieldWrapper.style.display = '';
+            if (shieldNum) shieldNum.textContent = block;
             
-            if (block > 0) {
-                shieldEl.style.display = 'flex';
-                if (shieldValue) shieldValue.textContent = block;
-                
-                // 방어도 있을 때 외곽선 효과
-                this.setBlockEffect(true);
-            } else {
-                shieldEl.style.display = 'none';
-                this.setBlockEffect(false);
-            }
+            // 방어도 있을 때 외곽선 효과
+            this.setBlockEffect(true);
+        } else {
+            if (hpContainer) hpContainer.classList.remove('has-shield');
+            if (shieldWrapper) shieldWrapper.style.display = 'none';
+            this.setBlockEffect(false);
         }
     },
     
-    // 쉴드 업데이트
+    // 쉴드 업데이트 (updatePlayerBlock과 동일)
     updatePlayerShield() {
-        if (!this.bottomUI) return;
-        
-        let shieldEl = this.bottomUI.querySelector('.pixi-player-shield');
-        const block = gameState?.player?.block || 0;
-        
-        if (block > 0) {
-            if (!shieldEl) {
-                shieldEl = document.createElement('div');
-                shieldEl.className = 'player-shield pixi-player-shield';
-                // HP바 다음에 삽입
-                const hpBar = this.bottomUI.querySelector('.pixi-player-hp');
-                if (hpBar && hpBar.nextSibling) {
-                    this.bottomUI.insertBefore(shieldEl, hpBar.nextSibling);
-                } else {
-                    this.bottomUI.appendChild(shieldEl);
-                }
-            }
-            shieldEl.innerHTML = `🛡️ ${block}`;
-            shieldEl.style.display = '';
-            
-            // 🛡️ 플레이어 컨테이너에 has-block 효과
-            this.setBlockEffect(true);
-        } else {
-            if (shieldEl) {
-                shieldEl.style.display = 'none';
-            }
-            this.setBlockEffect(false);
-        }
+        this.updatePlayerBlock();
     },
     
     // 상태효과 업데이트
@@ -1463,7 +1447,15 @@ playerRendererStyles.textContent = `
         font-family: 'DungGeunMo', monospace;
     }
     
-    /* HP 바 (적과 동일한 스타일) */
+    /* 🛡️ HP + 쉴드 통합 컨테이너 */
+    .player-hp-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 0;
+    }
+    
+    /* HP 바 */
     .player-hp-bar.pixi-player-hp {
         width: 90px;
         height: 12px;
@@ -1471,6 +1463,7 @@ playerRendererStyles.textContent = `
         border-radius: 6px;
         overflow: hidden;
         background: transparent;
+        transition: all 0.3s ease;
     }
     
     .player-hp-bar .hp-bg {
@@ -1480,6 +1473,16 @@ playerRendererStyles.textContent = `
         border: 1px solid #333;
         border-radius: 6px;
         box-shadow: inset 0 2px 4px rgba(0,0,0,0.8), 0 1px 2px rgba(0,0,0,0.5);
+        transition: all 0.3s ease;
+    }
+    
+    /* 🛡️ 쉴드 있을 때 HP 바 테두리 변경 */
+    .player-hp-container.has-shield .player-hp-bar .hp-bg {
+        border: 2px solid #60a5fa;
+        box-shadow: 
+            inset 0 2px 4px rgba(0,0,0,0.8),
+            0 0 8px rgba(96, 165, 250, 0.6),
+            0 0 16px rgba(96, 165, 250, 0.3);
     }
     
     .player-hp-bar .hp-fill {
@@ -1489,6 +1492,11 @@ playerRendererStyles.textContent = `
         border-radius: 5px;
         transition: width 0.3s ease;
         box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+    }
+    
+    .player-hp-container.has-shield .player-hp-bar .hp-fill {
+        top: 2px; left: 2px; bottom: 2px;
+        border-radius: 4px;
     }
     
     .player-hp-bar .hp-text {
@@ -1505,25 +1513,69 @@ playerRendererStyles.textContent = `
         letter-spacing: 0.5px;
     }
     
-    /* 쉴드 표시 */
-    .player-shield.pixi-player-shield {
+    /* 🛡️ 쉴드 래퍼 (HP 바 왼쪽) */
+    .player-shield-wrapper {
+        position: absolute;
+        left: -32px;
+        top: 50%;
+        transform: translateY(-50%);
         display: flex;
         align-items: center;
-        gap: 3px;
-        font-size: 11px;
-        font-weight: bold;
-        font-family: 'Cinzel', serif;
-        color: #60a5fa;
-        text-shadow: 0 0 5px #60a5fa, 0 1px 3px rgba(0,0,0,0.9);
-        padding: 3px 8px;
+        z-index: 5;
+    }
+    
+    /* 🛡️ 쉴드 수치 표시 */
+    .player-shield-value {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        min-width: 28px;
+        height: 22px;
+        padding: 0 4px;
         background: linear-gradient(180deg, 
-            rgba(40, 50, 80, 0.9) 0%, 
-            rgba(25, 35, 60, 0.95) 100%);
-        border: 1px solid rgba(100, 165, 250, 0.5);
+            #4a8fe8 0%, 
+            #3b7dd8 30%,
+            #2a6ac8 70%,
+            #1a5ab8 100%);
+        border: 2px solid #7cb8ff;
         border-radius: 4px;
         box-shadow: 
-            0 2px 6px rgba(0,0,0,0.7),
-            inset 0 1px 0 rgba(150, 200, 255, 0.15);
+            0 2px 6px rgba(0,0,0,0.6),
+            inset 0 1px 0 rgba(255,255,255,0.3),
+            0 0 10px rgba(96, 165, 250, 0.5);
+        font-family: 'Cinzel', serif;
+        animation: shieldPulse 2s ease-in-out infinite;
+    }
+    
+    .player-shield-value .shield-icon {
+        font-size: 10px;
+        filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+    }
+    
+    .player-shield-value .shield-num {
+        font-size: 11px;
+        font-weight: bold;
+        color: #fff;
+        text-shadow: 
+            0 1px 2px rgba(0,0,0,0.8),
+            0 0 4px rgba(0,0,0,0.5);
+    }
+    
+    @keyframes shieldPulse {
+        0%, 100% {
+            box-shadow: 
+                0 2px 6px rgba(0,0,0,0.6),
+                inset 0 1px 0 rgba(255,255,255,0.3),
+                0 0 10px rgba(96, 165, 250, 0.5);
+        }
+        50% {
+            box-shadow: 
+                0 2px 6px rgba(0,0,0,0.6),
+                inset 0 1px 0 rgba(255,255,255,0.3),
+                0 0 16px rgba(96, 165, 250, 0.8),
+                0 0 24px rgba(96, 165, 250, 0.4);
+        }
     }
     
     /* 상태 효과 */
