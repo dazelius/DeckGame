@@ -1,5 +1,6 @@
 [
   "backstab_slash",
+  "backstab_stab",
   "bash_hit",
   "bash_impact",
   "block",
@@ -13,6 +14,8 @@
   "dagger_throw",
   "dash",
   "dodge_flash",
+  "drain_burst",
+  "drain_stream",
   "energy_absorb",
   "energy_drain",
   "flurry_finish",
@@ -25,6 +28,7 @@
   "impact_shockwave_heavy",
   "landing_dust",
   "plunder_critical",
+  "plunder_rip",
   "plunder_slash",
   "plunder_stab",
   "power_aura",

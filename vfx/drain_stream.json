@@ -1,0 +1,37 @@
+{
+    "id": "drain_stream",
+    "name": "생명력 착취 흐름",
+    "particles": [
+        {
+            "type": "line",
+            "count": 6,
+            "angleStep": 15,
+            "offsetAngle": 160,
+            "length": [40, 80],
+            "width": 3,
+            "color": "#dc2626",
+            "glow": "#991b1b",
+            "life": 200,
+            "delay": 30
+        },
+        {
+            "type": "spark",
+            "count": 20,
+            "spread": 50,
+            "offsetAngle": 180,
+            "speed": [5, 12],
+            "size": [4, 8],
+            "colors": ["#dc2626", "#ef4444", "#f87171"],
+            "life": [200, 350],
+            "moveToward": true
+        },
+        {
+            "type": "ring",
+            "size": 15,
+            "maxSize": 50,
+            "color": "#7f1d1d",
+            "life": 180
+        }
+    ]
+}
+

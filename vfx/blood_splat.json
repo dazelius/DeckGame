@@ -3,26 +3,23 @@
     "name": "피 튀김",
     "particles": [
         {
-            "type": "spark",
-            "count": 18,
-            "color": "#dc2626",
-            "size": { "min": 3, "max": 10 },
-            "speed": { "min": 3, "max": 8 },
-            "angle": { "min": 100, "max": 260 },
-            "life": { "min": 150, "max": 350 },
-            "gravity": 0.2,
-            "fadeOut": true
+            "type": "debris",
+            "count": 12,
+            "speed": [6, 18],
+            "size": [4, 8],
+            "colors": ["#dc2626", "#b91c1c", "#991b1b", "#7f1d1d"],
+            "gravity": 0.5,
+            "life": [200, 400],
+            "spread": 120
         },
         {
-            "type": "debris",
+            "type": "spark",
             "count": 8,
-            "color": "#991b1b",
-            "size": { "min": 2, "max": 6 },
-            "speed": { "min": 2, "max": 5 },
-            "angle": { "min": 130, "max": 230 },
-            "life": { "min": 200, "max": 450 },
-            "gravity": 0.25
+            "spread": 80,
+            "speed": [4, 12],
+            "size": [3, 5],
+            "colors": ["#ef4444", "#dc2626"],
+            "life": [100, 200]
         }
-    ],
-    "offset": { "x": -15, "y": -50 }
+    ]
 }
