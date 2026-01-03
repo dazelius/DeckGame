@@ -131,9 +131,9 @@ const CardAnimations = {
                         onHit(hitCount++, dmgValue);
                     }
                     
-                    // 🎬 DDOOAction을 통한 적 피격 애니메이션!
+                    // 🎬 DDOOAction을 통한 적 피격 애니메이션! (배열로 랜덤!)
                     if (target && typeof DDOOAction !== 'undefined') {
-                        DDOOAction.play('enemy.hit', {
+                        DDOOAction.play(['enemy.hit_left', 'enemy.hit_right'], {
                             target: target,
                             targetEl: targetEl
                         }).catch(e => console.warn('[CardAnimations] 히트 애님 실패:', e));
