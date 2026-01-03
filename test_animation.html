@@ -548,7 +548,7 @@
         }
         
         // ========== 애니메이션 재생 ==========
-        async function playAnimation(id) {
+        async function playAnimation(id, skipReset = false) {
             const data = animCache.get(id);
             if (!data) {
                 log('error', `❌ 애니메이션 없음: ${id}`);
@@ -564,9 +564,11 @@
             
             log('anim', `▶️ 재생: ${id}`);
             
-            // 캐릭터 리셋
-            resetCharacters();
-            await delay(50);
+            // 시퀀스 시작 시에만 캐릭터 리셋
+            if (!skipReset) {
+                resetCharacters();
+                await delay(50);
+            }
             
             const target = data.target || (id.startsWith('enemy') ? 'enemy' : 'player');
             const container = target === 'player' ? playerContainer : enemyContainer;
@@ -574,15 +576,9 @@
             const baseX = target === 'player' ? config.playerBaseX : config.enemyBaseX;
             const direction = target === 'player' ? 1 : -1;
             
-            // 이전 애니메이션 킬
-            gsap.killTweensOf(container);
-            gsap.killTweensOf(container.scale);
-            gsap.killTweensOf(sprite);
-            gsap.killTweensOf(sprite.scale);
-            
             // 시퀀스 타입
             if (data.type === 'sequence' && data.steps) {
-                await playSequence(data, container, sprite, baseX, direction);
+                await playSequence(data);
                 return;
             }
             
@@ -592,30 +588,62 @@
             }
         }
         
-        async function playSequence(data, container, sprite, baseX, direction) {
+        async function playSequence(data) {
             log('anim', `🎬 시퀀스 시작: ${data.id}`);
             
             for (const step of data.steps) {
-                if (step.delay) {
+                // 딜레이
+                if (step.delay && !step.anim) {
                     await delay(step.delay / config.speed);
                     continue;
                 }
                 
+                // 애니메이션 재생 (리셋 없이)
                 if (step.anim) {
+                    const animData = animCache.get(step.anim);
+                    if (!animData) {
+                        log('warn', `⚠️ 애니메이션 없음: ${step.anim}`);
+                        continue;
+                    }
+                    
                     log('info', `  → ${step.anim}`);
-                    await playAnimation(step.anim);
+                    
+                    const target = animData.target || (step.anim.startsWith('enemy') ? 'enemy' : 'player');
+                    const container = target === 'player' ? playerContainer : enemyContainer;
+                    const sprite = target === 'player' ? playerSprite : enemySprite;
+                    const baseX = target === 'player' ? config.playerBaseX : config.enemyBaseX;
+                    const direction = target === 'player' ? 1 : -1;
+                    
+                    // 스텝 딜레이
+                    if (step.delay) {
+                        await delay(step.delay / config.speed);
+                    }
+                    
+                    // 키프레임 재생 (현재 위치 기준)
+                    if (animData.keyframes) {
+                        const promise = playKeyframesRelative(animData, container, sprite, direction);
+                        
+                        if (step.wait) {
+                            await promise;
+                        }
+                    }
                 }
                 
+                // VFX
                 if (step.vfx && config.vfx) {
-                    showVFX(step.vfx, container);
+                    showVFX(step.vfx, playerContainer);
                 }
             }
             
             log('success', `✅ 시퀀스 완료: ${data.id}`);
         }
         
+        // 절대 위치 기준 키프레임 (개별 재생용)
         async function playKeyframes(data, container, sprite, baseX, direction) {
             return new Promise((resolve) => {
+                gsap.killTweensOf(container);
+                gsap.killTweensOf(sprite.scale);
+                
                 const tl = gsap.timeline({
                     timeScale: config.speed,
                     onComplete: () => {
@@ -625,18 +653,16 @@
                 });
                 
                 data.keyframes.forEach((kf, index) => {
-                    if (index === 0) return; // 첫 프레임은 초기값
+                    if (index === 0) return;
                     
                     const duration = (kf.duration || 100) / 1000;
                     const ease = kf.ease || 'power2.out';
                     
                     const props = {};
                     
-                    // 위치
                     if (kf.x !== undefined) props.x = baseX + (kf.x * direction);
                     if (kf.y !== undefined) props.y = config.baseY + kf.y;
                     
-                    // 스케일
                     if (kf.scaleX !== undefined || kf.scaleY !== undefined) {
                         const scaleProps = {};
                         if (kf.scaleX !== undefined) scaleProps.x = kf.scaleX * 0.8;
@@ -644,15 +670,73 @@
                         tl.to(sprite.scale, { ...scaleProps, duration, ease }, '<');
                     }
                     
-                    // 알파
                     if (kf.alpha !== undefined) props.alpha = kf.alpha;
                     
-                    // 회전
                     if (kf.rotation !== undefined) {
                         tl.to(sprite, { rotation: kf.rotation * direction, duration, ease }, '<');
                     }
                     
-                    // 컨테이너 이동
+                    if (Object.keys(props).length > 0) {
+                        tl.to(container, { ...props, duration, ease }, index === 1 ? 0 : '>');
+                    }
+                    
+                    if (kf.vfx && config.vfx) {
+                        tl.call(() => showVFX(kf.vfx, container), null, '<');
+                    }
+                });
+            });
+        }
+        
+        // 상대 위치 기준 키프레임 (시퀀스 내 재생용)
+        async function playKeyframesRelative(data, container, sprite, direction) {
+            return new Promise((resolve) => {
+                // 현재 위치 저장
+                const currentX = container.x;
+                const currentY = container.y;
+                const baseScale = 0.8;
+                
+                // returnToBase가 있으면 원래 위치로 돌아가기
+                const returnToBase = data.returnToBase;
+                const targetBaseX = direction === 1 ? config.playerBaseX : config.enemyBaseX;
+                
+                const tl = gsap.timeline({
+                    timeScale: config.speed,
+                    onComplete: resolve
+                });
+                
+                data.keyframes.forEach((kf, index) => {
+                    if (index === 0) return;
+                    
+                    const duration = (kf.duration || 100) / 1000;
+                    const ease = kf.ease || 'power2.out';
+                    
+                    const props = {};
+                    
+                    // 위치 (현재 위치 기준 상대 이동)
+                    if (kf.x !== undefined) {
+                        if (returnToBase && index === data.keyframes.length - 1) {
+                            // 마지막 프레임이고 returnToBase면 원래 위치로
+                            props.x = targetBaseX;
+                        } else {
+                            props.x = currentX + (kf.x * direction);
+                        }
+                    }
+                    if (kf.y !== undefined) props.y = currentY + kf.y;
+                    
+                    // 스케일
+                    if (kf.scaleX !== undefined || kf.scaleY !== undefined) {
+                        const scaleProps = {};
+                        if (kf.scaleX !== undefined) scaleProps.x = kf.scaleX * baseScale;
+                        if (kf.scaleY !== undefined) scaleProps.y = kf.scaleY * baseScale;
+                        tl.to(sprite.scale, { ...scaleProps, duration, ease }, '<');
+                    }
+                    
+                    if (kf.alpha !== undefined) props.alpha = kf.alpha;
+                    
+                    if (kf.rotation !== undefined) {
+                        tl.to(sprite, { rotation: kf.rotation * direction, duration, ease }, '<');
+                    }
+                    
                     if (Object.keys(props).length > 0) {
                         tl.to(container, { ...props, duration, ease }, index === 1 ? 0 : '>');
                     }
@@ -662,6 +746,11 @@
                         tl.call(() => showVFX(kf.vfx, container), null, '<');
                     }
                 });
+                
+                // returnToBase 처리
+                if (returnToBase) {
+                    tl.to(container, { x: targetBaseX, duration: 0.2, ease: 'power2.out' });
+                }
             });
         }
         

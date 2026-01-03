@@ -4,11 +4,10 @@
     "target": "player",
     "type": "once",
     "priority": 5,
-    "duration": 200,
+    "duration": 250,
     "returnToBase": true,
     "keyframes": [
-        { "scaleX": 1.05, "scaleY": 0.98, "duration": 0 },
-        { "scaleX": 1, "scaleY": 1, "duration": 200, "ease": "power2.out" }
+        { "x": 0, "scaleX": 1.05, "scaleY": 0.95, "duration": 0 },
+        { "x": 0, "scaleX": 1, "scaleY": 1, "duration": 250, "ease": "power2.inOut" }
     ]
 }
-
