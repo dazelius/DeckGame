@@ -3,37 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎬 Animation Test Tool - Shadow Deck</title>
+    <title>🎬 JSON Animation Player - Shadow Deck</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
             font-family: 'Noto Sans KR', sans-serif;
             background: #0a0a0f;
             color: #e0e0e0;
             min-height: 100vh;
-            overflow-x: hidden;
         }
         
-        /* 헤더 */
         .header {
             background: linear-gradient(180deg, #1a1a2e 0%, #16162a 100%);
-            border-bottom: 2px solid #3a3a5a;
+            border-bottom: 2px solid #fbbf24;
             padding: 12px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000;
         }
         
         .header h1 {
@@ -43,44 +34,24 @@
             text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
         }
         
-        .header-buttons {
-            display: flex;
-            gap: 8px;
-        }
-        
         .header-btn {
-            background: #3a3a5a;
-            color: #fff;
-            border: 1px solid #5a5a7a;
-            padding: 6px 14px;
+            background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+            border: none;
+            padding: 8px 16px;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 0.85rem;
-            transition: all 0.2s;
-        }
-        
-        .header-btn:hover {
-            background: #4a4a6a;
-            border-color: #fbbf24;
-        }
-        
-        .header-btn.primary {
-            background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
-            border-color: #fbbf24;
-            color: #000;
             font-weight: bold;
+            color: #000;
         }
         
-        /* 메인 레이아웃 */
         .main-container {
             display: flex;
-            height: 100vh;
-            padding-top: 52px;
+            height: calc(100vh - 52px);
         }
         
-        /* 왼쪽 패널 - 컨트롤 */
+        /* 왼쪽 패널 */
         .control-panel {
-            width: 320px;
+            width: 300px;
             background: #12121a;
             border-right: 1px solid #2a2a3a;
             overflow-y: auto;
@@ -104,143 +75,82 @@
             border-bottom: 1px solid #3a3a5a;
         }
         
-        .anim-category {
-            margin-bottom: 8px;
+        .anim-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
         
-        .anim-category-title {
-            color: #888;
-            font-size: 0.75rem;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-        }
-        
-        .anim-btn-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 5px;
-        }
-        
-        .anim-btn {
+        .anim-item {
             background: #252535;
-            color: #ccc;
             border: 1px solid #3a3a5a;
-            padding: 8px 6px;
+            padding: 10px 12px;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 0.75rem;
             transition: all 0.2s;
-            text-align: center;
-        }
-        
-        .anim-btn:hover {
-            background: #353550;
-            border-color: #60a5fa;
-            color: #fff;
-        }
-        
-        .anim-btn.active {
-            background: linear-gradient(180deg, #3a3a6a 0%, #2a2a5a 100%);
-            border-color: #60a5fa;
-            color: #60a5fa;
-        }
-        
-        .anim-btn.player { border-left: 3px solid #60a5fa; }
-        .anim-btn.enemy { border-left: 3px solid #ef4444; }
-        .anim-btn.card { border-left: 3px solid #a78bfa; }
-        
-        /* 시퀀스 빌더 */
-        .sequence-builder {
-            background: #0f0f18;
-            border-radius: 6px;
-            padding: 10px;
-            min-height: 60px;
-            margin-top: 10px;
-        }
-        
-        .sequence-item {
-            display: inline-block;
-            background: #2a2a4a;
-            color: #fff;
-            padding: 4px 8px;
-            margin: 2px;
-            border-radius: 4px;
-            font-size: 0.7rem;
-        }
-        
-        .sequence-item.player { background: #1e3a5f; }
-        .sequence-item.enemy { background: #5f1e1e; }
-        
-        /* 프리뷰 컨트롤 */
-        .control-row {
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 10px;
         }
         
-        .control-row label {
+        .anim-item:hover {
+            background: #353550;
+            border-color: #60a5fa;
+        }
+        
+        .anim-item.playing {
+            background: linear-gradient(90deg, #1e3a5f 0%, #252535 100%);
+            border-color: #60a5fa;
+        }
+        
+        .anim-item .type {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            text-transform: uppercase;
+        }
+        
+        .anim-item .type.player { background: #3b82f6; color: #fff; }
+        .anim-item .type.enemy { background: #ef4444; color: #fff; }
+        .anim-item .type.card { background: #a78bfa; color: #fff; }
+        
+        .anim-item .name {
+            flex: 1;
+            font-size: 0.85rem;
+        }
+        
+        .anim-item .duration {
             color: #888;
-            font-size: 0.8rem;
-            min-width: 50px;
+            font-size: 0.75rem;
         }
         
-        .control-row input[type="range"] {
-            flex: 1;
-        }
-        
-        .control-row .value {
-            color: #60a5fa;
-            font-size: 0.8rem;
-            min-width: 40px;
-            text-align: right;
-        }
-        
-        .play-controls {
+        /* 스피드 컨트롤 */
+        .speed-control {
             display: flex;
-            gap: 8px;
-            margin-top: 15px;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
         }
         
-        .play-btn {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 6px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
+        .speed-control label { color: #888; font-size: 0.8rem; }
+        .speed-control input { flex: 1; }
+        .speed-control .value { color: #60a5fa; font-size: 0.8rem; min-width: 40px; text-align: right; }
         
-        .play-btn.play {
-            background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
-            color: #fff;
-        }
-        
-        .play-btn.stop {
-            background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
-            color: #fff;
-        }
-        
-        .play-btn:hover {
-            transform: scale(1.02);
-        }
-        
-        /* 중앙 - 스테이지 */
+        /* 스테이지 */
         .stage-container {
             flex: 1;
             position: relative;
             background: #0a0a12;
-            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
-        #pixiCanvas {
+        #pixiContainer {
             width: 100%;
             height: 100%;
         }
         
-        /* VFX 캔버스 */
         #vfxCanvas {
             position: absolute;
             top: 0;
@@ -251,12 +161,11 @@
             z-index: 10;
         }
         
-        /* 스테이지 오버레이 */
         .stage-overlay {
             position: absolute;
             bottom: 20px;
             left: 20px;
-            background: rgba(0,0,0,0.85);
+            background: rgba(0,0,0,0.9);
             border: 1px solid #3a3a5a;
             border-radius: 8px;
             padding: 12px 15px;
@@ -273,11 +182,9 @@
             margin-bottom: 3px;
         }
         
-        .stat-row .value {
-            color: #60a5fa;
-        }
+        .stat-row .value { color: #60a5fa; }
         
-        /* 오른쪽 패널 - 로그 */
+        /* 로그 패널 */
         .log-panel {
             width: 280px;
             background: #12121a;
@@ -292,6 +199,18 @@
             border-bottom: 1px solid #2a2a4a;
             font-size: 0.85rem;
             color: #fbbf24;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .log-header button {
+            background: #3a3a5a;
+            border: none;
+            padding: 3px 8px;
+            border-radius: 3px;
+            color: #888;
+            cursor: pointer;
+            font-size: 0.7rem;
         }
         
         .log-container {
@@ -313,319 +232,134 @@
         .log-entry.error { color: #ef4444; }
         .log-entry.anim { color: #a78bfa; }
         
-        .log-time {
-            color: #555;
-            margin-right: 6px;
-        }
+        .log-time { color: #555; margin-right: 6px; }
         
-        /* 프리셋 버튼들 */
-        .preset-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 6px;
-        }
-        
-        .preset-btn {
-            background: linear-gradient(180deg, #4a4a6a 0%, #3a3a5a 100%);
-            color: #fff;
-            border: 1px solid #5a5a8a;
-            padding: 10px 8px;
+        /* JSON 뷰어 */
+        .json-viewer {
+            background: #0f0f18;
             border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            text-align: center;
-            transition: all 0.2s;
+            padding: 10px;
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.7rem;
+            color: #888;
+            white-space: pre-wrap;
         }
         
-        .preset-btn:hover {
-            background: linear-gradient(180deg, #5a5a8a 0%, #4a4a6a 100%);
-            border-color: #fbbf24;
-        }
-        
-        .preset-btn .emoji {
-            display: block;
-            font-size: 1.5rem;
-            margin-bottom: 4px;
-        }
+        .json-viewer .key { color: #a78bfa; }
+        .json-viewer .string { color: #34d399; }
+        .json-viewer .number { color: #60a5fa; }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🎬 Animation Simulator</h1>
-        <div class="header-buttons">
-            <button class="header-btn" onclick="resetStage()">🔄 리셋</button>
-            <button class="header-btn" onclick="toggleStats()">📊 스탯</button>
-            <button class="header-btn primary" onclick="location.href='index.html'">🎮 게임으로</button>
-        </div>
+        <h1>🎬 JSON Animation Player</h1>
+        <button class="header-btn" onclick="location.href='index.html'">🎮 게임으로</button>
     </div>
     
     <div class="main-container">
-        <!-- 왼쪽: 컨트롤 패널 -->
+        <!-- 왼쪽: JSON 애니메이션 목록 -->
         <div class="control-panel">
-            <!-- 프리셋 시뮬레이션 -->
             <div class="panel-section">
-                <h3>⚡ 프리셋 시뮬레이션</h3>
-                <div class="preset-grid">
-                    <button class="preset-btn" onclick="runPreset('playerAttack')">
-                        <span class="emoji">⚔️</span>
-                        플레이어 공격
-                    </button>
-                    <button class="preset-btn" onclick="runPreset('enemyAttack')">
-                        <span class="emoji">👹</span>
-                        몬스터 공격
-                    </button>
-                    <button class="preset-btn" onclick="runPreset('flurry')">
-                        <span class="emoji">🗡️</span>
-                        연속 찌르기
-                    </button>
-                    <button class="preset-btn" onclick="runPreset('playerHit')">
-                        <span class="emoji">💥</span>
-                        플레이어 피격
-                    </button>
-                    <button class="preset-btn" onclick="runPreset('enemyHit')">
-                        <span class="emoji">🩸</span>
-                        몬스터 피격
-                    </button>
-                    <button class="preset-btn" onclick="runPreset('defend')">
-                        <span class="emoji">🛡️</span>
-                        방어
-                    </button>
-                    <button class="preset-btn" onclick="runPreset('death')">
-                        <span class="emoji">💀</span>
-                        사망
-                    </button>
-                    <button class="preset-btn" onclick="runPreset('combo')">
-                        <span class="emoji">🔥</span>
-                        콤보 공격
-                    </button>
-                </div>
-                
-                <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #3a3a5a;">
-                    <div class="anim-category-title">📄 JSON 시퀀스</div>
-                    <div class="preset-grid">
-                        <button class="preset-btn" onclick="runPreset('strike')" style="background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%); color: #000;">
-                            <span class="emoji">⚔️</span>
-                            card.strike
-                        </button>
-                        <button class="preset-btn" onclick="runPreset('bash')" style="background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);">
-                            <span class="emoji">💥</span>
-                            card.bash
-                        </button>
-                        <button class="preset-btn" onclick="runPreset('flurryP')" style="background: linear-gradient(180deg, #818cf8 0%, #6366f1 100%);">
-                            <span class="emoji">🗡️</span>
-                            card.flurryP
-                        </button>
-                    </div>
+                <h3>📁 JSON Animations</h3>
+                <div id="animList" class="anim-list">
+                    <!-- 동적으로 채워짐 -->
                 </div>
             </div>
             
-            <!-- 개별 애니메이션 -->
-            <div class="panel-section">
-                <h3>🎬 개별 애니메이션</h3>
-                
-                <div class="anim-category">
-                    <div class="anim-category-title">🧑 Player</div>
-                    <div class="anim-btn-grid">
-                        <button class="anim-btn player" onclick="playAnim('player', 'idle')">Idle</button>
-                        <button class="anim-btn player" onclick="playAnim('player', 'dash')">Dash →</button>
-                        <button class="anim-btn player" onclick="playAnim('player', 'attack')">Attack</button>
-                        <button class="anim-btn player" onclick="playAnim('player', 'stab')">Stab</button>
-                        <button class="anim-btn player" onclick="playAnim('player', 'hit')">Hit</button>
-                        <button class="anim-btn player" onclick="playAnim('player', 'defend')">Defend</button>
-                        <button class="anim-btn player" onclick="playAnim('player', 'return')">← Return</button>
-                        <button class="anim-btn player" onclick="playAnim('player', 'death')">Death</button>
-                    </div>
-                </div>
-                
-                <div class="anim-category">
-                    <div class="anim-category-title">👹 Enemy</div>
-                    <div class="anim-btn-grid">
-                        <button class="anim-btn enemy" onclick="playAnim('enemy', 'idle')">Idle</button>
-                        <button class="anim-btn enemy" onclick="playAnim('enemy', 'dash')">← Dash</button>
-                        <button class="anim-btn enemy" onclick="playAnim('enemy', 'attack')">Attack</button>
-                        <button class="anim-btn enemy" onclick="playAnim('enemy', 'hit')">Hit</button>
-                        <button class="anim-btn enemy" onclick="playAnim('enemy', 'stun')">Stun</button>
-                        <button class="anim-btn enemy" onclick="playAnim('enemy', 'return')">Return →</button>
-                        <button class="anim-btn enemy" onclick="playAnim('enemy', 'death')">Death</button>
-                        <button class="anim-btn enemy" onclick="playAnim('enemy', 'spawn')">Spawn</button>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- 설정 -->
             <div class="panel-section">
                 <h3>⚙️ 설정</h3>
-                <div class="control-row">
-                    <label>속도:</label>
-                    <input type="range" id="speedSlider" min="0.1" max="3" step="0.1" value="1" 
-                        oninput="updateSpeed(this.value)">
+                <div class="speed-control">
+                    <label>속도</label>
+                    <input type="range" id="speedSlider" min="0.1" max="3" step="0.1" value="1" onchange="updateSpeed()">
                     <span class="value" id="speedValue">1.0x</span>
                 </div>
-                <div class="control-row">
-                    <label>VFX:</label>
-                    <input type="checkbox" id="vfxEnabled" checked onchange="toggleVFX(this.checked)">
-                    <span style="color: #888; font-size: 0.8rem;">이펙트 활성화</span>
-                </div>
-                <div class="control-row">
-                    <label>Shake:</label>
-                    <input type="checkbox" id="shakeEnabled" checked onchange="toggleShake(this.checked)">
-                    <span style="color: #888; font-size: 0.8rem;">화면 흔들림</span>
+                <div class="speed-control">
+                    <label>VFX</label>
+                    <input type="checkbox" id="vfxToggle" checked>
                 </div>
             </div>
             
-            <!-- 재생 컨트롤 -->
-            <div class="play-controls">
-                <button class="play-btn stop" onclick="stopAll()">⏹️ 중지</button>
-                <button class="play-btn play" onclick="resetStage()">🔄 리셋</button>
+            <div class="panel-section">
+                <h3>📋 현재 JSON</h3>
+                <div id="jsonViewer" class="json-viewer">선택된 애니메이션 없음</div>
             </div>
         </div>
         
         <!-- 중앙: 스테이지 -->
         <div class="stage-container">
-            <div id="pixiCanvas"></div>
+            <div id="pixiContainer"></div>
             <canvas id="vfxCanvas"></canvas>
             
             <div class="stage-overlay" id="statsOverlay">
                 <div class="stat-row">
                     <span>Player X:</span>
-                    <span class="value" id="statPlayerX">0</span>
+                    <span class="value" id="playerX">0</span>
                 </div>
                 <div class="stat-row">
                     <span>Player Scale:</span>
-                    <span class="value" id="statPlayerScale">1.0</span>
+                    <span class="value" id="playerScale">1.0</span>
                 </div>
                 <div class="stat-row">
                     <span>Enemy X:</span>
-                    <span class="value" id="statEnemyX">0</span>
-                </div>
-                <div class="stat-row">
-                    <span>Enemy Scale:</span>
-                    <span class="value" id="statEnemyScale">1.0</span>
+                    <span class="value" id="enemyX">0</span>
                 </div>
                 <div class="stat-row">
                     <span>FPS:</span>
-                    <span class="value" id="statFPS">60</span>
+                    <span class="value" id="fpsValue">60</span>
                 </div>
             </div>
         </div>
         
         <!-- 오른쪽: 로그 -->
         <div class="log-panel">
-            <div class="log-header">📜 애니메이션 로그</div>
-            <div class="log-container" id="logContainer"></div>
+            <div class="log-header">
+                <span>📜 실행 로그</span>
+                <button onclick="clearLog()">지우기</button>
+            </div>
+            <div id="logContainer" class="log-container"></div>
         </div>
     </div>
-    
-    <!-- 스크립트 로드 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/PixiPlugin.min.js"></script>
-    
+
     <script>
-        // ==========================================
-        // JSON 애니메이션 로더 (인라인)
-        // ==========================================
-        const AnimData = {
-            cache: new Map(),
-            basePath: 'anim/',
-            
-            async load(id) {
-                if (this.cache.has(id)) return this.cache.get(id);
-                
-                try {
-                    const response = await fetch(`${this.basePath}${id}.json`);
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    const data = await response.json();
-                    this.cache.set(id, data);
-                    console.log(`[AnimData] ✅ 로드: ${id}`);
-                    return data;
-                } catch (e) {
-                    console.warn(`[AnimData] ⚠️ 로드 실패: ${id}`);
-                    return null;
-                }
-            },
-            
-            get(id) {
-                return this.cache.get(id) || null;
-            },
-            
-            has(id) {
-                return this.cache.has(id);
-            },
-            
-            async preload(ids) {
-                await Promise.all(ids.map(id => this.load(id)));
-            }
-        };
-    </script>
-    
-    <script>
-        // ==========================================
-        // 애니메이션 시뮬레이터
-        // ==========================================
-        
+        // ========== 전역 변수 ==========
         let app = null;
-        let playerSprite = null;
-        let enemySprite = null;
-        let playerContainer = null;
-        let enemyContainer = null;
-        let vfxCtx = null;
+        let playerContainer, playerSprite;
+        let enemyContainer, enemySprite;
+        let vfxCanvas, vfxCtx;
         
-        // 설정
         const config = {
-            speed: 1.0,
-            vfxEnabled: true,
-            shakeEnabled: true,
+            speed: 1,
+            vfx: true,
             playerBaseX: 0,
             enemyBaseX: 0,
             baseY: 0
         };
         
-        // 초기화
+        const animCache = new Map();
+        const ANIM_FILES = [
+            'player.attack', 'player.dash', 'player.defend', 'player.hit', 'player.return', 'player.stab',
+            'enemy.attack', 'enemy.dash', 'enemy.hit',
+            'card.strike', 'card.bash', 'card.flurry', 'card.flurryP'
+        ];
+        
+        // ========== 초기화 ==========
         document.addEventListener('DOMContentLoaded', async () => {
+            log('info', '🎬 Animation Player 초기화...');
             await initPixi();
-            initVFX();
+            await loadAllAnimations();
+            renderAnimList();
             startUpdateLoop();
-            
-            // JSON 애니메이션 사전 로드
-            await loadAnimations();
-            
-            log('info', '시뮬레이터 초기화 완료');
+            log('success', '✅ 준비 완료!');
         });
         
-        // JSON 애니메이션 로드
-        async function loadAnimations() {
-            log('info', '📂 애니메이션 데이터 로드 중...');
-            
-            const animations = [
-                'player.attack', 'player.stab', 'player.hit', 'player.dash', 
-                'player.defend', 'player.return',
-                'enemy.attack', 'enemy.hit', 'enemy.dash',
-                'card.strike', 'card.bash', 'card.flurry', 'card.flurryP'
-            ];
-            
-            await AnimData.preload(animations);
-            
-            log('success', `✅ ${AnimData.cache.size}개 애니메이션 로드 완료`);
-            
-            // 로드된 목록 표시
-            updateAnimList();
-        }
-        
-        // 로드된 애니메이션 목록 업데이트
-        function updateAnimList() {
-            AnimData.cache.forEach((anim, id) => {
-                log('anim', `  📄 ${id}: ${anim.name || id}`);
-            });
-        }
-        
-        // PixiJS 초기화
         async function initPixi() {
-            const container = document.getElementById('pixiCanvas');
-            const width = container.clientWidth;
-            const height = container.clientHeight;
+            const container = document.getElementById('pixiContainer');
+            const width = container.clientWidth || 800;
+            const height = container.clientHeight || 600;
             
-            // PixiJS 7 방식 (생성자에서 옵션 전달)
             app = new PIXI.Application({
                 width: width,
                 height: height,
@@ -634,225 +368,207 @@
                 resolution: window.devicePixelRatio || 1,
                 autoDensity: true
             });
-            
             container.appendChild(app.view);
             
-            // GSAP PixiPlugin 등록
-            gsap.registerPlugin(PixiPlugin);
-            PixiPlugin.registerPIXI(PIXI);
+            // VFX 캔버스
+            vfxCanvas = document.getElementById('vfxCanvas');
+            vfxCanvas.width = width;
+            vfxCanvas.height = height;
+            vfxCtx = vfxCanvas.getContext('2d');
             
-            // 배경 그리드
-            drawBackground();
+            // 배경 그리기
+            drawBackground(width, height);
             
-            // 캐릭터 생성 (스프라이트 로드 대기)
+            // 캐릭터 생성
             await createCharacters(width, height);
             
-            // 리사이즈 핸들러
-            window.addEventListener('resize', () => {
-                const w = container.clientWidth;
-                const h = container.clientHeight;
-                app.renderer.resize(w, h);
-                repositionCharacters(w, h);
-            });
-            
-            log('success', 'PixiJS 초기화 완료');
+            log('info', `PixiJS 초기화 완료 (${width}x${height})`);
         }
         
-        // 배경 그리드 그리기
-        function drawBackground() {
+        function drawBackground(width, height) {
             const bg = new PIXI.Graphics();
-            const w = app.screen.width;
-            const h = app.screen.height;
             
-            // 배경 (PixiJS 7 스타일)
-            bg.beginFill(0x0a0a12);
-            bg.drawRect(0, 0, w, h);
+            // 그라데이션 배경 (간단한 색상 블록)
+            bg.beginFill(0x1a1a28);
+            bg.drawRect(0, 0, width, height);
             bg.endFill();
             
-            // 그리드 라인
-            bg.lineStyle(1, 0x1a1a2a, 0.5);
-            for (let x = 0; x < w; x += 50) {
-                bg.moveTo(x, 0);
-                bg.lineTo(x, h);
-            }
-            for (let y = 0; y < h; y += 50) {
-                bg.moveTo(0, y);
-                bg.lineTo(w, y);
-            }
+            // 바닥선
+            const groundY = height * 0.65;
+            bg.lineStyle(2, 0x3a3a5a, 0.5);
+            bg.moveTo(0, groundY);
+            bg.lineTo(width, groundY);
             
             // 중앙선
-            bg.lineStyle(2, 0x3a3a5a, 0.5);
-            bg.moveTo(w / 2, 0);
-            bg.lineTo(w / 2, h);
-            
-            // 바닥선
-            const groundY = h * 0.7;
-            bg.lineStyle(3, 0x4a4a6a, 0.8);
-            bg.moveTo(0, groundY);
-            bg.lineTo(w, groundY);
+            bg.lineStyle(1, 0x2a2a4a, 0.3);
+            bg.moveTo(width / 2, 0);
+            bg.lineTo(width / 2, height);
             
             app.stage.addChild(bg);
         }
         
-        // 캐릭터 생성
         async function createCharacters(width, height) {
             const groundY = height * 0.65;
             config.baseY = groundY;
+            config.playerBaseX = width * 0.3;
+            config.enemyBaseX = width * 0.7;
             
-            // 플레이어 컨테이너
+            // 플레이어
             playerContainer = new PIXI.Container();
-            playerContainer.x = width * 0.25;
+            playerContainer.x = config.playerBaseX;
             playerContainer.y = groundY;
-            config.playerBaseX = playerContainer.x;
             
-            // 플레이어 스프라이트 (실제 이미지 로드)
             try {
-                const playerTexture = await PIXI.Assets.load('player.png');
-                playerSprite = new PIXI.Sprite(playerTexture);
+                const texture = await PIXI.Assets.load('hero.png');
+                playerSprite = new PIXI.Sprite(texture);
                 playerSprite.anchor.set(0.5, 1);
                 playerSprite.scale.set(0.8);
+                log('success', '✅ hero.png 로드');
             } catch (e) {
-                console.warn('[Sprite] player.png 로드 실패, 폴백 사용');
-                playerSprite = createCharacterGraphic(0x60a5fa, '🧙', 'PLAYER');
+                playerSprite = createFallbackSprite(0x60a5fa, 'P');
+                log('warn', '⚠️ hero.png 폴백 사용');
             }
             playerContainer.addChild(playerSprite);
             app.stage.addChild(playerContainer);
             
-            // 적 컨테이너
+            // 적
             enemyContainer = new PIXI.Container();
-            enemyContainer.x = width * 0.75;
+            enemyContainer.x = config.enemyBaseX;
             enemyContainer.y = groundY;
-            config.enemyBaseX = enemyContainer.x;
             
-            // 적 스프라이트 (실제 이미지 로드)
             try {
-                const enemyTexture = await PIXI.Assets.load('goblin_archer.png');
-                enemySprite = new PIXI.Sprite(enemyTexture);
+                const texture = await PIXI.Assets.load('goblinarcher.png');
+                enemySprite = new PIXI.Sprite(texture);
                 enemySprite.anchor.set(0.5, 1);
                 enemySprite.scale.set(0.8);
+                log('success', '✅ goblinarcher.png 로드');
             } catch (e) {
-                console.warn('[Sprite] goblin_archer.png 로드 실패, 폴백 사용');
-                enemySprite = createCharacterGraphic(0xef4444, '👹', 'ENEMY');
+                enemySprite = createFallbackSprite(0xef4444, 'E');
+                log('warn', '⚠️ goblinarcher.png 폴백 사용');
             }
             enemyContainer.addChild(enemySprite);
             app.stage.addChild(enemyContainer);
             
-            // 숨쉬기 애니메이션 시작
+            // 숨쉬기 애니메이션
             startBreathing();
-            
-            log('success', '캐릭터 스프라이트 로드 완료');
         }
         
-        // 캐릭터 그래픽 생성 (PixiJS 7 스타일)
-        function createCharacterGraphic(color, emoji, label) {
+        function createFallbackSprite(color, letter) {
             const container = new PIXI.Container();
             
-            // 바디
             const body = new PIXI.Graphics();
-            body.beginFill(color, 0.9);
-            body.lineStyle(3, 0xffffff, 0.3);
-            body.drawRoundedRect(-50, -120, 100, 120, 10);
+            body.beginFill(color);
+            body.drawRoundedRect(-30, -100, 60, 100, 8);
             body.endFill();
-            container.addChild(body);
             
-            // 그림자
-            const shadow = new PIXI.Graphics();
-            shadow.beginFill(0x000000, 0.4);
-            shadow.drawEllipse(0, 5, 40, 10);
-            shadow.endFill();
-            container.addChild(shadow);
-            
-            // 이모지 텍스트 (PixiJS 7 스타일)
-            const emojiText = new PIXI.Text(emoji, { fontSize: 50 });
-            emojiText.anchor.set(0.5);
-            emojiText.y = -70;
-            container.addChild(emojiText);
-            
-            // 라벨 (PixiJS 7 스타일)
-            const labelText = new PIXI.Text(label, {
-                fontFamily: 'Cinzel',
-                fontSize: 14,
+            const text = new PIXI.Text(letter, {
+                fontFamily: 'Arial',
+                fontSize: 32,
                 fill: 0xffffff,
                 fontWeight: 'bold'
             });
-            labelText.anchor.set(0.5);
-            labelText.y = -15;
-            container.addChild(labelText);
+            text.anchor.set(0.5);
+            text.y = -50;
             
+            container.addChild(body);
+            container.addChild(text);
             return container;
         }
         
-        // 캐릭터 재배치
-        function repositionCharacters(width, height) {
-            const groundY = height * 0.65;
-            config.baseY = groundY;
-            
-            playerContainer.x = width * 0.25;
-            playerContainer.y = groundY;
-            config.playerBaseX = playerContainer.x;
-            
-            enemyContainer.x = width * 0.75;
-            enemyContainer.y = groundY;
-            config.enemyBaseX = enemyContainer.x;
-        }
-        
-        // 숨쉬기 애니메이션
         function startBreathing() {
-            gsap.to(playerContainer.scale, {
-                x: 1.02,
-                y: 1.02,
+            // 플레이어 숨쉬기
+            gsap.to(playerSprite.scale, {
+                y: 0.82,
                 duration: 1.5,
-                ease: 'sine.inOut',
-                repeat: -1,
-                yoyo: true
-            });
-            
-            gsap.to(enemyContainer.scale, {
-                x: 1.02,
-                y: 1.02,
-                duration: 1.2,
-                ease: 'sine.inOut',
                 repeat: -1,
                 yoyo: true,
-                delay: 0.3
+                ease: 'sine.inOut'
+            });
+            
+            // 적 숨쉬기
+            gsap.to(enemySprite.scale, {
+                y: 0.82,
+                duration: 1.3,
+                repeat: -1,
+                yoyo: true,
+                ease: 'sine.inOut'
             });
         }
         
-        // VFX 초기화
-        function initVFX() {
-            const canvas = document.getElementById('vfxCanvas');
-            const container = document.querySelector('.stage-container');
-            canvas.width = container.clientWidth;
-            canvas.height = container.clientHeight;
-            vfxCtx = canvas.getContext('2d');
+        // ========== JSON 로드 ==========
+        async function loadAllAnimations() {
+            log('info', '📁 JSON 애니메이션 로드 중...');
             
-            window.addEventListener('resize', () => {
-                canvas.width = container.clientWidth;
-                canvas.height = container.clientHeight;
-            });
-        }
-        
-        // ==========================================
-        // 애니메이션 함수들
-        // ==========================================
-        
-        // JSON 데이터 기반 애니메이션 재생
-        async function playAnimFromJSON(animId) {
-            const animData = AnimData.get(animId);
-            
-            if (!animData) {
-                log('warn', `⚠️ 애니메이션 없음: ${animId}, 로드 시도...`);
-                const loaded = await AnimData.load(animId);
-                if (!loaded) {
-                    log('error', `❌ 로드 실패: ${animId}`);
-                    return;
+            for (const id of ANIM_FILES) {
+                try {
+                    const response = await fetch(`anim/${id}.json`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        animCache.set(id, data);
+                        log('success', `✅ ${id}.json`);
+                    }
+                } catch (e) {
+                    log('warn', `⚠️ ${id}.json 로드 실패`);
                 }
-                return playAnimFromJSON(animId);
             }
             
-            log('anim', `▶️ [JSON] ${animId}: ${animData.name}`);
+            log('info', `총 ${animCache.size}개 애니메이션 로드됨`);
+        }
+        
+        function renderAnimList() {
+            const container = document.getElementById('animList');
+            container.innerHTML = '';
             
-            const target = animData.target || 'player';
+            animCache.forEach((data, id) => {
+                const type = id.split('.')[0];
+                const name = id.split('.')[1];
+                const duration = calculateDuration(data);
+                
+                const item = document.createElement('div');
+                item.className = 'anim-item';
+                item.dataset.id = id;
+                item.innerHTML = `
+                    <span class="type ${type}">${type}</span>
+                    <span class="name">${name}</span>
+                    <span class="duration">${duration}ms</span>
+                `;
+                item.onclick = () => playAnimation(id);
+                container.appendChild(item);
+            });
+        }
+        
+        function calculateDuration(data) {
+            if (data.keyframes) {
+                return data.keyframes.reduce((sum, kf) => sum + (kf.duration || 100), 0);
+            }
+            if (data.steps) {
+                return data.steps.reduce((sum, step) => sum + (step.delay || 0), 0);
+            }
+            return data.duration || 500;
+        }
+        
+        // ========== 애니메이션 재생 ==========
+        async function playAnimation(id) {
+            const data = animCache.get(id);
+            if (!data) {
+                log('error', `❌ 애니메이션 없음: ${id}`);
+                return;
+            }
+            
+            // UI 업데이트
+            document.querySelectorAll('.anim-item').forEach(el => el.classList.remove('playing'));
+            document.querySelector(`.anim-item[data-id="${id}"]`)?.classList.add('playing');
+            
+            // JSON 표시
+            document.getElementById('jsonViewer').innerHTML = syntaxHighlight(JSON.stringify(data, null, 2));
+            
+            log('anim', `▶️ 재생: ${id}`);
+            
+            // 캐릭터 리셋
+            resetCharacters();
+            await delay(50);
+            
+            const target = data.target || (id.startsWith('enemy') ? 'enemy' : 'player');
             const container = target === 'player' ? playerContainer : enemyContainer;
             const sprite = target === 'player' ? playerSprite : enemySprite;
             const baseX = target === 'player' ? config.playerBaseX : config.enemyBaseX;
@@ -862,779 +578,236 @@
             gsap.killTweensOf(container);
             gsap.killTweensOf(container.scale);
             gsap.killTweensOf(sprite);
+            gsap.killTweensOf(sprite.scale);
             
             // 시퀀스 타입
-            if (animData.type === 'sequence' && animData.steps) {
-                return playSequenceFromJSON(animData);
+            if (data.type === 'sequence' && data.steps) {
+                await playSequence(data, container, sprite, baseX, direction);
+                return;
             }
             
             // 키프레임 타입
-            if (animData.keyframes) {
-                return playKeyframesFromJSON(animData, container, sprite, direction, baseX);
+            if (data.keyframes) {
+                await playKeyframes(data, container, sprite, baseX, direction);
             }
         }
         
-        // 시퀀스 애니메이션 재생
-        async function playSequenceFromJSON(animData) {
-            log('anim', `🎬 시퀀스 시작: ${animData.id}`);
+        async function playSequence(data, container, sprite, baseX, direction) {
+            log('anim', `🎬 시퀀스 시작: ${data.id}`);
             
-            for (const step of animData.steps) {
+            for (const step of data.steps) {
                 if (step.delay) {
-                    await delay(step.delay);
+                    await delay(step.delay / config.speed);
                     continue;
                 }
                 
                 if (step.anim) {
-                    const promise = playAnimFromJSON(step.anim);
-                    
-                    if (step.callback) {
-                        log('info', `📞 콜백: ${step.callback}(${step.callbackArg})`);
-                    }
-                    
-                    if (step.wait) {
-                        await promise;
-                    }
+                    log('info', `  → ${step.anim}`);
+                    await playAnimation(step.anim);
+                }
+                
+                if (step.vfx && config.vfx) {
+                    showVFX(step.vfx, container);
                 }
             }
             
-            log('success', `✅ 시퀀스 완료: ${animData.id}`);
+            log('success', `✅ 시퀀스 완료: ${data.id}`);
         }
         
-        // 키프레임 애니메이션 재생
-        function playKeyframesFromJSON(animData, container, sprite, direction, baseX) {
+        async function playKeyframes(data, container, sprite, baseX, direction) {
             return new Promise((resolve) => {
-                const tl = gsap.timeline({ 
+                const tl = gsap.timeline({
                     timeScale: config.speed,
-                    onComplete: resolve
+                    onComplete: () => {
+                        log('success', `✅ 완료: ${data.id}`);
+                        resolve();
+                    }
                 });
                 
-                let elapsed = 0;
-                
-                animData.keyframes.forEach((kf, index) => {
+                data.keyframes.forEach((kf, index) => {
                     if (index === 0) return; // 첫 프레임은 초기값
                     
                     const duration = (kf.duration || 100) / 1000;
                     const ease = kf.ease || 'power2.out';
                     
-                    // 스프라이트 트윈
-                    const spriteProps = {};
-                    if (kf.x !== undefined) spriteProps.x = kf.x * direction;
-                    if (kf.rotation !== undefined) spriteProps.rotation = kf.rotation * direction;
-                    if (kf.scaleX !== undefined) spriteProps.scaleX = kf.scaleX;
-                    if (kf.scaleY !== undefined) spriteProps.scaleY = kf.scaleY;
+                    const props = {};
                     
-                    if (Object.keys(spriteProps).length > 0) {
-                        tl.to(sprite, { ...spriteProps, duration, ease }, elapsed);
+                    // 위치
+                    if (kf.x !== undefined) props.x = baseX + (kf.x * direction);
+                    if (kf.y !== undefined) props.y = config.baseY + kf.y;
+                    
+                    // 스케일
+                    if (kf.scaleX !== undefined || kf.scaleY !== undefined) {
+                        const scaleProps = {};
+                        if (kf.scaleX !== undefined) scaleProps.x = kf.scaleX * 0.8;
+                        if (kf.scaleY !== undefined) scaleProps.y = kf.scaleY * 0.8;
+                        tl.to(sprite.scale, { ...scaleProps, duration, ease }, '<');
                     }
                     
-                    // 이벤트 처리
-                    if (animData.events?.onPeak?.frame === index) {
-                        const event = animData.events.onPeak;
-                        tl.call(() => {
-                            if (config.vfxEnabled && event.vfx) {
-                                const pos = container.getGlobalPosition();
-                                if (event.vfx === 'slash' || event.vfx === 'stab') {
-                                    createSlashVFX(pos.x + 50 * direction, pos.y - 60, event.vfx === 'stab');
-                                } else if (event.vfx === 'hit' || event.vfx === 'blood') {
-                                    createHitVFX(pos.x, pos.y - 60);
-                                } else if (event.vfx === 'shield') {
-                                    createShieldVFX(pos.x, pos.y - 60);
-                                }
-                            }
-                            if (config.shakeEnabled && event.shake) {
-                                screenShake(event.shake);
-                            }
-                        }, null, elapsed + duration * 0.5);
+                    // 알파
+                    if (kf.alpha !== undefined) props.alpha = kf.alpha;
+                    
+                    // 회전
+                    if (kf.rotation !== undefined) {
+                        tl.to(sprite, { rotation: kf.rotation * direction, duration, ease }, '<');
                     }
                     
-                    elapsed += duration;
+                    // 컨테이너 이동
+                    if (Object.keys(props).length > 0) {
+                        tl.to(container, { ...props, duration, ease }, index === 1 ? 0 : '>');
+                    }
+                    
+                    // VFX
+                    if (kf.vfx && config.vfx) {
+                        tl.call(() => showVFX(kf.vfx, container), null, '<');
+                    }
                 });
-                
-                // returnToBase 처리
-                if (animData.returnToBase) {
-                    tl.to(container, { x: baseX, duration: 0.2, ease: 'power2.out' }, elapsed);
-                }
             });
-        }
-        
-        function playAnim(target, animName) {
-            // JSON 데이터 먼저 확인
-            const animId = `${target}.${animName}`;
-            if (AnimData.has(animId)) {
-                return playAnimFromJSON(animId);
-            }
-            
-            // 폴백: 하드코딩된 애니메이션
-            log('anim', `▶️ ${target}.${animName}`);
-            
-            const container = target === 'player' ? playerContainer : enemyContainer;
-            const sprite = target === 'player' ? playerSprite : enemySprite;
-            const baseX = target === 'player' ? config.playerBaseX : config.enemyBaseX;
-            const direction = target === 'player' ? 1 : -1;
-            
-            // 이전 애니메이션 킬
-            gsap.killTweensOf(container);
-            gsap.killTweensOf(container.scale);
-            gsap.killTweensOf(sprite);
-            
-            switch (animName) {
-                case 'idle':
-                    gsap.to(container.scale, {
-                        x: 1.02, y: 1.02,
-                        duration: 1.5 / config.speed,
-                        ease: 'sine.inOut',
-                        repeat: -1,
-                        yoyo: true
-                    });
-                    break;
-                    
-                case 'dash':
-                    const dashDist = target === 'player' ? 200 : -200;
-                    gsap.timeline({ timeScale: config.speed })
-                        .to(container, {
-                            x: baseX + dashDist,
-                            duration: 0.15,
-                            ease: 'power2.out'
-                        })
-                        .to(container.scale, {
-                            x: 1.1, y: 0.95,
-                            duration: 0.1,
-                            ease: 'power2.out'
-                        }, 0);
-                    break;
-                    
-                case 'attack':
-                    gsap.timeline({ timeScale: config.speed })
-                        .to(sprite, {
-                            x: -10 * direction,
-                            scaleX: 0.95,
-                            scaleY: 1.05,
-                            duration: 0.05,
-                            ease: 'power2.in'
-                        })
-                        .to(sprite, {
-                            x: 30 * direction,
-                            scaleX: 1.15,
-                            scaleY: 0.9,
-                            duration: 0.06,
-                            ease: 'power4.out',
-                            onComplete: () => {
-                                if (config.vfxEnabled) {
-                                    const pos = container.getGlobalPosition();
-                                    createSlashVFX(pos.x + 50 * direction, pos.y - 60);
-                                }
-                                if (config.shakeEnabled) {
-                                    screenShake(8);
-                                }
-                            }
-                        })
-                        .to(sprite, {
-                            x: 0,
-                            scaleX: 1,
-                            scaleY: 1,
-                            duration: 0.1,
-                            ease: 'power2.out'
-                        });
-                    break;
-                    
-                case 'stab':
-                    gsap.timeline({ timeScale: config.speed })
-                        .to(sprite, {
-                            x: -8 * direction,
-                            scaleX: 0.95,
-                            scaleY: 1.05,
-                            duration: 0.03,
-                            ease: 'power2.in'
-                        })
-                        .to(sprite, {
-                            x: 25 * direction,
-                            scaleX: 1.1,
-                            scaleY: 0.92,
-                            duration: 0.03,
-                            ease: 'power4.out',
-                            onComplete: () => {
-                                if (config.vfxEnabled) {
-                                    const pos = container.getGlobalPosition();
-                                    createSlashVFX(pos.x + 40 * direction, pos.y - 50, true);
-                                }
-                            }
-                        })
-                        .to(sprite, {
-                            x: 0,
-                            scaleX: 1,
-                            scaleY: 1,
-                            duration: 0.06,
-                            ease: 'power2.out'
-                        });
-                    break;
-                    
-                case 'hit':
-                    const hitDir = target === 'player' ? -1 : 1;
-                    gsap.timeline({ timeScale: config.speed })
-                        .to(container, {
-                            x: container.x + 15 * hitDir,
-                            duration: 0.04,
-                            ease: 'power4.out'
-                        }, 0)
-                        .to(container.scale, {
-                            x: 0.85,
-                            y: 1.15,
-                            duration: 0.04,
-                            ease: 'power4.out',
-                            onComplete: () => {
-                                if (config.vfxEnabled) {
-                                    const pos = container.getGlobalPosition();
-                                    createHitVFX(pos.x, pos.y - 60);
-                                }
-                                if (config.shakeEnabled) {
-                                    screenShake(12);
-                                }
-                            }
-                        }, 0)
-                        .to({}, { duration: 0.08 }) // 히트스탑
-                        .to(container, {
-                            x: baseX,
-                            duration: 0.2,
-                            ease: 'elastic.out(1, 0.5)'
-                        })
-                        .to(container.scale, {
-                            x: 1,
-                            y: 1,
-                            duration: 0.2,
-                            ease: 'elastic.out(1, 0.5)'
-                        }, '<');
-                    break;
-                    
-                case 'defend':
-                    gsap.timeline({ timeScale: config.speed })
-                        .to(container.scale, {
-                            x: 0.9,
-                            y: 1.1,
-                            duration: 0.1,
-                            ease: 'power2.out',
-                            onComplete: () => {
-                                if (config.vfxEnabled) {
-                                    const pos = container.getGlobalPosition();
-                                    createShieldVFX(pos.x, pos.y - 60);
-                                }
-                            }
-                        })
-                        .to(container.scale, {
-                            x: 1,
-                            y: 1,
-                            duration: 0.3,
-                            ease: 'elastic.out(1, 0.5)'
-                        });
-                    break;
-                    
-                case 'return':
-                    gsap.to(container, {
-                        x: baseX,
-                        duration: 0.2 / config.speed,
-                        ease: 'power2.out'
-                    });
-                    gsap.to(container.scale, {
-                        x: 1,
-                        y: 1,
-                        duration: 0.2 / config.speed,
-                        ease: 'power2.out'
-                    });
-                    break;
-                    
-                case 'death':
-                    gsap.timeline({ timeScale: config.speed })
-                        .to(container.scale, {
-                            x: 1.1,
-                            y: 0.9,
-                            duration: 0.1,
-                            ease: 'power2.out'
-                        })
-                        .to(container, {
-                            alpha: 0,
-                            y: config.baseY + 50,
-                            rotation: 0.3,
-                            duration: 0.5,
-                            ease: 'power2.in'
-                        })
-                        .to(container.scale, {
-                            x: 0.5,
-                            y: 1.5,
-                            duration: 0.5,
-                            ease: 'power2.in'
-                        }, '<');
-                    break;
-                    
-                case 'stun':
-                    gsap.timeline({ timeScale: config.speed, repeat: 2 })
-                        .to(container, {
-                            rotation: -0.1,
-                            duration: 0.08,
-                            ease: 'power2.inOut'
-                        })
-                        .to(container, {
-                            rotation: 0.1,
-                            duration: 0.08,
-                            ease: 'power2.inOut'
-                        })
-                        .to(container, {
-                            rotation: 0,
-                            duration: 0.08,
-                            ease: 'power2.out'
-                        });
-                    break;
-                    
-                case 'spawn':
-                    container.alpha = 0;
-                    container.scale.set(0);
-                    container.y = config.baseY - 100;
-                    
-                    gsap.timeline({ timeScale: config.speed })
-                        .to(container, {
-                            alpha: 1,
-                            y: config.baseY,
-                            duration: 0.3,
-                            ease: 'back.out(2)'
-                        })
-                        .to(container.scale, {
-                            x: 1,
-                            y: 1,
-                            duration: 0.3,
-                            ease: 'back.out(2)'
-                        }, '<');
-                    break;
-            }
-        }
-        
-        // ==========================================
-        // 프리셋 시퀀스
-        // ==========================================
-        
-        async function runPreset(presetName) {
-            log('info', `🎬 프리셋 시작: ${presetName}`);
-            
-            // 먼저 리셋
-            resetCharacters();
-            await delay(100);
-            
-            switch (presetName) {
-                case 'playerAttack':
-                    // 플레이어 → 적 공격 시퀀스
-                    playAnim('player', 'dash');
-                    await delay(150);
-                    playAnim('player', 'attack');
-                    await delay(100);
-                    playAnim('enemy', 'hit');
-                    await delay(300);
-                    playAnim('player', 'return');
-                    break;
-                    
-                case 'enemyAttack':
-                    // 적 → 플레이어 공격 시퀀스
-                    playAnim('enemy', 'dash');
-                    await delay(150);
-                    playAnim('enemy', 'attack');
-                    await delay(100);
-                    playAnim('player', 'hit');
-                    await delay(300);
-                    playAnim('enemy', 'return');
-                    break;
-                    
-                case 'flurry':
-                    // JSON 시퀀스 사용
-                    if (AnimData.has('card.flurry')) {
-                        await playAnimFromJSON('card.flurry');
-                    } else {
-                        // 폴백: 하드코딩
-                        playAnim('player', 'dash');
-                        await delay(150);
-                        
-                        for (let i = 0; i < 3; i++) {
-                            playAnim('player', 'stab');
-                            await delay(50);
-                            playAnim('enemy', 'hit');
-                            log('anim', `💥 ${i + 1}번째 타격!`);
-                            await delay(150);
-                        }
-                        
-                        await delay(100);
-                        playAnim('player', 'return');
-                    }
-                    break;
-                    
-                case 'flurryP':
-                    // JSON 시퀀스 사용 (연속 찌르기+)
-                    if (AnimData.has('card.flurryP')) {
-                        await playAnimFromJSON('card.flurryP');
-                    }
-                    break;
-                    
-                case 'strike':
-                    // JSON 시퀀스 사용 (베기)
-                    if (AnimData.has('card.strike')) {
-                        await playAnimFromJSON('card.strike');
-                    }
-                    break;
-                    
-                case 'bash':
-                    // JSON 시퀀스 사용 (강타)
-                    if (AnimData.has('card.bash')) {
-                        await playAnimFromJSON('card.bash');
-                    }
-                    break;
-                    
-                case 'playerHit':
-                    playAnim('player', 'hit');
-                    break;
-                    
-                case 'enemyHit':
-                    playAnim('enemy', 'hit');
-                    break;
-                    
-                case 'defend':
-                    playAnim('player', 'defend');
-                    break;
-                    
-                case 'death':
-                    playAnim('enemy', 'hit');
-                    await delay(200);
-                    playAnim('enemy', 'death');
-                    break;
-                    
-                case 'combo':
-                    // 콤보 공격 (공격 → 찌르기 → 강타)
-                    playAnim('player', 'dash');
-                    await delay(150);
-                    
-                    playAnim('player', 'attack');
-                    await delay(80);
-                    playAnim('enemy', 'hit');
-                    await delay(200);
-                    
-                    playAnim('player', 'stab');
-                    await delay(50);
-                    playAnim('enemy', 'hit');
-                    await delay(200);
-                    
-                    playAnim('player', 'attack');
-                    await delay(80);
-                    playAnim('enemy', 'hit');
-                    await delay(300);
-                    
-                    playAnim('player', 'return');
-                    break;
-            }
-            
-            log('success', `✅ 프리셋 완료: ${presetName}`);
-        }
-        
-        // ==========================================
-        // VFX 함수들
-        // ==========================================
-        
-        function createSlashVFX(x, y, isStab = false) {
-            if (!config.vfxEnabled) return;
-            
-            const particles = [];
-            const color = isStab ? '#60a5fa' : '#fbbf24';
-            const count = isStab ? 5 : 8;
-            
-            for (let i = 0; i < count; i++) {
-                particles.push({
-                    x: x,
-                    y: y,
-                    vx: (Math.random() - 0.5) * 15,
-                    vy: (Math.random() - 0.5) * 10 - 5,
-                    size: 3 + Math.random() * 4,
-                    life: 1,
-                    color: color
-                });
-            }
-            
-            // 슬래시 라인
-            const slashAnim = {
-                x: x - 30,
-                y: y - 20,
-                length: 0,
-                targetLength: 80,
-                angle: isStab ? 0 : -30 + Math.random() * 20,
-                life: 1,
-                color: color
-            };
-            
-            animateVFX(particles, slashAnim);
-        }
-        
-        function createHitVFX(x, y) {
-            if (!config.vfxEnabled) return;
-            
-            const particles = [];
-            
-            // 피 튀김
-            for (let i = 0; i < 12; i++) {
-                particles.push({
-                    x: x,
-                    y: y,
-                    vx: (Math.random() - 0.5) * 20,
-                    vy: (Math.random() - 0.5) * 15 - 3,
-                    size: 2 + Math.random() * 5,
-                    life: 1,
-                    color: '#ef4444'
-                });
-            }
-            
-            animateVFX(particles, null);
-        }
-        
-        function createShieldVFX(x, y) {
-            if (!config.vfxEnabled) return;
-            
-            // 쉴드 이펙트
-            const ring = {
-                x: x,
-                y: y,
-                radius: 0,
-                targetRadius: 60,
-                life: 1,
-                color: '#60a5fa'
-            };
-            
-            animateRing(ring);
-        }
-        
-        function animateVFX(particles, slash) {
-            let frame = 0;
-            const maxFrames = 30;
-            
-            function draw() {
-                if (frame >= maxFrames) return;
-                
-                // 파티클
-                particles.forEach(p => {
-                    p.x += p.vx;
-                    p.y += p.vy;
-                    p.vy += 0.5; // 중력
-                    p.life -= 0.03;
-                    
-                    if (p.life > 0) {
-                        vfxCtx.beginPath();
-                        vfxCtx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
-                        vfxCtx.fillStyle = p.color;
-                        vfxCtx.globalAlpha = p.life;
-                        vfxCtx.fill();
-                    }
-                });
-                
-                // 슬래시
-                if (slash && slash.life > 0) {
-                    slash.length = Math.min(slash.length + 15, slash.targetLength);
-                    slash.life -= 0.08;
-                    
-                    vfxCtx.save();
-                    vfxCtx.translate(slash.x, slash.y);
-                    vfxCtx.rotate(slash.angle * Math.PI / 180);
-                    
-                    vfxCtx.beginPath();
-                    vfxCtx.moveTo(0, 0);
-                    vfxCtx.lineTo(slash.length, 0);
-                    vfxCtx.strokeStyle = slash.color;
-                    vfxCtx.lineWidth = 4 * slash.life;
-                    vfxCtx.globalAlpha = slash.life;
-                    vfxCtx.stroke();
-                    
-                    vfxCtx.restore();
-                }
-                
-                vfxCtx.globalAlpha = 1;
-                frame++;
-                requestAnimationFrame(draw);
-            }
-            
-            draw();
-        }
-        
-        function animateRing(ring) {
-            let frame = 0;
-            const maxFrames = 20;
-            
-            function draw() {
-                if (frame >= maxFrames) return;
-                
-                ring.radius = Math.min(ring.radius + 5, ring.targetRadius);
-                ring.life -= 0.05;
-                
-                if (ring.life > 0) {
-                    vfxCtx.beginPath();
-                    vfxCtx.arc(ring.x, ring.y, ring.radius, 0, Math.PI * 2);
-                    vfxCtx.strokeStyle = ring.color;
-                    vfxCtx.lineWidth = 3 * ring.life;
-                    vfxCtx.globalAlpha = ring.life;
-                    vfxCtx.stroke();
-                }
-                
-                vfxCtx.globalAlpha = 1;
-                frame++;
-                requestAnimationFrame(draw);
-            }
-            
-            draw();
-        }
-        
-        // 화면 흔들림
-        function screenShake(intensity) {
-            if (!config.shakeEnabled) return;
-            
-            const stage = app.stage;
-            gsap.timeline()
-                .to(stage, {
-                    x: intensity,
-                    y: intensity / 2,
-                    duration: 0.02,
-                    ease: 'none'
-                })
-                .to(stage, {
-                    x: -intensity,
-                    y: -intensity / 2,
-                    duration: 0.02,
-                    ease: 'none'
-                })
-                .to(stage, {
-                    x: intensity / 2,
-                    y: 0,
-                    duration: 0.02,
-                    ease: 'none'
-                })
-                .to(stage, {
-                    x: 0,
-                    y: 0,
-                    duration: 0.05,
-                    ease: 'power2.out'
-                });
-        }
-        
-        // ==========================================
-        // 유틸리티
-        // ==========================================
-        
-        function delay(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms / config.speed));
-        }
-        
-        function stopAll() {
-            gsap.killTweensOf(playerContainer);
-            gsap.killTweensOf(playerContainer.scale);
-            gsap.killTweensOf(playerSprite);
-            gsap.killTweensOf(enemyContainer);
-            gsap.killTweensOf(enemyContainer.scale);
-            gsap.killTweensOf(enemySprite);
-            gsap.killTweensOf(app.stage);
-            
-            resetCharacters();
-            log('warn', '⏹️ 모든 애니메이션 중지');
         }
         
         function resetCharacters() {
-            // 플레이어 리셋
+            gsap.killTweensOf(playerContainer);
+            gsap.killTweensOf(playerSprite);
+            gsap.killTweensOf(playerSprite.scale);
+            gsap.killTweensOf(enemyContainer);
+            gsap.killTweensOf(enemySprite);
+            gsap.killTweensOf(enemySprite.scale);
+            
             playerContainer.x = config.playerBaseX;
             playerContainer.y = config.baseY;
             playerContainer.alpha = 1;
-            playerContainer.rotation = 0;
-            playerContainer.scale.set(1);
-            playerSprite.x = 0;
-            playerSprite.y = 0;
-            playerSprite.scale.set(1);
+            playerSprite.rotation = 0;
+            playerSprite.scale.set(0.8);
             
-            // 적 리셋
             enemyContainer.x = config.enemyBaseX;
             enemyContainer.y = config.baseY;
             enemyContainer.alpha = 1;
-            enemyContainer.rotation = 0;
-            enemyContainer.scale.set(1);
-            enemySprite.x = 0;
-            enemySprite.y = 0;
-            enemySprite.scale.set(1);
-        }
-        
-        function resetStage() {
-            stopAll();
-            vfxCtx.clearRect(0, 0, vfxCtx.canvas.width, vfxCtx.canvas.height);
-            app.stage.x = 0;
-            app.stage.y = 0;
+            enemySprite.rotation = 0;
+            enemySprite.scale.set(0.8);
+            
             startBreathing();
-            log('info', '🔄 스테이지 리셋');
         }
         
-        function updateSpeed(value) {
-            config.speed = parseFloat(value);
+        // ========== VFX ==========
+        function showVFX(type, container) {
+            if (!config.vfx) return;
+            
+            const x = container.x;
+            const y = container.y - 50;
+            
+            switch (type) {
+                case 'slash':
+                    drawSlash(x, y);
+                    break;
+                case 'hit':
+                    drawHit(x, y);
+                    break;
+                case 'spark':
+                    drawSparks(x, y);
+                    break;
+            }
+        }
+        
+        function drawSlash(x, y) {
+            vfxCtx.save();
+            vfxCtx.strokeStyle = '#fff';
+            vfxCtx.lineWidth = 3;
+            vfxCtx.shadowColor = '#60a5fa';
+            vfxCtx.shadowBlur = 15;
+            
+            vfxCtx.beginPath();
+            vfxCtx.moveTo(x - 40, y + 30);
+            vfxCtx.lineTo(x + 40, y - 30);
+            vfxCtx.stroke();
+            vfxCtx.restore();
+            
+            setTimeout(() => clearVFX(), 150);
+        }
+        
+        function drawHit(x, y) {
+            vfxCtx.save();
+            vfxCtx.fillStyle = '#ef4444';
+            vfxCtx.shadowColor = '#ef4444';
+            vfxCtx.shadowBlur = 20;
+            
+            vfxCtx.beginPath();
+            vfxCtx.arc(x, y, 20, 0, Math.PI * 2);
+            vfxCtx.fill();
+            vfxCtx.restore();
+            
+            setTimeout(() => clearVFX(), 100);
+        }
+        
+        function drawSparks(x, y) {
+            for (let i = 0; i < 8; i++) {
+                const angle = (Math.PI * 2 / 8) * i;
+                const len = 20 + Math.random() * 20;
+                
+                vfxCtx.save();
+                vfxCtx.strokeStyle = '#fbbf24';
+                vfxCtx.lineWidth = 2;
+                vfxCtx.shadowColor = '#fbbf24';
+                vfxCtx.shadowBlur = 10;
+                
+                vfxCtx.beginPath();
+                vfxCtx.moveTo(x, y);
+                vfxCtx.lineTo(x + Math.cos(angle) * len, y + Math.sin(angle) * len);
+                vfxCtx.stroke();
+                vfxCtx.restore();
+            }
+            
+            setTimeout(() => clearVFX(), 150);
+        }
+        
+        function clearVFX() {
+            vfxCtx.clearRect(0, 0, vfxCanvas.width, vfxCanvas.height);
+        }
+        
+        // ========== 유틸 ==========
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        function updateSpeed() {
+            config.speed = parseFloat(document.getElementById('speedSlider').value);
             document.getElementById('speedValue').textContent = config.speed.toFixed(1) + 'x';
         }
         
-        function toggleVFX(enabled) {
-            config.vfxEnabled = enabled;
-            log('info', `VFX: ${enabled ? 'ON' : 'OFF'}`);
-        }
-        
-        function toggleShake(enabled) {
-            config.shakeEnabled = enabled;
-            log('info', `화면 흔들림: ${enabled ? 'ON' : 'OFF'}`);
-        }
-        
-        function toggleStats() {
-            const overlay = document.getElementById('statsOverlay');
-            overlay.style.display = overlay.style.display === 'none' ? 'block' : 'none';
-        }
-        
-        // 업데이트 루프
-        function startUpdateLoop() {
-            let lastTime = performance.now();
-            let frameCount = 0;
-            
-            function update() {
-                const now = performance.now();
-                frameCount++;
-                
-                if (now - lastTime >= 1000) {
-                    document.getElementById('statFPS').textContent = frameCount;
-                    frameCount = 0;
-                    lastTime = now;
-                }
-                
-                // 스탯 업데이트
-                if (playerContainer && enemyContainer) {
-                    document.getElementById('statPlayerX').textContent = Math.round(playerContainer.x);
-                    document.getElementById('statPlayerScale').textContent = playerContainer.scale.x.toFixed(2);
-                    document.getElementById('statEnemyX').textContent = Math.round(enemyContainer.x);
-                    document.getElementById('statEnemyScale').textContent = enemyContainer.scale.x.toFixed(2);
-                }
-                
-                // VFX 캔버스 클리어 (투명도 낮춤으로 잔상 효과)
-                vfxCtx.fillStyle = 'rgba(10, 10, 18, 0.15)';
-                vfxCtx.fillRect(0, 0, vfxCtx.canvas.width, vfxCtx.canvas.height);
-                
-                requestAnimationFrame(update);
-            }
-            
-            update();
-        }
-        
-        // 로그
         function log(type, message) {
             const container = document.getElementById('logContainer');
-            const time = new Date().toLocaleTimeString('ko-KR', { 
-                hour: '2-digit', 
-                minute: '2-digit', 
-                second: '2-digit',
-                fractionalSecondDigits: 2
-            });
+            const time = new Date().toLocaleTimeString('ko-KR', { hour12: false });
             
             const entry = document.createElement('div');
             entry.className = `log-entry ${type}`;
             entry.innerHTML = `<span class="log-time">${time}</span>${message}`;
-            container.insertBefore(entry, container.firstChild);
-            
-            // 최대 50개
-            while (container.children.length > 50) {
-                container.removeChild(container.lastChild);
-            }
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        function clearLog() {
+            document.getElementById('logContainer').innerHTML = '';
+        }
+        
+        function syntaxHighlight(json) {
+            return json
+                .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?)/g, (match) => {
+                    if (/:$/.test(match)) {
+                        return `<span class="key">${match}</span>`;
+                    }
+                    return `<span class="string">${match}</span>`;
+                })
+                .replace(/\b(-?\d+\.?\d*)\b/g, '<span class="number">$1</span>');
+        }
+        
+        function startUpdateLoop() {
+            setInterval(() => {
+                if (!playerContainer || !enemyContainer) return;
+                
+                document.getElementById('playerX').textContent = playerContainer.x.toFixed(0);
+                document.getElementById('playerScale').textContent = playerSprite.scale.x.toFixed(2);
+                document.getElementById('enemyX').textContent = enemyContainer.x.toFixed(0);
+                document.getElementById('fpsValue').textContent = Math.round(app.ticker.FPS);
+            }, 100);
         }
     </script>
 </body>
