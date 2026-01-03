@@ -337,6 +337,10 @@
             if (useDDOOEngine && DDOOAction.initialized) {
                 log('info', '🎮 DDOOAction 엔진으로 캐릭터 생성...');
                 
+                // 아웃라인 설정 조정 (너무 두껍지 않게)
+                DDOOAction.config.character.outlineThickness = 1;
+                DDOOAction.config.enableOutline = false;  // 테스트용 비활성화
+                
                 // 플레이어 텍스처 로드
                 let playerTex;
                 try {
