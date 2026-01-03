@@ -131,9 +131,12 @@ const CardAnimations = {
                         onHit(hitCount++, dmgValue);
                     }
                     
-                    // 적 피격 애니메이션 (target 객체 전체 전달!)
-                    if (target && typeof EnemyRenderer !== 'undefined') {
-                        EnemyRenderer.playHitAnimation(target, dmgValue, false);
+                    // 🎬 DDOOAction을 통한 적 피격 애니메이션!
+                    if (target && typeof DDOOAction !== 'undefined') {
+                        DDOOAction.play('enemy.hit', {
+                            target: target,
+                            targetEl: targetEl
+                        }).catch(e => console.warn('[CardAnimations] 히트 애님 실패:', e));
                     }
                     
                     // 실제 대미지 적용

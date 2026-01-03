@@ -463,9 +463,19 @@ const DDOOAction = {
     
     // ==================== 애니메이션 재생 ====================
     async play(animId, options = {}) {
-        const data = this.animCache.get(animId);
+        // 🎲 피격 애니메이션 랜덤 좌우 선택!
+        let actualAnimId = animId;
+        if (animId === 'enemy.hit') {
+            actualAnimId = Math.random() > 0.5 ? 'enemy.hit_left' : 'enemy.hit_right';
+            if (this.config.debug) console.log(`[DDOOAction] 🎲 랜덤 피격: ${actualAnimId}`);
+        } else if (animId === 'enemy.flurry_hit') {
+            actualAnimId = Math.random() > 0.5 ? 'enemy.flurry_hit_left' : 'enemy.flurry_hit_right';
+            if (this.config.debug) console.log(`[DDOOAction] 🎲 랜덤 연타 피격: ${actualAnimId}`);
+        }
+        
+        const data = this.animCache.get(actualAnimId);
         if (!data) {
-            console.warn(`[DDOOAction] 애니메이션 없음: ${animId}`);
+            console.warn(`[DDOOAction] 애니메이션 없음: ${actualAnimId}`);
             return null;
         }
         
@@ -543,6 +553,13 @@ const DDOOAction = {
                         if (randomAnimData) {
                             actualAnimData = randomAnimData;
                             if (this.config.debug) console.log(`[DDOOAction] 🎲 랜덤 피격: ${randomHit}`);
+                        }
+                    } else if (step.anim === 'enemy.flurry_hit') {
+                        const randomHit = Math.random() > 0.5 ? 'enemy.flurry_hit_left' : 'enemy.flurry_hit_right';
+                        const randomAnimData = this.animCache.get(randomHit);
+                        if (randomAnimData) {
+                            actualAnimData = randomAnimData;
+                            if (this.config.debug) console.log(`[DDOOAction] 🎲 랜덤 연타 피격: ${randomHit}`);
                         }
                     }
                     

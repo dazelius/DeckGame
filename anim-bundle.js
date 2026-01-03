@@ -1,12 +1,12 @@
 /**
  * DDOO Animation Bundle - 자동 생성됨
- * 생성일: 2026-01-03T16:59:19.246Z
+ * 생성일: 2026-01-03T17:02:57.364Z
  * 
  * 이 파일을 포함하면 fetch 없이 모든 애니메이션/VFX 데이터 사용 가능!
  * <script src="anim-bundle.js"></script>
  */
 
-// 애니메이션 데이터 (41개)
+// 애니메이션 데이터 (43개)
 window.ANIM_BUNDLE = {
   "card.bash": {
     "id": "card.bash",
@@ -218,39 +218,39 @@ window.ANIM_BUNDLE = {
       },
       {
         "anim": "player.flurry_stab1",
-        "wait": true,
-        "damage": 2
+        "wait": false
       },
       {
         "anim": "enemy.flurry_hit",
-        "wait": false,
-        "delay": 10
+        "wait": true,
+        "delay": 25,
+        "damage": 2
       },
       {
-        "delay": 30
+        "delay": 20
       },
       {
         "anim": "player.flurry_stab2",
-        "wait": true,
-        "damage": 2
+        "wait": false
       },
       {
         "anim": "enemy.flurry_hit",
-        "wait": false,
-        "delay": 10
+        "wait": true,
+        "delay": 25,
+        "damage": 2
       },
       {
-        "delay": 30
+        "delay": 20
       },
       {
         "anim": "player.flurry_stab3",
-        "wait": true,
-        "damage": 2
+        "wait": false
       },
       {
         "anim": "enemy.flurry_hit",
         "wait": true,
-        "delay": 10
+        "delay": 25,
+        "damage": 2
       }
     ]
   },
@@ -258,7 +258,7 @@ window.ANIM_BUNDLE = {
     "id": "card.flurryP",
     "name": "연속 찌르기+",
     "type": "sequence",
-    "description": "4번 연속으로 빠르게 찌른다",
+    "description": "5번 연속으로 빠르게 찌른다",
     "returnToBase": true,
     "steps": [
       {
@@ -267,52 +267,65 @@ window.ANIM_BUNDLE = {
       },
       {
         "anim": "player.flurry_stab1",
-        "wait": true,
-        "damage": 3
+        "wait": false
       },
       {
         "anim": "enemy.flurry_hit",
-        "wait": false,
-        "delay": 10
+        "wait": true,
+        "delay": 20,
+        "damage": 3
       },
       {
-        "delay": 25
+        "delay": 15
       },
       {
         "anim": "player.flurry_stab2",
-        "wait": true,
-        "damage": 3
+        "wait": false
       },
       {
         "anim": "enemy.flurry_hit",
-        "wait": false,
-        "delay": 10
+        "wait": true,
+        "delay": 20,
+        "damage": 3
       },
       {
-        "delay": 25
+        "delay": 15
       },
       {
         "anim": "player.flurry_stab3",
-        "wait": true,
-        "damage": 3
+        "wait": false
       },
       {
         "anim": "enemy.flurry_hit",
-        "wait": false,
-        "delay": 10
+        "wait": true,
+        "delay": 20,
+        "damage": 3
       },
       {
-        "delay": 25
+        "delay": 15
       },
       {
         "anim": "player.flurry_stab1",
-        "wait": true,
-        "damage": 3
+        "wait": false
       },
       {
         "anim": "enemy.flurry_hit",
         "wait": true,
-        "delay": 10
+        "delay": 20,
+        "damage": 3
+      },
+      {
+        "delay": 15
+      },
+      {
+        "anim": "player.flurry_stab2",
+        "wait": false
+      },
+      {
+        "anim": "enemy.flurry_hit",
+        "wait": true,
+        "delay": 20,
+        "damage": 3
       }
     ]
   },
@@ -812,6 +825,168 @@ window.ANIM_BUNDLE = {
   "enemy.flurry_hit": {
     "id": "enemy.flurry_hit",
     "name": "연속찌르기 피격",
+    "target": "enemy",
+    "type": "once",
+    "priority": 16,
+    "duration": 85,
+    "keyframes": [
+      {
+        "x": 0,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "alpha": 1,
+        "rotation": 0,
+        "duration": 0
+      },
+      {
+        "x": 30,
+        "y": -8,
+        "scaleX": 0.75,
+        "scaleY": 1.28,
+        "alpha": 0.5,
+        "rotation": 0.12,
+        "duration": 10,
+        "ease": "power4.out",
+        "vfx": "flurry_hit",
+        "vfxTarget": "self"
+      },
+      {
+        "x": 40,
+        "y": -3,
+        "scaleX": 0.72,
+        "scaleY": 1.32,
+        "alpha": 0.45,
+        "rotation": 0.15,
+        "duration": 12,
+        "ease": "power2.out"
+      },
+      {
+        "x": -12,
+        "y": 4,
+        "scaleX": 1.05,
+        "scaleY": 0.96,
+        "alpha": 0.65,
+        "rotation": -0.06,
+        "duration": 15,
+        "ease": "power2.out"
+      },
+      {
+        "x": 5,
+        "y": 2,
+        "scaleX": 0.97,
+        "scaleY": 1.03,
+        "alpha": 0.8,
+        "rotation": 0.02,
+        "duration": 18,
+        "ease": "elastic.out(1, 0.7)"
+      },
+      {
+        "x": -2,
+        "y": 0,
+        "scaleX": 1.01,
+        "scaleY": 0.99,
+        "alpha": 0.92,
+        "rotation": -0.01,
+        "duration": 15,
+        "ease": "power2.out"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "alpha": 1,
+        "rotation": 0,
+        "duration": 15,
+        "ease": "power2.out"
+      }
+    ]
+  },
+  "enemy.flurry_hit_left": {
+    "id": "enemy.flurry_hit_left",
+    "name": "연속찌르기 피격 - 왼쪽",
+    "target": "enemy",
+    "type": "once",
+    "priority": 16,
+    "duration": 85,
+    "keyframes": [
+      {
+        "x": 0,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "alpha": 1,
+        "rotation": 0,
+        "duration": 0
+      },
+      {
+        "x": -30,
+        "y": -8,
+        "scaleX": 0.75,
+        "scaleY": 1.28,
+        "alpha": 0.5,
+        "rotation": -0.12,
+        "duration": 10,
+        "ease": "power4.out",
+        "vfx": "flurry_hit",
+        "vfxTarget": "self"
+      },
+      {
+        "x": -40,
+        "y": -3,
+        "scaleX": 0.72,
+        "scaleY": 1.32,
+        "alpha": 0.45,
+        "rotation": -0.15,
+        "duration": 12,
+        "ease": "power2.out"
+      },
+      {
+        "x": 12,
+        "y": 4,
+        "scaleX": 1.05,
+        "scaleY": 0.96,
+        "alpha": 0.65,
+        "rotation": 0.06,
+        "duration": 15,
+        "ease": "power2.out"
+      },
+      {
+        "x": -5,
+        "y": 2,
+        "scaleX": 0.97,
+        "scaleY": 1.03,
+        "alpha": 0.8,
+        "rotation": -0.02,
+        "duration": 18,
+        "ease": "elastic.out(1, 0.7)"
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "scaleX": 1.01,
+        "scaleY": 0.99,
+        "alpha": 0.92,
+        "rotation": 0.01,
+        "duration": 15,
+        "ease": "power2.out"
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "scaleX": 1,
+        "scaleY": 1,
+        "alpha": 1,
+        "rotation": 0,
+        "duration": 15,
+        "ease": "power2.out"
+      }
+    ]
+  },
+  "enemy.flurry_hit_right": {
+    "id": "enemy.flurry_hit_right",
+    "name": "연속찌르기 피격 - 오른쪽",
     "target": "enemy",
     "type": "once",
     "priority": 16,

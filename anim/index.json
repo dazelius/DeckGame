@@ -14,6 +14,8 @@
   "enemy.dagger_hit",
   "enemy.dash",
   "enemy.flurry_hit",
+  "enemy.flurry_hit_left",
+  "enemy.flurry_hit_right",
   "enemy.hit",
   "enemy.hit_left",
   "enemy.hit_right",
