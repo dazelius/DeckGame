@@ -133,15 +133,28 @@ Object.assign(cardDatabase, {
         cost: 1,
         icon: '<img src="slash.png" alt="Slash" class="card-icon-img">',
         description: '<span class="damage">6</span> 데미지를 줍니다.',
+        animationId: 'strike',  // 🎬 DDOO Action 연결!
         effect: (state) => {
-            const playerEl = document.getElementById('player');
-            const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
-            
-            // 플레이어 돌진
-            EffectSystem.playerAttack(playerEl, enemyEl, () => {
-                EffectSystem.slash(enemyEl, { color: '#ff4444', count: 1 });
-                dealDamage(state.enemy, 6);
-            });
+            // 🎬 CardAnimations 사용 (DDOOAction 연결)
+            if (typeof CardAnimations !== 'undefined' && CardAnimations.has('strike')) {
+                CardAnimations.play('strike', {
+                    target: state.enemy,
+                    targetEl: typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : null,
+                    damage: 6,
+                    onHit: () => {
+                        dealDamage(state.enemy, 6);
+                    },
+                    onComplete: () => {}
+                });
+            } else {
+                // 폴백
+                const playerEl = document.getElementById('player');
+                const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
+                EffectSystem.playerAttack(playerEl, enemyEl, () => {
+                    EffectSystem.slash(enemyEl, { color: '#ff4444', count: 1 });
+                    dealDamage(state.enemy, 6);
+                });
+            }
             
             addLog('베기로 6 데미지!', 'damage');
         }
@@ -208,22 +221,36 @@ Object.assign(cardDatabase, {
         cost: 2,
         icon: '<img src="gangta.png" alt="Bash" class="card-icon-img">',
         description: '<span class="damage">12</span> 데미지.<br><span class="debuff-val">취약</span> 2턴 부여.',
+        animationId: 'bash',  // 🎬 DDOO Action 연결!
         effect: (state) => {
-            const playerEl = document.getElementById('player');
-            const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
+            // 🎬 CardAnimations 사용 (DDOOAction 연결)
+            if (typeof CardAnimations !== 'undefined' && CardAnimations.has('bash')) {
+                CardAnimations.play('bash', {
+                    target: state.enemy,
+                    targetEl: typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : null,
+                    damage: 12,
+                    onHit: () => {
+                        dealDamage(state.enemy, 12);
+                        // 취약 부여
+                        state.enemy.vulnerable = (state.enemy.vulnerable || 0) + 2;
+                        addLog(`${state.enemy.name}에게 취약 2턴!`, 'debuff');
+                    },
+                    onComplete: () => {}
+                });
+            } else {
+                // 폴백
+                const playerEl = document.getElementById('player');
+                const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
+                EffectSystem.playerAttack(playerEl, enemyEl, () => {
+                    EffectSystem.impact(enemyEl, { color: '#ff6b35', size: 200 });
+                    EffectSystem.screenShake(12, 300);
+                    dealDamage(state.enemy, 12);
+                    state.enemy.vulnerable = (state.enemy.vulnerable || 0) + 2;
+                    addLog(`${state.enemy.name}에게 취약 2턴!`, 'debuff');
+                });
+            }
             
-            // 플레이어 돌진
-            EffectSystem.playerAttack(playerEl, enemyEl, () => {
-                EffectSystem.impact(enemyEl, { color: '#ff6b35', size: 200 });
-                EffectSystem.screenShake(12, 300);
-                dealDamage(state.enemy, 12);
-                
-                // 취약 부여
-                state.enemy.vulnerable = (state.enemy.vulnerable || 0) + 2;
-                addLog(`${state.enemy.name}에게 취약 2턴!`, 'debuff');
-            });
-            
-            addLog('강타로 10 데미지!', 'damage');
+            addLog('강타로 12 데미지!', 'damage');
         }
     },
     
