@@ -26,7 +26,7 @@ const CardAnimations = {
             { id: 'flurry', name: '연속 찌르기', jsonId: 'card.flurry' },
             { id: 'flurryP', name: '연속 찌르기+', jsonId: 'card.flurryP' },
             { id: 'dirtyStrike', name: '비열한 일격', jsonId: 'card.dirtystrike' },
-            { id: 'dirtyStrikeP', name: '비열한 일격+', jsonId: 'card.dirtystrike' },
+            { id: 'dirtyStrikeP', name: '비열한 일격+', jsonId: 'card.dirtystrikeP' },
             { id: 'dodge', name: '닷지', jsonId: 'card.dodge' },
             { id: 'dodgeP', name: '닷지+', jsonId: 'card.dodge' },
             { id: 'dagger', name: '단검 투척', jsonId: 'card.dagger' }

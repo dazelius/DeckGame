@@ -6,13 +6,13 @@
     "returnToBase": true,
     "steps": [
         { "anim": "player.dash", "wait": true },
-        { "anim": "player.flurry_stab1", "wait": true, "damage": 3 },
+        { "anim": "player.flurry_stab1", "wait": true, "damage": 2 },
         { "anim": "enemy.flurry_hit", "wait": false, "delay": 10 },
         { "delay": 30 },
-        { "anim": "player.flurry_stab2", "wait": true, "damage": 3 },
+        { "anim": "player.flurry_stab2", "wait": true, "damage": 2 },
         { "anim": "enemy.flurry_hit", "wait": false, "delay": 10 },
         { "delay": 30 },
-        { "anim": "player.flurry_stab3", "wait": true, "damage": 3 },
+        { "anim": "player.flurry_stab3", "wait": true, "damage": 2 },
         { "anim": "enemy.flurry_hit", "wait": true, "delay": 10 }
     ]
 }
