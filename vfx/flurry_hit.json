@@ -1,38 +1,44 @@
 {
     "id": "flurry_hit",
     "name": "세검 적중",
-    "shake": 2,
+    "shake": 3,
     "particles": [
         {
             "type": "flash",
-            "size": 35,
+            "size": 100,
             "color": "#ffffff",
-            "life": 35
+            "life": 45
+        },
+        {
+            "type": "flash",
+            "size": 70,
+            "color": "#c4b5fd",
+            "life": 65
         },
         {
             "type": "ring",
-            "size": 15,
-            "maxSize": 55,
+            "size": 25,
+            "maxSize": 100,
             "color": "#a5b4fc",
-            "life": 100
+            "life": 130
         },
         {
             "type": "spark",
-            "count": 10,
-            "spread": 50,
-            "speed": [10, 20],
-            "size": [2, 5],
+            "count": 18,
+            "spread": 90,
+            "speed": [15, 35],
+            "size": [4, 12],
             "colors": ["#a5b4fc", "#c4b5fd", "#f0abfc", "#ffffff"],
-            "life": [70, 140]
+            "life": [90, 180]
         },
         {
             "type": "line",
-            "count": 8,
-            "angleStep": 45,
-            "length": [20, 45],
-            "width": 2,
+            "count": 12,
+            "angleStep": 30,
+            "length": [40, 90],
+            "width": 4,
             "color": "#c4b5fd",
-            "life": 70
+            "life": 100
         }
     ]
 }

@@ -1,61 +1,66 @@
 {
     "id": "heavy_slash",
     "name": "대검 베기",
-    "shake": 8,
+    "shake": 10,
     "particles": [
         {
             "type": "flash",
-            "size": 70,
+            "size": 180,
             "color": "#ffffff",
-            "life": 60
+            "life": 70
+        },
+        {
+            "type": "flash",
+            "size": 130,
+            "color": "#f59e0b",
+            "life": 90
         },
         {
             "type": "slash",
             "count": 1,
             "delay": 0,
             "angle": [-45],
-            "length": [200, 250],
-            "width": 12,
+            "length": [450, 550],
+            "width": 20,
             "color": "#ffffff",
             "glow": "#f59e0b",
-            "life": 180
+            "life": 200
         },
         {
             "type": "slash",
             "count": 1,
             "delay": 0,
             "angle": [-45],
-            "length": [160, 200],
-            "width": 35,
+            "length": [350, 450],
+            "width": 60,
             "color": "rgba(245, 158, 11, 0.5)",
             "glow": "#d97706",
-            "life": 140
+            "life": 170
         },
         {
             "type": "ring",
-            "size": 25,
-            "maxSize": 100,
+            "size": 50,
+            "maxSize": 220,
             "color": "#f59e0b",
-            "life": 180
+            "life": 250
         },
         {
             "type": "spark",
-            "count": 15,
-            "spread": 70,
-            "speed": [6, 14],
-            "size": [3, 8],
+            "count": 30,
+            "spread": 120,
+            "speed": [18, 45],
+            "size": [6, 16],
             "colors": ["#f59e0b", "#fbbf24", "#ffffff"],
-            "life": [180, 320]
+            "life": [150, 300]
         },
         {
             "type": "debris",
-            "count": 8,
-            "speed": [5, 12],
-            "size": [3, 7],
+            "count": 15,
+            "speed": [12, 30],
+            "size": [5, 12],
             "colors": ["#f59e0b", "#d97706"],
-            "gravity": 0.3,
-            "life": [220, 380]
+            "gravity": 0.35,
+            "life": [250, 450]
         }
     ]
 }
-
