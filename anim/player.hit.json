@@ -1,0 +1,22 @@
+{
+    "id": "player.hit",
+    "name": "플레이어 피격",
+    "target": "player",
+    "type": "once",
+    "priority": 20,
+    "duration": 250,
+    "keyframes": [
+        { "x": 0, "scaleX": 1, "scaleY": 1, "tint": "0xffffff", "duration": 0 },
+        { "x": -15, "scaleX": 0.85, "scaleY": 1.15, "tint": "0xff6666", "duration": 40, "ease": "power4.out" },
+        { "x": -15, "scaleX": 0.85, "scaleY": 1.15, "tint": "0xff6666", "duration": 60 },
+        { "x": 0, "scaleX": 1, "scaleY": 1, "tint": "0xffffff", "duration": 150, "ease": "elastic.out(1,0.5)" }
+    ],
+    "events": {
+        "onStart": {
+            "vfx": "hit",
+            "shake": 12,
+            "sound": "hit"
+        }
+    }
+}
+

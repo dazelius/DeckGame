@@ -1,0 +1,20 @@
+{
+    "id": "card.bash",
+    "name": "강타",
+    "type": "sequence",
+    "priority": 12,
+    "description": "강력한 일격",
+    "steps": [
+        { "anim": "player.dash", "wait": false },
+        { "delay": 100 },
+        { "anim": "player.attack", "wait": true, "callback": "onHit", "callbackArg": 0 },
+        { "anim": "enemy.hit", "wait": false },
+        { "delay": 50 },
+        { "anim": "player.return", "wait": true }
+    ],
+    "vfx": {
+        "color": "#ef4444",
+        "shake": 15
+    }
+}
+

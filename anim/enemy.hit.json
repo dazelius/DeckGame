@@ -1,0 +1,22 @@
+{
+    "id": "enemy.hit",
+    "name": "적 피격",
+    "target": "enemy",
+    "type": "once",
+    "priority": 20,
+    "duration": 250,
+    "keyframes": [
+        { "x": 0, "scaleX": 1, "scaleY": 1, "tint": "0xffffff", "duration": 0 },
+        { "x": 20, "scaleX": 0.8, "scaleY": 1.2, "tint": "0xff4444", "duration": 40, "ease": "power4.out" },
+        { "x": 20, "scaleX": 0.8, "scaleY": 1.2, "tint": "0xff4444", "duration": 80 },
+        { "x": 0, "scaleX": 1, "scaleY": 1, "tint": "0xffffff", "duration": 130, "ease": "elastic.out(1,0.5)" }
+    ],
+    "events": {
+        "onStart": {
+            "vfx": "blood",
+            "shake": 8,
+            "sound": "hit"
+        }
+    }
+}
+

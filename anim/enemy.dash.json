@@ -1,0 +1,18 @@
+{
+    "id": "enemy.dash",
+    "name": "적 대시",
+    "target": "enemy",
+    "type": "once",
+    "priority": 15,
+    "duration": 150,
+    "keyframes": [
+        { "x": 0, "scaleX": 1, "scaleY": 1, "duration": 0 },
+        { "x": -200, "scaleX": 1.1, "scaleY": 0.95, "duration": 150, "ease": "power2.out" }
+    ],
+    "events": {
+        "onStart": {
+            "sound": "dash"
+        }
+    }
+}
+

@@ -1,0 +1,25 @@
+{
+    "id": "card.flurry",
+    "name": "연속 찌르기",
+    "type": "sequence",
+    "priority": 15,
+    "description": "3회 연속 찌르기 공격",
+    "steps": [
+        { "anim": "player.dash", "wait": true },
+        { "anim": "player.stab", "wait": true, "callback": "onHit", "callbackArg": 0 },
+        { "anim": "enemy.hit", "wait": false },
+        { "delay": 80 },
+        { "anim": "player.stab", "wait": true, "callback": "onHit", "callbackArg": 1 },
+        { "anim": "enemy.hit", "wait": false },
+        { "delay": 80 },
+        { "anim": "player.stab", "wait": true, "callback": "onHit", "callbackArg": 2 },
+        { "anim": "enemy.hit", "wait": false },
+        { "delay": 100 },
+        { "anim": "player.return", "wait": true }
+    ],
+    "vfx": {
+        "color": "#60a5fa",
+        "hitNumbers": true
+    }
+}
+

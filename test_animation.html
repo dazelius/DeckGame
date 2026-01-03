@@ -399,6 +399,24 @@
                         콤보 공격
                     </button>
                 </div>
+                
+                <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #3a3a5a;">
+                    <div class="anim-category-title">📄 JSON 시퀀스</div>
+                    <div class="preset-grid">
+                        <button class="preset-btn" onclick="runPreset('strike')" style="background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%); color: #000;">
+                            <span class="emoji">⚔️</span>
+                            card.strike
+                        </button>
+                        <button class="preset-btn" onclick="runPreset('bash')" style="background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);">
+                            <span class="emoji">💥</span>
+                            card.bash
+                        </button>
+                        <button class="preset-btn" onclick="runPreset('flurryP')" style="background: linear-gradient(180deg, #818cf8 0%, #6366f1 100%);">
+                            <span class="emoji">🗡️</span>
+                            card.flurryP
+                        </button>
+                    </div>
+                </div>
             </div>
             
             <!-- 개별 애니메이션 -->
@@ -505,6 +523,40 @@
     
     <script>
         // ==========================================
+        // JSON 애니메이션 로더 (인라인)
+        // ==========================================
+        const AnimData = {
+            cache: new Map(),
+            basePath: 'anim/',
+            
+            async load(id) {
+                if (this.cache.has(id)) return this.cache.get(id);
+                
+                try {
+                    const response = await fetch(`${this.basePath}${id}.json`);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const data = await response.json();
+                    this.cache.set(id, data);
+                    console.log(`[AnimData] ✅ 로드: ${id}`);
+                    return data;
+                } catch (e) {
+                    console.warn(`[AnimData] ⚠️ 로드 실패: ${id}`);
+                    return null;
+                }
+            },
+            
+            get(id) {
+                return this.cache.get(id) || null;
+            },
+            
+            async preload(ids) {
+                await Promise.all(ids.map(id => this.load(id)));
+            }
+        };
+    </script>
+    
+    <script>
+        // ==========================================
         // 애니메이션 시뮬레이터
         // ==========================================
         
@@ -530,8 +582,38 @@
             await initPixi();
             initVFX();
             startUpdateLoop();
+            
+            // JSON 애니메이션 사전 로드
+            await loadAnimations();
+            
             log('info', '시뮬레이터 초기화 완료');
         });
+        
+        // JSON 애니메이션 로드
+        async function loadAnimations() {
+            log('info', '📂 애니메이션 데이터 로드 중...');
+            
+            const animations = [
+                'player.attack', 'player.stab', 'player.hit', 'player.dash', 
+                'player.defend', 'player.return',
+                'enemy.attack', 'enemy.hit', 'enemy.dash',
+                'card.strike', 'card.bash', 'card.flurry', 'card.flurryP'
+            ];
+            
+            await AnimData.preload(animations);
+            
+            log('success', `✅ ${AnimData.cache.size}개 애니메이션 로드 완료`);
+            
+            // 로드된 목록 표시
+            updateAnimList();
+        }
+        
+        // 로드된 애니메이션 목록 업데이트
+        function updateAnimList() {
+            AnimData.cache.forEach((anim, id) => {
+                log('anim', `  📄 ${id}: ${anim.name || id}`);
+            });
+        }
         
         // PixiJS 초기화
         async function initPixi() {
@@ -738,7 +820,135 @@
         // 애니메이션 함수들
         // ==========================================
         
+        // JSON 데이터 기반 애니메이션 재생
+        async function playAnimFromJSON(animId) {
+            const animData = AnimData.get(animId);
+            
+            if (!animData) {
+                log('warn', `⚠️ 애니메이션 없음: ${animId}, 로드 시도...`);
+                const loaded = await AnimData.load(animId);
+                if (!loaded) {
+                    log('error', `❌ 로드 실패: ${animId}`);
+                    return;
+                }
+                return playAnimFromJSON(animId);
+            }
+            
+            log('anim', `▶️ [JSON] ${animId}: ${animData.name}`);
+            
+            const target = animData.target || 'player';
+            const container = target === 'player' ? playerContainer : enemyContainer;
+            const sprite = target === 'player' ? playerSprite : enemySprite;
+            const baseX = target === 'player' ? config.playerBaseX : config.enemyBaseX;
+            const direction = target === 'player' ? 1 : -1;
+            
+            // 이전 애니메이션 킬
+            gsap.killTweensOf(container);
+            gsap.killTweensOf(container.scale);
+            gsap.killTweensOf(sprite);
+            
+            // 시퀀스 타입
+            if (animData.type === 'sequence' && animData.steps) {
+                return playSequenceFromJSON(animData);
+            }
+            
+            // 키프레임 타입
+            if (animData.keyframes) {
+                return playKeyframesFromJSON(animData, container, sprite, direction, baseX);
+            }
+        }
+        
+        // 시퀀스 애니메이션 재생
+        async function playSequenceFromJSON(animData) {
+            log('anim', `🎬 시퀀스 시작: ${animData.id}`);
+            
+            for (const step of animData.steps) {
+                if (step.delay) {
+                    await delay(step.delay);
+                    continue;
+                }
+                
+                if (step.anim) {
+                    const promise = playAnimFromJSON(step.anim);
+                    
+                    if (step.callback) {
+                        log('info', `📞 콜백: ${step.callback}(${step.callbackArg})`);
+                    }
+                    
+                    if (step.wait) {
+                        await promise;
+                    }
+                }
+            }
+            
+            log('success', `✅ 시퀀스 완료: ${animData.id}`);
+        }
+        
+        // 키프레임 애니메이션 재생
+        function playKeyframesFromJSON(animData, container, sprite, direction, baseX) {
+            return new Promise((resolve) => {
+                const tl = gsap.timeline({ 
+                    timeScale: config.speed,
+                    onComplete: resolve
+                });
+                
+                let elapsed = 0;
+                
+                animData.keyframes.forEach((kf, index) => {
+                    if (index === 0) return; // 첫 프레임은 초기값
+                    
+                    const duration = (kf.duration || 100) / 1000;
+                    const ease = kf.ease || 'power2.out';
+                    
+                    // 스프라이트 트윈
+                    const spriteProps = {};
+                    if (kf.x !== undefined) spriteProps.x = kf.x * direction;
+                    if (kf.rotation !== undefined) spriteProps.rotation = kf.rotation * direction;
+                    if (kf.scaleX !== undefined) spriteProps.scaleX = kf.scaleX;
+                    if (kf.scaleY !== undefined) spriteProps.scaleY = kf.scaleY;
+                    
+                    if (Object.keys(spriteProps).length > 0) {
+                        tl.to(sprite, { ...spriteProps, duration, ease }, elapsed);
+                    }
+                    
+                    // 이벤트 처리
+                    if (animData.events?.onPeak?.frame === index) {
+                        const event = animData.events.onPeak;
+                        tl.call(() => {
+                            if (config.vfxEnabled && event.vfx) {
+                                const pos = container.getGlobalPosition();
+                                if (event.vfx === 'slash' || event.vfx === 'stab') {
+                                    createSlashVFX(pos.x + 50 * direction, pos.y - 60, event.vfx === 'stab');
+                                } else if (event.vfx === 'hit' || event.vfx === 'blood') {
+                                    createHitVFX(pos.x, pos.y - 60);
+                                } else if (event.vfx === 'shield') {
+                                    createShieldVFX(pos.x, pos.y - 60);
+                                }
+                            }
+                            if (config.shakeEnabled && event.shake) {
+                                screenShake(event.shake);
+                            }
+                        }, null, elapsed + duration * 0.5);
+                    }
+                    
+                    elapsed += duration;
+                });
+                
+                // returnToBase 처리
+                if (animData.returnToBase) {
+                    tl.to(container, { x: baseX, duration: 0.2, ease: 'power2.out' }, elapsed);
+                }
+            });
+        }
+        
         function playAnim(target, animName) {
+            // JSON 데이터 먼저 확인
+            const animId = `${target}.${animName}`;
+            if (AnimData.has(animId)) {
+                return playAnimFromJSON(animId);
+            }
+            
+            // 폴백: 하드코딩된 애니메이션
             log('anim', `▶️ ${target}.${animName}`);
             
             const container = target === 'player' ? playerContainer : enemyContainer;
@@ -1014,20 +1224,46 @@
                     break;
                     
                 case 'flurry':
-                    // 연속 찌르기 (3회)
-                    playAnim('player', 'dash');
-                    await delay(150);
-                    
-                    for (let i = 0; i < 3; i++) {
-                        playAnim('player', 'stab');
-                        await delay(50);
-                        playAnim('enemy', 'hit');
-                        log('anim', `💥 ${i + 1}번째 타격!`);
+                    // JSON 시퀀스 사용
+                    if (AnimData.has('card.flurry')) {
+                        await playAnimFromJSON('card.flurry');
+                    } else {
+                        // 폴백: 하드코딩
+                        playAnim('player', 'dash');
                         await delay(150);
+                        
+                        for (let i = 0; i < 3; i++) {
+                            playAnim('player', 'stab');
+                            await delay(50);
+                            playAnim('enemy', 'hit');
+                            log('anim', `💥 ${i + 1}번째 타격!`);
+                            await delay(150);
+                        }
+                        
+                        await delay(100);
+                        playAnim('player', 'return');
                     }
+                    break;
                     
-                    await delay(100);
-                    playAnim('player', 'return');
+                case 'flurryP':
+                    // JSON 시퀀스 사용 (연속 찌르기+)
+                    if (AnimData.has('card.flurryP')) {
+                        await playAnimFromJSON('card.flurryP');
+                    }
+                    break;
+                    
+                case 'strike':
+                    // JSON 시퀀스 사용 (베기)
+                    if (AnimData.has('card.strike')) {
+                        await playAnimFromJSON('card.strike');
+                    }
+                    break;
+                    
+                case 'bash':
+                    // JSON 시퀀스 사용 (강타)
+                    if (AnimData.has('card.bash')) {
+                        await playAnimFromJSON('card.bash');
+                    }
                     break;
                     
                 case 'playerHit':
