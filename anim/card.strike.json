@@ -2,14 +2,18 @@
     "id": "card.strike",
     "name": "베기",
     "type": "sequence",
+    "target": "player",
     "priority": 10,
-    "description": "기본 공격",
+    "description": "기본 공격: 대시 → 공격 → 복귀",
     "steps": [
-        { "anim": "player.attack", "wait": true, "callback": "onHit", "callbackArg": 0 },
-        { "anim": "enemy.hit", "wait": false }
+        { "anim": "player.dash", "wait": true },
+        { "anim": "player.attack", "wait": false },
+        { "anim": "enemy.hit", "wait": true, "delay": 40 },
+        { "delay": 100 },
+        { "anim": "player.return", "wait": true }
     ],
     "vfx": {
+        "onHit": "slash",
         "color": "#fbbf24"
     }
 }
-
