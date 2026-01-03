@@ -535,9 +535,16 @@ const DDOOAction = {
                         await this.delay(step.delay);
                     }
                     
+                    // 🎲 적 피격 애니메이션은 랜덤 방향 적용!
+                    let animDir = dir;
+                    if (animData.target === 'enemy' && animData.id?.includes('hit')) {
+                        animDir = Math.random() > 0.5 ? 1 : -1;
+                    }
+                    
                     // 애니메이션 재생
                     const promise = this.playKeyframes(animData, {
                         ...options,
+                        dir: animDir,
                         isRelative: true,  // 시퀀스 내에서는 상대 좌표
                         stepEvents: step   // 스텝에 정의된 이벤트 전달
                     });
