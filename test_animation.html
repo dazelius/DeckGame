@@ -231,11 +231,15 @@
         };
         
         const animCache = new Map();
+        const vfxCache = new Map();
+        
         const ANIM_FILES = [
             'player.attack', 'player.dash', 'player.defend', 'player.hit', 'player.return', 'player.stab',
             'enemy.attack', 'enemy.dash', 'enemy.hit',
             'card.strike', 'card.bash', 'card.flurry', 'card.flurryP'
         ];
+        
+        const VFX_FILES = ['slash', 'hit', 'spark', 'dash', 'stab', 'critical', 'block'];
         
         // VFX 파티클 풀
         const particles = [];
@@ -245,6 +249,7 @@
         document.addEventListener('DOMContentLoaded', async () => {
             log('info', '🎬 FGO-Style Animation Studio 초기화...');
             await initPixi();
+            await loadAllVFX();
             await loadAllAnimations();
             renderAnimList();
             startVFXLoop();
@@ -373,6 +378,22 @@
         }
         
         // ==================== JSON 로드 ====================
+        async function loadAllVFX() {
+            log('info', '💥 Loading VFX...');
+            for (const id of VFX_FILES) {
+                try {
+                    const res = await fetch(`vfx/${id}.json`);
+                    if (res.ok) {
+                        vfxCache.set(id, await res.json());
+                        log('success', `✅ vfx/${id}`);
+                    }
+                } catch (e) {
+                    log('warn', `⚠️ vfx/${id} failed`);
+                }
+            }
+            log('info', `Loaded: ${vfxCache.size} VFX`);
+        }
+        
         async function loadAllAnimations() {
             log('info', '📁 Loading animations...');
             for (const id of ANIM_FILES) {
@@ -575,165 +596,176 @@
             startBreathing();
         }
         
-        // ==================== VFX 시스템 (FGO 스타일) ====================
-        function triggerVFX(type, container, dir) {
+        // ==================== VFX 시스템 (JSON 기반) ====================
+        function triggerVFX(vfxId, container, dir) {
+            const vfxData = vfxCache.get(vfxId);
+            if (!vfxData) {
+                log('warn', `⚠️ VFX not found: ${vfxId}`);
+                return;
+            }
+            
             const x = container.x;
             const y = container.y - 60;
             
-            log('vfx', `💥 ${type} at (${x.toFixed(0)}, ${y.toFixed(0)})`);
+            log('vfx', `💥 ${vfxId} at (${x.toFixed(0)}, ${y.toFixed(0)})`);
             
-            switch (type) {
-                case 'slash':
-                    vfxSlash(x, y, dir);
-                    break;
-                case 'hit':
-                    vfxImpact(x, y);
-                    break;
-                case 'spark':
-                    vfxSparks(x, y);
-                    break;
-                case 'dash':
-                    vfxDashTrail(container);
-                    break;
+            // VFX에 정의된 shake 실행
+            if (vfxData.shake) {
+                screenShake(vfxData.shake);
+            }
+            
+            // 각 파티클 정의 처리
+            for (const pDef of vfxData.particles) {
+                spawnParticlesFromDef(pDef, x, y, dir, container);
             }
         }
         
-        // 슬래시 VFX (FGO 스타일)
-        function vfxSlash(x, y, dir) {
-            const slashCount = 2;
+        // JSON 정의에서 파티클 생성
+        function spawnParticlesFromDef(def, x, y, dir, container) {
+            const count = def.count || 1;
+            const delayBetween = def.delay || 0;
             
-            for (let i = 0; i < slashCount; i++) {
+            for (let i = 0; i < count; i++) {
                 setTimeout(() => {
-                    const angle = -30 + (i * 60);
-                    const length = 120 + Math.random() * 40;
-                    
-                    // 메인 슬래시
-                    spawnParticle({
-                        type: 'slash',
-                        x, y,
-                        angle: angle * dir,
-                        length: length,
-                        width: 8,
-                        color: '#ffffff',
-                        glow: '#60a5fa',
-                        life: 150
-                    });
-                    
-                    // 글로우 슬래시
-                    spawnParticle({
-                        type: 'slash',
-                        x, y,
-                        angle: angle * dir,
-                        length: length * 0.8,
-                        width: 20,
-                        color: 'rgba(96, 165, 250, 0.5)',
-                        glow: '#60a5fa',
-                        life: 100
-                    });
-                    
-                    // 스파크 파티클
-                    for (let j = 0; j < 8; j++) {
-                        spawnParticle({
-                            type: 'spark',
-                            x: x + (Math.random() - 0.5) * 60,
-                            y: y + (Math.random() - 0.5) * 60,
-                            vx: (Math.random() - 0.5) * 15,
-                            vy: (Math.random() - 0.5) * 15 - 3,
-                            size: 2 + Math.random() * 3,
-                            color: '#fbbf24',
-                            life: 200 + Math.random() * 100
-                        });
+                    switch (def.type) {
+                        case 'slash':
+                        case 'thrust':
+                            spawnSlashParticle(def, x, y, dir, i);
+                            break;
+                        case 'spark':
+                            spawnSparkParticle(def, x, y);
+                            break;
+                        case 'flash':
+                            spawnFlashParticle(def, x, y);
+                            break;
+                        case 'ring':
+                            spawnRingParticle(def, x, y);
+                            break;
+                        case 'line':
+                            spawnLineParticle(def, x, y, i);
+                            break;
+                        case 'debris':
+                            spawnDebrisParticle(def, x, y);
+                            break;
+                        case 'trail':
+                            spawnTrailParticle(def, container, i);
+                            break;
                     }
-                }, i * 50);
+                }, i * delayBetween);
             }
         }
         
-        // 임팩트 VFX
-        function vfxImpact(x, y) {
-            // 중심 플래시
+        function spawnSlashParticle(def, x, y, dir, index) {
+            const angles = Array.isArray(def.angle) ? def.angle : [def.angle || 0];
+            const angle = angles[index % angles.length] || (Math.random() - 0.5) * 60;
+            const length = getRandValue(def.length);
+            
+            spawnParticle({
+                type: 'slash',
+                x, y,
+                angle: angle * dir,
+                length: length,
+                width: def.width || 8,
+                color: def.color || '#ffffff',
+                glow: def.glow || '#60a5fa',
+                life: def.life || 150
+            });
+        }
+        
+        function spawnSparkParticle(def, x, y) {
+            const spread = def.spread || 50;
+            const speed = getRandValue(def.speed);
+            const size = getRandValue(def.size);
+            const angle = Math.random() * Math.PI * 2;
+            const colors = def.colors || [def.color || '#fbbf24'];
+            
+            spawnParticle({
+                type: 'spark',
+                x: x + (Math.random() - 0.5) * spread,
+                y: y + (Math.random() - 0.5) * spread,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 2,
+                size: size,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                life: getRandValue(def.life)
+            });
+        }
+        
+        function spawnFlashParticle(def, x, y) {
             spawnParticle({
                 type: 'flash',
                 x, y,
-                size: 80,
-                color: '#ffffff',
-                life: 80
+                size: def.size || 80,
+                color: def.color || '#ffffff',
+                life: def.life || 80
             });
-            
-            // 링 이펙트
+        }
+        
+        function spawnRingParticle(def, x, y) {
             spawnParticle({
                 type: 'ring',
                 x, y,
-                size: 20,
-                maxSize: 100,
-                color: '#ef4444',
-                life: 200
+                size: def.size || 20,
+                maxSize: def.maxSize || 100,
+                color: def.color || '#ef4444',
+                life: def.life || 200
             });
-            
-            // 충격파 라인
-            for (let i = 0; i < 12; i++) {
-                const angle = (Math.PI * 2 / 12) * i;
-                spawnParticle({
-                    type: 'line',
-                    x, y,
-                    angle: angle * (180 / Math.PI),
-                    length: 30 + Math.random() * 50,
-                    width: 3,
-                    color: '#fbbf24',
-                    life: 150
-                });
-            }
-            
-            // 파편
-            for (let i = 0; i < 15; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const speed = 5 + Math.random() * 10;
-                spawnParticle({
-                    type: 'debris',
-                    x, y,
-                    vx: Math.cos(angle) * speed,
-                    vy: Math.sin(angle) * speed - 5,
-                    size: 3 + Math.random() * 5,
-                    color: i % 2 === 0 ? '#ef4444' : '#fbbf24',
-                    gravity: 0.3,
-                    life: 300 + Math.random() * 200
-                });
-            }
-            
-            screenShake(12);
         }
         
-        // 스파크 VFX
-        function vfxSparks(x, y) {
-            for (let i = 0; i < 20; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const speed = 3 + Math.random() * 8;
-                spawnParticle({
-                    type: 'spark',
-                    x: x + (Math.random() - 0.5) * 30,
-                    y: y + (Math.random() - 0.5) * 30,
-                    vx: Math.cos(angle) * speed,
-                    vy: Math.sin(angle) * speed,
-                    size: 2 + Math.random() * 4,
-                    color: Math.random() > 0.5 ? '#fbbf24' : '#ffffff',
-                    life: 150 + Math.random() * 150
-                });
-            }
+        function spawnLineParticle(def, x, y, index) {
+            const angleStep = def.angleStep || 30;
+            const angle = index * angleStep;
+            const length = getRandValue(def.length);
+            
+            spawnParticle({
+                type: 'line',
+                x, y,
+                angle: angle,
+                length: length,
+                width: def.width || 3,
+                color: def.color || '#fbbf24',
+                life: def.life || 150
+            });
         }
         
-        // 대시 트레일
-        function vfxDashTrail(container) {
-            for (let i = 0; i < 5; i++) {
-                setTimeout(() => {
-                    spawnParticle({
-                        type: 'trail',
-                        x: container.x - i * 20,
-                        y: container.y - 50,
-                        size: 40 - i * 5,
-                        color: 'rgba(96, 165, 250, 0.3)',
-                        life: 150
-                    });
-                }, i * 20);
+        function spawnDebrisParticle(def, x, y) {
+            const speed = getRandValue(def.speed);
+            const size = getRandValue(def.size);
+            const angle = Math.random() * Math.PI * 2;
+            const colors = def.colors || [def.color || '#ef4444'];
+            
+            spawnParticle({
+                type: 'debris',
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 5,
+                size: size,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                gravity: def.gravity || 0.3,
+                life: getRandValue(def.life)
+            });
+        }
+        
+        function spawnTrailParticle(def, container, index) {
+            const offsetX = (def.offsetX || -20) * index;
+            const size = getRandValue(def.size) - index * 5;
+            
+            spawnParticle({
+                type: 'trail',
+                x: container.x + offsetX,
+                y: container.y - 50,
+                size: Math.max(size, 10),
+                color: def.color || 'rgba(96, 165, 250, 0.3)',
+                life: def.life || 150
+            });
+        }
+        
+        // 유틸: 배열이면 랜덤 범위, 아니면 그대로
+        function getRandValue(val) {
+            if (Array.isArray(val)) {
+                return val[0] + Math.random() * (val[1] - val[0]);
             }
+            return val || 0;
         }
         
         // 파티클 스폰

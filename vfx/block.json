@@ -1,0 +1,30 @@
+{
+    "id": "block",
+    "name": "방어",
+    "shake": 5,
+    "particles": [
+        {
+            "type": "flash",
+            "size": 60,
+            "color": "#60a5fa",
+            "life": 60
+        },
+        {
+            "type": "ring",
+            "size": 40,
+            "maxSize": 80,
+            "color": "#3b82f6",
+            "life": 150
+        },
+        {
+            "type": "spark",
+            "count": 10,
+            "spread": 50,
+            "speed": [3, 8],
+            "size": [2, 4],
+            "color": "#60a5fa",
+            "life": [100, 200]
+        }
+    ]
+}
+

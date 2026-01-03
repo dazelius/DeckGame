@@ -1,0 +1,51 @@
+{
+    "id": "critical",
+    "name": "크리티컬",
+    "shake": 15,
+    "hitstop": 80,
+    "particles": [
+        {
+            "type": "flash",
+            "size": 120,
+            "color": "#fbbf24",
+            "life": 100
+        },
+        {
+            "type": "slash",
+            "count": 3,
+            "delay": 30,
+            "angle": [-45, 0, 45],
+            "length": [150, 180],
+            "width": 10,
+            "color": "#ffffff",
+            "glow": "#fbbf24",
+            "life": 180
+        },
+        {
+            "type": "ring",
+            "size": 30,
+            "maxSize": 150,
+            "color": "#fbbf24",
+            "life": 250
+        },
+        {
+            "type": "spark",
+            "count": 25,
+            "spread": 80,
+            "speed": [8, 20],
+            "size": [3, 7],
+            "colors": ["#fbbf24", "#ffffff", "#f59e0b"],
+            "life": [250, 400]
+        },
+        {
+            "type": "debris",
+            "count": 20,
+            "speed": [8, 18],
+            "size": [4, 10],
+            "colors": ["#fbbf24", "#ef4444"],
+            "gravity": 0.4,
+            "life": [400, 600]
+        }
+    ]
+}
+
