@@ -1,56 +1,50 @@
 {
     "id": "flurry_stab",
-    "name": "세검 찌르기",
-    "duration": 150,
-    "offset": { "x": 0, "y": -30 },
+    "name": "연속 찌르기 이펙트",
+    "shake": 4,
     "particles": [
         {
             "type": "flash",
+            "size": 40,
             "color": "#ffffff",
-            "size": 80,
-            "alpha": 0.9,
-            "fadeOut": true
+            "life": 40
         },
         {
             "type": "arrow",
-            "count": 1,
-            "color": "#e0e7ff",
-            "glow": "#a78bfa",
-            "length": 200,
-            "width": 55,
-            "alpha": 0.95,
-            "lifetime": 120
+            "length": 70,
+            "width": 45,
+            "tipAngle": 25,
+            "color": "#93c5fd",
+            "glow": "#60a5fa",
+            "life": 100
         },
         {
-            "type": "arrow",
+            "type": "slash",
             "count": 1,
-            "color": "#ffffff",
-            "glow": "#818cf8",
-            "length": 160,
-            "width": 40,
-            "alpha": 0.85,
-            "lifetime": 100
-        },
-        {
-            "type": "line",
-            "count": 1,
-            "color": "#ffffff",
-            "glow": "#a78bfa",
-            "length": 350,
+            "angle": [0],
+            "length": [60, 90],
             "width": 6,
-            "angle": 0,
-            "alpha": 1,
-            "lifetime": 100
+            "color": "#ffffff",
+            "glow": "#60a5fa",
+            "life": 80
         },
         {
             "type": "spark",
-            "count": 15,
-            "color": "#c4b5fd",
-            "size": 5,
-            "speed": 140,
-            "spread": 40,
-            "alpha": 0.9,
-            "lifetime": 120
+            "count": 10,
+            "spread": 30,
+            "speed": [6, 14],
+            "size": [2, 5],
+            "colors": ["#60a5fa", "#93c5fd", "#ffffff"],
+            "life": [100, 180]
+        },
+        {
+            "type": "line",
+            "count": 4,
+            "angleStep": 90,
+            "length": [25, 45],
+            "width": 2,
+            "color": "#93c5fd",
+            "life": 80
         }
     ]
 }

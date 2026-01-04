@@ -1966,9 +1966,129 @@ const DDOOAction = {
                     case 'projectile':
                         this.spawnProjectileParticle(def, x, y, dir, scale);
                         break;
+                    // 새로운 고급 파티클 타입들
+                    case 'energy_orb':
+                        this.spawnEnergyOrbParticle(def, x, y, scale);
+                        break;
+                    case 'electric':
+                        this.spawnElectricParticle(def, x, y, i, scale);
+                        break;
+                    case 'wave':
+                        this.spawnWaveParticle(def, x, y, i, scale);
+                        break;
+                    case 'star':
+                        this.spawnStarParticle(def, x, y, scale);
+                        break;
+                    case 'comet':
+                        this.spawnCometParticle(def, x, y, scale);
+                        break;
                 }
             }, delayBetween * i);
         }
+    },
+    
+    // 🔮 에너지 오브 스폰
+    spawnEnergyOrbParticle(def, x, y, scale) {
+        const size = this.getRandValue(def.size) * scale;
+        const colors = Array.isArray(def.colors) ? def.colors : [def.color || '#fbbf24'];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const spread = (def.spread || 0) * scale;
+        
+        this.spawnParticle({
+            type: 'energy_orb',
+            x: x + (Math.random() - 0.5) * spread,
+            y: y + (Math.random() - 0.5) * spread,
+            startSize: size,
+            color: color,
+            life: this.getRandValue(def.life) || 150
+        });
+    },
+    
+    // ⚡ 전기 파티클 스폰
+    spawnElectricParticle(def, x, y, index, scale) {
+        const length = this.getRandValue(def.length) * scale;
+        const width = (def.width || 2) * scale;
+        const colors = Array.isArray(def.colors) ? def.colors : [def.color || '#60a5fa'];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const angleStep = def.angleStep || 45;
+        const angle = angleStep * index;
+        
+        this.spawnParticle({
+            type: 'electric',
+            x: x,
+            y: y,
+            length: length,
+            width: width,
+            angle: angle,
+            segments: def.segments || 5,
+            color: color,
+            life: this.getRandValue(def.life) || 120
+        });
+    },
+    
+    // 🌊 웨이브 파티클 스폰
+    spawnWaveParticle(def, x, y, index, scale) {
+        const startAngles = Array.isArray(def.startAngle) ? def.startAngle : [def.startAngle || -90];
+        const endAngles = Array.isArray(def.endAngle) ? def.endAngle : [def.endAngle || 90];
+        const colors = Array.isArray(def.colors) ? def.colors : [def.color || '#60a5fa'];
+        
+        this.spawnParticle({
+            type: 'wave',
+            x: x,
+            y: y,
+            startSize: (def.startSize || 30) * scale,
+            maxSize: (def.maxSize || 100) * scale,
+            thickness: (def.thickness || 8) * scale,
+            startAngle: startAngles[index % startAngles.length],
+            endAngle: endAngles[index % endAngles.length],
+            color: colors[index % colors.length],
+            life: this.getRandValue(def.life) || 150
+        });
+    },
+    
+    // ⭐ 별 파티클 스폰
+    spawnStarParticle(def, x, y, scale) {
+        const size = this.getRandValue(def.size) * scale;
+        const colors = Array.isArray(def.colors) ? def.colors : [def.color || '#fbbf24'];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const points = Array.isArray(def.points) ? 
+            def.points[Math.floor(Math.random() * def.points.length)] : 
+            (def.points || 4);
+        const spread = (def.spread || 0) * scale;
+        const rotationSpeed = this.getRandValue(def.rotationSpeed) || 0.08;
+        
+        this.spawnParticle({
+            type: 'star',
+            x: x + (Math.random() - 0.5) * spread,
+            y: y + (Math.random() - 0.5) * spread,
+            startSize: size,
+            points: points,
+            rotation: Math.random() * Math.PI * 2,
+            rotationSpeed: rotationSpeed,
+            color: color,
+            life: this.getRandValue(def.life) || 180
+        });
+    },
+    
+    // ☄️ 혜성 파티클 스폰
+    spawnCometParticle(def, x, y, scale) {
+        const size = this.getRandValue(def.size) * scale;
+        const colors = Array.isArray(def.colors) ? def.colors : [def.color || '#fbbf24'];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const speed = this.getRandValue(def.speed) * scale;
+        const angle = Math.random() * Math.PI * 2;
+        
+        this.spawnParticle({
+            type: 'comet',
+            x: x,
+            y: y,
+            startSize: size,
+            tailLength: (def.tailLength || 40) * scale,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            color: color,
+            life: this.getRandValue(def.life) || 250
+        });
     },
     
     // 🎯 프로젝타일 파티클 생성 (타겟을 향해 날아감)
@@ -2562,6 +2682,27 @@ const DDOOAction = {
                 p.rotation += p.rotationSpeed || 0;
                 this.drawVoxelParticle(p, alpha, progress);
                 break;
+            // ✨ 새로운 고급 파티클 타입들
+            case 'energy_orb':
+                this.drawEnergyOrbParticle(p, alpha, progress);
+                break;
+            case 'electric':
+                p.x += p.vx || 0;
+                p.y += p.vy || 0;
+                this.drawElectricParticle(p, alpha, progress);
+                break;
+            case 'wave':
+                this.drawWaveParticle(p, alpha, progress);
+                break;
+            case 'star':
+                p.rotation += p.rotationSpeed || 0.05;
+                this.drawStarParticle(p, alpha, progress);
+                break;
+            case 'comet':
+                p.x += p.vx || 0;
+                p.y += p.vy || 0;
+                this.drawCometParticle(p, alpha, progress);
+                break;
         }
     },
     
@@ -2582,6 +2723,224 @@ const DDOOAction = {
         
         ctx.beginPath();
         ctx.arc(p.x, p.y, size * (1 - alpha * 0.3), 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    },
+    
+    // 🔮 에너지 오브 파티클 (새로 추가)
+    drawEnergyOrbParticle(p, alpha, progress) {
+        const ctx = this.vfxCtx;
+        if (!ctx) return;
+        if (!isFinite(p.x) || !isFinite(p.y)) return;
+        
+        const size = (p.startSize || 20) * (1 + progress * 0.3);
+        const color = p.color || '#fbbf24';
+        const pulseSize = size * (1 + Math.sin(progress * Math.PI * 4) * 0.15);
+        
+        ctx.save();
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 30;
+        
+        // 외부 후광
+        const glowGrad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, pulseSize * 2);
+        glowGrad.addColorStop(0, color + 'aa');
+        glowGrad.addColorStop(0.4, color + '55');
+        glowGrad.addColorStop(0.7, color + '22');
+        glowGrad.addColorStop(1, 'transparent');
+        
+        ctx.fillStyle = glowGrad;
+        ctx.globalAlpha = alpha * 0.6;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, pulseSize * 2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // 메인 오브
+        const coreGrad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, pulseSize);
+        coreGrad.addColorStop(0, '#ffffff');
+        coreGrad.addColorStop(0.3, color);
+        coreGrad.addColorStop(0.7, color + 'cc');
+        coreGrad.addColorStop(1, 'transparent');
+        
+        ctx.fillStyle = coreGrad;
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, pulseSize, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // 밝은 코어
+        ctx.fillStyle = '#ffffff';
+        ctx.globalAlpha = alpha * 0.9;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, pulseSize * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    },
+    
+    // ⚡ 전기 파티클 (새로 추가)
+    drawElectricParticle(p, alpha, progress) {
+        const ctx = this.vfxCtx;
+        if (!ctx) return;
+        if (!isFinite(p.x) || !isFinite(p.y)) return;
+        
+        const length = p.length || 30;
+        const color = p.color || '#60a5fa';
+        const segments = p.segments || 5;
+        
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = (p.width || 2) * alpha;
+        ctx.lineCap = 'round';
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 15;
+        ctx.globalAlpha = alpha;
+        
+        // 랜덤 지그재그 전기 효과
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        
+        let currentX = p.x;
+        let currentY = p.y;
+        const angle = p.angle || 0;
+        const rad = angle * Math.PI / 180;
+        
+        for (let i = 0; i < segments; i++) {
+            const segLen = length / segments;
+            const jitter = (Math.random() - 0.5) * 15;
+            currentX += Math.cos(rad) * segLen + Math.sin(rad) * jitter;
+            currentY += Math.sin(rad) * segLen - Math.cos(rad) * jitter;
+            ctx.lineTo(currentX, currentY);
+        }
+        ctx.stroke();
+        
+        // 밝은 코어
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = (p.width || 2) * alpha * 0.5;
+        ctx.stroke();
+        
+        ctx.restore();
+    },
+    
+    // 🌊 웨이브 파티클 (새로 추가)
+    drawWaveParticle(p, alpha, progress) {
+        const ctx = this.vfxCtx;
+        if (!ctx) return;
+        if (!isFinite(p.x) || !isFinite(p.y)) return;
+        
+        const size = (p.startSize || 30) + ((p.maxSize || 100) - (p.startSize || 30)) * progress;
+        const color = p.color || '#60a5fa';
+        const thickness = (p.thickness || 8) * (1 - progress * 0.7);
+        
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = thickness;
+        ctx.globalAlpha = alpha * (1 - progress * 0.5);
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 20;
+        
+        // 반원 웨이브
+        ctx.beginPath();
+        const startAngle = (p.startAngle || -90) * Math.PI / 180;
+        const endAngle = (p.endAngle || 90) * Math.PI / 180;
+        ctx.arc(p.x, p.y, size, startAngle, endAngle);
+        ctx.stroke();
+        
+        // 밝은 코어
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = thickness * 0.4;
+        ctx.globalAlpha = alpha * 0.6;
+        ctx.stroke();
+        
+        ctx.restore();
+    },
+    
+    // ⭐ 별 파티클 (새로 추가)
+    drawStarParticle(p, alpha, progress) {
+        const ctx = this.vfxCtx;
+        if (!ctx) return;
+        if (!isFinite(p.x) || !isFinite(p.y)) return;
+        
+        const size = (p.startSize || 15) * (1 - progress * 0.3);
+        const color = p.color || '#fbbf24';
+        const points = p.points || 4;
+        const rotation = p.rotation || 0;
+        
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(rotation);
+        
+        ctx.fillStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 20;
+        ctx.globalAlpha = alpha;
+        
+        // 별 그리기
+        ctx.beginPath();
+        for (let i = 0; i < points * 2; i++) {
+            const r = i % 2 === 0 ? size : size * 0.4;
+            const angle = (i * Math.PI) / points - Math.PI / 2;
+            if (i === 0) ctx.moveTo(r * Math.cos(angle), r * Math.sin(angle));
+            else ctx.lineTo(r * Math.cos(angle), r * Math.sin(angle));
+        }
+        ctx.closePath();
+        ctx.fill();
+        
+        // 밝은 중심
+        ctx.fillStyle = '#ffffff';
+        ctx.globalAlpha = alpha * 0.8;
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    },
+    
+    // ☄️ 혜성 파티클 (새로 추가)
+    drawCometParticle(p, alpha, progress) {
+        const ctx = this.vfxCtx;
+        if (!ctx) return;
+        if (!isFinite(p.x) || !isFinite(p.y)) return;
+        
+        const size = (p.startSize || 10) * (1 - progress * 0.5);
+        const color = p.color || '#fbbf24';
+        const tailLength = p.tailLength || 40;
+        const angle = Math.atan2(p.vy || 0, p.vx || 1);
+        
+        ctx.save();
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 15;
+        
+        // 꼬리
+        const tailGrad = ctx.createLinearGradient(
+            p.x - Math.cos(angle) * tailLength,
+            p.y - Math.sin(angle) * tailLength,
+            p.x, p.y
+        );
+        tailGrad.addColorStop(0, 'transparent');
+        tailGrad.addColorStop(0.5, color + '44');
+        tailGrad.addColorStop(1, color);
+        
+        ctx.strokeStyle = tailGrad;
+        ctx.lineWidth = size * 1.5;
+        ctx.lineCap = 'round';
+        ctx.globalAlpha = alpha * 0.7;
+        
+        ctx.beginPath();
+        ctx.moveTo(p.x - Math.cos(angle) * tailLength, p.y - Math.sin(angle) * tailLength);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+        
+        // 헤드
+        const headGrad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 1.5);
+        headGrad.addColorStop(0, '#ffffff');
+        headGrad.addColorStop(0.4, color);
+        headGrad.addColorStop(1, 'transparent');
+        
+        ctx.fillStyle = headGrad;
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, size * 1.5, 0, Math.PI * 2);
         ctx.fill();
         
         ctx.restore();
@@ -2810,25 +3169,50 @@ const DDOOAction = {
         
         const rad = (p.angle || 0) * Math.PI / 180;
         const len = Math.max(1, p.startLength * (1 - progress * 0.3));
+        const width = Math.max(1, (p.startWidth || 5) * alpha);
         
         this.vfxCtx.translate(p.x, p.y);
         this.vfxCtx.rotate(rad);
         
+        // ✨ 강화된 글로우 효과
         if (p.glow) {
             this.vfxCtx.shadowColor = p.glow;
-            this.vfxCtx.shadowBlur = 20;
+            this.vfxCtx.shadowBlur = 25 + width;
         }
         
         const halfLen = len / 2;
+        
+        // 🌟 외부 글로우 레이어 (새로 추가)
+        if (p.glow && alpha > 0.3) {
+            const outerGrad = this.vfxCtx.createLinearGradient(-halfLen, 0, halfLen, 0);
+            outerGrad.addColorStop(0, 'transparent');
+            outerGrad.addColorStop(0.2, p.glow);
+            outerGrad.addColorStop(0.8, p.glow);
+            outerGrad.addColorStop(1, 'transparent');
+            
+            this.vfxCtx.strokeStyle = outerGrad;
+            this.vfxCtx.lineWidth = width * 2.5;
+            this.vfxCtx.lineCap = 'round';
+            this.vfxCtx.globalAlpha = alpha * 0.3;
+            
+            this.vfxCtx.beginPath();
+            this.vfxCtx.moveTo(-halfLen, 0);
+            this.vfxCtx.lineTo(halfLen, 0);
+            this.vfxCtx.stroke();
+        }
+        
+        // 메인 슬래시
         const grad = this.vfxCtx.createLinearGradient(-halfLen, 0, halfLen, 0);
         grad.addColorStop(0, 'transparent');
-        grad.addColorStop(0.3, p.color || '#ffffff');
-        grad.addColorStop(0.7, p.color || '#ffffff');
+        grad.addColorStop(0.2, p.color || '#ffffff');
+        grad.addColorStop(0.5, '#ffffff');  // 중앙 밝게
+        grad.addColorStop(0.8, p.color || '#ffffff');
         grad.addColorStop(1, 'transparent');
         
         this.vfxCtx.strokeStyle = grad;
-        this.vfxCtx.lineWidth = Math.max(1, (p.startWidth || 5) * alpha);
+        this.vfxCtx.lineWidth = width;
         this.vfxCtx.lineCap = 'round';
+        this.vfxCtx.globalAlpha = alpha;
         
         this.vfxCtx.beginPath();
         this.vfxCtx.moveTo(-halfLen, 0);
@@ -2893,12 +3277,34 @@ const DDOOAction = {
         if (!isFinite(p.x) || !isFinite(p.y)) return;
         
         const size = Math.max(1, (p.startSize || 5) * alpha);
+        const color = p.color || '#fbbf24';
         
-        this.vfxCtx.fillStyle = p.color || '#fbbf24';
+        // ✨ 외부 글로우 (새로 추가)
+        this.vfxCtx.shadowColor = color;
+        this.vfxCtx.shadowBlur = 15 + size;
+        
+        // 🌟 글로우 후광
+        const glowGrad = this.vfxCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 2);
+        glowGrad.addColorStop(0, color);
+        glowGrad.addColorStop(0.5, color + '80');
+        glowGrad.addColorStop(1, 'transparent');
+        
+        this.vfxCtx.fillStyle = glowGrad;
+        this.vfxCtx.globalAlpha = Math.max(0, Math.min(1, alpha * 0.5));
+        this.vfxCtx.beginPath();
+        this.vfxCtx.arc(p.x, p.y, size * 2, 0, Math.PI * 2);
+        this.vfxCtx.fill();
+        
+        // 메인 스파크 (밝은 중심)
+        this.vfxCtx.fillStyle = '#ffffff';
         this.vfxCtx.globalAlpha = Math.max(0, Math.min(1, alpha));
-        this.vfxCtx.shadowColor = p.color || '#fbbf24';
-        this.vfxCtx.shadowBlur = 8;
+        this.vfxCtx.beginPath();
+        this.vfxCtx.arc(p.x, p.y, size * 0.6, 0, Math.PI * 2);
+        this.vfxCtx.fill();
         
+        // 외곽 색상
+        this.vfxCtx.fillStyle = color;
+        this.vfxCtx.globalAlpha = Math.max(0, Math.min(1, alpha * 0.8));
         this.vfxCtx.beginPath();
         this.vfxCtx.arc(p.x, p.y, size, 0, Math.PI * 2);
         this.vfxCtx.fill();
@@ -2909,19 +3315,44 @@ const DDOOAction = {
             return;
         }
         
-        const size = Math.max(1, p.startSize * (1 + progress * 0.5));
+        const size = Math.max(1, p.startSize * (1 + progress * 0.8));
         const color = p.color || '#ffffff';
         
+        // ✨ 강화된 섀도우 블러
+        this.vfxCtx.shadowColor = color;
+        this.vfxCtx.shadowBlur = size * 0.8;
+        
+        // 🌟 외부 후광 (새로 추가)
+        const outerGrad = this.vfxCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 1.5);
+        outerGrad.addColorStop(0, color);
+        outerGrad.addColorStop(0.3, color + 'aa');
+        outerGrad.addColorStop(0.6, color + '44');
+        outerGrad.addColorStop(1, 'transparent');
+        
+        this.vfxCtx.fillStyle = outerGrad;
+        this.vfxCtx.globalAlpha = Math.max(0, Math.min(1, alpha * 0.6));
+        this.vfxCtx.beginPath();
+        this.vfxCtx.arc(p.x, p.y, size * 1.5, 0, Math.PI * 2);
+        this.vfxCtx.fill();
+        
+        // 메인 플래시 (중앙 밝게)
         const grad = this.vfxCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size);
-        grad.addColorStop(0, color);
-        grad.addColorStop(0.5, 'rgba(255,255,255,0.5)');
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.3, color);
+        grad.addColorStop(0.7, color + '88');
         grad.addColorStop(1, 'transparent');
         
         this.vfxCtx.fillStyle = grad;
-        this.vfxCtx.globalAlpha = Math.max(0, Math.min(1, alpha * 0.8));
-        
+        this.vfxCtx.globalAlpha = Math.max(0, Math.min(1, alpha));
         this.vfxCtx.beginPath();
         this.vfxCtx.arc(p.x, p.y, size, 0, Math.PI * 2);
+        this.vfxCtx.fill();
+        
+        // 💥 중앙 코어 (가장 밝은 점)
+        this.vfxCtx.fillStyle = '#ffffff';
+        this.vfxCtx.globalAlpha = Math.max(0, Math.min(1, alpha * 0.9));
+        this.vfxCtx.beginPath();
+        this.vfxCtx.arc(p.x, p.y, size * 0.2, 0, Math.PI * 2);
         this.vfxCtx.fill();
     },
     

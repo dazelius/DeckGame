@@ -1,23 +1,23 @@
 {
     "id": "player.flurry_stab3",
-    "name": "세검 3타 - 피니시 돌진",
+    "name": "세검 3타 - 피니시 돌진 (강화)",
     "target": "player",
     "type": "once",
     "priority": 14,
-    "duration": 140,
+    "duration": 160,
     "keyframes": [
         { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 0 },
         
-        { "x": -15, "y": 0, "scaleX": 0.82, "scaleY": 1.18, "rotation": -0.06, "duration": 12, "ease": "power2.in", "afterimage": true },
-        { "x": -22, "y": 0, "scaleX": 0.78, "scaleY": 1.22, "rotation": -0.08, "duration": 8, "ease": "power3.in" },
+        { "x": -18, "y": 0, "scaleX": 0.78, "scaleY": 1.22, "rotation": -0.08, "duration": 10, "ease": "power3.in", "afterimage": true, "color": "power" },
+        { "x": -28, "y": 0, "scaleX": 0.72, "scaleY": 1.28, "rotation": -0.12, "duration": 8, "ease": "power4.in" },
         
-        { "x": 95, "y": -5, "scaleX": 1.32, "scaleY": 0.74, "rotation": 0.05, "duration": 14, "ease": "power4.out", "vfx": "flurry_finish", "vfxTarget": "target", "shake": 6, "hitstop": 50, "afterimage": true },
+        { "x": 110, "y": -8, "scaleX": 1.4, "scaleY": 0.68, "rotation": 0.08, "duration": 12, "ease": "power4.out", "vfx": "flurry_finish", "vfxTarget": "target", "shake": 10, "hitstop": 60, "afterimage": true, "camera": { "zoom": 1.12, "duration": 120, "focusTarget": "enemy" }, "color": "hit", "slowmo": { "scale": 0.4, "duration": 80 } },
         
-        { "x": 105, "y": -3, "scaleX": 1.28, "scaleY": 0.76, "rotation": 0.04, "duration": 12, "ease": "power2.out", "afterimage": true },
-        { "x": 90, "y": 0, "scaleX": 1.18, "scaleY": 0.84, "rotation": 0.02, "duration": 16, "ease": "power2.out" },
-        { "x": 65, "y": 3, "scaleX": 1.10, "scaleY": 0.92, "rotation": 0.01, "duration": 20, "ease": "power2.out" },
-        { "x": 38, "y": 2, "scaleX": 1.04, "scaleY": 0.97, "rotation": 0, "duration": 22, "ease": "power2.out" },
-        { "x": 15, "y": 1, "scaleX": 1.01, "scaleY": 0.99, "rotation": 0, "duration": 18, "ease": "power2.out" },
-        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 18, "ease": "power2.out" }
+        { "x": 120, "y": -5, "scaleX": 1.35, "scaleY": 0.72, "rotation": 0.06, "duration": 12, "ease": "power2.out", "afterimage": true },
+        { "x": 100, "y": 0, "scaleX": 1.2, "scaleY": 0.82, "rotation": 0.03, "duration": 18, "ease": "power2.out" },
+        { "x": 70, "y": 3, "scaleX": 1.1, "scaleY": 0.92, "rotation": 0.01, "duration": 22, "ease": "power2.out" },
+        { "x": 40, "y": 2, "scaleX": 1.04, "scaleY": 0.97, "rotation": 0, "duration": 24, "ease": "power2.out" },
+        { "x": 15, "y": 1, "scaleX": 1.01, "scaleY": 0.99, "rotation": 0, "duration": 20, "ease": "power2.out" },
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 18, "ease": "elastic.out(1, 0.6)" }
     ]
 }

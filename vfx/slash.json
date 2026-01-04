@@ -1,62 +1,48 @@
 {
     "id": "slash",
-    "name": "베기",
-    "duration": 250,
-    "offset": { "x": 0, "y": -35 },
+    "name": "강화된 슬래시",
+    "shake": 5,
     "particles": [
         {
             "type": "flash",
+            "size": 50,
             "color": "#ffffff",
-            "size": 160,
-            "alpha": 1,
-            "fadeOut": true
-        },
-        {
-            "type": "flash",
-            "color": "#fbbf24",
-            "size": 110,
-            "alpha": 0.8,
-            "fadeOut": true
+            "life": 60
         },
         {
             "type": "slash",
             "count": 2,
+            "angle": [-15, 15],
+            "length": [80, 120],
+            "width": 10,
             "color": "#ffffff",
-            "glow": "#f59e0b",
-            "angle": [-50, -35],
-            "length": 180,
-            "width": 18,
-            "alpha": 1,
-            "lifetime": 180
+            "glow": "#60a5fa",
+            "life": 120
         },
         {
             "type": "ring",
-            "count": 1,
-            "color": "#f59e0b",
-            "size": 40,
-            "maxSize": 170,
-            "alpha": 0.8,
-            "fadeOut": true
+            "size": 15,
+            "maxSize": 70,
+            "color": "#93c5fd",
+            "life": 100
         },
         {
             "type": "spark",
-            "count": 30,
-            "color": "#fbbf24",
-            "size": 8,
-            "speed": 200,
-            "angle": "radial",
-            "alpha": 1,
-            "lifetime": 200
+            "count": 15,
+            "spread": 50,
+            "speed": [8, 18],
+            "size": [3, 7],
+            "colors": ["#ffffff", "#93c5fd", "#60a5fa"],
+            "life": [150, 280]
         },
         {
             "type": "line",
-            "count": 14,
-            "color": "#fbbf24",
-            "length": 100,
-            "width": 5,
-            "angle": "radial",
-            "alpha": 0.8,
-            "lifetime": 140
+            "count": 8,
+            "angleStep": 45,
+            "length": [30, 60],
+            "width": 2,
+            "color": "#93c5fd",
+            "life": 100
         }
     ]
 }

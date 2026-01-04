@@ -1,17 +1,21 @@
 {
     "id": "player.plunder_slam",
-    "name": "강탈 - 내려찍기 (마무리)",
+    "name": "강탈 - 내려찍기 (마무리 강화)",
     "target": "player",
     "type": "once",
     "priority": 18,
-    "duration": 300,
+    "duration": 350,
     "keyframes": [
         { "x": 145, "y": -50, "scaleX": 1, "scaleY": 1, "rotation": 0.8, "alpha": 1, "duration": 0 },
-        { "x": 155, "y": -70, "scaleX": 0.8, "scaleY": 1.2, "rotation": -0.5, "alpha": 1, "duration": 50, "ease": "power2.in", "afterimage": true },
-        { "x": 140, "y": 0, "scaleX": 1.4, "scaleY": 0.65, "rotation": 0.3, "alpha": 1, "duration": 70, "ease": "power4.out", "vfx": "slam_impact", "shake": 18, "hitstop": 120, "afterimage": true, "camera": { "zoom": 1.15 }, "color": "critical" },
-        { "x": 130, "y": 5, "scaleX": 1.2, "scaleY": 0.85, "rotation": 0.1, "alpha": 1, "duration": 60, "ease": "power2.out", "vfx": "gold_drain" },
-        { "x": 80, "y": 0, "scaleX": 1.1, "scaleY": 0.92, "rotation": 0.05, "alpha": 1, "duration": 60, "ease": "power2.out", "afterimage": true },
-        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "alpha": 1, "duration": 60, "ease": "power2.out" }
+        
+        { "x": 155, "y": -80, "scaleX": 0.75, "scaleY": 1.3, "rotation": -0.6, "alpha": 1, "duration": 45, "ease": "power3.in", "afterimage": true, "color": "power" },
+        { "x": 160, "y": -90, "scaleX": 0.7, "scaleY": 1.35, "rotation": -0.7, "alpha": 1, "duration": 30, "ease": "power4.in", "vfx": "energy_burst", "vfxTarget": "self" },
+        
+        { "x": 140, "y": 5, "scaleX": 1.5, "scaleY": 0.55, "rotation": 0.35, "alpha": 1, "duration": 60, "ease": "power4.out", "vfx": "gold_explosion", "shake": 22, "hitstop": 150, "afterimage": true, "camera": { "zoom": 1.2, "duration": 200 }, "color": "critical", "slowmo": { "scale": 0.1, "duration": 300 } },
+        
+        { "x": 130, "y": 8, "scaleX": 1.25, "scaleY": 0.8, "rotation": 0.15, "alpha": 1, "duration": 55, "ease": "power2.out", "vfx": "gold_drain" },
+        { "x": 85, "y": 3, "scaleX": 1.12, "scaleY": 0.9, "rotation": 0.06, "alpha": 1, "duration": 50, "ease": "power2.out", "afterimage": true },
+        { "x": 40, "y": 0, "scaleX": 1.04, "scaleY": 0.97, "rotation": 0.02, "alpha": 1, "duration": 45, "ease": "power2.out" },
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "alpha": 1, "duration": 40, "ease": "elastic.out(1, 0.6)" }
     ]
 }
-

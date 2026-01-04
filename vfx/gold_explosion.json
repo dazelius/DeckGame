@@ -1,0 +1,72 @@
+{
+    "id": "gold_explosion",
+    "name": "골드 폭발 (강탈용)",
+    "shake": 12,
+    "particles": [
+        {
+            "type": "flash",
+            "size": 90,
+            "color": "#fbbf24",
+            "life": 60
+        },
+        {
+            "type": "flash",
+            "size": 60,
+            "color": "#ffffff",
+            "life": 40
+        },
+        {
+            "type": "ring",
+            "size": 25,
+            "maxSize": 130,
+            "color": "#fbbf24",
+            "life": 140
+        },
+        {
+            "type": "energy_orb",
+            "count": 5,
+            "size": [20, 35],
+            "colors": ["#fbbf24", "#f59e0b", "#eab308"],
+            "spread": 40,
+            "life": [180, 280]
+        },
+        {
+            "type": "star",
+            "count": 10,
+            "size": [10, 18],
+            "points": [4, 6],
+            "colors": ["#fbbf24", "#f59e0b", "#ffffff"],
+            "rotationSpeed": [0.06, 0.12],
+            "spread": 60,
+            "life": [140, 260]
+        },
+        {
+            "type": "comet",
+            "count": 12,
+            "size": [5, 10],
+            "tailLength": [25, 45],
+            "speed": [10, 22],
+            "colors": ["#fbbf24", "#f59e0b"],
+            "life": [200, 380]
+        },
+        {
+            "type": "spark",
+            "count": 35,
+            "spread": 90,
+            "speed": [12, 28],
+            "size": [4, 9],
+            "colors": ["#fbbf24", "#f59e0b", "#ffffff", "#eab308"],
+            "life": [180, 380]
+        },
+        {
+            "type": "debris",
+            "count": 20,
+            "speed": [10, 25],
+            "size": [3, 7],
+            "colors": ["#fbbf24", "#b45309", "#ffffff"],
+            "gravity": 0.35,
+            "life": [280, 500]
+        }
+    ]
+}
+

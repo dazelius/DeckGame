@@ -1,62 +1,70 @@
 {
     "id": "hit",
-    "name": "타격",
-    "duration": 280,
-    "offset": { "x": 0, "y": -30 },
+    "name": "강화된 타격 이펙트",
+    "shake": 8,
     "particles": [
         {
             "type": "flash",
+            "size": 80,
             "color": "#ffffff",
-            "size": 150,
-            "alpha": 1,
-            "fadeOut": true
+            "life": 50
         },
         {
             "type": "flash",
+            "size": 50,
             "color": "#ef4444",
-            "size": 110,
-            "alpha": 0.85,
-            "fadeOut": true
+            "life": 80
         },
         {
             "type": "ring",
-            "count": 2,
+            "size": 20,
+            "maxSize": 100,
+            "color": "#ffffff",
+            "life": 120
+        },
+        {
+            "type": "ring",
+            "size": 30,
+            "maxSize": 70,
             "color": "#ef4444",
-            "size": 35,
-            "maxSize": 160,
-            "alpha": 0.8,
-            "fadeOut": true,
-            "delay": [0, 40]
+            "life": 150
+        },
+        {
+            "type": "slash",
+            "count": 3,
+            "angle": [-60, 0, 60],
+            "length": [50, 80],
+            "width": 8,
+            "color": "#ffffff",
+            "glow": "#ef4444",
+            "life": 100
         },
         {
             "type": "spark",
-            "count": 25,
-            "color": "#fbbf24",
-            "size": 9,
-            "speed": 180,
-            "angle": "radial",
-            "alpha": 1,
-            "lifetime": 200
-        },
-        {
-            "type": "line",
-            "count": 16,
-            "color": "#fbbf24",
-            "length": 90,
-            "width": 4,
-            "angle": "radial",
-            "alpha": 0.7,
-            "lifetime": 130
+            "count": 20,
+            "spread": 70,
+            "speed": [10, 25],
+            "size": [3, 8],
+            "colors": ["#ef4444", "#f87171", "#ffffff", "#fbbf24"],
+            "life": [180, 350]
         },
         {
             "type": "debris",
-            "count": 15,
-            "color": "#ef4444",
-            "size": 8,
-            "speed": 120,
-            "gravity": 3,
-            "alpha": 0.9,
-            "lifetime": 300
+            "count": 12,
+            "speed": [8, 18],
+            "size": [3, 6],
+            "colors": ["#ef4444", "#991b1b", "#ffffff"],
+            "gravity": 0.4,
+            "life": [250, 450]
+        },
+        {
+            "type": "line",
+            "count": 10,
+            "angleStep": 36,
+            "length": [40, 80],
+            "width": 3,
+            "color": "#fbbf24",
+            "life": 120
         }
     ]
 }
