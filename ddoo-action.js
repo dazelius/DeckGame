@@ -1793,19 +1793,20 @@ const DDOOAction = {
     spawnVoxelShatter(sprite, options = {}) {
         if (!sprite || !sprite.texture) return;
         
-        const gridSize = options.gridSize || 8;  // 8x8 조각
-        const force = options.force || 15;       // 폭발 힘
-        const gravity = options.gravity || 0.4;  // 중력
-        const life = options.life || 600;        // 수명
-        const color = options.color || null;     // 색상 오버라이드
-        const dirBias = options.dirBias || 0;    // 방향 편향 (-1: 왼쪽, 1: 오른쪽)
+        const gridSize = options.gridSize || 12;  // 12x12 조각 (더 촘촘하게!)
+        const force = options.force || 15;        // 폭발 힘
+        const gravity = options.gravity || 0.4;   // 중력
+        const life = options.life || 600;         // 수명
+        const color = options.color || null;      // 색상 오버라이드
+        const dirBias = options.dirBias || 0;     // 방향 편향 (-1: 왼쪽, 1: 오른쪽)
+        const maxPieceSize = options.maxSize || 8; // 🔥 최대 조각 크기!
         
         // 스프라이트 위치/크기
         const bounds = sprite.getBounds();
         const spriteX = bounds.x + bounds.width / 2;
         const spriteY = bounds.y + bounds.height / 2;
-        const pieceW = bounds.width / gridSize;
-        const pieceH = bounds.height / gridSize;
+        const pieceW = Math.min(bounds.width / gridSize, maxPieceSize);   // 🔥 최대 크기 제한
+        const pieceH = Math.min(bounds.height / gridSize, maxPieceSize);  // 🔥 최대 크기 제한
         
         // 🎨 텍스처에서 색상 샘플링 (PixiJS v8 호환)
         let pixels = null;
@@ -1991,13 +1992,17 @@ const DDOOAction = {
                     }
                 }
                 
+                // 🔥 조각 크기: 작고 픽셀스러운 느낌으로!
+                const baseSize = Math.max(pieceW, pieceH);
+                const finalSize = Math.min(baseSize * (0.6 + Math.random() * 0.4), maxPieceSize);
+                
                 this.spawnParticle({
                     type: 'voxel',
                     x: px,
                     y: py,
                     vx: Math.cos(biasAngle) * speed + (Math.random() - 0.5) * force * 0.5,
                     vy: Math.sin(biasAngle) * speed - force * 0.3 - Math.random() * force * 0.5,
-                    size: Math.max(pieceW, pieceH) * (0.8 + Math.random() * 0.4),
+                    size: finalSize,
                     color: pieceColor,
                     gravity: gravity,
                     rotation: Math.random() * Math.PI * 2,
