@@ -690,39 +690,61 @@ const DDOOAction = {
         }
         
         // ⭐ returnToBase: 원점으로 복귀! (에러 발생해도 무조건 실행)
-        if (data.returnToBase !== false) {
-            await this.returnToOrigin(container, sprite, originX, originY);
+        // 🔥 플레이어 복원을 최우선으로! (적이 죽어도 플레이어는 돌아와야 함)
+        try {
+            if (data.returnToBase !== false) {
+                await this.returnToOrigin(container, sprite, originX, originY);
+            }
+        } catch (e) {
+            console.warn('[DDOOAction] returnToOrigin 에러 (무시):', e);
         }
         
-        // ⚠️ 최종 안전장치: 플레이어 sprite 상태 확실히 복원
-        if (sprite) {
-            sprite.alpha = 1;
-            sprite.rotation = 0;
-            if (sprite.scale) sprite.scale.set(1, 1);
-        }
-        if (container) {
-            container.x = originX;
-            container.y = originY;
-        }
-        
-        // ⚠️ 적 캐릭터도 상태 복원!
-        const enemyChar = this.characters.get('enemy');
-        if (enemyChar) {
-            enemyChar.sprite.alpha = 1;
-            enemyChar.sprite.rotation = 0;
-            if (enemyChar.sprite.scale) enemyChar.sprite.scale.set(1, 1);
-            enemyChar.container.x = enemyChar.baseX;
-            enemyChar.container.y = enemyChar.baseY;
+        // ⚠️ 최종 안전장치: 호출자 컨테이너/스프라이트 강제 복원!
+        try {
+            if (sprite) {
+                sprite.alpha = 1;
+                sprite.rotation = 0;
+                if (sprite.scale) sprite.scale.set(1, 1);
+            }
+            if (container) {
+                gsap.killTweensOf(container);  // 진행 중인 트윈 정리!
+                container.x = originX;
+                container.y = originY;
+            }
+        } catch (e) {
+            console.warn('[DDOOAction] 호출자 복원 에러:', e);
         }
         
-        // ⚠️ 플레이어 캐릭터도 확실히 복원! (DDOOAction 캐릭터)
-        const playerChar = this.characters.get('player');
-        if (playerChar) {
-            playerChar.sprite.alpha = 1;
-            playerChar.sprite.rotation = 0;
-            if (playerChar.sprite.scale) playerChar.sprite.scale.set(1, 1);
-            playerChar.container.x = playerChar.baseX;
-            playerChar.container.y = playerChar.baseY;
+        // ⚠️ 플레이어 캐릭터 확실히 복원! (DDOOAction 캐릭터 - 적이 죽어도 작동!)
+        try {
+            const playerChar = this.characters.get('player');
+            if (playerChar && playerChar.sprite && playerChar.container) {
+                gsap.killTweensOf(playerChar.container);
+                gsap.killTweensOf(playerChar.sprite);
+                playerChar.sprite.alpha = 1;
+                playerChar.sprite.rotation = 0;
+                if (playerChar.sprite.scale) playerChar.sprite.scale.set(1, 1);
+                playerChar.container.x = playerChar.baseX;
+                playerChar.container.y = playerChar.baseY;
+            }
+        } catch (e) {
+            console.warn('[DDOOAction] 플레이어 복원 에러:', e);
+        }
+        
+        // ⚠️ 적 캐릭터도 상태 복원 (죽었으면 건너뜀)
+        try {
+            const enemyChar = this.characters.get('enemy');
+            if (enemyChar && enemyChar.sprite && enemyChar.container && enemyChar.sprite.parent) {
+                gsap.killTweensOf(enemyChar.container);
+                gsap.killTweensOf(enemyChar.sprite);
+                enemyChar.sprite.alpha = 1;
+                enemyChar.sprite.rotation = 0;
+                if (enemyChar.sprite.scale) enemyChar.sprite.scale.set(1, 1);
+                enemyChar.container.x = enemyChar.baseX;
+                enemyChar.container.y = enemyChar.baseY;
+            }
+        } catch (e) {
+            // 적이 죽었으면 무시
         }
         
         // 📷 카메라 리셋
@@ -740,6 +762,22 @@ const DDOOAction = {
     // ⭐ 원점 복귀 애니메이션
     async returnToOrigin(container, sprite, originX, originY) {
         return new Promise((resolve) => {
+            // ⚠️ 안전 체크: 컨테이너/스프라이트가 없으면 즉시 완료
+            if (!container || !sprite) {
+                console.warn('[DDOOAction] returnToOrigin: 컨테이너/스프라이트 없음, 건너뜀');
+                resolve();
+                return;
+            }
+            
+            // ⚠️ 안전 체크: 스프라이트가 이미 제거되었으면 즉시 완료
+            if (!sprite.parent) {
+                console.warn('[DDOOAction] returnToOrigin: 스프라이트가 제거됨, 위치만 복원');
+                container.x = originX;
+                container.y = originY;
+                resolve();
+                return;
+            }
+            
             const duration = this.config.return.duration / 1000 / this.config.speed;
             const ease = this.config.return.ease;
             
@@ -752,7 +790,7 @@ const DDOOAction = {
             // ⚠️ 기존 트윈 정리
             gsap.killTweensOf(container);
             gsap.killTweensOf(sprite);
-            gsap.killTweensOf(sprite.scale);
+            if (sprite.scale) gsap.killTweensOf(sprite.scale);
             
             gsap.to(container, {
                 x: originX,
@@ -760,25 +798,27 @@ const DDOOAction = {
                 duration,
                 ease,
                 onUpdate: () => {
-                    if (shadow) {
+                    if (shadow && sprite.alpha !== undefined) {
                         shadow.x = container.x;
                         shadow.y = container.y + (this.config.character.shadowOffsetY || 5);
                         shadow.alpha = sprite.alpha * (this.config.character.shadowAlpha || 0.4);
                     }
                 },
                 onComplete: () => {
-                    // ⚠️ 최종 확실한 복원
-                    sprite.alpha = 1;
-                    sprite.rotation = 0;
-                    sprite.scale.set(1, 1);
+                    // ⚠️ 최종 확실한 복원 (안전 체크)
+                    if (sprite && sprite.parent) {
+                        sprite.alpha = 1;
+                        sprite.rotation = 0;
+                        if (sprite.scale) sprite.scale.set(1, 1);
+                    }
                     container.x = originX;
                     container.y = originY;
                     resolve();
                 }
             });
             
-            // 스케일/회전/알파 정규화
-            gsap.to(sprite.scale, { x: 1, y: 1, duration, ease });
+            // 스케일/회전/알파 정규화 (안전 체크)
+            if (sprite.scale) gsap.to(sprite.scale, { x: 1, y: 1, duration, ease });
             gsap.to(sprite, { rotation: 0, alpha: 1, duration, ease });
         });
     },
