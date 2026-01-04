@@ -197,144 +197,134 @@
         .log-entry.vfx { color: #f472b6; }
         .log-time { color: #444; margin-right: 5px; }
         
-        /* ==================== 타임라인 패널 ==================== */
+        /* ==================== 타임라인 패널 (개선) ==================== */
         .timeline-panel {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            height: 200px;
-            background: #0d0d15;
+            height: 240px;
+            background: #0a0a12;
             border-top: 2px solid #fbbf24;
             z-index: 1000;
             display: flex;
             flex-direction: column;
+            transition: height 0.2s ease;
         }
+        .timeline-panel.collapsed { height: 32px; }
         .timeline-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 6px 12px;
-            background: #1a1a2e;
+            padding: 5px 12px;
+            background: linear-gradient(180deg, #1a1a2e 0%, #12121f 100%);
             border-bottom: 1px solid #2a2a4a;
+            min-height: 32px;
         }
-        .timeline-header h3 { color: #fbbf24; font-size: 0.8rem; margin: 0; }
-        .timeline-controls {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
+        .timeline-header h3 { color: #fbbf24; font-size: 0.75rem; margin: 0; display: flex; align-items: center; gap: 8px; }
+        .timeline-header h3 .anim-name { color: #60a5fa; font-weight: normal; }
+        .timeline-controls { display: flex; gap: 6px; align-items: center; }
         .timeline-btn {
-            background: #3a3a5a;
-            border: none;
-            padding: 4px 10px;
-            border-radius: 4px;
-            color: #ddd;
+            background: #2a2a4a;
+            border: 1px solid #3a3a5a;
+            padding: 3px 8px;
+            border-radius: 3px;
+            color: #ccc;
             cursor: pointer;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
+            transition: all 0.1s;
         }
-        .timeline-btn:hover { background: #4a4a6a; }
-        .timeline-btn.active { background: #60a5fa; color: #000; }
-        .timeline-time {
-            font-family: monospace;
-            color: #60a5fa;
-            font-size: 0.8rem;
-            min-width: 80px;
-        }
-        .timeline-body {
-            flex: 1;
-            display: flex;
-            overflow: hidden;
-        }
+        .timeline-btn:hover { background: #3a3a5a; border-color: #60a5fa; }
+        .timeline-btn.active { background: #3b82f6; color: #fff; border-color: #60a5fa; }
+        .timeline-btn.play { background: #22c55e; color: #000; border-color: #4ade80; }
+        .timeline-btn.play:hover { background: #16a34a; }
+        .timeline-time { font-family: 'Consolas', monospace; color: #60a5fa; font-size: 0.75rem; min-width: 100px; text-align: right; }
+        .timeline-body { flex: 1; display: flex; overflow: hidden; }
         .timeline-tracks {
-            width: 120px;
-            background: #12121a;
+            width: 100px;
+            background: #0d0d18;
             border-right: 1px solid #2a2a4a;
             flex-shrink: 0;
+            overflow-y: auto;
         }
         .timeline-track-header {
-            height: 32px;
-            padding: 0 10px;
+            height: 26px;
+            padding: 0 8px;
             display: flex;
             align-items: center;
             border-bottom: 1px solid #1a1a2a;
-            font-size: 0.7rem;
-            color: #888;
+            font-size: 0.65rem;
+            color: #666;
+            gap: 4px;
         }
+        .timeline-track-header .icon { font-size: 0.7rem; }
         .timeline-track-header.player { color: #60a5fa; }
         .timeline-track-header.enemy { color: #ef4444; }
         .timeline-track-header.vfx { color: #a855f7; }
-        .timeline-track-header.shake { color: #fbbf24; }
+        .timeline-track-header.camera { color: #06b6d4; }
+        .timeline-track-header.effects { color: #f59e0b; }
+        .timeline-track-header.damage { color: #ef4444; }
         .timeline-content {
             flex: 1;
             overflow-x: auto;
-            overflow-y: hidden;
+            overflow-y: auto;
             position: relative;
+            cursor: grab;
         }
+        .timeline-content:active { cursor: grabbing; }
         .timeline-ruler {
-            height: 24px;
-            background: #1a1a28;
+            height: 22px;
+            background: #12121f;
             border-bottom: 1px solid #2a2a4a;
-            position: relative;
+            position: sticky;
+            top: 0;
+            z-index: 50;
         }
         .timeline-ruler-mark {
             position: absolute;
             top: 0;
             height: 100%;
-            border-left: 1px solid #3a3a5a;
-            font-size: 0.6rem;
-            color: #666;
-            padding-left: 3px;
-            padding-top: 2px;
+            border-left: 1px solid #252535;
+            font-size: 0.55rem;
+            color: #444;
+            padding-left: 2px;
+            padding-top: 1px;
+            user-select: none;
         }
-        .timeline-ruler-mark.major { border-color: #5a5a7a; color: #888; }
-        .timeline-lanes {
-            position: relative;
-        }
+        .timeline-ruler-mark.major { border-color: #3a3a5a; color: #666; }
+        .timeline-lanes { position: relative; min-height: 156px; }
         .timeline-lane {
-            height: 32px;
-            border-bottom: 1px solid #1a1a2a;
+            height: 26px;
+            border-bottom: 1px solid #151520;
             position: relative;
         }
+        .timeline-lane:nth-child(odd) { background: rgba(255,255,255,0.01); }
         .timeline-keyframe {
             position: absolute;
-            height: 24px;
-            top: 4px;
-            border-radius: 3px;
-            font-size: 0.6rem;
+            height: 20px;
+            top: 3px;
+            border-radius: 2px;
+            font-size: 0.55rem;
             display: flex;
             align-items: center;
-            padding: 0 4px;
+            padding: 0 3px;
             cursor: pointer;
             overflow: hidden;
             white-space: nowrap;
+            transition: transform 0.1s, box-shadow 0.1s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
         }
-        .timeline-keyframe.player {
-            background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
-            border: 1px solid #60a5fa;
-        }
-        .timeline-keyframe.enemy {
-            background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
-            border: 1px solid #f87171;
-        }
-        .timeline-keyframe.vfx {
-            background: linear-gradient(180deg, #a855f7 0%, #7c3aed 100%);
-            border: 1px solid #c084fc;
-            height: 18px;
-            top: 7px;
-        }
-        .timeline-keyframe.shake {
-            background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%);
-            border: 1px solid #fcd34d;
-            height: 14px;
-            top: 9px;
-        }
-        .timeline-keyframe.hitstop {
-            background: linear-gradient(180deg, #10b981 0%, #059669 100%);
-            border: 1px solid #34d399;
-            height: 14px;
-            top: 9px;
-        }
+        .timeline-keyframe:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,0.5); z-index: 10; }
+        .timeline-keyframe.player { background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%); border: 1px solid #60a5fa; }
+        .timeline-keyframe.enemy { background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%); border: 1px solid #f87171; }
+        .timeline-keyframe.vfx { background: linear-gradient(180deg, #a855f7 0%, #7c3aed 100%); border: 1px solid #c084fc; }
+        .timeline-keyframe.camera { background: linear-gradient(180deg, #06b6d4 0%, #0891b2 100%); border: 1px solid #22d3ee; }
+        .timeline-keyframe.shake { background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%); border: 1px solid #fbbf24; }
+        .timeline-keyframe.hitstop { background: linear-gradient(180deg, #10b981 0%, #059669 100%); border: 1px solid #34d399; }
+        .timeline-keyframe.slowmo { background: linear-gradient(180deg, #8b5cf6 0%, #6d28d9 100%); border: 1px solid #a78bfa; }
+        .timeline-keyframe.color { background: linear-gradient(180deg, #ec4899 0%, #be185d 100%); border: 1px solid #f472b6; }
+        .timeline-keyframe.damage { background: linear-gradient(180deg, #dc2626 0%, #991b1b 100%); border: 1px solid #f87171; }
+        .timeline-keyframe.shatter { background: linear-gradient(180deg, #14b8a6 0%, #0d9488 100%); border: 1px solid #2dd4bf; }
         .timeline-playhead {
             position: absolute;
             top: 0;
@@ -343,28 +333,39 @@
             background: #ef4444;
             z-index: 100;
             pointer-events: none;
+            box-shadow: 0 0 8px rgba(239,68,68,0.6);
         }
         .timeline-playhead::before {
             content: '';
             position: absolute;
-            top: -4px;
-            left: -5px;
+            top: -3px;
+            left: -4px;
             width: 0;
             height: 0;
-            border-left: 6px solid transparent;
-            border-right: 6px solid transparent;
-            border-top: 8px solid #ef4444;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 6px solid #ef4444;
         }
-        .timeline-empty {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: #555;
-            font-size: 0.8rem;
+        .timeline-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: #444; font-size: 0.75rem; }
+        .timeline-tooltip {
+            position: fixed;
+            background: #1a1a2e;
+            border: 1px solid #3a3a5a;
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-size: 0.65rem;
+            color: #ddd;
+            z-index: 2000;
+            pointer-events: none;
+            max-width: 250px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
+        .timeline-tooltip .tt-title { color: #fbbf24; font-weight: bold; margin-bottom: 4px; }
+        .timeline-tooltip .tt-row { display: flex; gap: 8px; color: #999; }
+        .timeline-tooltip .tt-row span:first-child { color: #666; min-width: 50px; }
         /* 메인 컨테이너 높이 조정 */
-        .main-container { height: calc(100vh - 200px); }
+        .main-container { height: calc(100vh - 240px); transition: height 0.2s ease; }
+        .main-container.timeline-collapsed { height: calc(100vh - 32px); }
     </style>
 </head>
 <body>
@@ -408,23 +409,28 @@
         </div>
     </div>
     
-    <!-- 🎬 타임라인 패널 -->
+    <!-- 🎬 타임라인 패널 (개선) -->
     <div class="timeline-panel" id="timelinePanel">
         <div class="timeline-header">
-            <h3>🎬 Timeline</h3>
+            <h3>🎬 Timeline <span class="anim-name" id="tlAnimName"></span></h3>
             <div class="timeline-controls">
-                <button class="timeline-btn" onclick="timelineZoom(-1)">➖</button>
-                <button class="timeline-btn" onclick="timelineZoom(1)">➕</button>
-                <span class="timeline-time" id="timelineTime">0.000s</span>
-                <button class="timeline-btn" onclick="toggleTimeline()">▼ 숨기기</button>
+                <button class="timeline-btn play" id="tlPlayBtn" onclick="Timeline.togglePlay()">▶</button>
+                <button class="timeline-btn" onclick="Timeline.stop()">⏹</button>
+                <button class="timeline-btn" onclick="Timeline.zoom(-0.1)">−</button>
+                <button class="timeline-btn" onclick="Timeline.zoom(0.1)">+</button>
+                <span class="timeline-time" id="timelineTime">0.000s / 0.000s</span>
+                <button class="timeline-btn" id="tlLoopBtn" onclick="Timeline.toggleLoop()">🔁</button>
+                <button class="timeline-btn" id="tlToggleBtn" onclick="Timeline.toggle()">▼</button>
             </div>
         </div>
         <div class="timeline-body">
             <div class="timeline-tracks">
-                <div class="timeline-track-header player">🎮 Player</div>
-                <div class="timeline-track-header enemy">👹 Enemy</div>
-                <div class="timeline-track-header vfx">✨ VFX</div>
-                <div class="timeline-track-header shake">📳 Shake/Stop</div>
+                <div class="timeline-track-header player"><span class="icon">🎮</span>Player</div>
+                <div class="timeline-track-header enemy"><span class="icon">👹</span>Enemy</div>
+                <div class="timeline-track-header vfx"><span class="icon">✨</span>VFX</div>
+                <div class="timeline-track-header camera"><span class="icon">📷</span>Camera</div>
+                <div class="timeline-track-header effects"><span class="icon">⚡</span>Effects</div>
+                <div class="timeline-track-header damage"><span class="icon">💥</span>Damage</div>
             </div>
             <div class="timeline-content" id="timelineContent">
                 <div class="timeline-ruler" id="timelineRuler"></div>
@@ -432,12 +438,15 @@
                     <div class="timeline-lane" id="playerLane"></div>
                     <div class="timeline-lane" id="enemyLane"></div>
                     <div class="timeline-lane" id="vfxLane"></div>
-                    <div class="timeline-lane" id="shakeLane"></div>
+                    <div class="timeline-lane" id="cameraLane"></div>
+                    <div class="timeline-lane" id="effectsLane"></div>
+                    <div class="timeline-lane" id="damageLane"></div>
                 </div>
-                <div class="timeline-playhead" id="timelinePlayhead" style="left: 0;"></div>
+                <div class="timeline-playhead" id="timelinePlayhead"></div>
             </div>
         </div>
     </div>
+    <div class="timeline-tooltip" id="tlTooltip" style="display:none;"></div>
 
     <script>
         // ==================== 전역 변수 ====================
@@ -1782,275 +1791,477 @@
         
         function clearLog() { document.getElementById('logContainer').innerHTML = ''; }
         
+        // 성능 최적화: requestAnimationFrame + 쓰로틀링
+        let lastUpdateTime = 0;
         function startUpdateLoop() {
-            setInterval(() => {
-                if (!playerContainer) return;
-                document.getElementById('playerPos').textContent = `${playerContainer.x.toFixed(0)}, ${playerContainer.y.toFixed(0)}`;
-                document.getElementById('enemyPos').textContent = `${enemyContainer.x.toFixed(0)}, ${enemyContainer.y.toFixed(0)}`;
-                document.getElementById('fpsValue').textContent = Math.round(app.ticker.FPS);
-            }, 100);
+            const updateStats = (time) => {
+                // 100ms 쓰로틀링
+                if (time - lastUpdateTime > 100) {
+                    lastUpdateTime = time;
+                    if (playerContainer) {
+                        document.getElementById('playerPos').textContent = `${playerContainer.x | 0}, ${playerContainer.y | 0}`;
+                        document.getElementById('enemyPos').textContent = `${enemyContainer.x | 0}, ${enemyContainer.y | 0}`;
+                        document.getElementById('fpsValue').textContent = app.ticker.FPS | 0;
+                    }
+                }
+                requestAnimationFrame(updateStats);
+            };
+            requestAnimationFrame(updateStats);
         }
         
-        // ==================== 🎬 타임라인 시스템 ====================
+        // ==================== 🎬 타임라인 시스템 (개선) ====================
         const Timeline = {
-            scale: 0.3,          // 1ms = 0.3px
-            duration: 2000,      // 기본 2초
+            scale: 0.25,
+            duration: 2000,
             currentTime: 0,
             isPlaying: false,
-            tracks: {
-                player: [],
-                enemy: [],
-                vfx: [],
-                shake: []
-            },
+            isLoop: false,
+            isVisible: true,
+            animId: null,
+            playStartTime: 0,
+            rafId: null,
             
+            tracks: { player: [], enemy: [], vfx: [], camera: [], effects: [], damage: [] },
+            
+            // 초기화
             init() {
                 this.renderRuler();
-                this.setupScrollSync();
+                this.setupEvents();
             },
             
-            // 눈금자 렌더링
-            renderRuler() {
-                const ruler = document.getElementById('timelineRuler');
-                ruler.innerHTML = '';
-                ruler.style.width = (this.duration * this.scale) + 'px';
-                
-                // 100ms 단위로 눈금
-                for (let t = 0; t <= this.duration; t += 100) {
-                    const mark = document.createElement('div');
-                    mark.className = 'timeline-ruler-mark' + (t % 500 === 0 ? ' major' : '');
-                    mark.style.left = (t * this.scale) + 'px';
-                    if (t % 500 === 0) {
-                        mark.textContent = (t / 1000).toFixed(1) + 's';
-                    }
-                    ruler.appendChild(mark);
-                }
-            },
-            
-            // 스크롤 동기화
-            setupScrollSync() {
+            // 이벤트 설정
+            setupEvents() {
                 const content = document.getElementById('timelineContent');
-                content.addEventListener('scroll', () => {
-                    // 플레이헤드 위치 유지
+                let isDragging = false;
+                let startX = 0;
+                let scrollLeft = 0;
+                
+                // 드래그로 스크롤
+                content.addEventListener('mousedown', (e) => {
+                    if (e.target.classList.contains('timeline-keyframe')) return;
+                    isDragging = true;
+                    startX = e.pageX - content.offsetLeft;
+                    scrollLeft = content.scrollLeft;
+                });
+                
+                content.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    const x = e.pageX - content.offsetLeft;
+                    content.scrollLeft = scrollLeft - (x - startX);
+                });
+                
+                content.addEventListener('mouseup', () => isDragging = false);
+                content.addEventListener('mouseleave', () => isDragging = false);
+                
+                // 클릭으로 시간 이동
+                content.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('timeline-keyframe')) return;
+                    const rect = content.getBoundingClientRect();
+                    const x = e.clientX - rect.left + content.scrollLeft;
+                    this.seekTo(x / this.scale);
+                });
+                
+                // 키보드 단축키
+                document.addEventListener('keydown', (e) => {
+                    if (e.target.tagName === 'INPUT') return;
+                    if (e.code === 'Space') { e.preventDefault(); this.togglePlay(); }
+                    if (e.code === 'Home') this.seekTo(0);
+                    if (e.code === 'End') this.seekTo(this.duration);
                 });
             },
             
-            // 애니메이션 분석하여 타임라인에 추가
+            // 눈금자 렌더링 (최적화: DocumentFragment 사용)
+            renderRuler() {
+                const ruler = document.getElementById('timelineRuler');
+                const fragment = document.createDocumentFragment();
+                ruler.innerHTML = '';
+                ruler.style.width = (this.duration * this.scale) + 'px';
+                
+                const step = this.scale < 0.15 ? 500 : this.scale < 0.3 ? 200 : 100;
+                for (let t = 0; t <= this.duration; t += step) {
+                    const mark = document.createElement('div');
+                    mark.className = 'timeline-ruler-mark' + (t % 500 === 0 ? ' major' : '');
+                    mark.style.left = (t * this.scale) + 'px';
+                    if (t % 500 === 0) mark.textContent = (t / 1000).toFixed(1) + 's';
+                    fragment.appendChild(mark);
+                }
+                ruler.appendChild(fragment);
+            },
+            
+            // 애니메이션 분석
             analyzeAnimation(animId) {
                 const data = animCache.get(animId);
                 if (!data) return;
                 
+                this.animId = animId;
                 this.clear();
+                document.getElementById('tlAnimName').textContent = animId;
                 
-                // 시퀀스 타입인 경우
                 if (data.type === 'sequence' && data.steps) {
                     this.analyzeSequence(data);
                 } else if (data.keyframes) {
+                    this.duration = this.calcAnimDuration(data);
                     this.analyzeKeyframes(data, 0);
                 }
                 
+                this.renderRuler();
                 this.render();
             },
             
-            // 시퀀스 분석
+            // 애니메이션 길이 계산 (duration 기반!)
+            calcAnimDuration(data) {
+                if (!data.keyframes) return data.duration || 500;
+                let total = 0;
+                data.keyframes.forEach(kf => total += kf.duration || 0);
+                return total || data.duration || 500;
+            },
+            
+            // 시퀀스 분석 (개선: duration 기반)
             analyzeSequence(data) {
                 let currentTime = 0;
                 
                 data.steps.forEach((step, idx) => {
+                    // 딜레이만 있는 경우
                     if (step.delay && !step.anim) {
                         currentTime += step.delay;
                         return;
                     }
                     
                     if (step.anim) {
-                        const animData = animCache.get(step.anim);
+                        // 랜덤 배열이면 첫 번째 사용
+                        const animId = Array.isArray(step.anim) ? step.anim[0] : step.anim;
+                        const animData = animCache.get(animId);
                         if (!animData) return;
                         
+                        // 딜레이 적용
                         if (step.delay) currentTime += step.delay;
                         
                         // 키프레임 분석
-                        this.analyzeKeyframes(animData, currentTime);
+                        this.analyzeKeyframes(animData, currentTime, step);
                         
-                        // 애니메이션 길이 계산
-                        if (animData.keyframes && step.wait) {
-                            const lastKf = animData.keyframes[animData.keyframes.length - 1];
-                            currentTime += lastKf.time || 0;
+                        // 애니메이션 길이 계산 (wait면 대기)
+                        if (step.wait) {
+                            currentTime += this.calcAnimDuration(animData);
                         }
+                    }
+                    
+                    // 이벤트 (damage, buff 등)
+                    if (step.damage) {
+                        this.tracks.damage.push({
+                            time: currentTime,
+                            duration: 50,
+                            label: `💥 ${step.damage}`,
+                            type: 'damage',
+                            data: step
+                        });
+                    }
+                    if (step.event) {
+                        this.tracks.damage.push({
+                            time: currentTime,
+                            duration: 50,
+                            label: `📦 ${step.event.type}`,
+                            type: 'damage',
+                            data: step.event
+                        });
                     }
                 });
                 
-                this.duration = Math.max(this.duration, currentTime + 500);
-                this.renderRuler();
+                this.duration = Math.max(this.duration, currentTime + 200);
             },
             
-            // 키프레임 분석
-            analyzeKeyframes(data, startTime) {
+            // 키프레임 분석 (개선: 모든 속성 분석)
+            analyzeKeyframes(data, startTime, stepData = {}) {
                 const target = data.target || (data.id?.startsWith('enemy') ? 'enemy' : 'player');
-                const trackName = target;
-                
                 if (!data.keyframes) return;
                 
+                let accTime = startTime;
+                
                 data.keyframes.forEach((kf, idx) => {
-                    const time = startTime + (kf.time || 0);
+                    const time = accTime;
                     const duration = kf.duration || 50;
                     
-                    // 메인 키프레임
-                    this.tracks[trackName].push({
-                        time,
-                        duration,
+                    // 메인 키프레임 (player/enemy)
+                    this.tracks[target].push({
+                        time, duration,
                         label: this.getKeyframeLabel(kf, idx),
-                        type: trackName,
+                        type: target,
                         data: kf
                     });
                     
                     // VFX
                     if (kf.vfx) {
                         this.tracks.vfx.push({
-                            time,
-                            duration: 150,
+                            time, duration: 150,
                             label: kf.vfx,
                             type: 'vfx',
                             data: kf
                         });
                     }
                     
-                    // Shake
+                    // 카메라 (zoom, focus)
+                    if (kf.camera) {
+                        let label = '📷';
+                        if (kf.camera.zoom) label += ` ${kf.camera.zoom}x`;
+                        if (kf.camera.focus) label += ` → ${kf.camera.focus}`;
+                        this.tracks.camera.push({
+                            time, duration: kf.camera.duration || 200,
+                            label, type: 'camera',
+                            data: kf.camera
+                        });
+                    }
+                    
+                    // 이펙트 (shake, hitstop, slowmo, color, shatter)
                     if (kf.shake) {
-                        this.tracks.shake.push({
-                            time,
-                            duration: kf.shake.duration || 100,
-                            label: '📳 Shake',
+                        this.tracks.effects.push({
+                            time, duration: 150,
+                            label: `📳 ${kf.shake}`,
                             type: 'shake',
                             data: kf
                         });
                     }
-                    
-                    // Hitstop
                     if (kf.hitstop) {
-                        this.tracks.shake.push({
-                            time,
-                            duration: kf.hitstop,
-                            label: '⏸️ Stop ' + kf.hitstop + 'ms',
+                        this.tracks.effects.push({
+                            time, duration: kf.hitstop,
+                            label: `⏸ ${kf.hitstop}ms`,
                             type: 'hitstop',
                             data: kf
                         });
                     }
+                    if (kf.slowmo) {
+                        const slowLabel = typeof kf.slowmo === 'object' ? `${kf.slowmo.scale}x` : kf.slowmo;
+                        this.tracks.effects.push({
+                            time, duration: 200,
+                            label: `🐌 ${slowLabel}`,
+                            type: 'slowmo',
+                            data: kf
+                        });
+                    }
+                    if (kf.color) {
+                        this.tracks.effects.push({
+                            time, duration: 150,
+                            label: `🎨 ${kf.color}`,
+                            type: 'color',
+                            data: kf
+                        });
+                    }
+                    if (kf.shatter) {
+                        const grid = kf.shatter.grid || 10;
+                        this.tracks.effects.push({
+                            time, duration: 200,
+                            label: `💎 ${grid}²`,
+                            type: 'shatter',
+                            data: kf
+                        });
+                    }
+                    
+                    // 다음 키프레임 시간
+                    accTime += duration;
                 });
+                
+                // 스텝에서 damage가 있으면 마지막에 추가
+                if (stepData.damage && !data.keyframes.some(kf => kf.damage)) {
+                    this.tracks.damage.push({
+                        time: accTime - 50,
+                        duration: 50,
+                        label: `💥 ${stepData.damage}`,
+                        type: 'damage',
+                        data: stepData
+                    });
+                }
             },
             
-            // 키프레임 레이블 생성
+            // 키프레임 레이블 (간결하게)
             getKeyframeLabel(kf, idx) {
                 const parts = [];
-                if (kf.x !== undefined) parts.push(`X:${kf.x}`);
-                if (kf.y !== undefined) parts.push(`Y:${kf.y}`);
-                if (kf.scaleX !== undefined || kf.scaleY !== undefined) {
-                    parts.push(`S:${(kf.scaleX || 1).toFixed(2)},${(kf.scaleY || 1).toFixed(2)}`);
-                }
-                if (kf.rotation !== undefined) parts.push(`R:${kf.rotation.toFixed(2)}`);
-                if (kf.alpha !== undefined) parts.push(`α:${kf.alpha}`);
+                if (kf.x !== undefined) parts.push(`x${kf.x}`);
+                if (kf.y !== undefined) parts.push(`y${kf.y}`);
+                if (kf.scaleX !== undefined && kf.scaleX !== 1) parts.push(`s${kf.scaleX.toFixed(1)}`);
+                if (kf.rotation !== undefined && kf.rotation !== 0) parts.push(`r${kf.rotation.toFixed(1)}`);
+                if (kf.alpha !== undefined && kf.alpha !== 1) parts.push(`α${kf.alpha}`);
                 if (kf.afterimage) parts.push('👤');
-                
-                return parts.length > 0 ? parts.join(' ') : `KF ${idx}`;
+                if (kf.dashToTarget) parts.push('🎯');
+                return parts.length > 0 ? parts.join(' ') : `#${idx}`;
             },
             
-            // 렌더링
+            // 렌더링 (최적화: batch DOM 업데이트)
             render() {
+                const lanes = document.getElementById('timelineLanes');
+                lanes.style.width = (this.duration * this.scale + 50) + 'px';
+                
                 this.renderTrack('player', 'playerLane');
                 this.renderTrack('enemy', 'enemyLane');
                 this.renderTrack('vfx', 'vfxLane');
-                this.renderTrack('shake', 'shakeLane');
-                
-                // 레인 너비 설정
-                const lanes = document.getElementById('timelineLanes');
-                lanes.style.width = (this.duration * this.scale) + 'px';
+                this.renderTrack('camera', 'cameraLane');
+                this.renderTrack('effects', 'effectsLane');
+                this.renderTrack('damage', 'damageLane');
             },
             
             renderTrack(trackName, laneId) {
                 const lane = document.getElementById(laneId);
-                lane.innerHTML = '';
+                const fragment = document.createDocumentFragment();
                 
                 this.tracks[trackName].forEach(item => {
-                    const kf = document.createElement('div');
-                    kf.className = `timeline-keyframe ${item.type}`;
-                    kf.style.left = (item.time * this.scale) + 'px';
-                    kf.style.width = Math.max(item.duration * this.scale, 30) + 'px';
-                    kf.textContent = item.label;
-                    kf.title = JSON.stringify(item.data, null, 2);
-                    
-                    kf.onclick = () => this.onKeyframeClick(item);
-                    
-                    lane.appendChild(kf);
+                    const el = document.createElement('div');
+                    el.className = `timeline-keyframe ${item.type}`;
+                    el.style.cssText = `left:${item.time * this.scale}px;width:${Math.max(item.duration * this.scale, 20)}px`;
+                    el.textContent = item.label;
+                    el.dataset.time = item.time;
+                    el.addEventListener('click', (e) => { e.stopPropagation(); this.onKeyframeClick(item, e); });
+                    el.addEventListener('mouseenter', (e) => this.showTooltip(item, e));
+                    el.addEventListener('mouseleave', () => this.hideTooltip());
+                    fragment.appendChild(el);
                 });
+                
+                lane.innerHTML = '';
+                lane.appendChild(fragment);
             },
             
-            onKeyframeClick(item) {
-                log('info', `🎯 키프레임: ${item.label} @ ${item.time}ms`);
-                console.log('Keyframe data:', item.data);
+            // 툴팁
+            showTooltip(item, e) {
+                const tt = document.getElementById('tlTooltip');
+                let html = `<div class="tt-title">${item.label}</div>`;
+                html += `<div class="tt-row"><span>Time:</span><span>${item.time}ms</span></div>`;
+                html += `<div class="tt-row"><span>Duration:</span><span>${item.duration}ms</span></div>`;
+                
+                const d = item.data;
+                if (d.x !== undefined) html += `<div class="tt-row"><span>X:</span><span>${d.x}</span></div>`;
+                if (d.y !== undefined) html += `<div class="tt-row"><span>Y:</span><span>${d.y}</span></div>`;
+                if (d.scaleX !== undefined) html += `<div class="tt-row"><span>ScaleX:</span><span>${d.scaleX}</span></div>`;
+                if (d.scaleY !== undefined) html += `<div class="tt-row"><span>ScaleY:</span><span>${d.scaleY}</span></div>`;
+                if (d.vfx) html += `<div class="tt-row"><span>VFX:</span><span>${d.vfx}</span></div>`;
+                if (d.ease) html += `<div class="tt-row"><span>Ease:</span><span>${d.ease}</span></div>`;
+                
+                tt.innerHTML = html;
+                tt.style.display = 'block';
+                tt.style.left = (e.clientX + 10) + 'px';
+                tt.style.top = (e.clientY - tt.offsetHeight - 10) + 'px';
             },
             
-            // 플레이헤드 이동
+            hideTooltip() {
+                document.getElementById('tlTooltip').style.display = 'none';
+            },
+            
+            onKeyframeClick(item, e) {
+                log('info', `🎯 ${item.type}: ${item.label} @ ${item.time}ms`);
+                this.seekTo(item.time);
+            },
+            
+            // 플레이헤드 설정
             setPlayhead(time) {
-                this.currentTime = time;
+                this.currentTime = Math.max(0, Math.min(time, this.duration));
                 const playhead = document.getElementById('timelinePlayhead');
-                playhead.style.left = (time * this.scale) + 'px';
-                document.getElementById('timelineTime').textContent = (time / 1000).toFixed(3) + 's';
+                playhead.style.left = (this.currentTime * this.scale) + 'px';
+                document.getElementById('timelineTime').textContent = 
+                    `${(this.currentTime / 1000).toFixed(2)}s / ${(this.duration / 1000).toFixed(2)}s`;
+                
+                // 자동 스크롤
+                const content = document.getElementById('timelineContent');
+                const playheadX = this.currentTime * this.scale;
+                if (playheadX > content.scrollLeft + content.clientWidth - 50) {
+                    content.scrollLeft = playheadX - 100;
+                } else if (playheadX < content.scrollLeft + 50) {
+                    content.scrollLeft = Math.max(0, playheadX - 100);
+                }
+            },
+            
+            // 시간 이동
+            seekTo(time) {
+                this.setPlayhead(time);
+            },
+            
+            // 재생/정지 토글
+            togglePlay() {
+                if (this.isPlaying) {
+                    this.pause();
+                } else {
+                    this.play();
+                }
+            },
+            
+            // 재생
+            play() {
+                if (!this.animId) return;
+                this.isPlaying = true;
+                document.getElementById('tlPlayBtn').textContent = '⏸';
+                document.getElementById('tlPlayBtn').classList.add('active');
+                
+                // 애니메이션 재생
+                playAnimation(this.animId, true);
+                
+                // 플레이헤드 동기화
+                this.playStartTime = performance.now();
+                const updateLoop = () => {
+                    if (!this.isPlaying) return;
+                    const elapsed = (performance.now() - this.playStartTime) / config.speed;
+                    this.setPlayhead(elapsed);
+                    
+                    if (elapsed >= this.duration) {
+                        if (this.isLoop) {
+                            this.playStartTime = performance.now();
+                            playAnimation(this.animId, true);
+                        } else {
+                            this.stop();
+                        }
+                    } else {
+                        this.rafId = requestAnimationFrame(updateLoop);
+                    }
+                };
+                this.rafId = requestAnimationFrame(updateLoop);
+            },
+            
+            // 일시정지
+            pause() {
+                this.isPlaying = false;
+                if (this.rafId) cancelAnimationFrame(this.rafId);
+                document.getElementById('tlPlayBtn').textContent = '▶';
+                document.getElementById('tlPlayBtn').classList.remove('active');
+            },
+            
+            // 정지
+            stop() {
+                this.pause();
+                this.setPlayhead(0);
+                resetCharacters();
+            },
+            
+            // 루프 토글
+            toggleLoop() {
+                this.isLoop = !this.isLoop;
+                document.getElementById('tlLoopBtn').classList.toggle('active', this.isLoop);
+            },
+            
+            // 줌
+            zoom(delta) {
+                this.scale = Math.max(0.05, Math.min(1, this.scale + delta));
+                this.renderRuler();
+                this.render();
+                this.setPlayhead(this.currentTime);
+            },
+            
+            // 패널 토글
+            toggle() {
+                this.isVisible = !this.isVisible;
+                const panel = document.getElementById('timelinePanel');
+                const main = document.querySelector('.main-container');
+                const btn = document.getElementById('tlToggleBtn');
+                
+                panel.classList.toggle('collapsed', !this.isVisible);
+                main.classList.toggle('timeline-collapsed', !this.isVisible);
+                btn.textContent = this.isVisible ? '▼' : '▲';
             },
             
             // 클리어
             clear() {
-                this.tracks = { player: [], enemy: [], vfx: [], shake: [] };
+                this.tracks = { player: [], enemy: [], vfx: [], camera: [], effects: [], damage: [] };
                 this.duration = 2000;
                 this.setPlayhead(0);
             }
         };
         
-        // 줌 인/아웃
-        function timelineZoom(dir) {
-            Timeline.scale = Math.max(0.1, Math.min(2, Timeline.scale + dir * 0.1));
-            Timeline.renderRuler();
-            Timeline.render();
-            log('info', `타임라인 줌: ${Timeline.scale.toFixed(1)}x`);
-        }
-        
-        // 타임라인 숨기기/보이기
-        let timelineVisible = true;
-        function toggleTimeline() {
-            timelineVisible = !timelineVisible;
-            const panel = document.getElementById('timelinePanel');
-            const btn = event.target;
-            
-            if (timelineVisible) {
-                panel.style.height = '200px';
-                btn.textContent = '▼ 숨기기';
-                document.querySelector('.main-container').style.height = 'calc(100vh - 200px)';
-            } else {
-                panel.style.height = '32px';
-                btn.textContent = '▲ 펼치기';
-                document.querySelector('.main-container').style.height = 'calc(100vh - 32px)';
-            }
-        }
-        
-        // 원본 playAnimation을 래핑하여 타임라인 연동
+        // playAnimation 래핑 (타임라인 연동)
         const _originalPlayAnimation = playAnimation;
         playAnimation = async function(id, skipReset) {
-            // 타임라인 분석
             Timeline.analyzeAnimation(id);
-            
-            // 플레이헤드 애니메이션
-            Timeline.setPlayhead(0);
-            const startTime = performance.now();
-            
-            const updatePlayhead = () => {
-                const elapsed = performance.now() - startTime;
-                Timeline.setPlayhead(elapsed / config.speed);
-                
-                if (elapsed / config.speed < Timeline.duration) {
-                    requestAnimationFrame(updatePlayhead);
-                }
-            };
-            requestAnimationFrame(updatePlayhead);
-            
-            // 원본 실행
             return _originalPlayAnimation(id, skipReset);
         };
         
