@@ -1,58 +1,79 @@
 {
     "id": "dagger_impact",
-    "name": "단검 적중 임팩트",
-    "shake": 8,
+    "name": "단검 적중 - 관통 임팩트",
+    "shake": 12,
     "particles": [
         {
             "type": "flash",
-            "size": 60,
+            "size": 100,
             "color": "#ffffff",
-            "life": 60
+            "life": 50
+        },
+        {
+            "type": "flash",
+            "size": 60,
+            "color": "#60a5fa",
+            "life": 80
         },
         {
             "type": "ring",
-            "size": 15,
+            "size": 20,
+            "maxSize": 120,
+            "color": "#ffffff",
+            "life": 100
+        },
+        {
+            "type": "ring",
+            "size": 30,
             "maxSize": 80,
-            "color": "#60a5fa",
+            "color": "#ef4444",
             "life": 150
         },
         {
             "type": "slash",
-            "count": 2,
-            "angle": [-30, 30],
-            "length": [40, 60],
-            "width": 6,
+            "count": 3,
+            "angle": [-45, 0, 45],
+            "length": [60, 90],
+            "width": 8,
             "color": "#ffffff",
+            "glow": "#60a5fa",
+            "life": 100
+        },
+        {
+            "type": "arrow",
+            "length": 80,
+            "width": 50,
+            "tipAngle": 25,
+            "color": "#93c5fd",
             "glow": "#60a5fa",
             "life": 120
         },
         {
             "type": "spark",
-            "count": 15,
-            "spread": 50,
-            "speed": [8, 18],
-            "size": [2, 6],
-            "colors": ["#ef4444", "#94a3b8", "#ffffff", "#60a5fa"],
-            "life": [150, 300]
+            "count": 25,
+            "spread": 80,
+            "speed": [12, 28],
+            "size": [3, 8],
+            "colors": ["#ef4444", "#dc2626", "#ffffff", "#60a5fa", "#c0c0c0"],
+            "life": [180, 350]
         },
         {
             "type": "debris",
-            "count": 10,
-            "speed": [6, 14],
-            "size": [2, 5],
-            "colors": ["#94a3b8", "#64748b", "#ef4444"],
-            "gravity": 0.4,
-            "life": [200, 400]
+            "count": 15,
+            "speed": [8, 20],
+            "size": [3, 6],
+            "colors": ["#ef4444", "#dc2626", "#7f1d1d", "#c0c0c0"],
+            "gravity": 0.5,
+            "life": [250, 500]
         },
         {
             "type": "line",
-            "count": 8,
-            "angleStep": 45,
-            "length": [35, 60],
-            "width": 3,
+            "count": 12,
+            "angleStep": 30,
+            "length": [50, 90],
+            "width": 4,
             "color": "#fbbf24",
-            "life": 140
+            "life": 120
         }
     ]
 }
-
