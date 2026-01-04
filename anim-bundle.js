@@ -1,6 +1,6 @@
 /**
  * DDOO Animation Bundle - 자동 생성됨
- * 생성일: 2026-01-04T16:12:04.963Z
+ * 생성일: 2026-01-04T16:17:33.377Z
  * 
  * 이 파일을 포함하면 fetch 없이 모든 애니메이션/VFX 데이터 사용 가능!
  * <script src="anim-bundle.js"></script>
@@ -2599,11 +2599,11 @@ window.ANIM_BUNDLE = {
   },
   "player.attack": {
     "id": "player.attack",
-    "name": "플레이어 공격 - 강화",
+    "name": "플레이어 공격 - 검 베기",
     "target": "player",
     "type": "once",
     "priority": 10,
-    "duration": 400,
+    "duration": 420,
     "keyframes": [
       {
         "x": 0,
@@ -2614,79 +2614,79 @@ window.ANIM_BUNDLE = {
         "duration": 0
       },
       {
-        "x": -10,
+        "x": -12,
         "y": 5,
-        "scaleX": 0.92,
-        "scaleY": 1.08,
-        "rotation": -0.05,
-        "duration": 35,
+        "scaleX": 0.9,
+        "scaleY": 1.1,
+        "rotation": -0.06,
+        "duration": 30,
         "ease": "power2.out",
         "afterimage": true
       },
       {
-        "x": -22,
-        "y": 12,
-        "scaleX": 0.85,
-        "scaleY": 1.15,
-        "rotation": -0.1,
-        "duration": 45,
+        "x": -25,
+        "y": 14,
+        "scaleX": 0.82,
+        "scaleY": 1.18,
+        "rotation": -0.12,
+        "duration": 40,
         "ease": "power2.in",
         "color": "power"
       },
       {
-        "x": -30,
-        "y": 18,
-        "scaleX": 0.78,
-        "scaleY": 1.22,
-        "rotation": -0.15,
+        "x": -35,
+        "y": 20,
+        "scaleX": 0.75,
+        "scaleY": 1.25,
+        "rotation": -0.18,
         "duration": 35,
         "ease": "power3.in"
       },
       {
-        "x": 20,
-        "y": -10,
-        "scaleX": 1.15,
-        "scaleY": 0.88,
-        "rotation": 0.08,
-        "duration": 20,
+        "x": 25,
+        "y": -12,
+        "scaleX": 1.2,
+        "scaleY": 0.85,
+        "rotation": 0.1,
+        "duration": 18,
         "ease": "power4.out",
         "afterimage": true,
         "camera": {
-          "zoom": 1.1,
-          "duration": 150
+          "zoom": 1.12,
+          "duration": 180
         }
       },
       {
-        "x": 70,
-        "y": -18,
-        "scaleX": 1.35,
-        "scaleY": 0.7,
-        "rotation": 0.2,
-        "duration": 25,
+        "x": 75,
+        "y": -20,
+        "scaleX": 1.4,
+        "scaleY": 0.68,
+        "rotation": 0.25,
+        "duration": 22,
         "ease": "power4.out",
-        "vfx": "slash",
+        "vfx": "sword_slash",
         "vfxTarget": "target",
-        "shake": 10,
-        "hitstop": 70,
+        "shake": 12,
+        "hitstop": 80,
         "afterimage": true,
         "color": "hit"
       },
       {
-        "x": 80,
-        "y": -12,
-        "scaleX": 1.3,
-        "scaleY": 0.75,
-        "rotation": 0.18,
+        "x": 85,
+        "y": -14,
+        "scaleX": 1.32,
+        "scaleY": 0.72,
+        "rotation": 0.2,
         "duration": 25,
         "ease": "power2.out"
       },
       {
-        "x": 65,
+        "x": 68,
         "y": -6,
         "scaleX": 1.18,
         "scaleY": 0.85,
         "rotation": 0.12,
-        "duration": 35,
+        "duration": 40,
         "ease": "power2.inOut"
       },
       {
@@ -2695,7 +2695,7 @@ window.ANIM_BUNDLE = {
         "scaleX": 1.1,
         "scaleY": 0.92,
         "rotation": 0.08,
-        "duration": 40,
+        "duration": 45,
         "ease": "power2.out"
       },
       {
@@ -2704,7 +2704,7 @@ window.ANIM_BUNDLE = {
         "scaleX": 1.04,
         "scaleY": 0.97,
         "rotation": 0.04,
-        "duration": 40,
+        "duration": 42,
         "ease": "power2.out"
       },
       {
@@ -2713,7 +2713,7 @@ window.ANIM_BUNDLE = {
         "scaleX": 1.01,
         "scaleY": 0.99,
         "rotation": 0.01,
-        "duration": 35,
+        "duration": 38,
         "ease": "power2.out"
       },
       {
@@ -5928,7 +5928,7 @@ window.ANIM_BUNDLE = {
   }
 };
 
-// VFX 데이터 (60개)
+// VFX 데이터 (61개)
 window.VFX_BUNDLE = {
   "air_slash": {
     "id": "air_slash",
@@ -9622,6 +9622,89 @@ window.VFX_BUNDLE = {
           90,
           180
         ]
+      }
+    ]
+  },
+  "sword_slash": {
+    "id": "sword_slash",
+    "name": "검 베기 궤적",
+    "shake": 8,
+    "particles": [
+      {
+        "type": "flash",
+        "size": 60,
+        "color": "#ffffff",
+        "life": 40
+      },
+      {
+        "type": "sword_arc",
+        "radius": [
+          70,
+          90
+        ],
+        "thickness": 18,
+        "startAngle": -70,
+        "endAngle": 50,
+        "color": "#ffffff",
+        "glow": "#60a5fa",
+        "trail": true,
+        "life": 180
+      },
+      {
+        "type": "sword_arc",
+        "radius": [
+          50,
+          65
+        ],
+        "thickness": 10,
+        "startAngle": -50,
+        "endAngle": 40,
+        "color": "#93c5fd",
+        "glow": "#3b82f6",
+        "trail": true,
+        "life": 150,
+        "delay": 20
+      },
+      {
+        "type": "ring",
+        "size": 20,
+        "maxSize": 80,
+        "color": "#ffffff",
+        "life": 100
+      },
+      {
+        "type": "spark",
+        "count": 18,
+        "spread": 60,
+        "speed": [
+          10,
+          22
+        ],
+        "size": [
+          3,
+          7
+        ],
+        "colors": [
+          "#ffffff",
+          "#93c5fd",
+          "#60a5fa"
+        ],
+        "life": [
+          150,
+          300
+        ]
+      },
+      {
+        "type": "line",
+        "count": 6,
+        "angleStep": 60,
+        "length": [
+          30,
+          55
+        ],
+        "width": 2,
+        "color": "#93c5fd",
+        "life": 100
       }
     ]
   },

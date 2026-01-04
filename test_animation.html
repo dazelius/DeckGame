@@ -1252,9 +1252,37 @@
                         case 'projectile':
                             spawnProjectileParticle(def, x, y, dir, scale, container);
                             break;
+                        case 'sword_arc':
+                            spawnSwordArcParticle(def, x, y, dir, i, scale);
+                            break;
                     }
                 }, i * delayBetween);
             }
+        }
+        
+        // 검 궤적 아크 스폰
+        function spawnSwordArcParticle(def, x, y, dir, index, scale) {
+            const radius = getRandValue(def.radius) * scale;
+            const thickness = (def.thickness || 15) * scale;
+            const colors = Array.isArray(def.colors) ? def.colors : [def.color || '#ffffff'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            const glowColors = Array.isArray(def.glowColors) ? def.glowColors : [def.glow || '#60a5fa'];
+            const glow = glowColors[Math.floor(Math.random() * glowColors.length)];
+            
+            spawnParticle({
+                type: 'sword_arc',
+                x: x,
+                y: y,
+                dir: dir,
+                radius: radius,
+                thickness: thickness,
+                startAngle: def.startAngle || -60,
+                endAngle: def.endAngle || 60,
+                color: color,
+                glow: glow,
+                trail: def.trail !== false,
+                life: getRandValue(def.life) || 180
+            });
         }
         
         function spawnSlashParticle(def, x, y, dir, index, scale) {
@@ -1491,6 +1519,9 @@
                         case 'projectile':
                             updateAndDrawProjectile(p, alpha, progress);
                             break;
+                        case 'sword_arc':
+                            drawSwordArcParticle(p, alpha, progress);
+                            break;
                     }
                     
                     vfxCtx.restore();
@@ -1499,6 +1530,82 @@
                 animationFrame = requestAnimationFrame(render);
             }
             render();
+        }
+        
+        // 검 궤적 아크 렌더링
+        function drawSwordArcParticle(p, alpha, progress) {
+            if (!isFinite(p.x) || !isFinite(p.y)) return;
+            
+            const radius = p.radius || 60;
+            const thickness = (p.thickness || 15) * (1 - progress * 0.4);
+            const dir = p.dir || 1;
+            const color = p.color || '#ffffff';
+            const glow = p.glow || '#60a5fa';
+            
+            const startAngle = (p.startAngle || -60) * Math.PI / 180;
+            const endAngle = (p.endAngle || 60) * Math.PI / 180;
+            const currentEnd = startAngle + (endAngle - startAngle) * Math.min(1, progress * 3);
+            const fadeStart = Math.max(startAngle, currentEnd - (endAngle - startAngle) * 0.7);
+            
+            vfxCtx.save();
+            vfxCtx.translate(p.x, p.y);
+            if (dir < 0) vfxCtx.scale(-1, 1);
+            
+            // 외부 글로우
+            vfxCtx.shadowColor = glow;
+            vfxCtx.shadowBlur = 30 + thickness;
+            
+            vfxCtx.strokeStyle = glow;
+            vfxCtx.lineWidth = thickness * 2.5;
+            vfxCtx.lineCap = 'round';
+            vfxCtx.globalAlpha = alpha * 0.3;
+            
+            vfxCtx.beginPath();
+            vfxCtx.arc(0, 0, radius, fadeStart, currentEnd);
+            vfxCtx.stroke();
+            
+            // 메인 아크
+            const arcLength = (currentEnd - fadeStart) * radius;
+            if (arcLength > 0) {
+                const startX = Math.cos(fadeStart) * radius;
+                const startY = Math.sin(fadeStart) * radius;
+                const endX = Math.cos(currentEnd) * radius;
+                const endY = Math.sin(currentEnd) * radius;
+                
+                const grad = vfxCtx.createLinearGradient(startX, startY, endX, endY);
+                grad.addColorStop(0, 'transparent');
+                grad.addColorStop(0.2, color + 'aa');
+                grad.addColorStop(0.5, color);
+                grad.addColorStop(0.8, '#ffffff');
+                grad.addColorStop(1, '#ffffff');
+                
+                vfxCtx.strokeStyle = grad;
+                vfxCtx.lineWidth = thickness;
+                vfxCtx.globalAlpha = alpha;
+                
+                vfxCtx.beginPath();
+                vfxCtx.arc(0, 0, radius, fadeStart, currentEnd);
+                vfxCtx.stroke();
+                
+                // 끝점 하이라이트
+                if (progress < 0.5) {
+                    const tipX = Math.cos(currentEnd) * radius;
+                    const tipY = Math.sin(currentEnd) * radius;
+                    
+                    const tipGrad = vfxCtx.createRadialGradient(tipX, tipY, 0, tipX, tipY, thickness * 2);
+                    tipGrad.addColorStop(0, '#ffffff');
+                    tipGrad.addColorStop(0.5, color);
+                    tipGrad.addColorStop(1, 'transparent');
+                    
+                    vfxCtx.fillStyle = tipGrad;
+                    vfxCtx.globalAlpha = alpha * (1 - progress * 2);
+                    vfxCtx.beginPath();
+                    vfxCtx.arc(tipX, tipY, thickness * 2, 0, Math.PI * 2);
+                    vfxCtx.fill();
+                }
+            }
+            
+            vfxCtx.restore();
         }
         
         function drawSlashParticle(p, alpha, progress) {
