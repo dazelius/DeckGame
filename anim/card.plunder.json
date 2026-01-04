@@ -1,12 +1,29 @@
 {
     "id": "card.plunder",
-    "name": "강탈 - 등 뒤 습격",
+    "name": "강탈 - 5연속 습격",
     "type": "sequence",
-    "description": "적 뒤로 순간이동해 찌르고 뜯어낸다",
+    "description": "적 뒤로 순간이동해 5번 찌르고 뜯어낸다",
     "returnToBase": true,
     "steps": [
-        { "anim": "player.plunder", "wait": true },
-        { "delay": 40 },
-        { "anim": "enemy.plunder_hit", "wait": true, "damage": 8 }
+        { "anim": "player.plunder_teleport", "wait": true },
+        
+        { "anim": "player.plunder_stab1", "wait": false },
+        { "anim": "enemy.plunder_hit1", "wait": true, "delay": 20, "damage": 1 },
+        { "delay": 15 },
+        
+        { "anim": "player.plunder_stab2", "wait": false },
+        { "anim": "enemy.plunder_hit2", "wait": true, "delay": 20, "damage": 1 },
+        { "delay": 15 },
+        
+        { "anim": "player.plunder_stab3", "wait": false },
+        { "anim": "enemy.plunder_hit3", "wait": true, "delay": 20, "damage": 1 },
+        { "delay": 15 },
+        
+        { "anim": "player.plunder_stab4", "wait": false },
+        { "anim": "enemy.plunder_hit4", "wait": true, "delay": 20, "damage": 1 },
+        { "delay": 20 },
+        
+        { "anim": "player.plunder_finish", "wait": false },
+        { "anim": "enemy.plunder_finish", "wait": true, "delay": 30, "damage": 4 }
     ]
 }

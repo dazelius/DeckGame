@@ -1,24 +1,14 @@
 {
     "id": "enemy.plunder_hit",
-    "name": "강탈 피격 - 등 뒤에서 찔림",
+    "name": "강탈 피격 (단일)",
     "target": "enemy",
     "type": "once",
     "priority": 18,
-    "duration": 600,
+    "duration": 150,
     "keyframes": [
         { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 0 },
-        
-        { "x": -15, "y": -10, "scaleX": 0.85, "scaleY": 1.15, "alpha": 0.9, "rotation": -0.1, "duration": 30, "ease": "power4.out", "color": "hit", "shatter": { "grid": 10, "force": 10, "life": 400, "hideTime": 120 }, "hitstop": 60 },
-        { "x": -25, "y": -5, "scaleX": 0.75, "scaleY": 1.25, "alpha": 0.8, "rotation": -0.15, "duration": 40, "ease": "power2.out" },
-        { "x": -20, "y": 5, "scaleX": 0.7, "scaleY": 1.3, "alpha": 0.75, "rotation": -0.1, "duration": 35, "ease": "power2.out", "vfx": "blood_splat" },
-        
-        { "x": -30, "y": 10, "scaleX": 0.72, "scaleY": 1.28, "alpha": 0.7, "rotation": -0.12, "duration": 50, "ease": "power2.out" },
-        { "x": -25, "y": 8, "scaleX": 0.78, "scaleY": 1.22, "alpha": 0.75, "rotation": -0.08, "duration": 55, "ease": "power2.out" },
-        
-        { "x": 30, "y": 3, "scaleX": 0.85, "scaleY": 1.15, "alpha": 0.8, "rotation": 0.1, "duration": 45, "ease": "power3.out" },
-        { "x": 50, "y": 0, "scaleX": 0.9, "scaleY": 1.1, "alpha": 0.88, "rotation": 0.12, "duration": 50, "ease": "power2.out" },
-        { "x": 40, "y": 0, "scaleX": 0.94, "scaleY": 1.06, "alpha": 0.93, "rotation": 0.06, "duration": 50, "ease": "power2.out" },
-        { "x": 20, "y": 0, "scaleX": 0.97, "scaleY": 1.03, "alpha": 0.97, "rotation": 0.02, "duration": 45, "ease": "power2.out" },
-        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 40, "ease": "power2.out" }
+        { "x": -15, "y": -10, "scaleX": 0.75, "scaleY": 1.25, "alpha": 0.7, "rotation": -0.15, "duration": 30, "ease": "power4.out", "color": "hit", "shatter": { "target": "self", "grid": 10, "force": 12, "life": 400, "hideTime": 100 }, "hitstop": 50, "shake": 8 },
+        { "x": -8, "y": -3, "scaleX": 0.88, "scaleY": 1.12, "alpha": 0.85, "rotation": -0.08, "duration": 40, "ease": "power2.out" },
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 80, "ease": "power2.out" }
     ]
 }

@@ -1,0 +1,17 @@
+{
+    "id": "player.plunder_teleport",
+    "name": "강탈 - 뒤로 텔레포트",
+    "target": "player",
+    "type": "once",
+    "priority": 16,
+    "duration": 200,
+    "keyframes": [
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "alpha": 1, "duration": 0 },
+        { "x": -20, "y": 0, "scaleX": 0.8, "scaleY": 1.2, "rotation": -0.1, "alpha": 0.6, "duration": 40, "ease": "power2.in", "afterimage": true },
+        { "x": -50, "y": 0, "scaleX": 0.5, "scaleY": 1.5, "rotation": -0.2, "alpha": 0.2, "duration": 30, "ease": "power3.in", "afterimage": true, "vfx": "shadow_fade", "vfxTarget": "self" },
+        { "x": 220, "y": 0, "scaleX": 0.4, "scaleY": 1.6, "rotation": 0, "alpha": 0, "duration": 20, "ease": "power4.out" },
+        { "x": 200, "y": 0, "scaleX": 1.1, "scaleY": 0.9, "rotation": 0.1, "alpha": 1, "duration": 30, "ease": "power3.out", "vfx": "shadow_appear", "vfxTarget": "self", "color": "shadow" },
+        { "x": 180, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "alpha": 1, "duration": 80, "ease": "power2.out" }
+    ]
+}
+
