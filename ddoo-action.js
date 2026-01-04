@@ -236,17 +236,17 @@ const DDOOAction = {
                 console.log('[DDOOAction] 💡 GlowFilter 준비완료');
             }
             
-            // 🌊 충격파 필터
+            // 🌊 충격파 필터 (v6.0.0+ API)
             if (filters.ShockwaveFilter) {
-                this.pixiFilters.shockwave = new filters.ShockwaveFilter(
-                    [0.5, 0.5],  // center (normalized)
-                    {
-                        amplitude: this.config.filters.shockwave.amplitude,
-                        wavelength: this.config.filters.shockwave.wavelength,
-                        speed: this.config.filters.shockwave.speed,
-                        radius: -1
-                    }
-                );
+                this.pixiFilters.shockwave = new filters.ShockwaveFilter({
+                    center: { x: 0.5, y: 0.5 },
+                    amplitude: this.config.filters.shockwave.amplitude,
+                    wavelength: this.config.filters.shockwave.wavelength,
+                    speed: this.config.filters.shockwave.speed,
+                    radius: -1,
+                    brightness: 1,
+                    time: 0
+                });
                 console.log('[DDOOAction] 🌊 ShockwaveFilter 준비완료');
             }
             
@@ -337,10 +337,10 @@ const DDOOAction = {
         }
     },
     
-    // 🌊 충격파 효과
+    // 🌊 충격파 효과 (v6.0.0+ API)
     triggerShockwave(x, y, options = {}) {
         if (!this.pixiFilters.available || !this.stageContainer) return;
-        if (!PIXI.filters.ShockwaveFilter) return;
+        if (!PIXI.filters || !PIXI.filters.ShockwaveFilter) return;
         
         try {
             const screenW = this.pixiApp?.screen?.width || 800;
@@ -350,17 +350,16 @@ const DDOOAction = {
             const centerX = x / screenW;
             const centerY = y / screenH;
             
-            const shockwave = new PIXI.filters.ShockwaveFilter(
-                [centerX, centerY],
-                {
-                    amplitude: options.amplitude || 15,
-                    wavelength: options.wavelength || 80,
-                    speed: options.speed || 300,
-                    radius: -1,
-                    brightness: 1
-                },
-                0  // time
-            );
+            // v6.0.0+ 새 API: options 객체만 사용
+            const shockwave = new PIXI.filters.ShockwaveFilter({
+                center: { x: centerX, y: centerY },
+                amplitude: options.amplitude || 15,
+                wavelength: options.wavelength || 80,
+                speed: options.speed || 300,
+                radius: -1,
+                brightness: 1,
+                time: 0
+            });
             
             // 스테이지에 필터 추가
             if (!this.stageContainer.filters) {
@@ -372,6 +371,7 @@ const DDOOAction = {
             // 충격파 애니메이션
             const duration = options.duration || 600;
             const maxRadius = options.maxRadius || 300;
+            const startAmplitude = options.amplitude || 15;
             
             gsap.to(shockwave, {
                 time: duration / 1000,
@@ -381,7 +381,7 @@ const DDOOAction = {
                     // 반경 확장
                     shockwave.radius = (shockwave.time / (duration / 1000)) * maxRadius;
                     // 진폭 감소
-                    shockwave.amplitude = (options.amplitude || 15) * (1 - shockwave.time / (duration / 1000));
+                    shockwave.amplitude = startAmplitude * (1 - shockwave.time / (duration / 1000));
                 },
                 onComplete: () => {
                     // 필터 제거
