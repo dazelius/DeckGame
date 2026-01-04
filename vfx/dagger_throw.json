@@ -1,51 +1,62 @@
 {
     "id": "dagger_throw",
-    "name": "단검 투척 - 회전하는 단검",
-    "shake": 3,
+    "name": "단검 투척 - 섬광의 칼날",
+    "shake": 4,
     "particles": [
         {
             "type": "projectile",
             "shape": "dagger",
-            "speed": 32,
-            "rotation": 1200,
-            "size": 28,
-            "color": "#94a3b8",
+            "speed": 45,
+            "rotation": 1800,
+            "size": 35,
+            "color": "#c0c0c0",
             "glow": "#60a5fa",
+            "glowIntensity": 2.0,
             "trail": true,
+            "trailLength": 12,
+            "trailColor": "#93c5fd",
             "onHitVFX": "dagger_impact",
-            "life": 600
+            "life": 500
         },
         {
             "type": "flash",
-            "size": 35,
-            "color": "#e0e7ff",
-            "life": 50
+            "size": 50,
+            "color": "#ffffff",
+            "life": 40
         },
         {
             "type": "ring",
-            "size": 8,
-            "maxSize": 40,
-            "color": "#94a3b8",
+            "size": 10,
+            "maxSize": 60,
+            "color": "#60a5fa",
+            "life": 120
+        },
+        {
+            "type": "line",
+            "count": 6,
+            "angleStep": 60,
+            "length": [40, 70],
+            "width": 3,
+            "color": "#93c5fd",
             "life": 100
         },
         {
             "type": "spark",
-            "count": 6,
-            "spread": 25,
-            "speed": [4, 10],
-            "size": [2, 4],
-            "colors": ["#94a3b8", "#60a5fa", "#ffffff"],
-            "life": [100, 180]
+            "count": 12,
+            "spread": 40,
+            "speed": [8, 18],
+            "size": [2, 5],
+            "colors": ["#60a5fa", "#93c5fd", "#ffffff", "#c0c0c0"],
+            "life": [120, 200]
         },
         {
-            "type": "line",
-            "count": 3,
-            "angleStep": 45,
-            "length": [30, 50],
-            "width": 2,
-            "color": "#c4b5fd",
-            "life": 80
+            "type": "debris",
+            "count": 4,
+            "speed": [3, 8],
+            "size": [2, 4],
+            "colors": ["#94a3b8", "#c0c0c0"],
+            "gravity": 0.2,
+            "life": [80, 150]
         }
     ]
 }
-
