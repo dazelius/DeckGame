@@ -1043,6 +1043,24 @@
                         tl.call(() => screenShake(kf.shake), null, '<');
                     }
                     
+                    // ========== 복셀 쉐터 (타격감!) ==========
+                    if (kf.shatter && typeof DDOOAction !== 'undefined') {
+                        tl.call(() => {
+                            const shatterOpts = typeof kf.shatter === 'object' ? kf.shatter : {};
+                            const target = shatterOpts.target || 'enemy';
+                            DDOOAction.shatterTarget(target, {
+                                gridSize: shatterOpts.grid || 10,
+                                force: shatterOpts.force || 12,
+                                gravity: shatterOpts.gravity || 0.35,
+                                life: shatterOpts.life || 500,
+                                color: shatterOpts.color || null,
+                                dirBias: data.target === 'player' ? 1 : -1,
+                                hideSprite: shatterOpts.hide !== false,
+                                hideTime: shatterOpts.hideTime || 150
+                            });
+                        }, null, '<');
+                    }
+                    
                     // ========== 잔상 생성 ==========
                     if (kf.afterimage) {
                         tl.call(() => {

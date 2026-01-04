@@ -1429,6 +1429,24 @@ const DDOOAction = {
                     tl.call(() => this.screenShake(kf.shake), null, '<');
                 }
                 
+                // 🎆 복셀 쉐터 (타격감!)
+                if (kf.shatter) {
+                    tl.call(() => {
+                        const shatterOpts = typeof kf.shatter === 'object' ? kf.shatter : {};
+                        const target = shatterOpts.target || 'enemy';
+                        this.shatterTarget(target, {
+                            gridSize: shatterOpts.grid || 10,
+                            force: shatterOpts.force || 12,
+                            gravity: shatterOpts.gravity || 0.35,
+                            life: shatterOpts.life || 500,
+                            color: shatterOpts.color || null,
+                            dirBias: dir,  // 공격 방향으로 튀어나감
+                            hideSprite: shatterOpts.hide !== false,
+                            hideTime: shatterOpts.hideTime || 150
+                        });
+                    }, null, '<');
+                }
+                
                 // 📷 카메라 줌
                 if (kf.camera && this.config.enableCamera) {
                     tl.call(() => {
@@ -1721,6 +1739,120 @@ const DDOOAction = {
         });
     },
     
+    // ============================================
+    // 🎆 복셀 쉐터 효과 (스프라이트 산산조각!)
+    // ============================================
+    spawnVoxelShatter(sprite, options = {}) {
+        if (!sprite || !sprite.texture) return;
+        
+        const gridSize = options.gridSize || 8;  // 8x8 조각
+        const force = options.force || 15;       // 폭발 힘
+        const gravity = options.gravity || 0.4;  // 중력
+        const life = options.life || 600;        // 수명
+        const color = options.color || null;     // 색상 오버라이드
+        const dirBias = options.dirBias || 0;    // 방향 편향 (-1: 왼쪽, 1: 오른쪽)
+        
+        // 스프라이트 위치/크기
+        const bounds = sprite.getBounds();
+        const spriteX = bounds.x + bounds.width / 2;
+        const spriteY = bounds.y + bounds.height / 2;
+        const pieceW = bounds.width / gridSize;
+        const pieceH = bounds.height / gridSize;
+        
+        // 텍스처에서 색상 샘플링 시도
+        let pixels = null;
+        try {
+            const tex = sprite.texture;
+            if (tex.source && tex.source.resource) {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = tex.width;
+                canvas.height = tex.height;
+                ctx.drawImage(tex.source.resource, 0, 0);
+                pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            }
+        } catch (e) {
+            // 색상 샘플링 실패 시 기본값 사용
+        }
+        
+        // 조각 생성
+        for (let gx = 0; gx < gridSize; gx++) {
+            for (let gy = 0; gy < gridSize; gy++) {
+                // 조각 중심점
+                const px = bounds.x + (gx + 0.5) * pieceW;
+                const py = bounds.y + (gy + 0.5) * pieceH;
+                
+                // 중심에서의 거리/각도
+                const dx = px - spriteX;
+                const dy = py - spriteY;
+                const dist = Math.sqrt(dx * dx + dy * dy) + 1;
+                const angle = Math.atan2(dy, dx);
+                
+                // 폭발 속도 (중심에서 멀수록 약간 빠름)
+                const speed = force * (0.5 + Math.random() * 0.8) * (1 + dist * 0.01);
+                const biasAngle = angle + dirBias * 0.5;
+                
+                // 색상 결정
+                let pieceColor = color || '#888888';
+                if (pixels && !color) {
+                    // 텍스처에서 색상 샘플링
+                    const texX = Math.floor((gx / gridSize) * sprite.texture.width);
+                    const texY = Math.floor((gy / gridSize) * sprite.texture.height);
+                    const idx = (texY * sprite.texture.width + texX) * 4;
+                    if (pixels[idx + 3] > 50) {  // 투명하지 않으면
+                        pieceColor = `rgb(${pixels[idx]}, ${pixels[idx+1]}, ${pixels[idx+2]})`;
+                    } else {
+                        continue;  // 투명 픽셀은 건너뜀
+                    }
+                }
+                
+                this.spawnParticle({
+                    type: 'voxel',
+                    x: px,
+                    y: py,
+                    vx: Math.cos(biasAngle) * speed + (Math.random() - 0.5) * force * 0.5,
+                    vy: Math.sin(biasAngle) * speed - force * 0.3 - Math.random() * force * 0.5,
+                    size: Math.max(pieceW, pieceH) * (0.8 + Math.random() * 0.4),
+                    color: pieceColor,
+                    gravity: gravity,
+                    rotation: Math.random() * Math.PI * 2,
+                    rotationSpeed: (Math.random() - 0.5) * 0.3,
+                    life: life * (0.7 + Math.random() * 0.6)
+                });
+            }
+        }
+        
+        console.log(`[DDOOAction] 🎆 Voxel Shatter: ${gridSize}x${gridSize} = ${gridSize*gridSize} pieces`);
+    },
+    
+    // 대상 스프라이트에 쉐터 효과 (JSON에서 호출용)
+    shatterTarget(target, options = {}) {
+        let sprite = null;
+        
+        if (target === 'enemy' || target === 'target') {
+            sprite = this.currentTargetSprite;
+        } else if (target === 'player' || target === 'self') {
+            sprite = this.currentSprite;
+        } else if (target && target.texture) {
+            sprite = target;
+        }
+        
+        if (sprite) {
+            // 스프라이트 일시적으로 숨기기 (선택적)
+            if (options.hideSprite !== false) {
+                const originalAlpha = sprite.alpha;
+                sprite.alpha = 0;
+                
+                // 잠시 후 복구
+                setTimeout(() => {
+                    sprite.alpha = originalAlpha;
+                }, options.hideTime || 200);
+            }
+            
+            this.spawnVoxelShatter(sprite, options);
+        }
+    },
+    
     spawnParticle(p) {
         p.born = performance.now();
         p.startLife = p.life || 150;
@@ -1937,6 +2069,13 @@ const DDOOAction = {
             case 'trail_dot':
                 this.drawTrailDot(p, alpha);
                 break;
+            case 'voxel':
+                p.x += p.vx || 0;
+                p.y += p.vy || 0;
+                if (p.gravity) p.vy += p.gravity;
+                p.rotation += p.rotationSpeed || 0;
+                this.drawVoxelParticle(p, alpha, progress);
+                break;
         }
     },
     
@@ -1958,6 +2097,46 @@ const DDOOAction = {
         ctx.beginPath();
         ctx.arc(p.x, p.y, size * (1 - alpha * 0.3), 0, Math.PI * 2);
         ctx.fill();
+        
+        ctx.restore();
+    },
+    
+    // 🎆 복셀 조각 렌더링
+    drawVoxelParticle(p, alpha, progress) {
+        const ctx = this.vfxCtx;
+        if (!ctx) return;
+        
+        const size = p.size || 8;
+        if (!isFinite(size) || size <= 0) return;
+        if (!isFinite(p.x) || !isFinite(p.y)) return;
+        
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation || 0);
+        
+        // 페이드아웃
+        ctx.globalAlpha = alpha * (1 - progress * 0.3);
+        
+        // 메인 복셀 조각 (사각형)
+        ctx.fillStyle = p.color || '#888888';
+        const halfSize = size / 2;
+        ctx.fillRect(-halfSize, -halfSize, size, size);
+        
+        // 하이라이트 (3D 느낌)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.fillRect(-halfSize, -halfSize, size * 0.4, size * 0.4);
+        
+        // 그림자 (3D 느낌)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.fillRect(halfSize * 0.2, halfSize * 0.2, size * 0.6, size * 0.6);
+        
+        // 글로우 효과 (선택적)
+        if (progress < 0.3) {
+            ctx.shadowColor = p.color || '#ffffff';
+            ctx.shadowBlur = 10 * (1 - progress * 3);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.fillRect(-halfSize, -halfSize, size, size);
+        }
         
         ctx.restore();
     },
