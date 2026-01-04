@@ -1793,42 +1793,35 @@ const DDOOAction = {
     spawnVoxelShatter(sprite, options = {}) {
         if (!sprite || !sprite.texture) return;
         
-        const gridSize = options.gridSize || 12;  // 12x12 조각 (더 촘촘하게!)
+        const gridSize = options.gridSize || 10;  // 10x10 조각
         const force = options.force || 15;        // 폭발 힘
         const gravity = options.gravity || 0.4;   // 중력
         const life = options.life || 600;         // 수명
         const color = options.color || null;      // 색상 오버라이드
         const dirBias = options.dirBias || 0;     // 방향 편향 (-1: 왼쪽, 1: 오른쪽)
-        const maxPieceSize = options.maxSize || 8; // 🔥 최대 조각 크기!
+        const maxPieceSize = options.maxSize || 6; // 🔥 최대 조각 크기!
         
-        // 🎯 스프라이트 위치/크기 (부모 컨테이너 기준!)
+        // 🎯 컨테이너 위치 (복셀 중심점!)
         const container = sprite.parent;
-        const containerX = container ? container.x : 0;
-        const containerY = container ? container.y : 0;
+        const containerX = container ? container.x : sprite.x;
+        const containerY = container ? container.y : sprite.y;
         
-        // 스프라이트 실제 렌더링 크기 계산
-        const scaleX = sprite.scale?.x || 1;
-        const scaleY = sprite.scale?.y || 1;
-        const spriteWidth = (sprite.texture?.width || 100) * Math.abs(scaleX);
-        const spriteHeight = (sprite.texture?.height || 100) * Math.abs(scaleY);
+        // 🎯 캐릭터 크기 추정 (고정값 사용 - 더 안정적!)
+        // 대부분의 캐릭터는 약 60x80 정도 크기
+        const charWidth = options.width || 60;
+        const charHeight = options.height || 80;
         
-        // 앵커 기준 오프셋
-        const anchorX = sprite.anchor?.x || 0.5;
-        const anchorY = sprite.anchor?.y || 0.5;
+        // 🎯 복셀 생성 중심점 = 컨테이너 위치 (앵커가 발 밑이므로 위로 올림)
+        const spriteCenterX = containerX;
+        const spriteCenterY = containerY - charHeight * 0.4;  // 약간 위 (몸통 중심)
         
-        // 🎯 복셀 생성 영역 (컨테이너 위치 + 스프라이트 오프셋)
-        const spriteCenterX = containerX + sprite.x - spriteWidth * anchorX + spriteWidth / 2;
-        const spriteCenterY = containerY + sprite.y - spriteHeight * anchorY + spriteHeight / 2;
-        const halfW = spriteWidth / 2;
-        const halfH = spriteHeight / 2;
-        
-        const pieceW = Math.min(spriteWidth / gridSize, maxPieceSize);
-        const pieceH = Math.min(spriteHeight / gridSize, maxPieceSize);
+        const pieceW = Math.min(charWidth / gridSize, maxPieceSize);
+        const pieceH = Math.min(charHeight / gridSize, maxPieceSize);
         
         console.log('[DDOOAction] 🎆 Shatter 위치:', { 
             containerX, containerY, 
             spriteCenterX, spriteCenterY,
-            spriteWidth, spriteHeight,
+            charWidth, charHeight,
             gridSize, pieceW, pieceH
         });
         
@@ -1979,9 +1972,12 @@ const DDOOAction = {
         
         // 조각 생성
         let createdCount = 0;
+        const halfW = charWidth / 2;
+        const halfH = charHeight / 2;
+        
         for (let gx = 0; gx < gridSize; gx++) {
             for (let gy = 0; gy < gridSize; gy++) {
-                // 🎯 조각 중심점 (스프라이트 중심 기준!)
+                // 🎯 조각 중심점 (캐릭터 중심 기준!)
                 const px = (spriteCenterX - halfW) + (gx + 0.5) * pieceW;
                 const py = (spriteCenterY - halfH) + (gy + 0.5) * pieceH;
                 
