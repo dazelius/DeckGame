@@ -1,6 +1,6 @@
 // =====================================================
-// DDOO Action Engine v3.1
-// 애니메이션 & VFX & 캐릭터 렌더링 & 카메라 & 컬러그레이딩 & 슬로우모션 통합 엔진
+// DDOO Action Engine v3.2
+// 애니메이션 & VFX & 캐릭터 렌더링 & 카메라 & 컬러그레이딩 & 슬로우모션 & 필터 통합 엔진
 // =====================================================
 
 const DDOOAction = {
@@ -19,6 +19,7 @@ const DDOOAction = {
         enableCamera: true,        // 📷 카메라 시스템
         enableColorGrade: true,    // 🎨 컬러 그레이딩
         enableSlowmo: true,        // ⏱️ 슬로우모션
+        enableFilters: true,       // ✨ PixiJS 필터 (글로우/블룸/충격파)
         debug: false,
         
         // 리턴 애니메이션 설정
@@ -61,6 +62,30 @@ const DDOOAction = {
             defaultScale: 1.0,
             minScale: 0.1,
             maxScale: 2.0
+        },
+        
+        // ✨ 필터 설정
+        filters: {
+            bloom: {
+                enabled: true,
+                strength: 1.5,
+                brightness: 1.0,
+                blur: 3
+            },
+            glow: {
+                enabled: true,
+                distance: 15,
+                outerStrength: 2,
+                innerStrength: 0,
+                color: 0x60a5fa,
+                quality: 0.3
+            },
+            shockwave: {
+                enabled: true,
+                amplitude: 20,
+                wavelength: 100,
+                speed: 400
+            }
         }
     },
     
@@ -80,6 +105,14 @@ const DDOOAction = {
     
     // 🎨 컬러 그레이딩 필터
     colorFilter: null,
+    
+    // ✨ PixiJS 필터
+    pixiFilters: {
+        bloom: null,
+        glow: null,
+        shockwave: null,
+        available: false  // pixi-filters 로드 여부
+    },
     
     // ==================== 캐시 ====================
     animCache: new Map(),
@@ -132,6 +165,9 @@ const DDOOAction = {
         // 🎨 컬러 그레이딩 필터 초기화
         this.initColorFilter();
         
+        // ✨ PixiJS 필터 초기화
+        this.initPixiFilters();
+        
         this.initialized = true;
         console.log('[DDOOAction] ✅ 엔진 v3.0 초기화 완료');
         console.log(`[DDOOAction] 📁 애니메이션: ${this.animCache.size}개`);
@@ -161,6 +197,232 @@ const DDOOAction = {
             if (this.stageContainer && !this.stageContainer.filters) {
                 this.stageContainer.filters = [];
             }
+        }
+    },
+    
+    // ✨ PixiJS 필터 초기화 (pixi-filters 라이브러리)
+    initPixiFilters() {
+        // pixi-filters 라이브러리 체크
+        if (typeof PIXI === 'undefined' || typeof PIXI.filters === 'undefined') {
+            console.log('[DDOOAction] ⚠️ pixi-filters 미로드 - 고급 필터 비활성화');
+            this.pixiFilters.available = false;
+            return;
+        }
+        
+        try {
+            const filters = PIXI.filters;
+            
+            // 🌟 블룸 필터 (밝은 부분 번짐)
+            if (filters.AdvancedBloomFilter) {
+                this.pixiFilters.bloom = new filters.AdvancedBloomFilter({
+                    threshold: 0.5,
+                    bloomScale: this.config.filters.bloom.strength,
+                    brightness: this.config.filters.bloom.brightness,
+                    blur: this.config.filters.bloom.blur,
+                    quality: 5
+                });
+                console.log('[DDOOAction] ✨ BloomFilter 준비완료');
+            }
+            
+            // 💡 글로우 필터 (외곽 발광)
+            if (filters.GlowFilter) {
+                this.pixiFilters.glow = new filters.GlowFilter({
+                    distance: this.config.filters.glow.distance,
+                    outerStrength: this.config.filters.glow.outerStrength,
+                    innerStrength: this.config.filters.glow.innerStrength,
+                    color: this.config.filters.glow.color,
+                    quality: this.config.filters.glow.quality
+                });
+                console.log('[DDOOAction] 💡 GlowFilter 준비완료');
+            }
+            
+            // 🌊 충격파 필터
+            if (filters.ShockwaveFilter) {
+                this.pixiFilters.shockwave = new filters.ShockwaveFilter(
+                    [0.5, 0.5],  // center (normalized)
+                    {
+                        amplitude: this.config.filters.shockwave.amplitude,
+                        wavelength: this.config.filters.shockwave.wavelength,
+                        speed: this.config.filters.shockwave.speed,
+                        radius: -1
+                    }
+                );
+                console.log('[DDOOAction] 🌊 ShockwaveFilter 준비완료');
+            }
+            
+            this.pixiFilters.available = true;
+            console.log('[DDOOAction] ✨ PixiJS 필터 시스템 초기화 완료');
+            
+        } catch (e) {
+            console.warn('[DDOOAction] ⚠️ 필터 초기화 실패:', e);
+            this.pixiFilters.available = false;
+        }
+    },
+    
+    // ✨ 스프라이트에 글로우 효과 적용
+    applyGlow(sprite, options = {}) {
+        if (!this.pixiFilters.available || !this.pixiFilters.glow) return;
+        if (!sprite) return;
+        
+        const color = options.color || this.config.filters.glow.color;
+        const strength = options.strength || this.config.filters.glow.outerStrength;
+        const distance = options.distance || this.config.filters.glow.distance;
+        
+        try {
+            const glow = new PIXI.filters.GlowFilter({
+                distance: distance,
+                outerStrength: strength,
+                innerStrength: 0,
+                color: color,
+                quality: 0.3
+            });
+            
+            if (!sprite.filters) sprite.filters = [];
+            sprite.filters = [...sprite.filters, glow];
+            
+            // 자동 제거 (옵션)
+            if (options.duration) {
+                gsap.to(glow, {
+                    outerStrength: 0,
+                    duration: options.duration / 1000,
+                    ease: 'power2.out',
+                    onComplete: () => {
+                        if (sprite.filters) {
+                            sprite.filters = sprite.filters.filter(f => f !== glow);
+                        }
+                    }
+                });
+            }
+            
+            return glow;
+        } catch (e) {
+            console.warn('[DDOOAction] 글로우 적용 실패:', e);
+        }
+    },
+    
+    // ✨ 스프라이트에 블룸 효과 적용
+    applyBloom(sprite, options = {}) {
+        if (!this.pixiFilters.available || !PIXI.filters.AdvancedBloomFilter) return;
+        if (!sprite) return;
+        
+        try {
+            const bloom = new PIXI.filters.AdvancedBloomFilter({
+                threshold: options.threshold || 0.3,
+                bloomScale: options.scale || 1.5,
+                brightness: options.brightness || 1.2,
+                blur: options.blur || 4,
+                quality: 5
+            });
+            
+            if (!sprite.filters) sprite.filters = [];
+            sprite.filters = [...sprite.filters, bloom];
+            
+            // 자동 제거
+            if (options.duration) {
+                gsap.to(bloom, {
+                    bloomScale: 0,
+                    duration: options.duration / 1000,
+                    ease: 'power2.out',
+                    onComplete: () => {
+                        if (sprite.filters) {
+                            sprite.filters = sprite.filters.filter(f => f !== bloom);
+                        }
+                    }
+                });
+            }
+            
+            return bloom;
+        } catch (e) {
+            console.warn('[DDOOAction] 블룸 적용 실패:', e);
+        }
+    },
+    
+    // 🌊 충격파 효과
+    triggerShockwave(x, y, options = {}) {
+        if (!this.pixiFilters.available || !this.stageContainer) return;
+        if (!PIXI.filters.ShockwaveFilter) return;
+        
+        try {
+            const screenW = this.pixiApp?.screen?.width || 800;
+            const screenH = this.pixiApp?.screen?.height || 600;
+            
+            // 화면 좌표를 normalized 좌표로 변환
+            const centerX = x / screenW;
+            const centerY = y / screenH;
+            
+            const shockwave = new PIXI.filters.ShockwaveFilter(
+                [centerX, centerY],
+                {
+                    amplitude: options.amplitude || 15,
+                    wavelength: options.wavelength || 80,
+                    speed: options.speed || 300,
+                    radius: -1,
+                    brightness: 1
+                },
+                0  // time
+            );
+            
+            // 스테이지에 필터 추가
+            if (!this.stageContainer.filters) {
+                this.stageContainer.filters = [shockwave];
+            } else {
+                this.stageContainer.filters = [...this.stageContainer.filters, shockwave];
+            }
+            
+            // 충격파 애니메이션
+            const duration = options.duration || 600;
+            const maxRadius = options.maxRadius || 300;
+            
+            gsap.to(shockwave, {
+                time: duration / 1000,
+                duration: duration / 1000,
+                ease: 'power2.out',
+                onUpdate: () => {
+                    // 반경 확장
+                    shockwave.radius = (shockwave.time / (duration / 1000)) * maxRadius;
+                    // 진폭 감소
+                    shockwave.amplitude = (options.amplitude || 15) * (1 - shockwave.time / (duration / 1000));
+                },
+                onComplete: () => {
+                    // 필터 제거
+                    if (this.stageContainer.filters) {
+                        this.stageContainer.filters = this.stageContainer.filters.filter(f => f !== shockwave);
+                    }
+                }
+            });
+            
+            console.log(`[DDOOAction] 🌊 Shockwave at (${x.toFixed(0)}, ${y.toFixed(0)})`);
+            return shockwave;
+            
+        } catch (e) {
+            console.warn('[DDOOAction] 충격파 적용 실패:', e);
+        }
+    },
+    
+    // ✨ 타격 시 글로우+블룸 콤보 효과
+    triggerHitEffect(sprite, options = {}) {
+        if (!this.pixiFilters.available || !sprite) return;
+        
+        const color = options.color || 0xffffff;
+        const duration = options.duration || 200;
+        
+        // 1. 글로우 효과
+        this.applyGlow(sprite, {
+            color: color,
+            strength: 4,
+            distance: 20,
+            duration: duration
+        });
+        
+        // 2. 밝기 플래시
+        if (sprite.tint !== undefined) {
+            const originalTint = sprite.tint;
+            sprite.tint = 0xffffff;
+            gsap.to(sprite, {
+                tint: originalTint,
+                duration: duration / 1000,
+                ease: 'power2.out'
+            });
         }
     },
     
@@ -1472,9 +1734,22 @@ const DDOOAction = {
                     }, null, '>');
                 }
                 
-                // 스크린쉐이크
+                // 스크린쉐이크 + 충격파
                 if (kf.shake && this.config.enableShake) {
-                    tl.call(() => this.screenShake(kf.shake), null, '<');
+                    tl.call(() => {
+                        this.screenShake(kf.shake);
+                        
+                        // ✨ 충격파 효과 (shake 강도에 따라)
+                        if (this.config.enableFilters && kf.shake >= 8) {
+                            const hitPoint = getHitPoint ? getHitPoint() : { x: container.x, y: container.y };
+                            this.triggerShockwave(hitPoint.x, hitPoint.y, {
+                                amplitude: kf.shake * 1.2,
+                                wavelength: 60 + kf.shake * 3,
+                                duration: 400 + kf.shake * 20,
+                                maxRadius: 200 + kf.shake * 10
+                            });
+                        }
+                    }, null, '<');
                 }
                 
                 // 🎆 복셀 쉐터 (타격감!)
