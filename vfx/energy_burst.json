@@ -1,0 +1,56 @@
+{
+    "id": "energy_burst",
+    "name": "에너지 버스트",
+    "shake": 8,
+    "particles": [
+        {
+            "type": "flash",
+            "size": 80,
+            "color": "#60a5fa",
+            "life": 50
+        },
+        {
+            "type": "energy_orb",
+            "size": 50,
+            "color": "#3b82f6",
+            "life": 150
+        },
+        {
+            "type": "ring",
+            "size": 20,
+            "maxSize": 100,
+            "color": "#93c5fd",
+            "life": 120
+        },
+        {
+            "type": "electric",
+            "count": 12,
+            "length": [25, 50],
+            "width": 2,
+            "segments": 5,
+            "angleStep": 30,
+            "colors": ["#60a5fa", "#93c5fd", "#ffffff"],
+            "life": [80, 150]
+        },
+        {
+            "type": "star",
+            "count": 6,
+            "size": [12, 20],
+            "points": 4,
+            "colors": ["#60a5fa", "#93c5fd"],
+            "rotationSpeed": [0.08, 0.15],
+            "spread": 40,
+            "life": [120, 200]
+        },
+        {
+            "type": "spark",
+            "count": 25,
+            "spread": 70,
+            "speed": [10, 25],
+            "size": [3, 7],
+            "colors": ["#60a5fa", "#93c5fd", "#ffffff"],
+            "life": [150, 300]
+        }
+    ]
+}
+

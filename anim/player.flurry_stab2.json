@@ -1,6 +1,6 @@
 {
     "id": "player.flurry_stab2",
-    "name": "세검 2타 - 하단 찌르기",
+    "name": "세검 2타 - 하단 찌르기 (강화)",
     "target": "player",
     "type": "once",
     "priority": 14,
@@ -8,14 +8,14 @@
     "keyframes": [
         { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 0 },
         
-        { "x": -6, "y": 12, "scaleX": 0.90, "scaleY": 1.10, "rotation": 0.06, "duration": 7, "ease": "power2.in", "afterimage": true },
+        { "x": -8, "y": 15, "scaleX": 0.88, "scaleY": 1.12, "rotation": 0.08, "duration": 7, "ease": "power3.in", "afterimage": true, "color": "power" },
         
-        { "x": 65, "y": 22, "scaleX": 1.22, "scaleY": 0.82, "rotation": -0.10, "duration": 11, "ease": "power4.out", "vfx": "flurry_stab", "vfxTarget": "target", "shake": 3, "hitstop": 22, "afterimage": true },
+        { "x": 75, "y": 28, "scaleX": 1.28, "scaleY": 0.78, "rotation": -0.12, "duration": 9, "ease": "power4.out", "vfx": "flurry_stab", "vfxTarget": "target", "shake": 5, "hitstop": 28, "afterimage": true },
         
-        { "x": 72, "y": 18, "scaleX": 1.18, "scaleY": 0.84, "rotation": -0.08, "duration": 10, "ease": "power2.out", "afterimage": true },
-        { "x": 55, "y": 12, "scaleX": 1.10, "scaleY": 0.92, "rotation": -0.05, "duration": 14, "ease": "power2.out" },
+        { "x": 82, "y": 22, "scaleX": 1.22, "scaleY": 0.82, "rotation": -0.1, "duration": 10, "ease": "power2.out", "afterimage": true },
+        { "x": 60, "y": 14, "scaleX": 1.1, "scaleY": 0.92, "rotation": -0.05, "duration": 14, "ease": "power2.out" },
         { "x": 32, "y": 6, "scaleX": 1.04, "scaleY": 0.97, "rotation": -0.02, "duration": 17, "ease": "power2.out" },
-        { "x": 10, "y": 2, "scaleX": 1.01, "scaleY": 0.99, "rotation": -0.01, "duration": 15, "ease": "power2.out" },
-        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 16, "ease": "power2.out" }
+        { "x": 10, "y": 2, "scaleX": 1.01, "scaleY": 0.99, "rotation": -0.01, "duration": 16, "ease": "power2.out" },
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 17, "ease": "elastic.out(1, 0.6)" }
     ]
 }
