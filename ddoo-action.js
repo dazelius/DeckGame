@@ -1801,12 +1801,36 @@ const DDOOAction = {
         const dirBias = options.dirBias || 0;     // 방향 편향 (-1: 왼쪽, 1: 오른쪽)
         const maxPieceSize = options.maxSize || 8; // 🔥 최대 조각 크기!
         
-        // 스프라이트 위치/크기
-        const bounds = sprite.getBounds();
-        const spriteX = bounds.x + bounds.width / 2;
-        const spriteY = bounds.y + bounds.height / 2;
-        const pieceW = Math.min(bounds.width / gridSize, maxPieceSize);   // 🔥 최대 크기 제한
-        const pieceH = Math.min(bounds.height / gridSize, maxPieceSize);  // 🔥 최대 크기 제한
+        // 🎯 스프라이트 위치/크기 (부모 컨테이너 기준!)
+        const container = sprite.parent;
+        const containerX = container ? container.x : 0;
+        const containerY = container ? container.y : 0;
+        
+        // 스프라이트 실제 렌더링 크기 계산
+        const scaleX = sprite.scale?.x || 1;
+        const scaleY = sprite.scale?.y || 1;
+        const spriteWidth = (sprite.texture?.width || 100) * Math.abs(scaleX);
+        const spriteHeight = (sprite.texture?.height || 100) * Math.abs(scaleY);
+        
+        // 앵커 기준 오프셋
+        const anchorX = sprite.anchor?.x || 0.5;
+        const anchorY = sprite.anchor?.y || 0.5;
+        
+        // 🎯 복셀 생성 영역 (컨테이너 위치 + 스프라이트 오프셋)
+        const spriteCenterX = containerX + sprite.x - spriteWidth * anchorX + spriteWidth / 2;
+        const spriteCenterY = containerY + sprite.y - spriteHeight * anchorY + spriteHeight / 2;
+        const halfW = spriteWidth / 2;
+        const halfH = spriteHeight / 2;
+        
+        const pieceW = Math.min(spriteWidth / gridSize, maxPieceSize);
+        const pieceH = Math.min(spriteHeight / gridSize, maxPieceSize);
+        
+        console.log('[DDOOAction] 🎆 Shatter 위치:', { 
+            containerX, containerY, 
+            spriteCenterX, spriteCenterY,
+            spriteWidth, spriteHeight,
+            gridSize, pieceW, pieceH
+        });
         
         // 🎨 텍스처에서 색상 샘플링 (PixiJS v8 호환)
         let pixels = null;
@@ -1957,13 +1981,13 @@ const DDOOAction = {
         let createdCount = 0;
         for (let gx = 0; gx < gridSize; gx++) {
             for (let gy = 0; gy < gridSize; gy++) {
-                // 조각 중심점
-                const px = bounds.x + (gx + 0.5) * pieceW;
-                const py = bounds.y + (gy + 0.5) * pieceH;
+                // 🎯 조각 중심점 (스프라이트 중심 기준!)
+                const px = (spriteCenterX - halfW) + (gx + 0.5) * pieceW;
+                const py = (spriteCenterY - halfH) + (gy + 0.5) * pieceH;
                 
                 // 중심에서의 거리/각도
-                const dx = px - spriteX;
-                const dy = py - spriteY;
+                const dx = px - spriteCenterX;
+                const dy = py - spriteCenterY;
                 const dist = Math.sqrt(dx * dx + dy * dy) + 1;
                 const angle = Math.atan2(dy, dx);
                 
