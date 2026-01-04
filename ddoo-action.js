@@ -1803,23 +1803,104 @@ const DDOOAction = {
         const pieceW = bounds.width / gridSize;
         const pieceH = bounds.height / gridSize;
         
-        // 텍스처에서 색상 샘플링 시도
+        // 🎨 텍스처에서 색상 샘플링 (PixiJS v8 호환)
         let pixels = null;
+        let texWidth = 0;
+        let texHeight = 0;
+        
         try {
             const tex = sprite.texture;
-            if (tex.source && tex.source.resource) {
+            texWidth = tex.width;
+            texHeight = tex.height;
+            
+            // 방법 1: PixiJS extract API 사용 (가장 확실)
+            if (this.pixiApp && this.pixiApp.renderer && this.pixiApp.renderer.extract) {
+                try {
+                    const canvas = this.pixiApp.renderer.extract.canvas(sprite);
+                    const ctx = canvas.getContext('2d');
+                    pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                    texWidth = canvas.width;
+                    texHeight = canvas.height;
+                    console.log('[DDOOAction] 🎨 Extract API로 픽셀 추출 성공!', canvas.width, 'x', canvas.height);
+                } catch (e1) {
+                    console.log('[DDOOAction] Extract API 실패, 다른 방법 시도...');
+                }
+            }
+            
+            // 방법 2: texture.source.resource (HTMLImageElement)
+            if (!pixels && tex.source && tex.source.resource instanceof HTMLImageElement) {
+                const img = tex.source.resource;
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                canvas.width = tex.width;
-                canvas.height = tex.height;
-                ctx.drawImage(tex.source.resource, 0, 0);
+                canvas.width = img.naturalWidth || img.width;
+                canvas.height = img.naturalHeight || img.height;
+                ctx.drawImage(img, 0, 0);
                 pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                texWidth = canvas.width;
+                texHeight = canvas.height;
+                console.log('[DDOOAction] 🎨 HTMLImageElement로 픽셀 추출 성공!');
+            }
+            
+            // 방법 3: texture.baseTexture.resource.source (구버전 호환)
+            if (!pixels && tex.baseTexture && tex.baseTexture.resource && tex.baseTexture.resource.source) {
+                const img = tex.baseTexture.resource.source;
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+                pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                texWidth = canvas.width;
+                texHeight = canvas.height;
+                console.log('[DDOOAction] 🎨 baseTexture.resource.source로 픽셀 추출 성공!');
+            }
+            
+            // 방법 4: 원본 이미지 URL에서 재로드
+            if (!pixels) {
+                const textureUrl = tex.source?.label || tex.source?.resource?.src || tex.textureCacheIds?.[0];
+                if (textureUrl && typeof textureUrl === 'string') {
+                    // 동기적으로 처리하기 어려우므로 캐시된 이미지 사용 시도
+                    const cachedImg = PIXI.Assets.cache.get(textureUrl);
+                    if (cachedImg && cachedImg.resource instanceof HTMLImageElement) {
+                        const img = cachedImg.resource;
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                        texWidth = canvas.width;
+                        texHeight = canvas.height;
+                        console.log('[DDOOAction] 🎨 캐시된 이미지로 픽셀 추출 성공!');
+                    }
+                }
             }
         } catch (e) {
-            // 색상 샘플링 실패 시 기본값 사용
+            console.warn('[DDOOAction] ⚠️ 픽셀 추출 실패:', e);
+        }
+        
+        // 🎨 픽셀 추출 실패 시 스프라이트 틴트 색상 사용
+        let fallbackColors = ['#888888'];
+        if (!pixels) {
+            // 스프라이트 틴트 색상 사용
+            if (sprite.tint && sprite.tint !== 0xFFFFFF) {
+                const tint = sprite.tint;
+                const r = (tint >> 16) & 0xFF;
+                const g = (tint >> 8) & 0xFF;
+                const b = tint & 0xFF;
+                fallbackColors = [`rgb(${r},${g},${b})`];
+            } else {
+                // 캐릭터별 기본 색상
+                const isEnemy = this.currentTargetSprite === sprite;
+                fallbackColors = isEnemy 
+                    ? ['#4a7c59', '#5a9c69', '#3a6c49', '#6aac79', '#2a5c39'] // 고블린 녹색 계열
+                    : ['#7c8a99', '#8c9aa9', '#6c7a89', '#9caab9', '#5c6a79']; // 플레이어 회색 계열
+            }
+            console.warn('[DDOOAction] ⚠️ 픽셀 추출 실패, 대체 색상 사용:', fallbackColors);
         }
         
         // 조각 생성
+        let createdCount = 0;
         for (let gx = 0; gx < gridSize; gx++) {
             for (let gy = 0; gy < gridSize; gy++) {
                 // 조각 중심점
@@ -1837,16 +1918,21 @@ const DDOOAction = {
                 const biasAngle = angle + dirBias * 0.5;
                 
                 // 색상 결정
-                let pieceColor = color || '#888888';
-                if (pixels && !color) {
-                    // 텍스처에서 색상 샘플링
-                    const texX = Math.floor((gx / gridSize) * sprite.texture.width);
-                    const texY = Math.floor((gy / gridSize) * sprite.texture.height);
-                    const idx = (texY * sprite.texture.width + texX) * 4;
-                    if (pixels[idx + 3] > 50) {  // 투명하지 않으면
-                        pieceColor = `rgb(${pixels[idx]}, ${pixels[idx+1]}, ${pixels[idx+2]})`;
+                let pieceColor = color;
+                if (!pieceColor) {
+                    if (pixels && texWidth > 0 && texHeight > 0) {
+                        // 텍스처에서 색상 샘플링
+                        const texX = Math.floor((gx / gridSize) * texWidth);
+                        const texY = Math.floor((gy / gridSize) * texHeight);
+                        const idx = (texY * texWidth + texX) * 4;
+                        if (idx >= 0 && idx + 3 < pixels.length && pixels[idx + 3] > 30) {
+                            pieceColor = `rgb(${pixels[idx]}, ${pixels[idx+1]}, ${pixels[idx+2]})`;
+                        } else {
+                            continue;  // 투명 픽셀은 건너뜀
+                        }
                     } else {
-                        continue;  // 투명 픽셀은 건너뜀
+                        // 대체 색상 랜덤 선택
+                        pieceColor = fallbackColors[Math.floor(Math.random() * fallbackColors.length)];
                     }
                 }
                 
@@ -1863,10 +1949,11 @@ const DDOOAction = {
                     rotationSpeed: (Math.random() - 0.5) * 0.3,
                     life: life * (0.7 + Math.random() * 0.6)
                 });
+                createdCount++;
             }
         }
         
-        console.log(`[DDOOAction] 🎆 Voxel Shatter: ${gridSize}x${gridSize} = ${gridSize*gridSize} pieces`);
+        console.log(`[DDOOAction] 🎆 Voxel Shatter: ${createdCount}/${gridSize*gridSize} pieces (pixels: ${!!pixels})`);
     },
     
     // 대상 스프라이트에 쉐터 효과 (JSON에서 호출용)
