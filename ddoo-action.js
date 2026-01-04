@@ -1275,6 +1275,10 @@ const DDOOAction = {
             const charData = charId ? this.characters.get(charId) : null;
             const shadow = charData?.shadow;
             
+            // 🎯 현재 애니메이션 대상 스프라이트 저장 (shatter: "self" 용)
+            this.currentSprite = sprite;
+            this.currentContainer = container;
+            
             const tl = gsap.timeline({
                 onUpdate: () => {
                     // 그림자 위치 동기화

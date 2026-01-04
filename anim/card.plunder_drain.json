@@ -1,13 +1,31 @@
 {
     "id": "card.plunder_drain",
-    "name": "강탈 - 생명력 착취",
+    "name": "강탈 - 생명력 착취 (5연속)",
     "type": "sequence",
-    "description": "취약한 적에게 찌르고 생명력을 빨아들인다",
+    "description": "취약한 적에게 5번 찌르고 생명력을 빨아들인다",
     "returnToBase": true,
     "steps": [
-        { "anim": "player.plunder_drain", "wait": true },
-        { "delay": 30 },
-        { "anim": "enemy.plunder_hit", "wait": true, "damage": 8 },
+        { "anim": "player.plunder_teleport", "wait": true },
+        
+        { "anim": "player.plunder_stab1", "wait": false },
+        { "anim": "enemy.plunder_hit1", "wait": true, "delay": 20, "damage": 1 },
+        { "delay": 10 },
+        
+        { "anim": "player.plunder_stab2", "wait": false },
+        { "anim": "enemy.plunder_hit2", "wait": true, "delay": 20, "damage": 1 },
+        { "delay": 10 },
+        
+        { "anim": "player.plunder_stab3", "wait": false },
+        { "anim": "enemy.plunder_hit3", "wait": true, "delay": 20, "damage": 1 },
+        { "delay": 10 },
+        
+        { "anim": "player.plunder_stab4", "wait": false },
+        { "anim": "enemy.plunder_hit4", "wait": true, "delay": 20, "damage": 1 },
+        { "delay": 15 },
+        
+        { "anim": "player.plunder_finish", "wait": false },
+        { "anim": "enemy.plunder_finish", "wait": true, "delay": 30, "damage": 4 },
+        
         { "delay": 50 },
         { "event": { "type": "energy", "value": 2 } }
     ]
