@@ -1813,67 +1813,82 @@ const DDOOAction = {
             texWidth = tex.width;
             texHeight = tex.height;
             
-            // 방법 1: PixiJS extract API 사용 (가장 확실)
-            if (this.pixiApp && this.pixiApp.renderer && this.pixiApp.renderer.extract) {
+            // 🔍 텍스처 구조 디버그
+            console.log('[DDOOAction] 📊 텍스처 분석:', {
+                width: tex.width,
+                height: tex.height,
+                hasSource: !!tex.source,
+                sourceType: tex.source?.constructor?.name,
+                hasResource: !!tex.source?.resource,
+                resourceType: tex.source?.resource?.constructor?.name,
+                label: tex.source?.label
+            });
+            
+            // 방법 1: texture.source.resource가 HTMLImageElement인 경우 (가장 직접적)
+            if (tex.source && tex.source.resource instanceof HTMLImageElement) {
+                const img = tex.source.resource;
+                if (img.complete && img.naturalWidth > 0) {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    ctx.drawImage(img, 0, 0);
+                    pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                    texWidth = canvas.width;
+                    texHeight = canvas.height;
+                    console.log('[DDOOAction] 🎨 HTMLImageElement로 픽셀 추출 성공!', texWidth, 'x', texHeight);
+                }
+            }
+            
+            // 방법 2: texture.source.resource가 ImageBitmap인 경우
+            if (!pixels && tex.source && tex.source.resource instanceof ImageBitmap) {
+                const bitmap = tex.source.resource;
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = bitmap.width;
+                canvas.height = bitmap.height;
+                ctx.drawImage(bitmap, 0, 0);
+                pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                texWidth = canvas.width;
+                texHeight = canvas.height;
+                console.log('[DDOOAction] 🎨 ImageBitmap으로 픽셀 추출 성공!', texWidth, 'x', texHeight);
+            }
+            
+            // 방법 3: texture.source.resource.data (Uint8Array 직접 접근)
+            if (!pixels && tex.source && tex.source.resource && tex.source.resource.data) {
+                pixels = tex.source.resource.data;
+                texWidth = tex.source.width || tex.width;
+                texHeight = tex.source.height || tex.height;
+                console.log('[DDOOAction] 🎨 직접 data 배열 접근 성공!', texWidth, 'x', texHeight);
+            }
+            
+            // 방법 4: PixiJS extract API (백업)
+            if (!pixels && this.pixiApp && this.pixiApp.renderer && this.pixiApp.renderer.extract) {
                 try {
-                    const canvas = this.pixiApp.renderer.extract.canvas(sprite);
+                    // 텍스처에서 직접 추출 시도
+                    const canvas = this.pixiApp.renderer.extract.canvas(tex);
                     const ctx = canvas.getContext('2d');
                     pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
                     texWidth = canvas.width;
                     texHeight = canvas.height;
-                    console.log('[DDOOAction] 🎨 Extract API로 픽셀 추출 성공!', canvas.width, 'x', canvas.height);
+                    console.log('[DDOOAction] 🎨 Extract API (texture)로 픽셀 추출 성공!', texWidth, 'x', texHeight);
                 } catch (e1) {
-                    console.log('[DDOOAction] Extract API 실패, 다른 방법 시도...');
+                    console.log('[DDOOAction] Extract API 실패:', e1.message);
                 }
             }
             
-            // 방법 2: texture.source.resource (HTMLImageElement)
-            if (!pixels && tex.source && tex.source.resource instanceof HTMLImageElement) {
-                const img = tex.source.resource;
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = img.naturalWidth || img.width;
-                canvas.height = img.naturalHeight || img.height;
-                ctx.drawImage(img, 0, 0);
-                pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-                texWidth = canvas.width;
-                texHeight = canvas.height;
-                console.log('[DDOOAction] 🎨 HTMLImageElement로 픽셀 추출 성공!');
-            }
-            
-            // 방법 3: texture.baseTexture.resource.source (구버전 호환)
+            // 방법 5: texture.baseTexture.resource.source (레거시 호환)
             if (!pixels && tex.baseTexture && tex.baseTexture.resource && tex.baseTexture.resource.source) {
                 const img = tex.baseTexture.resource.source;
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                canvas.width = img.width;
-                canvas.height = img.height;
+                canvas.width = img.width || img.naturalWidth;
+                canvas.height = img.height || img.naturalHeight;
                 ctx.drawImage(img, 0, 0);
                 pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
                 texWidth = canvas.width;
                 texHeight = canvas.height;
-                console.log('[DDOOAction] 🎨 baseTexture.resource.source로 픽셀 추출 성공!');
-            }
-            
-            // 방법 4: 원본 이미지 URL에서 재로드
-            if (!pixels) {
-                const textureUrl = tex.source?.label || tex.source?.resource?.src || tex.textureCacheIds?.[0];
-                if (textureUrl && typeof textureUrl === 'string') {
-                    // 동기적으로 처리하기 어려우므로 캐시된 이미지 사용 시도
-                    const cachedImg = PIXI.Assets.cache.get(textureUrl);
-                    if (cachedImg && cachedImg.resource instanceof HTMLImageElement) {
-                        const img = cachedImg.resource;
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-                        canvas.width = img.width;
-                        canvas.height = img.height;
-                        ctx.drawImage(img, 0, 0);
-                        pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-                        texWidth = canvas.width;
-                        texHeight = canvas.height;
-                        console.log('[DDOOAction] 🎨 캐시된 이미지로 픽셀 추출 성공!');
-                    }
-                }
+                console.log('[DDOOAction] 🎨 baseTexture.resource.source로 픽셀 추출 성공!', texWidth, 'x', texHeight);
             }
         } catch (e) {
             console.warn('[DDOOAction] ⚠️ 픽셀 추출 실패:', e);
