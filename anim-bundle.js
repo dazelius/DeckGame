@@ -1,6 +1,6 @@
 /**
  * DDOO Animation Bundle - 자동 생성됨
- * 생성일: 2026-01-04T16:17:33.377Z
+ * 생성일: 2026-01-04T16:20:46.218Z
  * 
  * 이 파일을 포함하면 fetch 없이 모든 애니메이션/VFX 데이터 사용 가능!
  * <script src="anim-bundle.js"></script>
@@ -7314,74 +7314,94 @@ window.VFX_BUNDLE = {
   },
   "flurry_finish": {
     "id": "flurry_finish",
-    "name": "연속 찌르기 피니시 이펙트",
-    "shake": 10,
+    "name": "연속 찌르기 피니시 이펙트 - 강화",
+    "shake": 12,
     "particles": [
       {
         "type": "flash",
-        "size": 80,
+        "size": 100,
         "color": "#ffffff",
-        "life": 50
+        "life": 45
       },
       {
         "type": "flash",
-        "size": 60,
+        "size": 70,
         "color": "#60a5fa",
-        "life": 80
-      },
-      {
-        "type": "ring",
-        "size": 25,
-        "maxSize": 120,
-        "color": "#ffffff",
-        "life": 100
-      },
-      {
-        "type": "ring",
-        "size": 40,
-        "maxSize": 90,
-        "color": "#60a5fa",
-        "life": 140
+        "life": 75
       },
       {
         "type": "arrow",
-        "length": 120,
-        "width": 80,
-        "tipAngle": 25,
-        "color": "#93c5fd",
+        "length": 220,
+        "width": 100,
+        "tipAngle": 18,
+        "color": "#ffffff",
         "glow": "#60a5fa",
+        "life": 160
+      },
+      {
+        "type": "arrow",
+        "length": 180,
+        "width": 70,
+        "tipAngle": 16,
+        "color": "#93c5fd",
+        "glow": "#3b82f6",
+        "life": 130,
+        "delay": 20
+      },
+      {
+        "type": "ring",
+        "size": 30,
+        "maxSize": 140,
+        "color": "#ffffff",
+        "life": 110
+      },
+      {
+        "type": "ring",
+        "size": 50,
+        "maxSize": 100,
+        "color": "#60a5fa",
         "life": 150
       },
       {
         "type": "slash",
-        "count": 5,
+        "count": 3,
         "angle": [
-          -80,
-          -40,
+          -30,
           0,
-          40,
-          80
+          30
         ],
         "length": [
-          70,
-          120
+          100,
+          160
         ],
-        "width": 8,
+        "width": 10,
         "color": "#ffffff",
         "glow": "#60a5fa",
-        "life": 120
+        "life": 130
+      },
+      {
+        "type": "line",
+        "count": 5,
+        "angleStep": 0,
+        "length": [
+          100,
+          150
+        ],
+        "width": 4,
+        "color": "#93c5fd",
+        "life": 100
       },
       {
         "type": "spark",
-        "count": 30,
-        "spread": 80,
+        "count": 35,
+        "spread": 90,
         "speed": [
-          12,
-          28
+          14,
+          32
         ],
         "size": [
-          3,
-          8
+          4,
+          9
         ],
         "colors": [
           "#60a5fa",
@@ -7390,20 +7410,20 @@ window.VFX_BUNDLE = {
           "#3b82f6"
         ],
         "life": [
-          180,
-          380
+          200,
+          400
         ]
       },
       {
         "type": "debris",
-        "count": 15,
+        "count": 18,
         "speed": [
-          10,
-          22
+          12,
+          26
         ],
         "size": [
-          3,
-          6
+          4,
+          7
         ],
         "colors": [
           "#60a5fa",
@@ -7412,21 +7432,9 @@ window.VFX_BUNDLE = {
         ],
         "gravity": 0.35,
         "life": [
-          280,
-          500
+          300,
+          550
         ]
-      },
-      {
-        "type": "line",
-        "count": 12,
-        "angleStep": 30,
-        "length": [
-          50,
-          100
-        ],
-        "width": 3,
-        "color": "#93c5fd",
-        "life": 140
       }
     ]
   },
@@ -7493,23 +7501,33 @@ window.VFX_BUNDLE = {
   },
   "flurry_stab": {
     "id": "flurry_stab",
-    "name": "연속 찌르기 이펙트",
-    "shake": 4,
+    "name": "연속 찌르기 이펙트 - 길쭉한 화살표",
+    "shake": 5,
     "particles": [
       {
         "type": "flash",
-        "size": 40,
+        "size": 50,
         "color": "#ffffff",
-        "life": 40
+        "life": 35
       },
       {
         "type": "arrow",
-        "length": 70,
-        "width": 45,
-        "tipAngle": 25,
-        "color": "#93c5fd",
+        "length": 180,
+        "width": 80,
+        "tipAngle": 20,
+        "color": "#ffffff",
         "glow": "#60a5fa",
-        "life": 100
+        "life": 120
+      },
+      {
+        "type": "arrow",
+        "length": 140,
+        "width": 55,
+        "tipAngle": 18,
+        "color": "#93c5fd",
+        "glow": "#3b82f6",
+        "life": 100,
+        "delay": 15
       },
       {
         "type": "slash",
@@ -7518,25 +7536,37 @@ window.VFX_BUNDLE = {
           0
         ],
         "length": [
-          60,
-          90
+          120,
+          160
         ],
-        "width": 6,
+        "width": 8,
         "color": "#ffffff",
         "glow": "#60a5fa",
+        "life": 100
+      },
+      {
+        "type": "line",
+        "count": 3,
+        "angleStep": 0,
+        "length": [
+          80,
+          120
+        ],
+        "width": 3,
+        "color": "#93c5fd",
         "life": 80
       },
       {
         "type": "spark",
-        "count": 10,
-        "spread": 30,
+        "count": 12,
+        "spread": 40,
         "speed": [
-          6,
-          14
+          8,
+          18
         ],
         "size": [
-          2,
-          5
+          3,
+          6
         ],
         "colors": [
           "#60a5fa",
@@ -7544,21 +7574,9 @@ window.VFX_BUNDLE = {
           "#ffffff"
         ],
         "life": [
-          100,
-          180
+          120,
+          200
         ]
-      },
-      {
-        "type": "line",
-        "count": 4,
-        "angleStep": 90,
-        "length": [
-          25,
-          45
-        ],
-        "width": 2,
-        "color": "#93c5fd",
-        "life": 80
       }
     ]
   },
