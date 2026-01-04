@@ -1899,6 +1899,40 @@ const DDOOAction = {
             console.warn('[DDOOAction] ⚠️ 픽셀 추출 실패, 대체 색상 사용:', fallbackColors);
         }
         
+        // 🔍 픽셀이 있으면 불투명 영역 분석 (Extract API는 전체 캔버스를 반환)
+        let opaqueBox = null;
+        if (pixels && texWidth > 0 && texHeight > 0) {
+            let minX = texWidth, maxX = 0, minY = texHeight, maxY = 0;
+            let foundOpaque = false;
+            
+            // 불투명 픽셀 영역 찾기 (샘플링으로 빠르게)
+            const step = Math.max(1, Math.floor(texWidth / 50));
+            for (let y = 0; y < texHeight; y += step) {
+                for (let x = 0; x < texWidth; x += step) {
+                    const idx = (y * texWidth + x) * 4;
+                    if (pixels[idx + 3] > 30) {
+                        foundOpaque = true;
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                    }
+                }
+            }
+            
+            if (foundOpaque) {
+                // 약간 여유 추가
+                minX = Math.max(0, minX - step);
+                maxX = Math.min(texWidth - 1, maxX + step);
+                minY = Math.max(0, minY - step);
+                maxY = Math.min(texHeight - 1, maxY + step);
+                opaqueBox = { minX, maxX, minY, maxY, w: maxX - minX, h: maxY - minY };
+                console.log(`[DDOOAction] 🔍 불투명 영역: ${opaqueBox.w}x${opaqueBox.h} at (${minX},${minY})`);
+            } else {
+                console.warn('[DDOOAction] ⚠️ 불투명 픽셀을 찾을 수 없음!');
+            }
+        }
+        
         // 조각 생성
         let createdCount = 0;
         for (let gx = 0; gx < gridSize; gx++) {
@@ -1920,15 +1954,17 @@ const DDOOAction = {
                 // 색상 결정
                 let pieceColor = color;
                 if (!pieceColor) {
-                    if (pixels && texWidth > 0 && texHeight > 0) {
-                        // 텍스처에서 색상 샘플링
-                        const texX = Math.floor((gx / gridSize) * texWidth);
-                        const texY = Math.floor((gy / gridSize) * texHeight);
+                    if (pixels && texWidth > 0 && texHeight > 0 && opaqueBox) {
+                        // 불투명 영역 내에서 샘플링
+                        const texX = opaqueBox.minX + Math.floor((gx / gridSize) * opaqueBox.w);
+                        const texY = opaqueBox.minY + Math.floor((gy / gridSize) * opaqueBox.h);
                         const idx = (texY * texWidth + texX) * 4;
-                        if (idx >= 0 && idx + 3 < pixels.length && pixels[idx + 3] > 30) {
+                        
+                        if (idx >= 0 && idx + 3 < pixels.length && pixels[idx + 3] > 10) {
                             pieceColor = `rgb(${pixels[idx]}, ${pixels[idx+1]}, ${pixels[idx+2]})`;
                         } else {
-                            continue;  // 투명 픽셀은 건너뜀
+                            // 투명 픽셀이면 대체 색상 사용 (건너뛰지 않음)
+                            pieceColor = fallbackColors[Math.floor(Math.random() * fallbackColors.length)];
                         }
                     } else {
                         // 대체 색상 랜덤 선택
@@ -1953,7 +1989,7 @@ const DDOOAction = {
             }
         }
         
-        console.log(`[DDOOAction] 🎆 Voxel Shatter: ${createdCount}/${gridSize*gridSize} pieces (pixels: ${!!pixels})`);
+        console.log(`[DDOOAction] 🎆 Voxel Shatter: ${createdCount}/${gridSize*gridSize} pieces (pixels: ${!!pixels}, opaque: ${!!opaqueBox})`);
     },
     
     // 대상 스프라이트에 쉐터 효과 (JSON에서 호출용)
