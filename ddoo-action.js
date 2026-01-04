@@ -1982,9 +1982,39 @@ const DDOOAction = {
                     case 'comet':
                         this.spawnCometParticle(def, x, y, scale);
                         break;
+                    case 'sword_arc':
+                        this.spawnSwordArcParticle(def, x, y, dir, i, scale);
+                        break;
                 }
             }, delayBetween * i);
         }
+    },
+    
+    // ⚔️ 검 궤적 아크 스폰
+    spawnSwordArcParticle(def, x, y, dir, index, scale) {
+        const radius = this.getRandValue(def.radius) * scale;
+        const thickness = (def.thickness || 15) * scale;
+        const startAngle = def.startAngle || -60;
+        const endAngle = def.endAngle || 60;
+        const colors = Array.isArray(def.colors) ? def.colors : [def.color || '#ffffff'];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const glowColors = Array.isArray(def.glowColors) ? def.glowColors : [def.glow || '#60a5fa'];
+        const glow = glowColors[Math.floor(Math.random() * glowColors.length)];
+        
+        this.spawnParticle({
+            type: 'sword_arc',
+            x: x,
+            y: y,
+            dir: dir,
+            radius: radius,
+            thickness: thickness,
+            startAngle: startAngle,
+            endAngle: endAngle,
+            color: color,
+            glow: glow,
+            trail: def.trail !== false,
+            life: this.getRandValue(def.life) || 180
+        });
     },
     
     // 🔮 에너지 오브 스폰
@@ -2703,6 +2733,9 @@ const DDOOAction = {
                 p.y += p.vy || 0;
                 this.drawCometParticle(p, alpha, progress);
                 break;
+            case 'sword_arc':
+                this.drawSwordArcParticle(p, alpha, progress);
+                break;
         }
     },
     
@@ -2942,6 +2975,104 @@ const DDOOAction = {
         ctx.beginPath();
         ctx.arc(p.x, p.y, size * 1.5, 0, Math.PI * 2);
         ctx.fill();
+        
+        ctx.restore();
+    },
+    
+    // ⚔️ 검 궤적 아크 렌더링 (호 형태 슬래시)
+    drawSwordArcParticle(p, alpha, progress) {
+        const ctx = this.vfxCtx;
+        if (!ctx) return;
+        if (!isFinite(p.x) || !isFinite(p.y)) return;
+        
+        const radius = p.radius || 60;
+        const thickness = (p.thickness || 15) * (1 - progress * 0.4);
+        const dir = p.dir || 1;
+        const color = p.color || '#ffffff';
+        const glow = p.glow || '#60a5fa';
+        
+        // 진행에 따른 각도 애니메이션 (호가 그려지는 효과)
+        const startAngle = (p.startAngle || -60) * Math.PI / 180;
+        const endAngle = (p.endAngle || 60) * Math.PI / 180;
+        const currentEnd = startAngle + (endAngle - startAngle) * Math.min(1, progress * 3);
+        const fadeStart = Math.max(startAngle, currentEnd - (endAngle - startAngle) * 0.7);
+        
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        if (dir < 0) ctx.scale(-1, 1);
+        
+        // 🌟 외부 글로우 레이어
+        ctx.shadowColor = glow;
+        ctx.shadowBlur = 30 + thickness;
+        
+        // 글로우 후광
+        ctx.strokeStyle = glow;
+        ctx.lineWidth = thickness * 2.5;
+        ctx.lineCap = 'round';
+        ctx.globalAlpha = alpha * 0.3;
+        
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, fadeStart, currentEnd);
+        ctx.stroke();
+        
+        // 메인 아크 (그라데이션)
+        const arcLength = (currentEnd - fadeStart) * radius;
+        if (arcLength > 0) {
+            // 시작점에서 끝점까지 그라데이션
+            const startX = Math.cos(fadeStart) * radius;
+            const startY = Math.sin(fadeStart) * radius;
+            const endX = Math.cos(currentEnd) * radius;
+            const endY = Math.sin(currentEnd) * radius;
+            
+            const grad = ctx.createLinearGradient(startX, startY, endX, endY);
+            grad.addColorStop(0, 'transparent');
+            grad.addColorStop(0.2, color + 'aa');
+            grad.addColorStop(0.5, color);
+            grad.addColorStop(0.8, '#ffffff');
+            grad.addColorStop(1, '#ffffff');
+            
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = thickness;
+            ctx.globalAlpha = alpha;
+            
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, fadeStart, currentEnd);
+            ctx.stroke();
+            
+            // 끝점 하이라이트 (검의 날카로운 끝)
+            if (progress < 0.5) {
+                const tipX = Math.cos(currentEnd) * radius;
+                const tipY = Math.sin(currentEnd) * radius;
+                
+                const tipGrad = ctx.createRadialGradient(tipX, tipY, 0, tipX, tipY, thickness * 2);
+                tipGrad.addColorStop(0, '#ffffff');
+                tipGrad.addColorStop(0.5, color);
+                tipGrad.addColorStop(1, 'transparent');
+                
+                ctx.fillStyle = tipGrad;
+                ctx.globalAlpha = alpha * (1 - progress * 2);
+                ctx.beginPath();
+                ctx.arc(tipX, tipY, thickness * 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        // 트레일 잔상 효과
+        if (p.trail && progress > 0.1 && progress < 0.8) {
+            ctx.globalAlpha = alpha * 0.15;
+            ctx.strokeStyle = color + '44';
+            ctx.lineWidth = thickness * 0.5;
+            
+            for (let i = 1; i <= 3; i++) {
+                const trailOffset = i * 0.08;
+                const trailStart = Math.max(startAngle, fadeStart - trailOffset);
+                const trailEnd = Math.max(trailStart, currentEnd - trailOffset * 2);
+                
+                ctx.beginPath();
+                ctx.arc(0, 0, radius - i * 3, trailStart, trailEnd);
+                ctx.stroke();
+            }
+        }
         
         ctx.restore();
     },

@@ -1,0 +1,62 @@
+{
+    "id": "sword_slash",
+    "name": "검 베기 궤적",
+    "shake": 8,
+    "particles": [
+        {
+            "type": "flash",
+            "size": 60,
+            "color": "#ffffff",
+            "life": 40
+        },
+        {
+            "type": "sword_arc",
+            "radius": [70, 90],
+            "thickness": 18,
+            "startAngle": -70,
+            "endAngle": 50,
+            "color": "#ffffff",
+            "glow": "#60a5fa",
+            "trail": true,
+            "life": 180
+        },
+        {
+            "type": "sword_arc",
+            "radius": [50, 65],
+            "thickness": 10,
+            "startAngle": -50,
+            "endAngle": 40,
+            "color": "#93c5fd",
+            "glow": "#3b82f6",
+            "trail": true,
+            "life": 150,
+            "delay": 20
+        },
+        {
+            "type": "ring",
+            "size": 20,
+            "maxSize": 80,
+            "color": "#ffffff",
+            "life": 100
+        },
+        {
+            "type": "spark",
+            "count": 18,
+            "spread": 60,
+            "speed": [10, 22],
+            "size": [3, 7],
+            "colors": ["#ffffff", "#93c5fd", "#60a5fa"],
+            "life": [150, 300]
+        },
+        {
+            "type": "line",
+            "count": 6,
+            "angleStep": 60,
+            "length": [30, 55],
+            "width": 2,
+            "color": "#93c5fd",
+            "life": 100
+        }
+    ]
+}
+
