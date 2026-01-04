@@ -22,6 +22,16 @@ const DDOOAction = {
         enableFilters: true,       // ✨ PixiJS 필터 (글로우/블룸/충격파)
         debug: false,
         
+        // ⚡ 성능 설정
+        performance: {
+            maxParticles: 150,        // 최대 파티클 수
+            shadowBlur: true,         // shadowBlur 사용 여부 (false = 성능 향상)
+            maxShadowBlur: 15,        // 최대 shadowBlur 값
+            useGradients: true,       // 그라데이션 사용 여부
+            particleQuality: 1.0,     // 파티클 품질 (0.5 = 절반)
+            skipFrames: 0             // 프레임 스킵 (0 = 매 프레임)
+        },
+        
         // 리턴 애니메이션 설정
         return: {
             duration: 250,       // 리턴 시간 (ms)
@@ -2490,12 +2500,29 @@ const DDOOAction = {
     },
     
     spawnParticle(p) {
+        // ⚡ 파티클 수 제한 (성능 최적화)
+        const maxParticles = this.config.performance?.maxParticles || 150;
+        if (this.particles.length >= maxParticles) {
+            // 가장 오래된 파티클 제거
+            this.particles.shift();
+        }
+        
         p.born = performance.now();
         p.startLife = p.life || 150;
         if (p.length) p.startLength = p.length;
         if (p.width) p.startWidth = p.width;
         if (p.size) p.startSize = p.size;
         this.particles.push(p);
+    },
+    
+    // ⚡ shadowBlur 최적화 헬퍼
+    setShadowBlur(ctx, value) {
+        if (!this.config.performance?.shadowBlur) {
+            ctx.shadowBlur = 0;
+            return;
+        }
+        const max = this.config.performance?.maxShadowBlur || 15;
+        ctx.shadowBlur = Math.min(value, max);
     },
     
     getRandValue(val) {
@@ -2739,7 +2766,7 @@ const DDOOAction = {
         }
     },
     
-    // 🔵 트레일 도트 렌더링
+    // 🔵 트레일 도트 렌더링 (최적화)
     drawTrailDot(p, alpha) {
         const ctx = this.vfxCtx;
         if (!ctx) return;
@@ -2748,64 +2775,39 @@ const DDOOAction = {
         if (!isFinite(size) || size <= 0) return;
         if (!isFinite(p.x) || !isFinite(p.y)) return;
         
-        ctx.save();
         ctx.globalAlpha = alpha * 0.6;
         ctx.fillStyle = p.color || '#60a5fa';
         ctx.shadowColor = p.color || '#60a5fa';
-        ctx.shadowBlur = 8;
+        this.setShadowBlur(ctx, 8);
         
         ctx.beginPath();
         ctx.arc(p.x, p.y, size * (1 - alpha * 0.3), 0, Math.PI * 2);
         ctx.fill();
-        
-        ctx.restore();
     },
     
-    // 🔮 에너지 오브 파티클 (새로 추가)
+    // 🔮 에너지 오브 파티클 (최적화)
     drawEnergyOrbParticle(p, alpha, progress) {
         const ctx = this.vfxCtx;
         if (!ctx) return;
         if (!isFinite(p.x) || !isFinite(p.y)) return;
         
-        const size = (p.startSize || 20) * (1 + progress * 0.3);
+        const size = (p.startSize || 20) * (1 + progress * 0.2);
         const color = p.color || '#fbbf24';
-        const pulseSize = size * (1 + Math.sin(progress * Math.PI * 4) * 0.15);
         
         ctx.save();
         ctx.shadowColor = color;
-        ctx.shadowBlur = 30;
+        this.setShadowBlur(ctx, 15);
         
-        // 외부 후광
-        const glowGrad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, pulseSize * 2);
-        glowGrad.addColorStop(0, color + 'aa');
-        glowGrad.addColorStop(0.4, color + '55');
-        glowGrad.addColorStop(0.7, color + '22');
-        glowGrad.addColorStop(1, 'transparent');
+        // ⚡ 최적화: 단일 그라데이션
+        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.4, color);
+        grad.addColorStop(1, 'transparent');
         
-        ctx.fillStyle = glowGrad;
-        ctx.globalAlpha = alpha * 0.6;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, pulseSize * 2, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // 메인 오브
-        const coreGrad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, pulseSize);
-        coreGrad.addColorStop(0, '#ffffff');
-        coreGrad.addColorStop(0.3, color);
-        coreGrad.addColorStop(0.7, color + 'cc');
-        coreGrad.addColorStop(1, 'transparent');
-        
-        ctx.fillStyle = coreGrad;
+        ctx.fillStyle = grad;
         ctx.globalAlpha = alpha;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, pulseSize, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // 밝은 코어
-        ctx.fillStyle = '#ffffff';
-        ctx.globalAlpha = alpha * 0.9;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, pulseSize * 0.25, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
         ctx.fill();
         
         ctx.restore();
@@ -2979,7 +2981,7 @@ const DDOOAction = {
         ctx.restore();
     },
     
-    // ⚔️ 검 궤적 아크 렌더링 (호 형태 슬래시)
+    // ⚔️ 검 궤적 아크 렌더링 (최적화)
     drawSwordArcParticle(p, alpha, progress) {
         const ctx = this.vfxCtx;
         if (!ctx) return;
@@ -2991,7 +2993,6 @@ const DDOOAction = {
         const color = p.color || '#ffffff';
         const glow = p.glow || '#60a5fa';
         
-        // 진행에 따른 각도 애니메이션 (호가 그려지는 효과)
         const startAngle = (p.startAngle || -60) * Math.PI / 180;
         const endAngle = (p.endAngle || 60) * Math.PI / 180;
         const currentEnd = startAngle + (endAngle - startAngle) * Math.min(1, progress * 3);
@@ -3001,24 +3002,13 @@ const DDOOAction = {
         ctx.translate(p.x, p.y);
         if (dir < 0) ctx.scale(-1, 1);
         
-        // 🌟 외부 글로우 레이어
+        // ⚡ 최적화: shadowBlur 제한
         ctx.shadowColor = glow;
-        ctx.shadowBlur = 30 + thickness;
+        this.setShadowBlur(ctx, 15);
         
-        // 글로우 후광
-        ctx.strokeStyle = glow;
-        ctx.lineWidth = thickness * 2.5;
-        ctx.lineCap = 'round';
-        ctx.globalAlpha = alpha * 0.3;
-        
-        ctx.beginPath();
-        ctx.arc(0, 0, radius, fadeStart, currentEnd);
-        ctx.stroke();
-        
-        // 메인 아크 (그라데이션)
+        // 메인 아크만 그리기 (외부 글로우 제거)
         const arcLength = (currentEnd - fadeStart) * radius;
         if (arcLength > 0) {
-            // 시작점에서 끝점까지 그라데이션
             const startX = Math.cos(fadeStart) * radius;
             const startY = Math.sin(fadeStart) * radius;
             const endX = Math.cos(currentEnd) * radius;
@@ -3026,21 +3016,21 @@ const DDOOAction = {
             
             const grad = ctx.createLinearGradient(startX, startY, endX, endY);
             grad.addColorStop(0, 'transparent');
-            grad.addColorStop(0.2, color + 'aa');
-            grad.addColorStop(0.5, color);
-            grad.addColorStop(0.8, '#ffffff');
+            grad.addColorStop(0.2, color);
+            grad.addColorStop(0.6, '#ffffff');
             grad.addColorStop(1, '#ffffff');
             
             ctx.strokeStyle = grad;
             ctx.lineWidth = thickness;
+            ctx.lineCap = 'round';
             ctx.globalAlpha = alpha;
             
             ctx.beginPath();
             ctx.arc(0, 0, radius, fadeStart, currentEnd);
             ctx.stroke();
             
-            // 끝점 하이라이트 (검의 날카로운 끝)
-            if (progress < 0.5) {
+            // 끝점 하이라이트 (간소화)
+            if (progress < 0.4) {
                 const tipX = Math.cos(currentEnd) * radius;
                 const tipY = Math.sin(currentEnd) * radius;
                 
@@ -3298,56 +3288,37 @@ const DDOOAction = {
             return;
         }
         
+        const ctx = this.vfxCtx;
         const rad = (p.angle || 0) * Math.PI / 180;
         const len = Math.max(1, p.startLength * (1 - progress * 0.3));
         const width = Math.max(1, (p.startWidth || 5) * alpha);
-        
-        this.vfxCtx.translate(p.x, p.y);
-        this.vfxCtx.rotate(rad);
-        
-        // ✨ 강화된 글로우 효과
-        if (p.glow) {
-            this.vfxCtx.shadowColor = p.glow;
-            this.vfxCtx.shadowBlur = 25 + width;
-        }
-        
         const halfLen = len / 2;
         
-        // 🌟 외부 글로우 레이어 (새로 추가)
-        if (p.glow && alpha > 0.3) {
-            const outerGrad = this.vfxCtx.createLinearGradient(-halfLen, 0, halfLen, 0);
-            outerGrad.addColorStop(0, 'transparent');
-            outerGrad.addColorStop(0.2, p.glow);
-            outerGrad.addColorStop(0.8, p.glow);
-            outerGrad.addColorStop(1, 'transparent');
-            
-            this.vfxCtx.strokeStyle = outerGrad;
-            this.vfxCtx.lineWidth = width * 2.5;
-            this.vfxCtx.lineCap = 'round';
-            this.vfxCtx.globalAlpha = alpha * 0.3;
-            
-            this.vfxCtx.beginPath();
-            this.vfxCtx.moveTo(-halfLen, 0);
-            this.vfxCtx.lineTo(halfLen, 0);
-            this.vfxCtx.stroke();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(rad);
+        
+        // ⚡ 최적화: shadowBlur 제한
+        if (p.glow) {
+            ctx.shadowColor = p.glow;
+            this.setShadowBlur(ctx, 15);
         }
         
-        // 메인 슬래시
-        const grad = this.vfxCtx.createLinearGradient(-halfLen, 0, halfLen, 0);
+        // 메인 슬래시만 (외부 글로우 제거)
+        const grad = ctx.createLinearGradient(-halfLen, 0, halfLen, 0);
         grad.addColorStop(0, 'transparent');
-        grad.addColorStop(0.2, p.color || '#ffffff');
-        grad.addColorStop(0.5, '#ffffff');  // 중앙 밝게
-        grad.addColorStop(0.8, p.color || '#ffffff');
+        grad.addColorStop(0.15, p.color || '#ffffff');
+        grad.addColorStop(0.5, '#ffffff');
+        grad.addColorStop(0.85, p.color || '#ffffff');
         grad.addColorStop(1, 'transparent');
         
-        this.vfxCtx.strokeStyle = grad;
-        this.vfxCtx.lineWidth = width;
-        this.vfxCtx.lineCap = 'round';
-        this.vfxCtx.globalAlpha = alpha;
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = width;
+        ctx.lineCap = 'round';
+        ctx.globalAlpha = alpha;
         
-        this.vfxCtx.beginPath();
-        this.vfxCtx.moveTo(-halfLen, 0);
-        this.vfxCtx.lineTo(halfLen, 0);
+        ctx.beginPath();
+        ctx.moveTo(-halfLen, 0);
+        ctx.lineTo(halfLen, 0);
         this.vfxCtx.stroke();
     },
     
@@ -3409,36 +3380,25 @@ const DDOOAction = {
         
         const size = Math.max(1, (p.startSize || 5) * alpha);
         const color = p.color || '#fbbf24';
+        const ctx = this.vfxCtx;
         
-        // ✨ 외부 글로우 (새로 추가)
-        this.vfxCtx.shadowColor = color;
-        this.vfxCtx.shadowBlur = 15 + size;
+        // ⚡ 최적화: 글로우 단순화
+        ctx.shadowColor = color;
+        this.setShadowBlur(ctx, 10);
         
-        // 🌟 글로우 후광
-        const glowGrad = this.vfxCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 2);
-        glowGrad.addColorStop(0, color);
-        glowGrad.addColorStop(0.5, color + '80');
-        glowGrad.addColorStop(1, 'transparent');
+        // 메인 스파크만 그리기 (성능 최적화)
+        ctx.fillStyle = color;
+        ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+        ctx.fill();
         
-        this.vfxCtx.fillStyle = glowGrad;
-        this.vfxCtx.globalAlpha = Math.max(0, Math.min(1, alpha * 0.5));
-        this.vfxCtx.beginPath();
-        this.vfxCtx.arc(p.x, p.y, size * 2, 0, Math.PI * 2);
-        this.vfxCtx.fill();
-        
-        // 메인 스파크 (밝은 중심)
-        this.vfxCtx.fillStyle = '#ffffff';
-        this.vfxCtx.globalAlpha = Math.max(0, Math.min(1, alpha));
-        this.vfxCtx.beginPath();
-        this.vfxCtx.arc(p.x, p.y, size * 0.6, 0, Math.PI * 2);
-        this.vfxCtx.fill();
-        
-        // 외곽 색상
-        this.vfxCtx.fillStyle = color;
-        this.vfxCtx.globalAlpha = Math.max(0, Math.min(1, alpha * 0.8));
-        this.vfxCtx.beginPath();
-        this.vfxCtx.arc(p.x, p.y, size, 0, Math.PI * 2);
-        this.vfxCtx.fill();
+        // 밝은 중심 (작은 원 하나만)
+        ctx.fillStyle = '#ffffff';
+        ctx.globalAlpha = alpha * 0.8;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, size * 0.4, 0, Math.PI * 2);
+        ctx.fill();
     },
     
     drawFlashParticle(p, alpha, progress) {
@@ -3446,45 +3406,24 @@ const DDOOAction = {
             return;
         }
         
-        const size = Math.max(1, p.startSize * (1 + progress * 0.8));
+        const size = Math.max(1, p.startSize * (1 + progress * 0.5));
         const color = p.color || '#ffffff';
+        const ctx = this.vfxCtx;
         
-        // ✨ 강화된 섀도우 블러
-        this.vfxCtx.shadowColor = color;
-        this.vfxCtx.shadowBlur = size * 0.8;
+        // ⚡ 최적화: 그라데이션 1개만 사용
+        ctx.shadowColor = color;
+        this.setShadowBlur(ctx, 12);
         
-        // 🌟 외부 후광 (새로 추가)
-        const outerGrad = this.vfxCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 1.5);
-        outerGrad.addColorStop(0, color);
-        outerGrad.addColorStop(0.3, color + 'aa');
-        outerGrad.addColorStop(0.6, color + '44');
-        outerGrad.addColorStop(1, 'transparent');
-        
-        this.vfxCtx.fillStyle = outerGrad;
-        this.vfxCtx.globalAlpha = Math.max(0, Math.min(1, alpha * 0.6));
-        this.vfxCtx.beginPath();
-        this.vfxCtx.arc(p.x, p.y, size * 1.5, 0, Math.PI * 2);
-        this.vfxCtx.fill();
-        
-        // 메인 플래시 (중앙 밝게)
-        const grad = this.vfxCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size);
+        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size);
         grad.addColorStop(0, '#ffffff');
-        grad.addColorStop(0.3, color);
-        grad.addColorStop(0.7, color + '88');
+        grad.addColorStop(0.4, color);
         grad.addColorStop(1, 'transparent');
         
-        this.vfxCtx.fillStyle = grad;
-        this.vfxCtx.globalAlpha = Math.max(0, Math.min(1, alpha));
-        this.vfxCtx.beginPath();
-        this.vfxCtx.arc(p.x, p.y, size, 0, Math.PI * 2);
-        this.vfxCtx.fill();
-        
-        // 💥 중앙 코어 (가장 밝은 점)
-        this.vfxCtx.fillStyle = '#ffffff';
-        this.vfxCtx.globalAlpha = Math.max(0, Math.min(1, alpha * 0.9));
-        this.vfxCtx.beginPath();
-        this.vfxCtx.arc(p.x, p.y, size * 0.2, 0, Math.PI * 2);
-        this.vfxCtx.fill();
+        ctx.fillStyle = grad;
+        ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+        ctx.fill();
     },
     
     drawRingParticle(p, alpha, progress) {
