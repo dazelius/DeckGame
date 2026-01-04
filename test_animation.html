@@ -1105,9 +1105,10 @@
             }
             
             // 🎥 3D 배경 카메라도 리셋
-            if (typeof Background3D !== 'undefined' && Background3D.isInitialized && Background3D.camera) {
+            if (typeof Background3D !== 'undefined' && Background3D.isInitialized && Background3D.autoZoom) {
                 const baseZ = Background3D.cameraDefaults?.posZ || 15;
-                Background3D.camera.position.z = baseZ;
+                Background3D.autoZoom.targetZ = baseZ;
+                Background3D.autoZoom.currentZ = baseZ;
             }
             
             clearVFX();

@@ -829,18 +829,15 @@ const DDOOAction = {
         }
         
         // 🎥 Background3D 카메라 줌 연동 (있으면)
-        if (typeof Background3D !== 'undefined' && Background3D.isInitialized && Background3D.camera) {
-            // 3D 카메라 Z 위치로 줌 (줌인 = 가까이, 줌아웃 = 멀리)
+        // ⚠️ animate()가 매 프레임 currentZ를 targetZ로 보간하므로, targetZ를 변경!
+        if (typeof Background3D !== 'undefined' && Background3D.isInitialized && Background3D.autoZoom) {
             const baseZ = Background3D.cameraDefaults?.posZ || 15;
-            const targetZ = baseZ / targetZoom;  // 줌인하면 카메라 가까이
+            const newTargetZ = baseZ / targetZoom;  // 줌인하면 카메라 가까이
             
-            gsap.to(Background3D.camera.position, {
-                z: targetZ,
-                duration: dur,
-                ease: 'power2.out'
-            });
+            // targetZ 변경 → updateAutoZoom이 부드럽게 currentZ를 따라가게 함
+            Background3D.autoZoom.targetZ = newTargetZ;
             
-            if (this.config.debug) console.log(`[DDOOAction] 📷 3D Cam Z: ${targetZ.toFixed(1)}`);
+            if (this.config.debug) console.log(`[DDOOAction] 📷 3D Cam targetZ: ${newTargetZ.toFixed(1)}`);
         }
         
         this.cameraState.zoom = targetZoom;
@@ -932,14 +929,10 @@ const DDOOAction = {
             }
         }
         
-        // 🎥 Background3D 카메라도 리셋
-        if (typeof Background3D !== 'undefined' && Background3D.isInitialized && Background3D.camera) {
+        // 🎥 Background3D 카메라도 리셋 (targetZ 복원 → 자동 보간)
+        if (typeof Background3D !== 'undefined' && Background3D.isInitialized && Background3D.autoZoom) {
             const baseZ = Background3D.cameraDefaults?.posZ || 15;
-            gsap.to(Background3D.camera.position, {
-                z: baseZ,
-                duration: dur,
-                ease: 'power2.out'
-            });
+            Background3D.autoZoom.targetZ = baseZ;
         }
         
         this.cameraState = {
@@ -977,11 +970,11 @@ const DDOOAction = {
             }
         }
         
-        // 🎥 Background3D 카메라도 즉시 리셋
-        if (typeof Background3D !== 'undefined' && Background3D.isInitialized && Background3D.camera) {
-            gsap.killTweensOf(Background3D.camera.position);
+        // 🎥 Background3D 카메라도 즉시 리셋 (targetZ + currentZ 동시 복원)
+        if (typeof Background3D !== 'undefined' && Background3D.isInitialized && Background3D.autoZoom) {
             const baseZ = Background3D.cameraDefaults?.posZ || 15;
-            Background3D.camera.position.z = baseZ;
+            Background3D.autoZoom.targetZ = baseZ;
+            Background3D.autoZoom.currentZ = baseZ;  // 즉시 적용
         }
         
         this.cameraState = {
