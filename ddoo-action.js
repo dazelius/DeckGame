@@ -665,10 +665,14 @@ const DDOOAction = {
                     }
                     
                     // 애니메이션 재생
+                    // 🔥 baseX/baseY를 명시적으로 전달하여 원래 위치 기준으로 애니메이션!
+                    // (그래야 공중 콤보 등에서 y 오프셋이 누적되지 않음)
                     const promise = this.playKeyframes(actualAnimData, {
                         ...options,
                         container: stepContainer,
                         sprite: stepSprite,
+                        baseX: stepOriginX,    // 🔥 원래 위치 기준!
+                        baseY: stepOriginY,    // 🔥 원래 위치 기준!
                         originX: stepOriginX,
                         originY: stepOriginY,
                         dir: stepDir,
