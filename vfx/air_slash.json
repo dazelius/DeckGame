@@ -1,0 +1,25 @@
+{
+    "id": "air_slash",
+    "name": "공중 베기",
+    "particles": [
+        {
+            "type": "slash",
+            "angle": 30,
+            "length": 70,
+            "width": 8,
+            "color": "#60a5fa",
+            "glow": "#3b82f6",
+            "life": 120
+        },
+        {
+            "type": "spark",
+            "count": 8,
+            "spread": 40,
+            "speed": [8, 18],
+            "size": [3, 6],
+            "colors": ["#60a5fa", "#93c5fd", "#ffffff"],
+            "life": [120, 220]
+        }
+    ]
+}
+

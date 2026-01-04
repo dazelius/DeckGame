@@ -1,0 +1,32 @@
+{
+    "id": "gold_drain",
+    "name": "골드 흡수",
+    "particles": [
+        {
+            "type": "spark",
+            "count": 20,
+            "spread": 60,
+            "offsetAngle": 180,
+            "speed": [-8, -15],
+            "size": [5, 10],
+            "colors": ["#fbbf24", "#fde68a", "#fef3c7"],
+            "life": [300, 500],
+            "converge": true
+        },
+        {
+            "type": "ring",
+            "size": 50,
+            "maxSize": 10,
+            "color": "#f59e0b",
+            "life": 250
+        },
+        {
+            "type": "flash",
+            "size": 40,
+            "color": "#fef3c7",
+            "life": 80,
+            "delay": 200
+        }
+    ]
+}
+
