@@ -1,50 +1,60 @@
 {
     "id": "flurry_stab",
-    "name": "연속 찌르기 이펙트",
-    "shake": 4,
+    "name": "연속 찌르기 이펙트 - 길쭉한 화살표",
+    "shake": 5,
     "particles": [
         {
             "type": "flash",
-            "size": 40,
+            "size": 50,
             "color": "#ffffff",
-            "life": 40
+            "life": 35
         },
         {
             "type": "arrow",
-            "length": 70,
-            "width": 45,
-            "tipAngle": 25,
-            "color": "#93c5fd",
+            "length": 180,
+            "width": 80,
+            "tipAngle": 20,
+            "color": "#ffffff",
             "glow": "#60a5fa",
-            "life": 100
+            "life": 120
+        },
+        {
+            "type": "arrow",
+            "length": 140,
+            "width": 55,
+            "tipAngle": 18,
+            "color": "#93c5fd",
+            "glow": "#3b82f6",
+            "life": 100,
+            "delay": 15
         },
         {
             "type": "slash",
             "count": 1,
             "angle": [0],
-            "length": [60, 90],
-            "width": 6,
+            "length": [120, 160],
+            "width": 8,
             "color": "#ffffff",
             "glow": "#60a5fa",
+            "life": 100
+        },
+        {
+            "type": "line",
+            "count": 3,
+            "angleStep": 0,
+            "length": [80, 120],
+            "width": 3,
+            "color": "#93c5fd",
             "life": 80
         },
         {
             "type": "spark",
-            "count": 10,
-            "spread": 30,
-            "speed": [6, 14],
-            "size": [2, 5],
+            "count": 12,
+            "spread": 40,
+            "speed": [8, 18],
+            "size": [3, 6],
             "colors": ["#60a5fa", "#93c5fd", "#ffffff"],
-            "life": [100, 180]
-        },
-        {
-            "type": "line",
-            "count": 4,
-            "angleStep": 90,
-            "length": [25, 45],
-            "width": 2,
-            "color": "#93c5fd",
-            "life": 80
+            "life": [120, 200]
         }
     ]
 }

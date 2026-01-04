@@ -1,79 +1,89 @@
 {
     "id": "flurry_finish",
-    "name": "연속 찌르기 피니시 이펙트",
-    "shake": 10,
+    "name": "연속 찌르기 피니시 이펙트 - 강화",
+    "shake": 12,
     "particles": [
         {
             "type": "flash",
-            "size": 80,
+            "size": 100,
             "color": "#ffffff",
-            "life": 50
+            "life": 45
         },
         {
             "type": "flash",
-            "size": 60,
+            "size": 70,
             "color": "#60a5fa",
-            "life": 80
-        },
-        {
-            "type": "ring",
-            "size": 25,
-            "maxSize": 120,
-            "color": "#ffffff",
-            "life": 100
-        },
-        {
-            "type": "ring",
-            "size": 40,
-            "maxSize": 90,
-            "color": "#60a5fa",
-            "life": 140
+            "life": 75
         },
         {
             "type": "arrow",
-            "length": 120,
-            "width": 80,
-            "tipAngle": 25,
-            "color": "#93c5fd",
+            "length": 220,
+            "width": 100,
+            "tipAngle": 18,
+            "color": "#ffffff",
             "glow": "#60a5fa",
+            "life": 160
+        },
+        {
+            "type": "arrow",
+            "length": 180,
+            "width": 70,
+            "tipAngle": 16,
+            "color": "#93c5fd",
+            "glow": "#3b82f6",
+            "life": 130,
+            "delay": 20
+        },
+        {
+            "type": "ring",
+            "size": 30,
+            "maxSize": 140,
+            "color": "#ffffff",
+            "life": 110
+        },
+        {
+            "type": "ring",
+            "size": 50,
+            "maxSize": 100,
+            "color": "#60a5fa",
             "life": 150
         },
         {
             "type": "slash",
-            "count": 5,
-            "angle": [-80, -40, 0, 40, 80],
-            "length": [70, 120],
-            "width": 8,
+            "count": 3,
+            "angle": [-30, 0, 30],
+            "length": [100, 160],
+            "width": 10,
             "color": "#ffffff",
             "glow": "#60a5fa",
-            "life": 120
-        },
-        {
-            "type": "spark",
-            "count": 30,
-            "spread": 80,
-            "speed": [12, 28],
-            "size": [3, 8],
-            "colors": ["#60a5fa", "#93c5fd", "#ffffff", "#3b82f6"],
-            "life": [180, 380]
-        },
-        {
-            "type": "debris",
-            "count": 15,
-            "speed": [10, 22],
-            "size": [3, 6],
-            "colors": ["#60a5fa", "#93c5fd", "#ffffff"],
-            "gravity": 0.35,
-            "life": [280, 500]
+            "life": 130
         },
         {
             "type": "line",
-            "count": 12,
-            "angleStep": 30,
-            "length": [50, 100],
-            "width": 3,
+            "count": 5,
+            "angleStep": 0,
+            "length": [100, 150],
+            "width": 4,
             "color": "#93c5fd",
-            "life": 140
+            "life": 100
+        },
+        {
+            "type": "spark",
+            "count": 35,
+            "spread": 90,
+            "speed": [14, 32],
+            "size": [4, 9],
+            "colors": ["#60a5fa", "#93c5fd", "#ffffff", "#3b82f6"],
+            "life": [200, 400]
+        },
+        {
+            "type": "debris",
+            "count": 18,
+            "speed": [12, 26],
+            "size": [4, 7],
+            "colors": ["#60a5fa", "#93c5fd", "#ffffff"],
+            "gravity": 0.35,
+            "life": [300, 550]
         }
     ]
 }
