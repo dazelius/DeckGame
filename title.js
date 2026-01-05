@@ -187,6 +187,28 @@ const TitleSystem = {
         if (typeof Background3D !== 'undefined') {
             Background3D.init();
         }
+        
+        // 🎮 DDOOAction 애니메이션/VFX 캐시 프리로드 (전투 전 미리 로딩!)
+        this.preloadDDOOAction();
+    },
+    
+    // 🎮 DDOOAction 프리로드 (JSON 캐시만 미리 로드)
+    async preloadDDOOAction() {
+        if (typeof DDOOAction === 'undefined') {
+            console.log('[TitleSystem] DDOOAction 미정의 - 프리로드 스킵');
+            return;
+        }
+        
+        try {
+            console.log('[TitleSystem] 🎮 DDOOAction 애니메이션/VFX 프리로드 시작...');
+            
+            // 애니메이션 JSON 로드
+            await DDOOAction.loadAllAnimations();
+            
+            console.log(`[TitleSystem] ✅ DDOOAction 프리로드 완료! (Anim: ${DDOOAction.animCache?.size || 0}, VFX: ${DDOOAction.vfxCache?.size || 0})`);
+        } catch (e) {
+            console.warn('[TitleSystem] DDOOAction 프리로드 실패:', e);
+        }
     },
     
     // 이미지 프리로드 (LoadingScreen에서 처리)
