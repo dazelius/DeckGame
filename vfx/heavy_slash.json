@@ -2,69 +2,72 @@
     "id": "heavy_slash",
     "name": "대검 베기",
     "duration": 350,
+    "shake": 15,
     "offset": { "x": 0, "y": -40 },
     "particles": [
         {
             "type": "flash",
             "color": "#ffffff",
-            "size": 220,
-            "alpha": 1,
-            "fadeOut": true
+            "size": 150,
+            "life": 50
         },
         {
             "type": "flash",
             "color": "#ef4444",
-            "size": 160,
-            "alpha": 0.9,
-            "fadeOut": true
+            "size": 100,
+            "life": 80
         },
         {
-            "type": "flash",
-            "color": "#fbbf24",
-            "size": 120,
-            "alpha": 0.8,
-            "fadeOut": true
-        },
-        {
-            "type": "slash",
-            "count": 2,
+            "type": "sword_arc",
+            "radius": [120, 160],
+            "thickness": 35,
+            "startAngle": -90,
+            "endAngle": 60,
             "color": "#ffffff",
             "glow": "#ef4444",
-            "angle": [-55, -40],
-            "length": 220,
-            "width": 22,
-            "alpha": 1,
-            "lifetime": 220
+            "trail": true,
+            "life": 280
+        },
+        {
+            "type": "sword_arc",
+            "radius": [80, 110],
+            "thickness": 20,
+            "startAngle": -70,
+            "endAngle": 40,
+            "color": "#fbbf24",
+            "glow": "#ef4444",
+            "trail": true,
+            "life": 220,
+            "delay": 40
         },
         {
             "type": "ring",
             "count": 2,
             "color": "#ef4444",
-            "size": 55,
-            "maxSize": 280,
-            "alpha": 0.9,
-            "fadeOut": true,
+            "size": 40,
+            "maxSize": 200,
+            "life": 150,
             "delay": [0, 50]
         },
         {
             "type": "spark",
-            "count": 45,
-            "color": "#fbbf24",
-            "size": 12,
-            "speed": 250,
-            "angle": "radial",
-            "alpha": 1,
-            "lifetime": 320
+            "count": 40,
+            "spread": 90,
+            "speed": [20, 40],
+            "size": [5, 12],
+            "colors": ["#ffffff", "#fbbf24", "#ef4444"],
+            "life": [200, 400],
+            "gravity": 0.5
         },
         {
             "type": "debris",
-            "count": 30,
-            "color": "#ef4444",
-            "size": 12,
-            "speed": 180,
-            "gravity": 4,
-            "alpha": 0.9,
-            "lifetime": 450
+            "count": 25,
+            "spread": 80,
+            "speed": [15, 30],
+            "size": [6, 12],
+            "colors": ["#ef4444", "#fbbf24"],
+            "gravity": 0.8,
+            "life": [300, 500]
         }
     ]
 }

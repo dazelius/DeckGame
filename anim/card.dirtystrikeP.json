@@ -9,7 +9,6 @@
         { "delay": 15 },
         { "anim": "player.backstab_strike", "wait": true, "damage": 7 },
         { "anim": "enemy.stabbed", "wait": false, "delay": 10, "debuff": { "name": "vulnerable", "value": 2 } },
-        { "delay": 80 },
-        { "anim": "player.sneak_return", "wait": true }
+        { "delay": 120 }
     ]
 }

@@ -1,48 +1,33 @@
 {
     "id": "slash",
-    "name": "강화된 슬래시",
-    "shake": 5,
+    "name": "기본 베기",
+    "shake": 6,
     "particles": [
         {
             "type": "flash",
-            "size": 50,
+            "size": 80,
             "color": "#ffffff",
-            "life": 60
+            "life": 50
         },
         {
-            "type": "slash",
-            "count": 2,
-            "angle": [-15, 15],
-            "length": [80, 120],
-            "width": 10,
+            "type": "sword_arc",
+            "radius": [80, 100],
+            "thickness": 20,
+            "startAngle": -70,
+            "endAngle": 60,
             "color": "#ffffff",
             "glow": "#60a5fa",
-            "life": 120
-        },
-        {
-            "type": "ring",
-            "size": 15,
-            "maxSize": 70,
-            "color": "#93c5fd",
-            "life": 100
+            "trail": true,
+            "life": 200
         },
         {
             "type": "spark",
-            "count": 15,
-            "spread": 50,
-            "speed": [8, 18],
-            "size": [3, 7],
+            "count": 20,
+            "spread": 60,
+            "speed": [12, 25],
+            "size": [3, 8],
             "colors": ["#ffffff", "#93c5fd", "#60a5fa"],
-            "life": [150, 280]
-        },
-        {
-            "type": "line",
-            "count": 8,
-            "angleStep": 45,
-            "length": [30, 60],
-            "width": 2,
-            "color": "#93c5fd",
-            "life": 100
+            "life": [150, 300]
         }
     ]
 }

@@ -64,6 +64,15 @@ const DevMode = {
         // 파티클 생성
         this.createParticles();
         
+        // 🔥 촛불 클릭으로 게임 진입
+        const bonfire = maintenanceScreen.querySelector('.ds-bonfire');
+        if (bonfire) {
+            bonfire.style.cursor = 'pointer';
+            bonfire.addEventListener('click', () => {
+                this.unlockGame();
+            });
+        }
+        
         console.log('[DevMode] 점검 화면 표시됨 (Dark Souls Style)');
     },
     

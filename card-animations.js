@@ -85,10 +85,51 @@ const CardAnimations = {
             onComplete      // 완료 콜백
         } = options;
         
-        // DDOOAction 엔진 확인
-        if (typeof DDOOAction === 'undefined' || !DDOOAction.initialized) {
-            console.warn('[CardAnimations] DDOOAction 엔진 없음, 폴백 실행');
+        // DDOOAction 엔진 확인 - 없으면 초기화 시도!
+        if (typeof DDOOAction === 'undefined') {
+            console.warn('[CardAnimations] DDOOAction 정의 안됨, 폴백 실행');
             return this.fallbackAnimation(options);
+        }
+        
+        // DDOOAction이 초기화되지 않았으면 PlayerRenderer를 통해 초기화 시도
+        if (!DDOOAction.initialized) {
+            if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.app) {
+                console.log('[CardAnimations] DDOOAction 초기화 시도...');
+                try {
+                    await DDOOAction.init(PlayerRenderer.app, PlayerRenderer.app.stage);
+                    
+                    // ⏳ 초기화 완료될 때까지 최대 2초 대기
+                    let waitCount = 0;
+                    while (!DDOOAction.initialized && waitCount < 40) {
+                        await new Promise(r => setTimeout(r, 50));
+                        waitCount++;
+                    }
+                    
+                    if (!DDOOAction.initialized) {
+                        console.warn('[CardAnimations] DDOOAction 초기화 타임아웃');
+                        return this.fallbackAnimation(options);
+                    }
+                    
+                    console.log('[CardAnimations] ✅ DDOOAction 초기화 성공!');
+                } catch (e) {
+                    console.warn('[CardAnimations] DDOOAction 초기화 실패:', e);
+                    return this.fallbackAnimation(options);
+                }
+            } else {
+                console.warn('[CardAnimations] PlayerRenderer.app 없음, 폴백 실행');
+                return this.fallbackAnimation(options);
+            }
+        }
+        
+        // ⏳ animCache/vfxCache가 로드될 때까지 추가 대기
+        if (DDOOAction.animCache.size === 0 || DDOOAction.vfxCache.size === 0) {
+            console.log('[CardAnimations] 애니메이션 캐시 대기 중...');
+            let cacheWait = 0;
+            while ((DDOOAction.animCache.size === 0 || DDOOAction.vfxCache.size === 0) && cacheWait < 30) {
+                await new Promise(r => setTimeout(r, 100));
+                cacheWait++;
+            }
+            console.log(`[CardAnimations] 캐시 로드됨: anim=${DDOOAction.animCache.size}, vfx=${DDOOAction.vfxCache.size}`);
         }
         
         // PlayerRenderer 확인

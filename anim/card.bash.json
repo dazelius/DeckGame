@@ -6,7 +6,7 @@
     "returnToBase": true,
     "steps": [
         { "anim": "player.dash", "wait": true },
-        { "anim": "player.heavy_slash", "wait": false, "damage": 12 },
-        { "anim": ["enemy.bash_hit_left", "enemy.bash_hit_right"], "wait": true, "delay": 30, "debuff": { "name": "vulnerable", "value": 2 } }
+        { "anim": "player.bash", "wait": true, "damage": 12 },
+        { "anim": ["enemy.bash_hit_left", "enemy.bash_hit_right"], "wait": true, "delay": 10, "debuff": { "name": "vulnerable", "value": 2 } }
     ]
 }
