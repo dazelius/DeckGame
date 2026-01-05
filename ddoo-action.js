@@ -34,8 +34,8 @@ const DDOOAction = {
         
         // 리턴 애니메이션 설정
         return: {
-            duration: 250,       // 리턴 시간 (ms)
-            ease: 'power2.inOut' // 이징
+            duration: 120,       // 리턴 시간 (ms) - 빠르게!
+            ease: 'power3.out'   // 빠른 이징
         },
         
         // 캐릭터 렌더링 설정
@@ -914,27 +914,33 @@ const DDOOAction = {
     },
     
     // ==================== 애니메이션 재생 ====================
+    _isPlaying: false,  // 🔥 재생 중 플래그 (재배치 방지용)
+    
     async play(animId, options = {}) {
-        // 🔄 애니메이션 시작 전 카메라/이펙트 상태 초기화
-        this.resetCameraImmediate();
-        this.resetColorGradeImmediate();
-        this.resetSlowmoImmediate();
+        // 🔥 재생 중 플래그 설정!
+        this._isPlaying = true;
         
-        // ⏳ 한 프레임 대기 (리셋이 렌더링에 반영되도록)
-        await new Promise(resolve => requestAnimationFrame(resolve));
-        
-        // 🎲 배열이면 랜덤 선택!
-        let actualAnimId = animId;
-        if (Array.isArray(animId)) {
-            actualAnimId = animId[Math.floor(Math.random() * animId.length)];
-            if (this.config.debug) console.log(`[DDOOAction] 🎲 랜덤 선택: ${actualAnimId}`);
-        }
-        
-        const data = this.animCache.get(actualAnimId);
-        if (!data) {
-            console.warn(`[DDOOAction] 애니메이션 없음: ${actualAnimId}`);
-            return null;
-        }
+        try {
+            // 🔄 애니메이션 시작 전 카메라/이펙트 상태 초기화
+            this.resetCameraImmediate();
+            this.resetColorGradeImmediate();
+            this.resetSlowmoImmediate();
+            
+            // ⏳ 한 프레임 대기 (리셋이 렌더링에 반영되도록)
+            await new Promise(resolve => requestAnimationFrame(resolve));
+            
+            // 🎲 배열이면 랜덤 선택!
+            let actualAnimId = animId;
+            if (Array.isArray(animId)) {
+                actualAnimId = animId[Math.floor(Math.random() * animId.length)];
+                if (this.config.debug) console.log(`[DDOOAction] 🎲 랜덤 선택: ${actualAnimId}`);
+            }
+            
+            const data = this.animCache.get(actualAnimId);
+            if (!data) {
+                console.warn(`[DDOOAction] 애니메이션 없음: ${actualAnimId}`);
+                return null;
+            }
         
         const {
             container,      // PIXI.Container
@@ -963,13 +969,24 @@ const DDOOAction = {
         const originX = baseX ?? container.x;
         const originY = baseY ?? container.y;
         
-        // 시퀀스 타입
-        if (data.type === 'sequence' && data.steps) {
-            return this.playSequence(data, { ...options, originX, originY });
+            // 시퀀스 타입
+            if (data.type === 'sequence' && data.steps) {
+                return await this.playSequence(data, { ...options, originX, originY });
+            }
+            
+            // 단일 애니메이션
+            const result = await this.playKeyframes(data, { ...options, originX, originY });
+            
+            // 🔥 단일 애니메이션 완료 후 플래그 해제!
+            this._isPlaying = false;
+            return result;
+        } catch (e) {
+            console.error('[DDOOAction] play 에러:', e);
+            return null;
+        } finally {
+            // 🔥 에러 발생해도 플래그 해제!
+            this._isPlaying = false;
         }
-        
-        // 단일 애니메이션
-        return this.playKeyframes(data, { ...options, originX, originY });
     },
     
     async playSequence(data, options) {
@@ -1135,6 +1152,9 @@ const DDOOAction = {
         // ⏱️ 슬로우모션 리셋
         this.resetSlowmo();
         
+        // 🔥 재생 완료 플래그!
+        this._isPlaying = false;
+        
         if (options.onComplete) options.onComplete();
     },
     
@@ -1166,8 +1186,8 @@ const DDOOAction = {
             const shouldJump = totalDist > 100;
             
             const baseDuration = this.config.return.duration / 1000 / this.config.speed;
-            // 거리에 따라 시간 조정 (멀수록 약간 더 오래)
-            const duration = shouldJump ? Math.min(baseDuration * 1.5, 0.5) : baseDuration;
+            // 거리에 따라 시간 조정 (점프도 빠르게!)
+            const duration = shouldJump ? Math.min(baseDuration * 1.2, 0.25) : baseDuration;
             
             // 그림자 찾기
             const charId = [...this.characters.keys()].find(
@@ -1182,31 +1202,30 @@ const DDOOAction = {
             if (sprite.scale) gsap.killTweensOf(sprite.scale);
             
             if (shouldJump) {
-                // 🦘 점프 복귀 애니메이션!
-                const jumpHeight = Math.min(50 + totalDist * 0.15, 120);  // 거리에 비례한 점프 높이
+                // 🦘 점프 복귀 애니메이션! (빠르게!)
+                const jumpHeight = Math.min(40 + totalDist * 0.1, 80);  // 점프 높이 줄임
                 const tl = gsap.timeline();
                 
-                // 1️⃣ 점프 준비 (웅크림)
+                // 1️⃣ 점프 준비 (웅크림) - 빠르게
                 tl.to(container.scale, {
                     x: baseScale * 1.1,
                     y: baseScale * 0.85,
-                    duration: 0.06,
+                    duration: 0.03,
                     ease: 'power2.in'
                 });
                 
-                // 2️⃣ 도약! (위로 튀면서 x 이동 시작)
+                // 2️⃣ 도약! (위로 튀면서 x 이동)
                 tl.to(container, {
                     x: originX,
                     y: originY - jumpHeight,
-                    duration: duration * 0.5,
+                    duration: duration * 0.45,
                     ease: 'power2.out',
                     onUpdate: () => {
                         if (shadow) {
                             shadow.x = container.x;
                             shadow.y = originY + (this.config.character.shadowOffsetY || 5);
-                            // 점프 높이에 따라 그림자 축소
                             const heightRatio = Math.abs(container.y - originY) / jumpHeight;
-                            shadow.scale.set(1 - heightRatio * 0.5);
+                            shadow.scale.set(1 - heightRatio * 0.4);
                             shadow.alpha = (1 - heightRatio * 0.3) * (this.config.character.shadowAlpha || 0.4);
                         }
                     }
@@ -1214,39 +1233,39 @@ const DDOOAction = {
                 
                 tl.to(container.scale, {
                     x: baseScale * 0.9,
-                    y: baseScale * 1.15,
-                    duration: duration * 0.5,
+                    y: baseScale * 1.1,
+                    duration: duration * 0.45,
                     ease: 'power2.out'
                 }, '<');
                 
-                // 3️⃣ 착지! (아래로 낙하)
+                // 3️⃣ 착지! (빠른 낙하)
                 tl.to(container, {
                     y: originY,
-                    duration: duration * 0.4,
-                    ease: 'power2.in',
+                    duration: duration * 0.35,
+                    ease: 'power3.in',
                     onUpdate: () => {
                         if (shadow) {
                             const heightRatio = Math.abs(container.y - originY) / jumpHeight;
-                            shadow.scale.set(1 - heightRatio * 0.5);
+                            shadow.scale.set(1 - heightRatio * 0.4);
                             shadow.alpha = (1 - heightRatio * 0.3) * (this.config.character.shadowAlpha || 0.4);
                         }
                     }
                 });
                 
-                // 4️⃣ 착지 충격 (스쿼시)
+                // 4️⃣ 착지 충격 (스쿼시) - 빠르게
                 tl.to(container.scale, {
-                    x: baseScale * 1.15,
-                    y: baseScale * 0.85,
-                    duration: 0.06,
+                    x: baseScale * 1.1,
+                    y: baseScale * 0.9,
+                    duration: 0.03,
                     ease: 'power4.out'
-                }, '-=0.02');
+                }, '-=0.01');
                 
-                // 5️⃣ 복귀 (탄성)
+                // 5️⃣ 복귀 (빠른 탄성)
                 tl.to(container.scale, {
                     x: baseScale,
                     y: baseScale,
-                    duration: 0.15,
-                    ease: 'elastic.out(1, 0.6)',
+                    duration: 0.08,
+                    ease: 'power2.out',
                     onComplete: () => {
                         if (shadow) {
                             shadow.scale.set(1);
@@ -1343,7 +1362,7 @@ const DDOOAction = {
         if (this.cameraState?.isRootStage && this.characters.size > 0) {
             // 🎯 카메라 줌 = 화면 전체 확대 → 모든 캐릭터 동시 스케일링!
             this.characters.forEach((char, id) => {
-                if (char?.container) {
+                if (char?.container?.scale) {
                     gsap.killTweensOf(char.container.scale);
                     
                     // 🔥 원본 baseScale 저장 (복원용) - 최초 1회만!
@@ -1500,19 +1519,21 @@ const DDOOAction = {
             this.characters.forEach((char, id) => {
                 if (char?.container) {
                     gsap.killTweensOf(char.container);
-                    gsap.killTweensOf(char.container.scale);
-                    
-                    // 🔥 원본 baseScale로 복원!
-                    const targetScale = char._originalBaseScale || char.container.breathingBaseScale || char.baseScale || 1;
-                    if (this.config.debug) console.log(`[DDOOAction] 📷 ${id} 복원: ${targetScale}`);
-                    
-                    gsap.to(char.container.scale, {
-                        x: targetScale,
-                        y: targetScale,
-                        duration: dur,
-                        ease: 'power2.out',
-                        overwrite: 'auto'
-                    });
+                    if (char.container.scale) {
+                        gsap.killTweensOf(char.container.scale);
+                        
+                        // 🔥 원본 baseScale로 복원!
+                        const targetScale = char._originalBaseScale || char.container.breathingBaseScale || char.baseScale || 1;
+                        if (this.config.debug) console.log(`[DDOOAction] 📷 ${id} 복원: ${targetScale}`);
+                        
+                        gsap.to(char.container.scale, {
+                            x: targetScale,
+                            y: targetScale,
+                            duration: dur,
+                            ease: 'power2.out',
+                            overwrite: 'auto'
+                        });
+                    }
                 }
                 if (char?.sprite) {
                     gsap.killTweensOf(char.sprite);
@@ -1595,10 +1616,12 @@ const DDOOAction = {
             this.characters.forEach((char, id) => {
                 if (char?.container) {
                     gsap.killTweensOf(char.container);
-                    gsap.killTweensOf(char.container.scale);
-                    // 🔥 원본 baseScale로 복원!
-                    const scale = char._originalBaseScale || char.container.breathingBaseScale || char.baseScale || 1;
-                    char.container.scale.set(scale, scale);
+                    if (char.container.scale) {
+                        gsap.killTweensOf(char.container.scale);
+                        // 🔥 원본 baseScale로 복원!
+                        const scale = char._originalBaseScale || char.container.breathingBaseScale || char.baseScale || 1;
+                        char.container.scale.set(scale, scale);
+                    }
                 }
                 if (char?.sprite) {
                     gsap.killTweensOf(char.sprite);
