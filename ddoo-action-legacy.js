@@ -150,9 +150,6 @@ const DDOOAction = {
         this.pixiApp = pixiApp;
         this.stageContainer = stageContainer;
         
-        // 📁 외부 설정 파일 로드 (ddoo-config.json)
-        await this.loadConfig();
-        
         // 🔍 stageContainer가 app.stage인지 확인 (카메라 pivot 설정 방지용)
         this.cameraState.isRootStage = (stageContainer === pixiApp?.stage);
         if (this.cameraState.isRootStage) {
@@ -189,38 +186,6 @@ const DDOOAction = {
         console.log(`[DDOOAction] 🎨 컬러그레이딩: ${this.config.enableColorGrade ? 'ON' : 'OFF'}`);
         
         return this;
-    },
-    
-    // 📁 외부 설정 파일 로드
-    async loadConfig() {
-        try {
-            const res = await fetch('ddoo-config.json');
-            if (res.ok) {
-                const json = await res.json();
-                // 기존 config에 덮어쓰기 (deep merge)
-                this.mergeConfig(this.config, json);
-                console.log('[DDOOAction] 📁 ddoo-config.json 로드 완료');
-            }
-        } catch (e) {
-            console.log('[DDOOAction] 📁 ddoo-config.json 없음, 기본 설정 사용');
-        }
-    },
-    
-    // 설정 병합 (deep merge)
-    mergeConfig(target, source) {
-        for (const key in source) {
-            if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-                if (!target[key]) target[key] = {};
-                this.mergeConfig(target[key], source[key]);
-            } else {
-                // 문자열 "0x..."를 숫자로 변환
-                if (typeof source[key] === 'string' && source[key].startsWith('0x')) {
-                    target[key] = parseInt(source[key], 16);
-                } else {
-                    target[key] = source[key];
-                }
-            }
-        }
     },
     
     // 📷 카메라 시스템 초기화
@@ -652,72 +617,6 @@ const DDOOAction = {
         }
     },
     
-    // ==================== 리사이즈 핸들러 ====================
-    handleResize() {
-        if (!this.initialized) return;
-        
-        const battleArena = document.querySelector('.battle-arena');
-        if (!battleArena) return;
-        
-        const width = battleArena.offsetWidth;
-        const height = battleArena.offsetHeight;
-        const groundY = height * 0.75;
-        
-        // 🎯 PlayerRenderer에서 위치 동기화
-        if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.playerContainer) {
-            const playerChar = this.characters.get('player');
-            if (playerChar) {
-                const newX = PlayerRenderer.playerContainer.x;
-                const newY = PlayerRenderer.playerContainer.y;
-                playerChar.container.x = newX;
-                playerChar.container.y = newY;
-                playerChar.baseX = newX;
-                playerChar.baseY = newY;
-                if (playerChar.shadow) {
-                    playerChar.shadow.x = newX;
-                    playerChar.shadow.y = newY + (this.config.character.shadowOffsetY || 5);
-                }
-            }
-        }
-        
-        // 🎯 EnemyRenderer에서 위치 동기화
-        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.sprites) {
-            EnemyRenderer.sprites.forEach((data, id) => {
-                // DDOOAction에서 같은 ID의 캐릭터 찾기
-                let charId = 'enemy';
-                if (id !== 'enemy' && !id.startsWith('enemy')) {
-                    // pixiId로 저장된 경우
-                    const enemyChar = this.characters.get('enemy');
-                    if (enemyChar && enemyChar.container === data.container) {
-                        charId = 'enemy';
-                    }
-                }
-                
-                const enemyChar = this.characters.get(charId);
-                if (enemyChar && data.container) {
-                    const newX = data.container.x;
-                    const newY = data.container.y;
-                    enemyChar.container.x = newX;
-                    enemyChar.container.y = newY;
-                    enemyChar.baseX = newX;
-                    enemyChar.baseY = newY;
-                    if (enemyChar.shadow) {
-                        enemyChar.shadow.x = newX;
-                        enemyChar.shadow.y = newY + (this.config.character.shadowOffsetY || 5);
-                    }
-                }
-            });
-        }
-        
-        // 🎯 VFX Canvas 리사이즈
-        if (this.vfxCanvas) {
-            this.vfxCanvas.width = width;
-            this.vfxCanvas.height = height;
-        }
-        
-        console.log(`[DDOOAction] 📐 리사이즈: ${width}x${height}`);
-    },
-    
     // ==================== 히트 플래시 ====================
     hitFlash(charId, color = null) {
         const charData = this.characters.get(charId);
@@ -1138,7 +1037,7 @@ const DDOOAction = {
         if (options.onComplete) options.onComplete();
     },
     
-    // ⭐ 원점 복귀 애니메이션 (거리가 멀면 점프!)
+    // ⭐ 원점 복귀 애니메이션
     async returnToOrigin(container, sprite, originX, originY) {
         return new Promise((resolve) => {
             // ⚠️ 안전 체크: 컨테이너/스프라이트가 없으면 즉시 완료
@@ -1157,145 +1056,49 @@ const DDOOAction = {
                 return;
             }
             
-            // 🔥 거리 계산
-            const distX = Math.abs(container.x - originX);
-            const distY = Math.abs(container.y - originY);
-            const totalDist = Math.sqrt(distX * distX + distY * distY);
-            
-            // 거리가 100 이상이면 점프 복귀!
-            const shouldJump = totalDist > 100;
-            
-            const baseDuration = this.config.return.duration / 1000 / this.config.speed;
-            // 거리에 따라 시간 조정 (멀수록 약간 더 오래)
-            const duration = shouldJump ? Math.min(baseDuration * 1.5, 0.5) : baseDuration;
+            const duration = this.config.return.duration / 1000 / this.config.speed;
+            const ease = this.config.return.ease;
             
             // 그림자 찾기
             const charId = [...this.characters.keys()].find(
                 id => this.characters.get(id)?.container === container
             );
             const shadow = charId ? this.characters.get(charId)?.shadow : null;
-            const baseScale = container.breathingBaseScale || 1;
             
             // ⚠️ 기존 트윈 정리
             gsap.killTweensOf(container);
             gsap.killTweensOf(sprite);
             if (sprite.scale) gsap.killTweensOf(sprite.scale);
             
-            if (shouldJump) {
-                // 🦘 점프 복귀 애니메이션!
-                const jumpHeight = Math.min(50 + totalDist * 0.15, 120);  // 거리에 비례한 점프 높이
-                const tl = gsap.timeline();
-                
-                // 1️⃣ 점프 준비 (웅크림)
-                tl.to(container.scale, {
-                    x: baseScale * 1.1,
-                    y: baseScale * 0.85,
-                    duration: 0.06,
-                    ease: 'power2.in'
-                });
-                
-                // 2️⃣ 도약! (위로 튀면서 x 이동 시작)
-                tl.to(container, {
-                    x: originX,
-                    y: originY - jumpHeight,
-                    duration: duration * 0.5,
-                    ease: 'power2.out',
-                    onUpdate: () => {
-                        if (shadow) {
-                            shadow.x = container.x;
-                            shadow.y = originY + (this.config.character.shadowOffsetY || 5);
-                            // 점프 높이에 따라 그림자 축소
-                            const heightRatio = Math.abs(container.y - originY) / jumpHeight;
-                            shadow.scale.set(1 - heightRatio * 0.5);
-                            shadow.alpha = (1 - heightRatio * 0.3) * (this.config.character.shadowAlpha || 0.4);
-                        }
+            gsap.to(container, {
+                x: originX,
+                y: originY,
+                duration,
+                ease,
+                onUpdate: () => {
+                    if (shadow && sprite.alpha !== undefined) {
+                        shadow.x = container.x;
+                        shadow.y = container.y + (this.config.character.shadowOffsetY || 5);
+                        shadow.alpha = sprite.alpha * (this.config.character.shadowAlpha || 0.4);
                     }
-                }, '<');
-                
-                tl.to(container.scale, {
-                    x: baseScale * 0.9,
-                    y: baseScale * 1.15,
-                    duration: duration * 0.5,
-                    ease: 'power2.out'
-                }, '<');
-                
-                // 3️⃣ 착지! (아래로 낙하)
-                tl.to(container, {
-                    y: originY,
-                    duration: duration * 0.4,
-                    ease: 'power2.in',
-                    onUpdate: () => {
-                        if (shadow) {
-                            const heightRatio = Math.abs(container.y - originY) / jumpHeight;
-                            shadow.scale.set(1 - heightRatio * 0.5);
-                            shadow.alpha = (1 - heightRatio * 0.3) * (this.config.character.shadowAlpha || 0.4);
-                        }
+                },
+                onComplete: () => {
+                    // ⚠️ 최종 확실한 복원 (안전 체크)
+                    if (sprite && sprite.parent) {
+                        sprite.alpha = 1;
+                        sprite.rotation = 0;
+                        if (sprite.scale) sprite.scale.set(1, 1);
                     }
-                });
-                
-                // 4️⃣ 착지 충격 (스쿼시)
-                tl.to(container.scale, {
-                    x: baseScale * 1.15,
-                    y: baseScale * 0.85,
-                    duration: 0.06,
-                    ease: 'power4.out'
-                }, '-=0.02');
-                
-                // 5️⃣ 복귀 (탄성)
-                tl.to(container.scale, {
-                    x: baseScale,
-                    y: baseScale,
-                    duration: 0.15,
-                    ease: 'elastic.out(1, 0.6)',
-                    onComplete: () => {
-                        if (shadow) {
-                            shadow.scale.set(1);
-                            shadow.alpha = this.config.character.shadowAlpha || 0.4;
-                        }
-                        this.finishReturnToOrigin(container, sprite, originX, originY, resolve);
-                    }
-                });
-            } else {
-                // 🚶 일반 복귀 (가까운 거리)
-                gsap.to(container, {
-                    x: originX,
-                    y: originY,
-                    duration,
-                    ease: this.config.return.ease,
-                    onUpdate: () => {
-                        if (shadow && sprite.alpha !== undefined) {
-                            shadow.x = container.x;
-                            shadow.y = container.y + (this.config.character.shadowOffsetY || 5);
-                            shadow.alpha = sprite.alpha * (this.config.character.shadowAlpha || 0.4);
-                        }
-                    },
-                    onComplete: () => {
-                        this.finishReturnToOrigin(container, sprite, originX, originY, resolve);
-                    }
-                });
-            }
+                    container.x = originX;
+                    container.y = originY;
+                    resolve();
+                }
+            });
+            
+            // 스케일/회전/알파 정규화 (안전 체크)
+            if (sprite.scale) gsap.to(sprite.scale, { x: 1, y: 1, duration, ease });
+            gsap.to(sprite, { rotation: 0, alpha: 1, duration, ease });
         });
-    },
-    
-    // 🔧 복귀 완료 처리 (공통)
-    finishReturnToOrigin(container, sprite, originX, originY, resolve) {
-        // ⚠️ 최종 확실한 복원 (안전 체크)
-        if (sprite && sprite.parent) {
-            sprite.alpha = 1;
-            sprite.rotation = 0;
-            if (sprite.scale) sprite.scale.set(1, 1);
-        }
-        container.x = originX;
-        container.y = originY;
-        
-        // 🔝 zIndex 복구 (dashToTarget에서 저장한 값)
-        if (container._originalZIndex !== undefined) {
-            container.zIndex = container._originalZIndex;
-            delete container._originalZIndex;
-            if (container.parent?.sortChildren) container.parent.sortChildren();
-        }
-        
-        resolve();
     },
     
     // ==================== 📷 카메라 시스템 ====================
@@ -1324,7 +1127,7 @@ const DDOOAction = {
     
     // 카메라 줌
     cameraZoom(zoom, duration = 300) {
-        if (!this.stageContainer) return;
+        if (!this.config.enableCamera || !this.stageContainer) return;
         
         // 피벗이 설정되어 있는지 확인
         this.setupCameraPivot();
@@ -1332,68 +1135,27 @@ const DDOOAction = {
         const targetZoom = Math.max(this.config.camera.minZoom, Math.min(this.config.camera.maxZoom, zoom));
         const dur = duration / 1000 / this.config.speed / this.timescale;
         
-        // 🔥 트윈 추적 배열 초기화
-        if (!this._cameraZoomTweens) this._cameraZoomTweens = [];
-        
-        // 🎬 isRootStage일 때만 캐릭터 스케일 직접 변경 (player + enemy만!)
-        // isRootStage가 아니면 stageContainer 줌이 모든 캐릭터에 적용됨
-        if (this.cameraState?.isRootStage && this.characters.size > 0) {
-            // 🎯 카메라 줌 = 화면 전체 확대 → 모든 캐릭터 동시 스케일링!
-            this.characters.forEach((char, id) => {
-                if (char?.container) {
-                    gsap.killTweensOf(char.container.scale);
-                    
-                    // 🔥 원본 baseScale 저장 (복원용) - 최초 1회만!
-                    if (char._originalBaseScale === undefined) {
-                        char._originalBaseScale = char.container.breathingBaseScale || char.baseScale || 1;
-                    }
-                    
-                    const baseScale = char._originalBaseScale;
-                    const zoomScale = baseScale * targetZoom;
-                    
-                    if (this.config.debug) console.log(`[DDOOAction] 📷 ${id}: ${baseScale} → ${zoomScale}`);
-                    
-                    const tw = gsap.to(char.container.scale, {
-                        x: zoomScale,
-                        y: zoomScale,
-                        duration: dur,
-                        ease: 'power2.out',
-                        overwrite: 'auto'
-                    });
-                    this._cameraZoomTweens.push(tw);
-                }
-            });
-        }
-        
-        // 🎬 isRootStage가 아닐 때 stageContainer 줌 (전체 화면 줌)
-        if (!this.cameraState?.isRootStage) {
-            gsap.killTweensOf(this.stageContainer.scale);
-            const tw = gsap.to(this.stageContainer.scale, {
+        // ⚠️ app.stage 직접 사용 시 PixiJS 줌 건너뜀 (3D 배경만 줌)
+        if (!this.cameraState.isRootStage) {
+            // PixiJS stageContainer 줌
+            gsap.to(this.stageContainer.scale, {
                 x: targetZoom,
                 y: targetZoom,
                 duration: dur,
-                ease: 'power2.out',
-                overwrite: 'auto'
+                ease: 'power2.out'
             });
-            this._cameraZoomTweens.push(tw);
         }
         
-        // 🎥 Background3D 카메라 줌 연동 - 캐릭터 스케일과 동일한 비율!
+        // 🎥 Background3D 카메라 줌 연동 (있으면)
+        // ⚠️ animate()가 매 프레임 currentZ를 targetZ로 보간하므로, targetZ를 변경!
         if (typeof Background3D !== 'undefined' && Background3D.isInitialized && Background3D.autoZoom) {
             const baseZ = Background3D.cameraDefaults?.posZ || 15;
-            // 🔥 캐릭터 스케일과 동일한 비율로 3D 카메라 줌
-            // targetZoom 1.3 → 카메라 거리 15/1.3 = 11.5 (30% 가까이)
-            const newTargetZ = baseZ / targetZoom;
+            const newTargetZ = baseZ / targetZoom;  // 줌인하면 카메라 가까이
             
+            // targetZ 변경 → updateAutoZoom이 부드럽게 currentZ를 따라가게 함
             Background3D.autoZoom.targetZ = newTargetZ;
-            gsap.to(Background3D.autoZoom, {
-                currentZ: newTargetZ,
-                duration: dur,
-                ease: 'power2.out',
-                overwrite: 'auto'
-            });
             
-            console.log(`[DDOOAction] 📷 3D: ${baseZ.toFixed(1)} → ${newTargetZ.toFixed(1)} (zoom ${targetZoom.toFixed(2)})`);
+            if (this.config.debug) console.log(`[DDOOAction] 📷 3D Cam targetZ: ${newTargetZ.toFixed(1)}`);
         }
         
         this.cameraState.zoom = targetZoom;
@@ -1402,40 +1164,11 @@ const DDOOAction = {
     
     // 카메라 이동 (특정 대상 포커스)
     cameraFocus(target, duration = 200) {
-        if (!this.stageContainer) return;
+        if (!this.config.enableCamera || !this.stageContainer) return;
         
-        const dur = duration / 1000 / this.config.speed / this.timescale;
-        
-        // 🔧 Map.get() 사용!
-        let focusChar = null;
-        if (target === 'player') {
-            focusChar = this.characters.get('player');
-        } else if (target === 'enemy') {
-            focusChar = this.characters.get('enemy') || this.characters.get('target');
-        } else if (typeof target === 'string') {
-            focusChar = this.characters.get(target);
-        }
-        
-        // 🎬 DDOOAction.characters에 등록된 캐릭터 알파 하이라이트
-        // (test_animation.html + 인게임 모두 여기로 통합)
-        if (this.characters.size > 0) {
-            this.characters.forEach((char, key) => {
-                if (char?.sprite) {
-                    const isFocus = (char === focusChar);
-                    gsap.killTweensOf(char.sprite);
-                    gsap.to(char.sprite, {
-                        alpha: isFocus ? 1.0 : 0.6,
-                        duration: dur,
-                        ease: 'power2.out',
-                        overwrite: 'auto'
-                    });
-                }
-            });
-            if (this.config.debug) console.log(`[DDOOAction] 📷 Focus: ${target}`);
-        }
-        
-        // 🎬 isRootStage가 아닐 때만 stageContainer 이동
-        if (this.cameraState?.isRootStage) {
+        // ⚠️ app.stage 직접 사용 시 포커스 건너뜀
+        if (this.cameraState.isRootStage) {
+            if (this.config.debug) console.log(`[DDOOAction] 📷 Focus 건너뜀 (app.stage 직접 사용)`);
             return;
         }
         
@@ -1464,6 +1197,8 @@ const DDOOAction = {
             focusY = centerY;
         }
         
+        const dur = duration / 1000 / this.config.speed / this.timescale;
+        
         gsap.to(this.stageContainer.position, {
             x: focusX,
             y: focusY,
@@ -1480,54 +1215,14 @@ const DDOOAction = {
     
     // 카메라 리셋
     resetCamera() {
-        if (!this.stageContainer) return;
+        if (!this.config.enableCamera || !this.stageContainer) return;
         
-        console.log('[DDOOAction] 📷 resetCamera 호출됨, characters:', this.characters.size);
-        
-        const dur = 0.25;  // 고정 duration (250ms)
+        const dur = this.config.camera.zoomSpeed / this.config.speed / this.timescale;
         const centerX = this.pixiApp?.screen.width / 2 || 0;
         const centerY = this.pixiApp?.screen.height / 2 || 0;
         
-        // 🔥 전역 카메라 트윈 정리!
-        if (this._cameraZoomTweens) {
-            this._cameraZoomTweens.forEach(tw => tw.kill());
-            this._cameraZoomTweens = [];
-        }
-        
-        // 🎬 isRootStage일 때: 모든 캐릭터 스케일/알파 복원
-        if (this.cameraState?.isRootStage) {
-            this.characters.forEach((char, id) => {
-                if (char?.container) {
-                    gsap.killTweensOf(char.container);
-                    gsap.killTweensOf(char.container.scale);
-                    
-                    // 🔥 원본 baseScale로 복원!
-                    const targetScale = char._originalBaseScale || char.container.breathingBaseScale || char.baseScale || 1;
-                    if (this.config.debug) console.log(`[DDOOAction] 📷 ${id} 복원: ${targetScale}`);
-                    
-                    gsap.to(char.container.scale, {
-                        x: targetScale,
-                        y: targetScale,
-                        duration: dur,
-                        ease: 'power2.out',
-                        overwrite: 'auto'
-                    });
-                }
-                if (char?.sprite) {
-                    gsap.killTweensOf(char.sprite);
-                    gsap.to(char.sprite, {
-                        alpha: 1.0,
-                        duration: dur,
-                        ease: 'power2.out',
-                        overwrite: 'auto'
-                    });
-                }
-            });
-        }
-        
-        // 🎬 isRootStage가 아닐 때만 stageContainer 조작
-        if (!this.cameraState?.isRootStage) {
-            gsap.killTweensOf(this.stageContainer.scale);
+        // ⚠️ app.stage 직접 사용 시 PixiJS 카메라 조작 건너뜀
+        if (!this.cameraState.isRootStage) {
             gsap.to(this.stageContainer.scale, {
                 x: this.config.camera.defaultZoom,
                 y: this.config.camera.defaultZoom,
@@ -1552,18 +1247,10 @@ const DDOOAction = {
             }
         }
         
-        // 🎥 Background3D 카메라도 리셋 (부드럽게 복원)
+        // 🎥 Background3D 카메라도 리셋 (targetZ 복원 → 자동 보간)
         if (typeof Background3D !== 'undefined' && Background3D.isInitialized && Background3D.autoZoom) {
             const baseZ = Background3D.cameraDefaults?.posZ || 15;
             Background3D.autoZoom.targetZ = baseZ;
-            
-            // 🔥 currentZ도 부드럽게 트윈!
-            gsap.to(Background3D.autoZoom, {
-                currentZ: baseZ,
-                duration: dur,
-                ease: 'power2.out',
-                overwrite: 'auto'
-            });
         }
         
         this.cameraState = {
@@ -1583,25 +1270,8 @@ const DDOOAction = {
         const centerX = this.pixiApp?.screen.width / 2 || 0;
         const centerY = this.pixiApp?.screen.height / 2 || 0;
         
-        // 🎬 isRootStage일 때: 모든 캐릭터 스케일/알파 즉시 복원
-        if (this.cameraState?.isRootStage) {
-            this.characters.forEach((char, id) => {
-                if (char?.container) {
-                    gsap.killTweensOf(char.container.scale);
-                    // 🔥 원본 baseScale로 복원!
-                    const scale = char._originalBaseScale || char.container.breathingBaseScale || char.baseScale || 1;
-                    char.container.scale.set(scale, scale);
-                    if (this.config.debug) console.log(`[DDOOAction] 📷 ${id} 즉시 복원: ${scale}`);
-                }
-                if (char?.sprite) {
-                    gsap.killTweensOf(char.sprite);
-                    char.sprite.alpha = 1;
-                }
-            });
-        }
-        
-        // 🎬 isRootStage가 아닐 때만 stageContainer 조작
-        if (!this.cameraState?.isRootStage) {
+        // ⚠️ app.stage 직접 사용 시 PixiJS 카메라 조작 건너뜀
+        if (!this.cameraState.isRootStage) {
             // GSAP 트윈 중단
             gsap.killTweensOf(this.stageContainer.scale);
             gsap.killTweensOf(this.stageContainer.position);
@@ -1621,7 +1291,6 @@ const DDOOAction = {
         // 🎥 Background3D 카메라도 즉시 리셋 (targetZ + currentZ 동시 복원)
         if (typeof Background3D !== 'undefined' && Background3D.isInitialized && Background3D.autoZoom) {
             const baseZ = Background3D.cameraDefaults?.posZ || 15;
-            gsap.killTweensOf(Background3D.autoZoom);  // 진행 중인 트윈 정리
             Background3D.autoZoom.targetZ = baseZ;
             Background3D.autoZoom.currentZ = baseZ;  // 즉시 적용
         }
@@ -1900,7 +1569,7 @@ const DDOOAction = {
                 onComplete: () => {
                     // ⚠️ 마지막 키프레임 상태로 확실히 설정
                     const lastKf = data.keyframes[data.keyframes.length - 1];
-                    if (lastKf && sprite && sprite.scale) {
+                    if (lastKf) {
                         if (lastKf.alpha !== undefined) sprite.alpha = lastKf.alpha;
                         if (lastKf.scaleX !== undefined && lastKf.scaleY !== undefined) {
                             sprite.scale.set(lastKf.scaleX, lastKf.scaleY);
@@ -1921,150 +1590,93 @@ const DDOOAction = {
                 // 🎯 타겟으로 대시 (dashToTarget)
                 if (kf.dashToTarget) {
                     tl.call(() => {
-                        // 🛡️ 안전장치: 에러 발생해도 타임라인 재개되도록
-                        let timelineResumed = false;
-                        const resumeTimeline = () => {
-                            if (!timelineResumed) {
-                                timelineResumed = true;
-                                tl.resume();
-                            }
-                        };
+                        // 타겟 위치 계산
+                        let targetX = container.x;
+                        let targetChar = null;
+                        let myChar = null;
                         
-                        // ⏰ 타임아웃 안전장치: 2초 후에도 재개 안되면 강제 재개
-                        const safetyTimeout = setTimeout(() => {
-                            if (!timelineResumed) {
-                                console.warn('[DDOOAction] ⚠️ dashToTarget 타임아웃! 타임라인 강제 재개');
-                                resumeTimeline();
-                            }
-                        }, 2000);
+                        // 내 캐릭터 정보 찾기 (DDOOAction.characters 또는 현재 sprite)
+                        const myCharId = [...this.characters.keys()].find(
+                            id => this.characters.get(id)?.container === container
+                        );
+                        myChar = myCharId ? this.characters.get(myCharId) : { container, sprite };
                         
-                        try {
-                            // 🔝 공격 시 레이어 최상위로! (몬스터 앞에 오도록)
-                            const originalZIndex = container.zIndex || 0;
-                            container.zIndex = 9999;
-                            if (container.parent?.sortChildren) container.parent.sortChildren();
-                            
-                            // 타겟 위치 계산
-                            let targetX = container.x;
-                            let targetChar = null;
-                            let myChar = null;
-                            
-                            // 내 캐릭터 정보 찾기 (DDOOAction.characters 또는 현재 sprite)
-                            const myCharId = [...this.characters.keys()].find(
-                                id => this.characters.get(id)?.container === container
-                            );
-                            myChar = myCharId ? this.characters.get(myCharId) : { container, sprite };
-                            
-                            if (kf.dashToTarget === 'enemy' || kf.dashToTarget === true) {
-                                // 🎯 우선순위: options.targetContainer > DDOOAction.characters
-                                if (options.targetContainer) {
-                                    targetChar = { container: options.targetContainer, sprite: options.targetSprite };
-                                } else {
-                                    targetChar = this.characters.get('enemy');
-                                }
-                            } else if (kf.dashToTarget === 'player') {
-                                targetChar = this.characters.get('player');
+                        if (kf.dashToTarget === 'enemy' || kf.dashToTarget === true) {
+                            // 🎯 우선순위: options.targetContainer > DDOOAction.characters
+                            if (options.targetContainer) {
+                                targetChar = { container: options.targetContainer, sprite: options.targetSprite };
+                            } else {
+                                targetChar = this.characters.get('enemy');
                             }
-                            
-                            if (targetChar) {
-                                // 🎯 스프라이트 크기 기반 오프셋 계산 (겹침 방지)
-                                let myWidth = 50;  // 기본값
-                                let targetWidth = 50;  // 기본값
-                                const padding = kf.dashPadding !== undefined ? kf.dashPadding : 10;  // 추가 여백 (음수도 허용)
-                                
-                                // 내 스프라이트 너비 계산
-                                if (myChar?.sprite) {
-                                    try {
-                                        const myBounds = myChar.sprite.getBounds();
-                                        myWidth = myBounds.width / 2;
-                                    } catch (e) {
-                                        myWidth = (myChar.sprite.width || 50) * Math.abs(myChar.sprite.scale?.x || 1) / 2;
-                                    }
-                                } else if (sprite) {
-                                    try {
-                                        const myBounds = sprite.getBounds();
-                                        myWidth = myBounds.width / 2;
-                                    } catch (e) {
-                                        myWidth = (sprite.width || 50) * Math.abs(sprite.scale?.x || 1) / 2;
-                                    }
-                                }
-                                
-                                // 타겟 스프라이트 너비 계산
-                                if (targetChar.sprite) {
-                                    try {
-                                        const targetBounds = targetChar.sprite.getBounds();
-                                        targetWidth = targetBounds.width / 2;
-                                    } catch (e) {
-                                        targetWidth = (targetChar.sprite.width || 50) * Math.abs(targetChar.sprite.scale?.x || 1) / 2;
-                                    }
-                                }
-                                
-                                // 동적 오프셋: 두 스프라이트가 겹치지 않는 거리
-                                const autoOffset = myWidth + targetWidth + padding;
-                                const offset = kf.dashOffset !== undefined ? kf.dashOffset : autoOffset;
-                                
-                                // 타겟 위치에서 오프셋만큼 떨어진 곳으로
-                                if (kf.dashToTarget === 'player') {
-                                    targetX = targetChar.container.x + (offset * dir);
-                                } else {
-                                    targetX = targetChar.container.x - (offset * dir);
-                                }
-                                
-                                if (this.config.debug) {
-                                    console.log(`[DDOOAction] 🎯 DashToTarget: target=${targetChar.container.x.toFixed(0)}, offset=${offset.toFixed(0)}, targetX=${targetX.toFixed(0)}`);
-                                }
-                            }
-                            
-                            // 부드러운 대시 애니메이션
-                            const dashDuration = Math.max(dur, 0.15);  // 최소 150ms 보장
-                            const dashEase = kf.dashEase || 'power2.inOut';  // 더 부드러운 이징
-                            
-                            // 대시 시작 전 현재 위치
-                            const startX = container.x;
-                            const finalX = targetX;  // 최종 목적지 저장
-                            
-                            // 🔥 메인 타임라인 일시정지! (대시 완료 후 재개)
-                            tl.pause();
-                            
-                            // 🔥 기존 container 트윈 모두 정리!
-                            gsap.killTweensOf(container);
-                            
-                            // 대시 애니메이션 실행
-                            gsap.to(container, {
-                                x: finalX,
-                                y: baseY + (kf.y || 0),
-                                duration: dashDuration,
-                                ease: dashEase,
-                                onStart: () => {
-                                    if (this.config.debug) console.log(`[DDOOAction] 🚀 대시 시작: ${container.x.toFixed(0)} → ${finalX.toFixed(0)}`);
-                                },
-                                onUpdate: () => {
-                                    // 그림자 동기화
-                                    if (myChar?.shadow) {
-                                        myChar.shadow.x = container.x;
-                                        myChar.shadow.y = container.y + (this.config.character.shadowOffsetY || 5);
-                                    }
-                                },
-                                onComplete: () => {
-                                    // 🔥 최종 위치 강제 설정!
-                                    container.x = finalX;
-                                    container.y = baseY + (kf.y || 0);
-                                    
-                                    // 🔝 zIndex 복구 저장 (returnToBase에서 사용)
-                                    container._originalZIndex = originalZIndex;
-                                    
-                                    if (this.config.debug) console.log(`[DDOOAction] ✅ 대시 완료: x=${container.x.toFixed(0)}`);
-                                    
-                                    // 🔥 타임아웃 취소 & 타임라인 재개!
-                                    clearTimeout(safetyTimeout);
-                                    resumeTimeline();
-                                }
-                            });
-                        } catch (e) {
-                            console.error('[DDOOAction] ❌ dashToTarget 에러:', e);
-                            clearTimeout(safetyTimeout);
-                            resumeTimeline();  // 에러 발생해도 타임라인 재개!
+                        } else if (kf.dashToTarget === 'player') {
+                            targetChar = this.characters.get('player');
                         }
+                        
+                        if (targetChar) {
+                            // 🎯 스프라이트 크기 기반 오프셋 계산 (겹침 방지)
+                            let myWidth = 50;  // 기본값
+                            let targetWidth = 50;  // 기본값
+                            const padding = kf.dashPadding || 10;  // 추가 여백
+                            
+                            // 내 스프라이트 너비 계산
+                            if (myChar?.sprite) {
+                                try {
+                                    const myBounds = myChar.sprite.getBounds();
+                                    myWidth = myBounds.width / 2;
+                                } catch (e) {
+                                    myWidth = (myChar.sprite.width || 50) * Math.abs(myChar.sprite.scale?.x || 1) / 2;
+                                }
+                            } else if (sprite) {
+                                try {
+                                    const myBounds = sprite.getBounds();
+                                    myWidth = myBounds.width / 2;
+                                } catch (e) {
+                                    myWidth = (sprite.width || 50) * Math.abs(sprite.scale?.x || 1) / 2;
+                                }
+                            }
+                            
+                            // 타겟 스프라이트 너비 계산
+                            if (targetChar.sprite) {
+                                try {
+                                    const targetBounds = targetChar.sprite.getBounds();
+                                    targetWidth = targetBounds.width / 2;
+                                } catch (e) {
+                                    targetWidth = (targetChar.sprite.width || 50) * Math.abs(targetChar.sprite.scale?.x || 1) / 2;
+                                }
+                            }
+                            
+                            // 동적 오프셋: 두 스프라이트가 겹치지 않는 거리
+                            const autoOffset = myWidth + targetWidth + padding;
+                            const offset = kf.dashOffset !== undefined ? kf.dashOffset : autoOffset;
+                            
+                            // 타겟 위치에서 오프셋만큼 떨어진 곳으로
+                            if (kf.dashToTarget === 'player') {
+                                targetX = targetChar.container.x + (offset * dir);
+                            } else {
+                                targetX = targetChar.container.x - (offset * dir);
+                            }
+                            
+                            if (this.config.debug) {
+                                console.log(`[DDOOAction] 🎯 DashToTarget - myWidth: ${myWidth.toFixed(0)}, targetWidth: ${targetWidth.toFixed(0)}, offset: ${offset.toFixed(0)}`);
+                            }
+                        }
+                        
+                        // 빠른 대시 애니메이션
+                        gsap.to(container, {
+                            x: targetX,
+                            y: baseY + (kf.y || 0),
+                            duration: dur,
+                            ease: kf.dashEase || 'power3.out',
+                            onUpdate: () => {
+                                // 그림자 동기화
+                                if (myChar?.shadow) {
+                                    myChar.shadow.x = container.x;
+                                    myChar.shadow.y = container.y + (this.config.character.shadowOffsetY || 5);
+                                }
+                            }
+                        });
+                        
+                        if (this.config.debug) console.log(`[DDOOAction] 🎯 DashToTarget: ${targetX.toFixed(0)}`);
                     }, null, pos);
                 }
                 // 일반 이동
@@ -2917,19 +2529,18 @@ const DDOOAction = {
         ctx.shadowBlur = Math.min(value, max);
     },
     
-    // 🔧 DDOOUtils로 위임 (ddoo-utils.js)
     getRandValue(val) {
-        return typeof DDOOUtils !== 'undefined' 
-            ? DDOOUtils.getRandValue(val) 
-            : (Array.isArray(val) ? val[0] + Math.random() * (val[1] - val[0]) : val || 0);
+        if (Array.isArray(val)) {
+            return val[0] + Math.random() * (val[1] - val[0]);
+        }
+        return val || 0;
     },
     
     spawnSlashParticle(def, x, y, dir, index, scale) {
         const angles = Array.isArray(def.angle) ? def.angle : [def.angle || 0];
         const angle = angles[index % angles.length] || (Math.random() - 0.5) * 60;
-        // 2배 크기 적용
-        const length = this.getRandValue(def.length) * scale * 2;
-        const width = (def.width || 8) * scale * 2;
+        const length = this.getRandValue(def.length) * scale;
+        const width = (def.width || 8) * scale;
         
         this.spawnParticle({
             type: 'slash',
@@ -2939,7 +2550,7 @@ const DDOOAction = {
             width: width,
             color: def.color || '#ffffff',
             glow: def.glow || '#60a5fa',
-            life: def.life || 180
+            life: def.life || 150
         });
     },
     
@@ -3078,43 +2689,34 @@ const DDOOAction = {
         render();
     },
     
-    // 🎨 DDOODraw 모듈로 위임 (ddoo-draw.js)
     drawParticle(p, alpha, progress) {
-        const ctx = this.vfxCtx;
-        
-        // DDOODraw 모듈 체크
-        if (typeof DDOODraw === 'undefined') {
-            console.error('[DDOOAction] DDOODraw 모듈이 로드되지 않았습니다! ddoo-draw.js를 먼저 로드하세요.');
-            return;
-        }
-        
         switch (p.type) {
             case 'slash':
-                DDOODraw.drawSlashParticle(ctx, p, alpha, progress);
+                this.drawSlashParticle(p, alpha, progress);
                 break;
             case 'arrow':
-                DDOODraw.drawArrowParticle(ctx, p, alpha, progress);
+                this.drawArrowParticle(p, alpha, progress);
                 break;
             case 'spark':
                 p.x += p.vx || 0;
                 p.y += p.vy || 0;
                 if (p.gravity) p.vy += p.gravity;
-                DDOODraw.drawSparkParticle(ctx, p, alpha);
+                this.drawSparkParticle(p, alpha);
                 break;
             case 'flash':
-                DDOODraw.drawFlashParticle(ctx, p, alpha, progress);
+                this.drawFlashParticle(p, alpha, progress);
                 break;
             case 'ring':
-                DDOODraw.drawRingParticle(ctx, p, alpha, progress);
+                this.drawRingParticle(p, alpha, progress);
                 break;
             case 'line':
-                DDOODraw.drawLineParticle(ctx, p, alpha, progress);
+                this.drawLineParticle(p, alpha, progress);
                 break;
             case 'debris':
                 p.x += p.vx || 0;
                 p.y += p.vy || 0;
                 if (p.gravity) p.vy += p.gravity;
-                DDOODraw.drawDebrisParticle(ctx, p, alpha);
+                this.drawDebrisParticle(p, alpha);
                 break;
             case 'smoke':
                 p.x += p.vx || 0;
@@ -3122,50 +2724,324 @@ const DDOOAction = {
                 if (p.gravity) p.vy += p.gravity;
                 p.rotation += p.rotationSpeed || 0;
                 p.size = p.startSize * (1 + progress * 0.5);
-                DDOODraw.drawSmokeParticle(ctx, p, alpha * 0.7);
+                this.drawSmokeParticle(p, alpha * 0.7);
                 break;
             case 'symbol':
                 p.y += p.vy || 0;
-                DDOODraw.drawSymbolParticle(ctx, p, alpha, progress);
+                this.drawSymbolParticle(p, alpha, progress);
                 break;
             case 'projectile':
-                this.updateAndDrawProjectile(p, alpha, progress);  // 의존성 있어서 분리 안함
+                this.updateAndDrawProjectile(p, alpha, progress);
                 break;
             case 'trail_dot':
-                DDOODraw.drawTrailDot(ctx, p, alpha);
+                this.drawTrailDot(p, alpha);
                 break;
             case 'voxel':
                 p.x += p.vx || 0;
                 p.y += p.vy || 0;
                 if (p.gravity) p.vy += p.gravity;
                 p.rotation += p.rotationSpeed || 0;
-                DDOODraw.drawVoxelParticle(ctx, p, alpha, progress);
+                this.drawVoxelParticle(p, alpha, progress);
                 break;
             // ✨ 새로운 고급 파티클 타입들
             case 'energy_orb':
-                DDOODraw.drawEnergyOrbParticle(ctx, p, alpha, progress);
+                this.drawEnergyOrbParticle(p, alpha, progress);
                 break;
             case 'electric':
                 p.x += p.vx || 0;
                 p.y += p.vy || 0;
-                DDOODraw.drawElectricParticle(ctx, p, alpha, progress);
+                this.drawElectricParticle(p, alpha, progress);
                 break;
             case 'wave':
-                DDOODraw.drawWaveParticle(ctx, p, alpha, progress);
+                this.drawWaveParticle(p, alpha, progress);
                 break;
             case 'star':
                 p.rotation += p.rotationSpeed || 0.05;
-                DDOODraw.drawStarParticle(ctx, p, alpha, progress);
+                this.drawStarParticle(p, alpha, progress);
                 break;
             case 'comet':
                 p.x += p.vx || 0;
                 p.y += p.vy || 0;
-                DDOODraw.drawCometParticle(ctx, p, alpha, progress);
+                this.drawCometParticle(p, alpha, progress);
                 break;
             case 'sword_arc':
-                DDOODraw.drawSwordArcParticle(ctx, p, alpha, progress);
+                this.drawSwordArcParticle(p, alpha, progress);
                 break;
         }
+    },
+    
+    // 🔵 트레일 도트 렌더링 (초고속)
+    drawTrailDot(p, alpha) {
+        const ctx = this.vfxCtx;
+        if (!ctx) return;
+        if (!isFinite(p.x) || !isFinite(p.y)) return;
+        
+        const size = (p.size || 5) * (1 - alpha * 0.3);
+        if (size <= 0) return;
+        
+        // ⚡ 초고속: 단순 원
+        ctx.globalAlpha = alpha * 0.6;
+        ctx.fillStyle = p.color || '#60a5fa';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+        ctx.fill();
+    },
+    
+    // 🔮 에너지 오브 파티클 (초고속)
+    drawEnergyOrbParticle(p, alpha, progress) {
+        const ctx = this.vfxCtx;
+        if (!ctx) return;
+        if (!isFinite(p.x) || !isFinite(p.y)) return;
+        
+        const size = (p.startSize || 20) * (1 + progress * 0.2);
+        const color = p.color || '#fbbf24';
+        
+        // ⚡ 초고속: 단순 원
+        ctx.fillStyle = color;
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+        ctx.fill();
+    },
+    
+    // ⚡ 전기 파티클 (새로 추가)
+    drawElectricParticle(p, alpha, progress) {
+        const ctx = this.vfxCtx;
+        if (!ctx) return;
+        if (!isFinite(p.x) || !isFinite(p.y)) return;
+        
+        const length = p.length || 30;
+        const color = p.color || '#60a5fa';
+        const segments = p.segments || 5;
+        
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = (p.width || 2) * alpha;
+        ctx.lineCap = 'round';
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 15;
+        ctx.globalAlpha = alpha;
+        
+        // 랜덤 지그재그 전기 효과
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        
+        let currentX = p.x;
+        let currentY = p.y;
+        const angle = p.angle || 0;
+        const rad = angle * Math.PI / 180;
+        
+        for (let i = 0; i < segments; i++) {
+            const segLen = length / segments;
+            const jitter = (Math.random() - 0.5) * 15;
+            currentX += Math.cos(rad) * segLen + Math.sin(rad) * jitter;
+            currentY += Math.sin(rad) * segLen - Math.cos(rad) * jitter;
+            ctx.lineTo(currentX, currentY);
+        }
+        ctx.stroke();
+        
+        // 밝은 코어
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = (p.width || 2) * alpha * 0.5;
+        ctx.stroke();
+        
+        ctx.restore();
+    },
+    
+    // 🌊 웨이브 파티클 (새로 추가)
+    drawWaveParticle(p, alpha, progress) {
+        const ctx = this.vfxCtx;
+        if (!ctx) return;
+        if (!isFinite(p.x) || !isFinite(p.y)) return;
+        
+        const size = (p.startSize || 30) + ((p.maxSize || 100) - (p.startSize || 30)) * progress;
+        const color = p.color || '#60a5fa';
+        const thickness = (p.thickness || 8) * (1 - progress * 0.7);
+        
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = thickness;
+        ctx.globalAlpha = alpha * (1 - progress * 0.5);
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 20;
+        
+        // 반원 웨이브
+        ctx.beginPath();
+        const startAngle = (p.startAngle || -90) * Math.PI / 180;
+        const endAngle = (p.endAngle || 90) * Math.PI / 180;
+        ctx.arc(p.x, p.y, size, startAngle, endAngle);
+        ctx.stroke();
+        
+        // 밝은 코어
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = thickness * 0.4;
+        ctx.globalAlpha = alpha * 0.6;
+        ctx.stroke();
+        
+        ctx.restore();
+    },
+    
+    // ⭐ 별 파티클 (새로 추가)
+    drawStarParticle(p, alpha, progress) {
+        const ctx = this.vfxCtx;
+        if (!ctx) return;
+        if (!isFinite(p.x) || !isFinite(p.y)) return;
+        
+        const size = (p.startSize || 15) * (1 - progress * 0.3);
+        const color = p.color || '#fbbf24';
+        const points = p.points || 4;
+        const rotation = p.rotation || 0;
+        
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(rotation);
+        
+        ctx.fillStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 20;
+        ctx.globalAlpha = alpha;
+        
+        // 별 그리기
+        ctx.beginPath();
+        for (let i = 0; i < points * 2; i++) {
+            const r = i % 2 === 0 ? size : size * 0.4;
+            const angle = (i * Math.PI) / points - Math.PI / 2;
+            if (i === 0) ctx.moveTo(r * Math.cos(angle), r * Math.sin(angle));
+            else ctx.lineTo(r * Math.cos(angle), r * Math.sin(angle));
+        }
+        ctx.closePath();
+        ctx.fill();
+        
+        // 밝은 중심
+        ctx.fillStyle = '#ffffff';
+        ctx.globalAlpha = alpha * 0.8;
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    },
+    
+    // ☄️ 혜성 파티클 (새로 추가)
+    drawCometParticle(p, alpha, progress) {
+        const ctx = this.vfxCtx;
+        if (!ctx) return;
+        if (!isFinite(p.x) || !isFinite(p.y)) return;
+        
+        const size = (p.startSize || 10) * (1 - progress * 0.5);
+        const color = p.color || '#fbbf24';
+        const tailLength = p.tailLength || 40;
+        const angle = Math.atan2(p.vy || 0, p.vx || 1);
+        
+        ctx.save();
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 15;
+        
+        // 꼬리
+        const tailGrad = ctx.createLinearGradient(
+            p.x - Math.cos(angle) * tailLength,
+            p.y - Math.sin(angle) * tailLength,
+            p.x, p.y
+        );
+        tailGrad.addColorStop(0, 'transparent');
+        tailGrad.addColorStop(0.5, color + '44');
+        tailGrad.addColorStop(1, color);
+        
+        ctx.strokeStyle = tailGrad;
+        ctx.lineWidth = size * 1.5;
+        ctx.lineCap = 'round';
+        ctx.globalAlpha = alpha * 0.7;
+        
+        ctx.beginPath();
+        ctx.moveTo(p.x - Math.cos(angle) * tailLength, p.y - Math.sin(angle) * tailLength);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+        
+        // 헤드
+        const headGrad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 1.5);
+        headGrad.addColorStop(0, '#ffffff');
+        headGrad.addColorStop(0.4, color);
+        headGrad.addColorStop(1, 'transparent');
+        
+        ctx.fillStyle = headGrad;
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, size * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    },
+    
+    // ⚔️ 검 궤적 아크 렌더링 (초고속)
+    drawSwordArcParticle(p, alpha, progress) {
+        const ctx = this.vfxCtx;
+        if (!ctx) return;
+        if (!isFinite(p.x) || !isFinite(p.y)) return;
+        
+        const radius = p.radius || 60;
+        const thickness = (p.thickness || 15) * (1 - progress * 0.4);
+        const dir = p.dir || 1;
+        const color = p.color || '#ffffff';
+        
+        const startAngle = (p.startAngle || -60) * Math.PI / 180;
+        const endAngle = (p.endAngle || 60) * Math.PI / 180;
+        const currentEnd = startAngle + (endAngle - startAngle) * Math.min(1, progress * 3);
+        
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        if (dir < 0) ctx.scale(-1, 1);
+        
+        // ⚡ 초고속: 단순 호 그리기만
+        ctx.strokeStyle = color;
+        ctx.lineWidth = thickness;
+        ctx.lineCap = 'round';
+        ctx.globalAlpha = alpha;
+        
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, startAngle, currentEnd);
+        ctx.stroke();
+        
+        ctx.restore();
+    },
+    
+    // 🎆 복셀 조각 렌더링
+    drawVoxelParticle(p, alpha, progress) {
+        const ctx = this.vfxCtx;
+        if (!ctx) return;
+        
+        const size = p.size || 8;
+        if (!isFinite(size) || size <= 0) return;
+        if (!isFinite(p.x) || !isFinite(p.y)) return;
+        
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation || 0);
+        
+        // 페이드아웃
+        ctx.globalAlpha = alpha * (1 - progress * 0.3);
+        
+        // 메인 복셀 조각 (사각형)
+        ctx.fillStyle = p.color || '#888888';
+        const halfSize = size / 2;
+        ctx.fillRect(-halfSize, -halfSize, size, size);
+        
+        // 하이라이트 (3D 느낌)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.fillRect(-halfSize, -halfSize, size * 0.4, size * 0.4);
+        
+        // 그림자 (3D 느낌)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.fillRect(halfSize * 0.2, halfSize * 0.2, size * 0.6, size * 0.6);
+        
+        // 글로우 효과 (선택적)
+        if (progress < 0.3) {
+            ctx.shadowColor = p.color || '#ffffff';
+            ctx.shadowBlur = 10 * (1 - progress * 3);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.fillRect(-halfSize, -halfSize, size, size);
+        }
+        
+        ctx.restore();
     },
     
     // 🎯 프로젝타일 업데이트 및 렌더링
@@ -3290,6 +3166,224 @@ const DDOOAction = {
         ctx.restore();
     },
     
+    // 연기 파티클 렌더링
+    drawSmokeParticle(p, alpha) {
+        const ctx = this.vfxCtx;
+        if (!ctx) return;
+        
+        // 유효성 검사
+        const size = p.size || 20;
+        if (!isFinite(size) || size <= 0) return;
+        if (!isFinite(p.x) || !isFinite(p.y)) return;
+        
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation || 0);
+        ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+        
+        // 부드러운 원형 연기
+        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size);
+        gradient.addColorStop(0, p.color || '#333333');
+        gradient.addColorStop(0.5, (p.color || '#333333') + 'aa');
+        gradient.addColorStop(1, 'transparent');
+        
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(0, 0, size, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    },
+    
+    // 심볼 파티클 렌더링
+    drawSymbolParticle(p, alpha, progress) {
+        const ctx = this.vfxCtx;
+        if (!ctx) return;
+        
+        // 유효성 검사
+        const size = p.size || 30;
+        if (!isFinite(size) || size <= 0) return;
+        if (!isFinite(p.x) || !isFinite(p.y)) return;
+        
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+        ctx.font = `${size}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // 글로우 효과
+        ctx.shadowColor = '#fbbf24';
+        ctx.shadowBlur = 15;
+        
+        ctx.fillText(p.symbol || '⭐', p.x, p.y);
+        ctx.restore();
+    },
+    
+    drawSlashParticle(p, alpha, progress) {
+        if (!isFinite(p.x) || !isFinite(p.y) || !isFinite(p.startLength) || p.startLength <= 0) {
+            return;
+        }
+        
+        const ctx = this.vfxCtx;
+        const rad = (p.angle || 0) * Math.PI / 180;
+        const len = Math.max(1, p.startLength * (1 - progress * 0.3));
+        const width = Math.max(1, (p.startWidth || 5) * alpha);
+        const halfLen = len / 2;
+        
+        ctx.translate(p.x, p.y);
+        ctx.rotate(rad);
+        
+        // ⚡ 초고속: 단순 선 그리기
+        ctx.strokeStyle = p.color || '#ffffff';
+        ctx.lineWidth = width;
+        ctx.lineCap = 'round';
+        ctx.globalAlpha = alpha;
+        
+        ctx.beginPath();
+        ctx.moveTo(-halfLen, 0);
+        ctx.lineTo(halfLen, 0);
+        this.vfxCtx.stroke();
+    },
+    
+    drawArrowParticle(p, alpha, progress) {
+        // NaN/Infinity 체크
+        if (!isFinite(p.x) || !isFinite(p.y) || !isFinite(p.startLength) || p.startLength <= 0) {
+            return;
+        }
+        
+        const len = Math.max(1, (p.startLength || 50) * (1 - progress * 0.4));
+        const width = Math.max(1, (p.startWidth || 30) * (1 - progress * 0.3));
+        const tipRad = (p.tipAngle || 35) * Math.PI / 180;
+        const dir = p.dir || 1;
+        
+        this.vfxCtx.translate(p.x, p.y);
+        if (dir < 0) this.vfxCtx.scale(-1, 1);
+        
+        if (p.glow) {
+            this.vfxCtx.shadowColor = p.glow;
+            this.vfxCtx.shadowBlur = 25;
+        }
+        this.vfxCtx.globalAlpha = Math.max(0, Math.min(1, alpha));
+        
+        // 내부 채우기
+        if (p.innerColor) {
+            this.vfxCtx.fillStyle = p.innerColor;
+            this.vfxCtx.beginPath();
+            this.vfxCtx.moveTo(len, 0);
+            this.vfxCtx.lineTo(0, -width * Math.sin(tipRad));
+            this.vfxCtx.lineTo(len * 0.3, 0);
+            this.vfxCtx.lineTo(0, width * Math.sin(tipRad));
+            this.vfxCtx.closePath();
+            this.vfxCtx.fill();
+        }
+        
+        // 외곽선
+        this.vfxCtx.strokeStyle = p.color || '#ffffff';
+        this.vfxCtx.lineWidth = 3 * alpha;
+        this.vfxCtx.lineCap = 'round';
+        this.vfxCtx.lineJoin = 'round';
+        
+        this.vfxCtx.beginPath();
+        this.vfxCtx.moveTo(0, -width * Math.sin(tipRad));
+        this.vfxCtx.lineTo(len, 0);
+        this.vfxCtx.lineTo(0, width * Math.sin(tipRad));
+        this.vfxCtx.stroke();
+        
+        // 중앙선
+        this.vfxCtx.strokeStyle = '#ffffff';
+        this.vfxCtx.lineWidth = 2 * alpha;
+        this.vfxCtx.beginPath();
+        this.vfxCtx.moveTo(len * 0.2, 0);
+        this.vfxCtx.lineTo(len * 0.9, 0);
+        this.vfxCtx.stroke();
+    },
+    
+    drawSparkParticle(p, alpha) {
+        if (!isFinite(p.x) || !isFinite(p.y)) return;
+        
+        const size = Math.max(1, (p.startSize || 5) * alpha);
+        const ctx = this.vfxCtx;
+        
+        // ⚡ 초고속: 단일 원만 그리기
+        ctx.fillStyle = p.color || '#fbbf24';
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+        ctx.fill();
+    },
+    
+    drawFlashParticle(p, alpha, progress) {
+        if (!isFinite(p.x) || !isFinite(p.y) || !isFinite(p.startSize) || p.startSize <= 0) {
+            return;
+        }
+        
+        const size = Math.max(1, p.startSize * (1 + progress * 0.3));
+        const ctx = this.vfxCtx;
+        
+        // ⚡ 초고속: 단순 원 + 그라데이션
+        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size);
+        grad.addColorStop(0, p.color || '#ffffff');
+        grad.addColorStop(1, 'transparent');
+        
+        ctx.fillStyle = grad;
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+        ctx.fill();
+    },
+    
+    drawRingParticle(p, alpha, progress) {
+        if (!isFinite(p.x) || !isFinite(p.y) || !isFinite(p.startSize)) return;
+        
+        const ctx = this.vfxCtx;
+        const currentSize = Math.max(1, (p.startSize || 10) + ((p.maxSize || 50) - (p.startSize || 10)) * progress);
+        
+        // ⚡ 초고속: shadowBlur 제거
+        ctx.strokeStyle = p.color || '#ef4444';
+        ctx.lineWidth = 2 * alpha;
+        ctx.globalAlpha = alpha * 0.7;
+        
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, currentSize, 0, Math.PI * 2);
+        ctx.stroke();
+    },
+    
+    drawLineParticle(p, alpha, progress) {
+        if (!isFinite(p.x) || !isFinite(p.y) || !isFinite(p.startLength) || p.startLength <= 0) {
+            return;
+        }
+        
+        const ctx = this.vfxCtx;
+        const rad = (p.angle || 0) * Math.PI / 180;
+        const len = Math.max(1, p.startLength * (1 - progress * 0.3));
+        
+        // ⚡ 초고속: shadowBlur 제거
+        ctx.strokeStyle = p.color || '#fbbf24';
+        ctx.lineWidth = Math.max(1, (p.startWidth || 3) * alpha);
+        ctx.globalAlpha = alpha;
+        ctx.lineCap = 'round';
+        
+        const ex = p.x + Math.cos(rad) * len;
+        const ey = p.y + Math.sin(rad) * len;
+        
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+    },
+    
+    drawDebrisParticle(p, alpha) {
+        if (!isFinite(p.x) || !isFinite(p.y)) return;
+        
+        const ctx = this.vfxCtx;
+        const size = Math.max(1, (p.startSize || 5) * alpha);
+        
+        // ⚡ 초고속: shadowBlur 제거, 사각형으로 변경 (arc보다 빠름)
+        ctx.fillStyle = p.color || '#ef4444';
+        ctx.globalAlpha = alpha;
+        ctx.fillRect(p.x - size/2, p.y - size/2, size, size);
+    },
+    
     // ==================== 스크린쉐이크 ====================
     screenShake(intensity) {
         if (!this.stageContainer) return;
@@ -3323,11 +3417,8 @@ const DDOOAction = {
     },
     
     // ==================== 유틸리티 ====================
-    // 🔧 DDOOUtils로 위임 (ddoo-utils.js)
     delay(ms) {
-        return typeof DDOOUtils !== 'undefined'
-            ? DDOOUtils.delay(ms, this.config.speed)
-            : new Promise(resolve => setTimeout(resolve, ms / this.config.speed));
+        return new Promise(resolve => setTimeout(resolve, ms / this.config.speed));
     },
     
     clearAll() {

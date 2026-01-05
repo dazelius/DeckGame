@@ -20,7 +20,7 @@ const PlayerRenderer = {
     // 설정
     config: {
         baseY: 100,
-        baseScale: 1.0,        // 플레이어는 적보다 크게! (적: 0.7)
+        baseScale: 0.8,        // 플레이어 기본 스케일 (80%)
         positionX: 0.25,       // 화면 왼쪽 25% 위치
         
         // ✅ 3D 바닥면 연동 설정
@@ -90,8 +90,8 @@ const PlayerRenderer = {
         
         console.log('[PlayerRenderer] ✅ 초기화 완료!');
         
-        // DDOOAction 엔진 초기화
-        this.initDDOOAction();
+        // DDOOAction 엔진 초기화 (await 필수!)
+        await this.initDDOOAction();
         
         return true;
     },
@@ -100,14 +100,33 @@ const PlayerRenderer = {
     async initDDOOAction() {
         if (typeof DDOOAction !== 'undefined' && !DDOOAction.initialized) {
             try {
-                // EnemyRenderer의 stageContainer 사용
-                const stageContainer = this.app.stage;
-                await DDOOAction.init(this.app, stageContainer);
-                console.log('[PlayerRenderer] DDOOAction 엔진 연결됨');
+                // ⚠️ app.stage 직접 사용 - 2D 카메라 줌/포커스는 비활성화됨
+                // 대신 3D 배경(Background3D)의 카메라 줌은 계속 작동함
+                await DDOOAction.init(this.app, this.app.stage);
+                console.log('[PlayerRenderer] DDOOAction 엔진 연결됨 (3D 카메라만 활성화)');
             } catch (e) {
                 console.warn('[PlayerRenderer] DDOOAction 초기화 실패:', e);
             }
         }
+    },
+    
+    // 🎮 DDOOAction에 플레이어 캐릭터 등록 (카메라 효과용)
+    registerToDDOOAction() {
+        if (typeof DDOOAction === 'undefined' || !DDOOAction.initialized) return;
+        if (!this.playerContainer || !this.sprite) return;
+        
+        const charData = {
+            container: this.playerContainer,
+            sprite: this.sprite,
+            baseX: this.playerContainer.x,
+            baseY: this.playerContainer.y,
+            baseScale: this.playerContainer.breathingBaseScale || this.config.baseScale,
+            team: 'player',
+            state: 'idle'
+        };
+        
+        DDOOAction.characters.set('player', charData);
+        console.log('[PlayerRenderer] ✅ DDOOAction에 플레이어 등록됨');
     },
     
     async createApp() {
@@ -410,6 +429,9 @@ const PlayerRenderer = {
         
         // 기존 DOM 플레이어 숨기기
         this.hideDOMPlayer();
+        
+        // 🎮 DDOOAction에 플레이어 등록 (카메라 효과용)
+        this.registerToDDOOAction();
         
         console.log('[PlayerRenderer] ✅ 플레이어 생성 완료!');
         

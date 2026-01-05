@@ -7,8 +7,7 @@
     "steps": [
         { "anim": "player.power_windup", "wait": true },
         { "delay": 50 },
-        { "anim": "player.power_tackle", "wait": false, "damage": 8 },
-        { "anim": "enemy.power_impact", "wait": true, "delay": 30 }
+        { "anim": "player.power_tackle", "wait": true, "damage": 8 },
+        { "anim": "enemy.power_impact", "wait": true }
     ]
 }
-

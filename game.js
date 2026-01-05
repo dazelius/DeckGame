@@ -280,7 +280,7 @@ function loadPlayerDeck() {
 // ==========================================
 // 전투 시작
 // ==========================================
-function startBattle() {
+async function startBattle() {
     // 🎬 전투 시작 트랜지션
     if (typeof ScreenTransition !== 'undefined') {
         ScreenTransition.battleEnter();
@@ -302,6 +302,27 @@ function startBattle() {
     // 🎬 핸드헬드 카메라 효과 시작
     if (typeof CameraEffects !== 'undefined') {
         CameraEffects.onBattleStart();
+    }
+    
+    // 🎮 DDOOAction 엔진 사전 초기화 (첫 공격 지연 방지!)
+    if (typeof DDOOAction !== 'undefined' && !DDOOAction.initialized) {
+        if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.app) {
+            console.log('[Game] 🎮 DDOOAction 사전 초기화...');
+            try {
+                await DDOOAction.init(PlayerRenderer.app, PlayerRenderer.app.stage);
+                
+                // ⏳ 애니메이션/VFX 캐시 로드 대기 (최대 3초)
+                let waitCount = 0;
+                while ((DDOOAction.animCache.size === 0 || DDOOAction.vfxCache.size === 0) && waitCount < 30) {
+                    await new Promise(r => setTimeout(r, 100));
+                    waitCount++;
+                }
+                
+                console.log(`[Game] ✅ DDOOAction 준비 완료! (anim:${DDOOAction.animCache.size}, vfx:${DDOOAction.vfxCache.size})`);
+            } catch (e) {
+                console.warn('[Game] DDOOAction 초기화 실패:', e);
+            }
+        }
     }
     
     // 🎰 GamblerVFX 사전 초기화 (첫 카드 지연 방지)

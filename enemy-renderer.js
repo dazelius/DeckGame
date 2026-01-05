@@ -334,9 +334,39 @@ const EnemyRenderer = {
         // UI 오버레이 생성
         this.createEnemyUI(enemyId, enemy, slotIndex);
         
+        // 🎮 DDOOAction에 적 등록 (카메라 효과용)
+        this.registerToDDOOAction(enemyId, spriteData, slotIndex);
+        
         console.log(`[EnemyRenderer] Added enemy: ${enemy.name} at slot ${slotIndex}`);
         
         return spriteData;
+    },
+    
+    // 🎮 DDOOAction에 적 캐릭터 등록 (카메라 효과용)
+    registerToDDOOAction(enemyId, spriteData, slotIndex) {
+        if (typeof DDOOAction === 'undefined' || !DDOOAction.initialized) return;
+        if (!spriteData?.container || !spriteData?.sprite) return;
+        
+        const charData = {
+            container: spriteData.container,
+            sprite: spriteData.sprite,
+            baseX: spriteData.container.x,
+            baseY: spriteData.container.y,
+            baseScale: spriteData.container.breathingBaseScale || this.getSlotScale(slotIndex),
+            team: 'enemy',
+            state: 'idle'
+        };
+        
+        // 첫 번째 적은 'enemy'로 등록 (호환성)
+        if (slotIndex === 0 || !DDOOAction.characters.has('enemy')) {
+            DDOOAction.characters.set('enemy', charData);
+        }
+        
+        // 개별 ID로도 등록
+        DDOOAction.characters.set(enemyId, charData);
+        DDOOAction.characters.set(`enemy${slotIndex + 1}`, charData);
+        
+        console.log(`[EnemyRenderer] ✅ DDOOAction에 적 등록: ${enemyId}`);
     },
     
     async createEnemySprite(enemy, slotIndex) {
@@ -2325,11 +2355,8 @@ const EnemyRenderer = {
                     container.breathingTween.resume();
                 }
                 
-                // 3D 위치 다시 적용 (넉백 후 위치 유지)
-                // ⚠️ slotIndex 사용!
-                if (typeof Background3D !== 'undefined' && slotIndex !== undefined) {
-                    EnemyRenderer.updatePositionFrom3D(slotIndex);
-                }
+                // 🔥 위치 복구는 이미 originalX로 처리됨 - updatePositionFrom3D 제거!
+                // (slotIndex 재배치로 인한 위치 꼬임 방지)
             });
             
             // 🔴 빨간 플래시 (틴트) - 별도 처리

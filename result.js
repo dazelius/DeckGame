@@ -331,7 +331,7 @@ const ResultSystem = {
     // ==========================================
     // 게임 오버
     // ==========================================
-    gameOver() {
+    async gameOver() {
         // ⚡ 에너지 볼트 정리
         if (typeof EnergyBoltSystem !== 'undefined') {
             EnergyBoltSystem.clear();
@@ -373,21 +373,32 @@ const ResultSystem = {
             RescueSystem.dieInDungeon();
         }
 
-        // 패배 연출
+        // 🎬 패배 연출 - YOU DIED (3초간 표시 후 페이드아웃)
         if (typeof TurnEffects !== 'undefined') {
-            TurnEffects.showDefeat();
+            await TurnEffects.showDefeat();
         }
 
+        // 📜 패배 팝업 - 다크소울 스타일
+        const battleCount = gameState.battleCount - 1 || 0;
         const lostGoldMsg = (typeof GoldSystem !== 'undefined' && GoldSystem.dungeonGold > 0) 
-            ? `\n던전 골드 ${GoldSystem.dungeonGold}를 잃었습니다.` 
+            ? `<div style="color: #f87171; font-size: 0.85rem; margin-top: 8px;">💰 던전 골드 ${GoldSystem.dungeonGold} 상실</div>` 
             : '';
+        
         elements.modalIcon.textContent = '💀';
-        elements.modalTitle.textContent = '패배...';
+        elements.modalTitle.textContent = '전투에서 패배했습니다';
         elements.modalTitle.style.color = '#f87171';
         elements.modalMessage.innerHTML = `
-            <div style="text-align: center; color: #888;">
-                <div style="font-size: 1.1rem; margin-bottom: 8px;">${gameState.battleCount - 1}번의 전투 후 쓰러졌습니다.</div>
-                <div style="color: #f87171; font-size: 0.9rem;">모든 소지품을 잃었습니다...</div>
+            <div style="text-align: center;">
+                <div style="color: #dc2626; font-size: 1.2rem; font-weight: bold; margin-bottom: 12px; text-shadow: 0 0 10px rgba(220, 38, 38, 0.5);">
+                    어둠에 삼켜졌다...
+                </div>
+                <div style="color: #888; font-size: 0.95rem; margin-bottom: 8px;">
+                    ${battleCount}번의 전투 후 쓰러졌습니다.
+                </div>
+                <div style="color: #666; font-size: 0.85rem;">
+                    모든 소지품을 잃었습니다...
+                </div>
+                ${lostGoldMsg}
             </div>
         `;
         elements.rewardSection.style.display = 'none';
@@ -419,12 +430,12 @@ function getRandomRelicReward(minRarity = 'common') {
     return ResultSystem.getRandomRelicReward(minRarity);
 }
 
-function gameOver() {
+async function gameOver() {
     // 🛡️ 인텐트 안전 체크 중지
     if (typeof stopIntentSafetyCheck === 'function') {
         stopIntentSafetyCheck();
     }
-    ResultSystem.gameOver();
+    await ResultSystem.gameOver();
 }
 
 console.log('[ResultSystem] 로드 완료');

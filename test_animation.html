@@ -9,10 +9,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi-filters/5.2.1/pixi-filters.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    <script src="background-3d.js"></script>
-    <script src="ddoo-action.js"></script>
+    <script src="background-3d.js?v=3"></script>
+    <!-- DDOO Action Engine v3.2 + 모듈 -->
+    <script src="ddoo-utils.js?v=3"></script>
+    <script src="ddoo-draw.js?v=4"></script>
+    <script src="ddoo-action.js?v=36"></script>
+    <script src="ddoo-vfx-3d.js?v=3"></script>
     <!-- 🎁 번들 (fetch 없이 즉시 로드!) -->
-    <script src="anim-bundle.js"></script>
+    <script src="anim-bundle.js?v=18"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -111,6 +115,74 @@
         .speed-control label { color: #888; font-size: 0.75rem; }
         .speed-control input { flex: 1; }
         .speed-control .value { color: #60a5fa; font-size: 0.75rem; }
+        
+        /* 탭 네비게이션 */
+        .panel-tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 10px;
+            background: #0a0a12;
+            padding: 4px;
+            border-radius: 6px;
+        }
+        .panel-tab {
+            flex: 1;
+            background: #1a1a28;
+            border: 1px solid #2a2a4a;
+            padding: 8px 4px;
+            border-radius: 4px;
+            color: #888;
+            cursor: pointer;
+            font-size: 0.7rem;
+            font-weight: bold;
+            transition: all 0.15s;
+        }
+        .panel-tab:hover { background: #252538; color: #ccc; }
+        .panel-tab.active { 
+            background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+            color: #fff; 
+            border-color: #60a5fa;
+        }
+        .tab-content { max-height: calc(100vh - 380px); overflow-y: auto; }
+        
+        /* Draw 설정 */
+        .draw-settings { display: flex; flex-direction: column; gap: 8px; }
+        .setting-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .setting-row label { 
+            color: #888; 
+            font-size: 0.7rem; 
+            min-width: 45px;
+        }
+        .setting-row input[type="color"] {
+            width: 40px;
+            height: 24px;
+            border: 1px solid #3a3a5a;
+            border-radius: 4px;
+            cursor: pointer;
+            background: transparent;
+        }
+        .setting-row input[type="range"] { flex: 1; }
+        .setting-row .value { 
+            color: #60a5fa; 
+            font-size: 0.7rem; 
+            min-width: 40px;
+            text-align: right;
+        }
+        
+        /* VFX/Draw 아이템 타입 배지 */
+        .anim-item .type.vfx { background: #a855f7; }
+        .anim-item .type.draw { background: #f472b6; }
+        .anim-item .type.particle { background: #06b6d4; }
+        .anim-item .type.effect-3d { 
+            background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); 
+            color: #fff;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        
         .stage-container {
             flex: 1;
             position: relative;
@@ -377,10 +449,61 @@
     
     <div class="main-container">
         <div class="control-panel">
-            <div class="panel-section">
-                <h3>📁 Animations</h3>
-                <div id="animList" class="anim-list"></div>
+            <!-- 탭 네비게이션 -->
+            <div class="panel-tabs">
+                <button class="panel-tab active" data-tab="anim" onclick="switchTab('anim')">🎬 Anim</button>
+                <button class="panel-tab" data-tab="vfx" onclick="switchTab('vfx')">✨ VFX</button>
+                <button class="panel-tab" data-tab="draw" onclick="switchTab('draw')">🎨 Draw</button>
             </div>
+            
+            <!-- 애니메이션 탭 -->
+            <div class="tab-content" id="tab-anim">
+                <div class="panel-section">
+                    <h3>📁 Animations</h3>
+                    <div id="animList" class="anim-list"></div>
+                </div>
+            </div>
+            
+            <!-- VFX 탭 -->
+            <div class="tab-content" id="tab-vfx" style="display:none;">
+                <div class="panel-section">
+                    <h3>✨ VFX Effects</h3>
+                    <div id="vfxList" class="anim-list"></div>
+                </div>
+            </div>
+            
+            <!-- Draw 탭 -->
+            <div class="tab-content" id="tab-draw" style="display:none;">
+                <div class="panel-section">
+                    <h3>🎨 Draw Particles</h3>
+                    <div id="drawList" class="anim-list"></div>
+                </div>
+                <div class="panel-section">
+                    <h3>🎛️ Draw Settings</h3>
+                    <div class="draw-settings">
+                        <div class="setting-row">
+                            <label>Color</label>
+                            <input type="color" id="drawColor" value="#60a5fa">
+                        </div>
+                        <div class="setting-row">
+                            <label>Glow</label>
+                            <input type="color" id="drawGlow" value="#3b82f6">
+                        </div>
+                        <div class="setting-row">
+                            <label>Size</label>
+                            <input type="range" id="drawSize" min="50" max="300" value="150">
+                            <span class="value" id="drawSizeValue">150</span>
+                        </div>
+                        <div class="setting-row">
+                            <label>Angle</label>
+                            <input type="range" id="drawAngle" min="-180" max="180" value="-30">
+                            <span class="value" id="drawAngleValue">-30°</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 설정 섹션 (공통) -->
             <div class="panel-section">
                 <h3>⚙️ Settings</h3>
                 <div class="speed-control">
@@ -455,6 +578,10 @@
         let playerContainer, playerSprite, enemyContainer, enemySprite;
         let stageContainer; // 쉐이크용
         
+        // 다중 적 지원
+        let enemies = [];  // [{container, sprite, baseX}]
+        let currentTargetIndex = 0;
+        
         const config = {
             speed: 1,
             playerBaseX: 0,
@@ -463,7 +590,8 @@
             // 캐릭터 크기 정보
             charHeight: 120,    // 기본 캐릭터 높이
             charWidth: 60,      // 기본 캐릭터 너비
-            vfxScale: 1.0       // VFX 스케일
+            vfxScale: 1.0,      // VFX 스케일
+            enemyCount: 3       // 적 수
         };
         
         let animCache = new Map();
@@ -539,6 +667,7 @@
             
             // 스테이지 컨테이너 (쉐이크용)
             stageContainer = new PIXI.Container();
+            stageContainer.sortableChildren = true;  // zIndex 정렬 활성화!
             app.stage.addChild(stageContainer);
             
             // 3D 배경이 없으면 폴백 배경 그리기
@@ -559,6 +688,122 @@
             await createCharacters(width, height);
             
             log('info', `Stage: ${width}x${height}`);
+            
+            // 🔄 리사이즈 핸들러
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => handleResize(), 100);
+            });
+        }
+        
+        // 🔄 리사이즈 처리
+        function handleResize() {
+            const container = document.getElementById('pixiContainer');
+            if (!container || !app) return;
+            
+            const width = container.clientWidth || 900;
+            const height = container.clientHeight || 600;
+            
+            // PixiJS 캔버스 리사이즈
+            app.renderer.resize(width, height);
+            
+            // VFX 캔버스 리사이즈
+            const vfxCanvas = document.getElementById('vfxCanvas');
+            if (vfxCanvas) {
+                vfxCanvas.width = width;
+                vfxCanvas.height = height;
+            }
+            
+            // 캐릭터 위치 재계산
+            const groundY = height * 0.75;
+            config.baseY = groundY;
+            config.playerBaseX = width * 0.22;
+            const enemyStartX = width * 0.58;
+            const enemySpacing = width * 0.12;
+            
+            // 플레이어 위치 업데이트
+            if (playerContainer) {
+                playerContainer.x = config.playerBaseX;
+                playerContainer.y = groundY;
+                
+                const playerChar = DDOOAction?.characters?.get('player');
+                if (playerChar) {
+                    playerChar.baseX = config.playerBaseX;
+                    playerChar.baseY = groundY;
+                    if (playerChar.shadow) {
+                        playerChar.shadow.x = config.playerBaseX;
+                        playerChar.shadow.y = groundY + 5;
+                    }
+                }
+            }
+            
+            // 적 위치 업데이트
+            enemies.forEach((e, i) => {
+                const newX = enemyStartX + (i * enemySpacing);
+                const newY = groundY - (i * 15);
+                
+                e.container.x = newX;
+                e.container.y = newY;
+                e.baseX = newX;
+                e.baseY = newY;
+                
+                const charData = DDOOAction?.characters?.get(e.id);
+                if (charData) {
+                    charData.baseX = newX;
+                    charData.baseY = newY;
+                    if (charData.shadow) {
+                        charData.shadow.x = newX;
+                        charData.shadow.y = newY + 5;
+                    }
+                }
+            });
+            
+            // 배경 다시 그리기
+            if (stageContainer && stageContainer.children.length > 0) {
+                const bg = stageContainer.children[0];
+                if (bg instanceof PIXI.Graphics) {
+                    bg.clear();
+                    drawBackgroundGraphics(bg, width, height);
+                }
+            }
+            
+            // 3D 배경 리사이즈
+            if (typeof Background3D !== 'undefined' && Background3D.handleResize) {
+                Background3D.handleResize();
+            }
+            
+            // 타겟 선택 UI 업데이트
+            const currentEnemy = enemies[currentTargetIndex];
+            if (currentEnemy) {
+                config.enemyBaseX = currentEnemy.baseX;
+                enemyContainer = currentEnemy.container;
+            }
+            
+            log('info', `📐 리사이즈: ${width}x${height}`);
+        }
+        
+        function drawBackgroundGraphics(bg, width, height) {
+            // 그라데이션 효과
+            for (let i = 0; i < 10; i++) {
+                const alpha = 0.03 + (i * 0.01);
+                bg.beginFill(0x1a1a2e, alpha);
+                bg.drawRect(0, height * (i / 10), width, height / 10);
+                bg.endFill();
+            }
+            
+            // 바닥 라인
+            const groundY = height * 0.7;
+            bg.lineStyle(2, 0x3a3a5a, 0.6);
+            bg.moveTo(0, groundY);
+            bg.lineTo(width, groundY);
+            
+            // 그리드
+            bg.lineStyle(1, 0x2a2a3a, 0.2);
+            for (let x = 0; x < width; x += 100) {
+                bg.moveTo(x, 0);
+                bg.lineTo(x, height);
+            }
         }
         
         function drawBackground(width, height) {
@@ -589,10 +834,13 @@
         }
         
         async function createCharacters(width, height) {
-            const groundY = height * 0.7;
+            const groundY = height * 0.75;  // 바닥을 약간 낮춤
             config.baseY = groundY;
-            config.playerBaseX = width * 0.28;
-            config.enemyBaseX = width * 0.72;
+            config.playerBaseX = width * 0.22;  // 플레이어 위치
+            
+            // 적 위치 계산 (3명 배치) - 더 오른쪽에, 간격 좁게
+            const enemyStartX = width * 0.58;
+            const enemySpacing = width * 0.12;  // 간격 줄임
             
             // 🎮 DDOOAction 엔진 사용!
             const useDDOOEngine = typeof DDOOAction !== 'undefined';
@@ -625,6 +873,7 @@
                 });
                 playerContainer = playerData.container;
                 playerSprite = playerData.sprite;
+                playerContainer.zIndex = 100;  // 기본 zIndex (적보다 높게)
                 
                 // 적 텍스처 로드
                 let enemyTex;
@@ -636,19 +885,47 @@
                     log('warn', '⚠️ goblinarcher.png fallback');
                 }
                 
-                // DDOOAction으로 적 생성
-                const enemyData = DDOOAction.createCharacter('enemy', {
-                    texture: enemyTex,
-                    x: config.enemyBaseX,
-                    y: groundY,
-                    scale: 1.0,
-                    team: 'enemy',
-                    enableEffects: true
-                });
-                enemyContainer = enemyData.container;
-                enemySprite = enemyData.sprite;
+                // 🎯 다중 적 생성 (3명!)
+                enemies = [];
+                for (let i = 0; i < config.enemyCount; i++) {
+                    const enemyX = enemyStartX + (i * enemySpacing);
+                    const enemyId = i === 0 ? 'enemy' : `enemy${i + 1}`;
+                    
+                    // 원근감: 뒤로 갈수록 작고 높이 올라감
+                    const depthScale = 0.75 - (i * 0.08);
+                    const depthY = groundY - (i * 15);  // 뒤로 갈수록 약간 위로
+                    const depthZIndex = 50 - (i * 10);  // 앞에 있을수록 높은 zIndex
+                    
+                    const enemyData = DDOOAction.createCharacter(enemyId, {
+                        texture: enemyTex,
+                        x: enemyX,
+                        y: depthY,
+                        scale: depthScale,
+                        team: 'enemy',
+                        enableEffects: true
+                    });
+                    
+                    enemyData.container.zIndex = depthZIndex;  // 뒤에 있는 적은 낮은 zIndex
+                    
+                    enemies.push({
+                        id: enemyId,
+                        container: enemyData.container,
+                        sprite: enemyData.sprite,
+                        baseX: enemyX,
+                        baseY: depthY,
+                        scale: depthScale,
+                        zIndex: depthZIndex
+                    });
+                    
+                    log('info', `  → ${enemyId} at x=${enemyX.toFixed(0)}, scale=${depthScale.toFixed(2)}, z=${depthZIndex}`);
+                }
                 
-                log('success', '✅ DDOOAction 캐릭터 생성 완료 (그림자, 아웃라인, 브레싱)');
+                // 첫 번째 적을 기본 타겟으로
+                enemyContainer = enemies[0].container;
+                enemySprite = enemies[0].sprite;
+                config.enemyBaseX = enemies[0].baseX;
+                
+                log('success', `✅ DDOOAction 캐릭터 생성 완료 (플레이어 1명, 적 ${config.enemyCount}명)`);
                 
             } else {
                 // 폴백: 기존 방식
@@ -670,21 +947,43 @@
                 playerContainer.addChild(playerSprite);
                 stageContainer.addChild(playerContainer);
                 
-                // 적
-                enemyContainer = new PIXI.Container();
-                enemyContainer.x = config.enemyBaseX;
-                enemyContainer.y = groundY;
+                // 다중 적 (폴백)
+                enemies = [];
+                const enemyTex = await PIXI.Assets.load('goblinarcher.png').catch(() => null);
                 
-                try {
-                    const tex = await PIXI.Assets.load('goblinarcher.png');
-                    enemySprite = new PIXI.Sprite(tex);
-                    enemySprite.anchor.set(0.5, 1);
-                    enemySprite.scale.set(1.0);
-                } catch (e) {
-                    enemySprite = createFallback(0xef4444, 'E');
+                for (let i = 0; i < config.enemyCount; i++) {
+                    const enemyX = enemyStartX + (i * enemySpacing);
+                    const depthScale = 0.75 - (i * 0.08);
+                    const depthY = groundY - (i * 15);
+                    
+                    const container = new PIXI.Container();
+                    container.x = enemyX;
+                    container.y = depthY;
+                    
+                    let sprite;
+                    if (enemyTex) {
+                        sprite = new PIXI.Sprite(enemyTex);
+                        sprite.anchor.set(0.5, 1);
+                        sprite.scale.set(depthScale);
+                    } else {
+                        sprite = createFallback(0xef4444, `E${i+1}`);
+                    }
+                    container.addChild(sprite);
+                    stageContainer.addChild(container);
+                    
+                    enemies.push({
+                        id: `enemy${i === 0 ? '' : i + 1}`,
+                        container,
+                        sprite,
+                        baseX: enemyX,
+                        baseY: depthY,
+                        scale: depthScale
+                    });
                 }
-                enemyContainer.addChild(enemySprite);
-                stageContainer.addChild(enemyContainer);
+                
+                enemyContainer = enemies[0].container;
+                enemySprite = enemies[0].sprite;
+                config.enemyBaseX = enemies[0].baseX;
                 
                 initAfterimageSystem();
                 startBreathing();
@@ -692,6 +991,9 @@
             
             // 캐릭터 크기 저장
             updateCharacterInfo();
+            
+            // 타겟 선택 UI 추가
+            addTargetSelector();
         }
         
         // 폴백 텍스처 생성
@@ -715,7 +1017,56 @@
             config.enemyWidth = eBounds.width;
             
             log('info', `Player: ${config.playerWidth.toFixed(0)}x${config.playerHeight.toFixed(0)}`);
-            log('info', `Enemy: ${config.enemyWidth.toFixed(0)}x${config.enemyHeight.toFixed(0)}`);
+            log('info', `Enemies: ${enemies.length}명`);
+        }
+        
+        // 🎯 타겟 선택 UI
+        function addTargetSelector() {
+            const overlay = document.getElementById('statsOverlay');
+            
+            const targetRow = document.createElement('div');
+            targetRow.className = 'stat-row';
+            targetRow.innerHTML = `
+                <span>Target:</span>
+                <select id="targetSelect" style="background:#252535;color:#60a5fa;border:1px solid #3a3a5a;padding:2px 5px;border-radius:3px;font-size:0.7rem;">
+                    ${enemies.map((e, i) => `<option value="${i}">${e.id} (x:${e.baseX.toFixed(0)})</option>`).join('')}
+                </select>
+            `;
+            overlay.appendChild(targetRow);
+            
+            document.getElementById('targetSelect').addEventListener('change', (e) => {
+                selectTarget(parseInt(e.target.value));
+            });
+        }
+        
+        // 타겟 변경
+        function selectTarget(index) {
+            if (index < 0 || index >= enemies.length) return;
+            currentTargetIndex = index;
+            
+            const target = enemies[index];
+            enemyContainer = target.container;
+            enemySprite = target.sprite;
+            config.enemyBaseX = target.baseX;
+            
+            // DDOOAction의 타겟도 변경
+            if (typeof DDOOAction !== 'undefined' && DDOOAction.initialized) {
+                // 🎯 enemy 캐릭터를 새 타겟으로 직접 교체!
+                const newCharData = {
+                    container: target.container,
+                    sprite: target.sprite,
+                    baseX: target.baseX,
+                    baseY: target.baseY || config.baseY,
+                    baseScale: target.scale || 1,  // 🔥 baseScale 추가!
+                    team: 'enemy',
+                    state: 'idle'
+                };
+                DDOOAction.characters.set('enemy', newCharData);
+                
+                log('info', `🎯 DDOOAction 타겟 업데이트: enemy → ${target.id}`);
+            }
+            
+            log('info', `🎯 타겟 변경: ${target.id} (x:${target.baseX.toFixed(0)})`);
         }
         
         function createFallback(color, letter) {
@@ -889,6 +1240,409 @@
             });
         }
         
+        // ==================== 탭 전환 ====================
+        function switchTab(tabName) {
+            // 탭 버튼 활성화
+            document.querySelectorAll('.panel-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.tab === tabName);
+            });
+            
+            // 탭 컨텐츠 표시
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.style.display = content.id === `tab-${tabName}` ? 'block' : 'none';
+            });
+            
+            // VFX/Draw 리스트 렌더링 (최초 1회)
+            if (tabName === 'vfx' && !document.getElementById('vfxList').children.length) {
+                renderVFXList();
+            }
+            if (tabName === 'draw' && !document.getElementById('drawList').children.length) {
+                renderDrawList();
+            }
+        }
+        
+        // ==================== VFX 리스트 렌더링 ====================
+        function renderVFXList() {
+            const container = document.getElementById('vfxList');
+            container.innerHTML = '';
+            
+            vfxCache.forEach((data, id) => {
+                const item = document.createElement('div');
+                item.className = 'anim-item';
+                item.dataset.id = id;
+                item.innerHTML = `<span class="type vfx">VFX</span><span class="name">${data.name || id}</span>`;
+                item.onclick = () => playVFX(id);
+                container.appendChild(item);
+            });
+            
+            log('info', `📋 VFX 리스트 렌더링: ${vfxCache.size}개`);
+        }
+        
+        // ==================== VFX 재생 ====================
+        function playVFX(id) {
+            const vfxData = vfxCache.get(id);
+            if (!vfxData) {
+                log('error', `❌ VFX not found: ${id}`);
+                return;
+            }
+            
+            // 선택 표시
+            document.querySelectorAll('#vfxList .anim-item').forEach(el => el.classList.remove('playing'));
+            document.querySelector(`#vfxList .anim-item[data-id="${id}"]`)?.classList.add('playing');
+            
+            // 화면 중앙에서 VFX 재생
+            const centerX = app.screen.width / 2;
+            const centerY = config.baseY - 60;
+            
+            log('vfx', `✨ VFX: ${id}`);
+            
+            if (typeof DDOOAction !== 'undefined' && DDOOAction.triggerVFX) {
+                DDOOAction.triggerVFX(id, centerX, centerY, 1, 1.5);
+            } else {
+                triggerVFX(vfxData, centerX, centerY, 1, 1.5);
+            }
+        }
+        
+        // ==================== Draw 리스트 렌더링 ====================
+        function renderDrawList() {
+            const container = document.getElementById('drawList');
+            container.innerHTML = '';
+            
+            // DDOODraw에서 함수 목록 추출
+            const drawFunctions = [
+                // === 3D 이펙트 (WebGL) ===
+                { id: 'sparks3d', name: '✨ 3D Sparks', type: '3d', is3d: true },
+                // === 2D 이펙트 (Canvas) ===
+                { id: 'slash', name: '⚔️ Slash (검기)', type: 'slash' },
+                { id: 'sword_arc', name: '🌙 Sword Arc (검 호)', type: 'sword_arc' },
+                { id: 'trail_dot', name: '🔵 Trail Dot', type: 'trail_dot' },
+                { id: 'energy_orb', name: '🔮 Energy Orb', type: 'energy_orb' },
+                { id: 'electric', name: '⚡ Electric', type: 'electric' },
+                { id: 'wave', name: '🌊 Wave', type: 'wave' },
+                { id: 'star', name: '⭐ Star', type: 'star' },
+                { id: 'comet', name: '☄️ Comet', type: 'comet' },
+                { id: 'voxel', name: '🎆 Voxel', type: 'voxel' },
+                { id: 'smoke', name: '💨 Smoke', type: 'smoke' },
+                { id: 'symbol', name: '✨ Symbol', type: 'symbol' },
+                { id: 'arrow', name: '➤ Arrow', type: 'arrow' },
+                { id: 'spark', name: '✦ Spark', type: 'spark' },
+                { id: 'flash', name: '💫 Flash', type: 'flash' },
+                { id: 'ring', name: '⭕ Ring', type: 'ring' },
+                { id: 'line', name: '━ Line', type: 'line' },
+                { id: 'debris', name: '🧱 Debris', type: 'debris' }
+            ];
+            
+            drawFunctions.forEach(df => {
+                const item = document.createElement('div');
+                item.className = 'anim-item';
+                item.dataset.id = df.id;
+                const typeClass = df.is3d ? 'effect-3d' : 'draw';
+                const typeLabel = df.is3d ? '3D' : 'DRAW';
+                item.innerHTML = `<span class="type ${typeClass}">${typeLabel}</span><span class="name">${df.name}</span>`;
+                item.onclick = () => df.is3d ? play3DEffect(df.id) : playDrawParticle(df.type);
+                container.appendChild(item);
+            });
+            
+            // 설정 이벤트 리스너
+            document.getElementById('drawSize').addEventListener('input', (e) => {
+                document.getElementById('drawSizeValue').textContent = e.target.value;
+            });
+            document.getElementById('drawAngle').addEventListener('input', (e) => {
+                document.getElementById('drawAngleValue').textContent = e.target.value + '°';
+            });
+            
+            log('info', `📋 Draw 리스트 렌더링: ${drawFunctions.length}개`);
+            
+            // 3D VFX 초기화
+            if (typeof DDOOVfx3D !== 'undefined' && !DDOOVfx3D.initialized) {
+                DDOOVfx3D.init(document.getElementById('pixiContainer'));
+                log('success', '🎮 3D VFX 시스템 초기화');
+            }
+        }
+        
+        // ==================== 3D 이펙트 재생 ====================
+        function play3DEffect(effectId) {
+            // 선택 표시
+            document.querySelectorAll('#drawList .anim-item').forEach(el => el.classList.remove('playing'));
+            document.querySelector(`#drawList .anim-item[data-id="${effectId}"]`)?.classList.add('playing');
+            
+            // 설정값 가져오기
+            const color = document.getElementById('drawColor').value;
+            const glow = document.getElementById('drawGlow').value;
+            const size = parseInt(document.getElementById('drawSize').value);
+            const angle = parseInt(document.getElementById('drawAngle').value);
+            
+            // 화면 중앙 (pixiContainer 기준)
+            const container = document.getElementById('pixiContainer');
+            const centerX = container.clientWidth / 2;
+            const centerY = config.baseY - 60;
+            
+            // 색상을 hex로 변환
+            const colorHex = parseInt(color.replace('#', ''), 16);
+            const glowHex = parseInt(glow.replace('#', ''), 16);
+            
+            log('vfx', `🎮 3D Effect: ${effectId} (size:${size})`);
+            
+            if (typeof DDOOVfx3D === 'undefined') {
+                log('error', '❌ DDOOVfx3D가 로드되지 않았습니다');
+                return;
+            }
+            
+            // 3D VFX 초기화 체크
+            if (!DDOOVfx3D.initialized) {
+                DDOOVfx3D.init(container);
+            }
+            
+            switch (effectId) {
+                case 'slash3d':
+                    DDOOVfx3D.slash3D(centerX, centerY, {
+                        color: colorHex,
+                        glowColor: glowHex,
+                        length: size,
+                        width: size / 4,
+                        arc: 140,
+                        startAngle: angle,
+                        duration: 0.5,
+                        direction: 1
+                    });
+                    break;
+                    
+                case 'shockwave3d':
+                    DDOOVfx3D.shockwave3D(centerX, centerY, {
+                        color: colorHex,
+                        maxRadius: size,
+                        thickness: size / 15,
+                        duration: 0.5
+                    });
+                    break;
+                    
+                case 'sparks3d':
+                    DDOOVfx3D.sparks3D(centerX, centerY, {
+                        color: colorHex,
+                        count: Math.floor(size / 5),
+                        speed: size * 1.5,
+                        size: 4,
+                        duration: 0.7
+                    });
+                    break;
+            }
+        }
+        
+        // ==================== Draw 파티클 재생 ====================
+        function playDrawParticle(type) {
+            // 선택 표시
+            document.querySelectorAll('#drawList .anim-item').forEach(el => el.classList.remove('playing'));
+            document.querySelector(`#drawList .anim-item[data-id="${type}"]`)?.classList.add('playing');
+            
+            // 설정값 가져오기
+            const color = document.getElementById('drawColor').value;
+            const glow = document.getElementById('drawGlow').value;
+            const size = parseInt(document.getElementById('drawSize').value);
+            const angle = parseInt(document.getElementById('drawAngle').value);
+            
+            // 화면 중앙
+            const centerX = app.screen.width / 2;
+            const centerY = config.baseY - 60;
+            
+            log('vfx', `🎨 Draw: ${type} (size:${size}, angle:${angle}°)`);
+            
+            // 파티클 생성
+            const particleConfig = {
+                x: centerX,
+                y: centerY,
+                color: color,
+                glow: glow,
+                life: 500
+            };
+            
+            switch (type) {
+                case 'slash':
+                    if (typeof DDOOAction !== 'undefined') {
+                        DDOOAction.spawnParticle({
+                            type: 'slash',
+                            ...particleConfig,
+                            angle: angle,
+                            length: size,
+                            width: size / 8
+                        });
+                    }
+                    break;
+                case 'sword_arc':
+                    if (typeof DDOOAction !== 'undefined') {
+                        DDOOAction.spawnParticle({
+                            type: 'sword_arc',
+                            ...particleConfig,
+                            dir: 1,
+                            radius: size / 2,
+                            thickness: size / 10,
+                            startAngle: -80,
+                            endAngle: 80
+                        });
+                    }
+                    break;
+                case 'trail_dot':
+                    if (typeof DDOOAction !== 'undefined') {
+                        DDOOAction.spawnParticle({
+                            type: 'trail_dot',
+                            ...particleConfig,
+                            size: size / 10
+                        });
+                    }
+                    break;
+                case 'energy_orb':
+                    if (typeof DDOOAction !== 'undefined') {
+                        DDOOAction.spawnParticle({
+                            type: 'energy_orb',
+                            ...particleConfig,
+                            startSize: size / 5
+                        });
+                    }
+                    break;
+                case 'electric':
+                    if (typeof DDOOAction !== 'undefined') {
+                        DDOOAction.spawnParticle({
+                            type: 'electric',
+                            ...particleConfig,
+                            angle: angle,
+                            length: size,
+                            segments: 8,
+                            width: 3
+                        });
+                    }
+                    break;
+                case 'wave':
+                    if (typeof DDOOAction !== 'undefined') {
+                        DDOOAction.spawnParticle({
+                            type: 'wave',
+                            ...particleConfig,
+                            startSize: size / 4,
+                            maxSize: size,
+                            thickness: size / 15,
+                            startAngle: -90,
+                            endAngle: 90
+                        });
+                    }
+                    break;
+                case 'star':
+                    if (typeof DDOOAction !== 'undefined') {
+                        DDOOAction.spawnParticle({
+                            type: 'star',
+                            ...particleConfig,
+                            startSize: size / 5,
+                            points: 4,
+                            rotation: angle * Math.PI / 180
+                        });
+                    }
+                    break;
+                case 'comet':
+                    if (typeof DDOOAction !== 'undefined') {
+                        const rad = angle * Math.PI / 180;
+                        DDOOAction.spawnParticle({
+                            type: 'comet',
+                            ...particleConfig,
+                            startSize: size / 10,
+                            tailLength: size / 2,
+                            vx: Math.cos(rad) * 5,
+                            vy: Math.sin(rad) * 5
+                        });
+                    }
+                    break;
+                case 'voxel':
+                    if (typeof DDOOAction !== 'undefined') {
+                        DDOOAction.spawnParticle({
+                            type: 'voxel',
+                            ...particleConfig,
+                            size: size / 8,
+                            rotation: angle * Math.PI / 180,
+                            rotationSpeed: 0.1
+                        });
+                    }
+                    break;
+                case 'smoke':
+                    if (typeof DDOOAction !== 'undefined') {
+                        DDOOAction.spawnParticle({
+                            type: 'smoke',
+                            ...particleConfig,
+                            startSize: size / 4,
+                            rotation: 0,
+                            rotationSpeed: 0.02
+                        });
+                    }
+                    break;
+                case 'symbol':
+                    if (typeof DDOOAction !== 'undefined') {
+                        DDOOAction.spawnParticle({
+                            type: 'symbol',
+                            ...particleConfig,
+                            size: size / 3,
+                            symbol: '⭐'
+                        });
+                    }
+                    break;
+                case 'arrow':
+                    if (typeof DDOOAction !== 'undefined') {
+                        DDOOAction.spawnParticle({
+                            type: 'arrow',
+                            ...particleConfig,
+                            dir: 1,
+                            startLength: size,
+                            startWidth: size / 2,
+                            tipAngle: 35,
+                            innerColor: glow + '80'
+                        });
+                    }
+                    break;
+                case 'spark':
+                    if (typeof DDOOAction !== 'undefined') {
+                        DDOOAction.spawnParticle({
+                            type: 'spark',
+                            ...particleConfig,
+                            startSize: size / 10
+                        });
+                    }
+                    break;
+                case 'flash':
+                    if (typeof DDOOAction !== 'undefined') {
+                        DDOOAction.spawnParticle({
+                            type: 'flash',
+                            ...particleConfig,
+                            startSize: size / 2
+                        });
+                    }
+                    break;
+                case 'ring':
+                    if (typeof DDOOAction !== 'undefined') {
+                        DDOOAction.spawnParticle({
+                            type: 'ring',
+                            ...particleConfig,
+                            startSize: size / 5,
+                            maxSize: size
+                        });
+                    }
+                    break;
+                case 'line':
+                    if (typeof DDOOAction !== 'undefined') {
+                        DDOOAction.spawnParticle({
+                            type: 'line',
+                            ...particleConfig,
+                            angle: angle,
+                            startLength: size,
+                            startWidth: 3
+                        });
+                    }
+                    break;
+                case 'debris':
+                    if (typeof DDOOAction !== 'undefined') {
+                        DDOOAction.spawnParticle({
+                            type: 'debris',
+                            ...particleConfig,
+                            startSize: size / 10
+                        });
+                    }
+                    break;
+            }
+        }
+        
         // ==================== 메인 재생 ====================
         async function playAnimation(id, skipReset = false) {
             const data = animCache.get(id);
@@ -912,6 +1666,12 @@
             
             // 🎮 DDOOAction 엔진 사용!
             if (typeof DDOOAction !== 'undefined' && DDOOAction.initialized) {
+                // 🎯 현재 선택된 타겟 정보
+                const currentTarget = enemies[currentTargetIndex];
+                const targetCont = currentTarget?.container || enemyContainer;
+                const targetSpr = currentTarget?.sprite || enemySprite;
+                
+                
                 await DDOOAction.play(id, {
                     container,
                     sprite,
@@ -919,15 +1679,19 @@
                     baseY: config.baseY,
                     dir,
                     isRelative: false,
+                    // 🎯 타겟 정보 전달!
+                    targetContainer: targetCont,
+                    targetSprite: targetSpr,
+                    targetBaseX: currentTarget?.baseX || config.enemyBaseX,
+                    targetBaseY: currentTarget?.baseY || config.baseY,
                     onComplete: () => log('success', `✅ ${id} 완료`),
                     onHit: (kf) => log('info', `💥 히트! ${kf.vfx || ''}`),
                     getHitPoint: () => {
-                        // 적 타격점
-                        const ec = DDOOAction.getCharacter('enemy');
-                        if (ec) {
-                            return { x: ec.container.x, y: ec.container.y - (config.enemyHeight || 100) / 2 };
-                        }
-                        return { x: enemyContainer.x, y: config.baseY - 60 };
+                        // 🎯 현재 선택된 타겟의 타격점!
+                        return { 
+                            x: targetCont.x, 
+                            y: targetCont.y - (config.enemyHeight || 100) / 2 
+                        };
                     }
                 });
                 return;
@@ -1086,10 +1850,14 @@
             gsap.killTweensOf(playerContainer);
             gsap.killTweensOf(playerSprite);
             gsap.killTweensOf(playerSprite.scale);
-            gsap.killTweensOf(enemyContainer);
-            gsap.killTweensOf(enemySprite);
-            gsap.killTweensOf(enemySprite.scale);
             gsap.killTweensOf(stageContainer);
+            
+            // 모든 적 트윈 정리
+            enemies.forEach(e => {
+                gsap.killTweensOf(e.container);
+                gsap.killTweensOf(e.sprite);
+                gsap.killTweensOf(e.sprite.scale);
+            });
             
             playerContainer.x = config.playerBaseX;
             playerContainer.y = config.baseY;
@@ -1097,16 +1865,19 @@
             playerSprite.scale.set(1.0);
             playerSprite.alpha = 1;
             
-            enemyContainer.x = config.enemyBaseX;
-            enemyContainer.y = config.baseY;
-            enemySprite.rotation = 0;
-            enemySprite.scale.set(1.0);
-            enemySprite.alpha = 1;
+            // 모든 적 리셋
+            enemies.forEach((e, i) => {
+                e.container.x = e.baseX;
+                e.container.y = e.baseY || config.baseY;
+                e.sprite.rotation = 0;
+                e.sprite.scale.set(e.scale || (0.75 - (i * 0.08)));
+                e.sprite.alpha = 1;
+            });
             
             stageContainer.x = 0;
             stageContainer.y = 0;
-            stageContainer.scale.set(1, 1);  // ⚠️ 스케일도 복원!
-            stageContainer.alpha = 1;  // ⚠️ 스테이지 알파도 복원!
+            stageContainer.scale.set(1, 1);
+            stageContainer.alpha = 1;
             
             // ⚠️ DDOOAction 카메라/이펙트 리셋!
             if (typeof DDOOAction !== 'undefined' && DDOOAction.initialized) {
@@ -1122,14 +1893,19 @@
                     playerChar.container.x = config.playerBaseX;
                     playerChar.container.y = config.baseY;
                 }
-                const enemyChar = DDOOAction.characters.get('enemy');
-                if (enemyChar) {
-                    enemyChar.sprite.alpha = 1;
-                    enemyChar.sprite.rotation = 0;
-                    enemyChar.sprite.scale.set(1, 1);
-                    enemyChar.container.x = config.enemyBaseX;
-                    enemyChar.container.y = config.baseY;
-                }
+                
+                // 모든 적 리셋
+                enemies.forEach((e, i) => {
+                    const charData = DDOOAction.characters.get(e.id);
+                    if (charData) {
+                        charData.sprite.alpha = 1;
+                        charData.sprite.rotation = 0;
+                        const scale = e.scale || (0.75 - (i * 0.08));
+                        charData.sprite.scale.set(scale, scale);
+                        charData.container.x = e.baseX;
+                        charData.container.y = e.baseY || config.baseY;
+                    }
+                });
             }
             
             // 🎥 3D 배경 카메라도 리셋
@@ -1487,7 +2263,12 @@
                     
                     switch (p.type) {
                         case 'slash':
-                            drawSlashParticle(p, alpha, progress);
+                            // DDOODraw의 화려한 버전 사용!
+                            if (typeof DDOODraw !== 'undefined' && DDOODraw.drawSlashParticle) {
+                                DDOODraw.drawSlashParticle(vfxCtx, p, alpha, progress);
+                            } else {
+                                drawSlashParticle(p, alpha, progress);
+                            }
                             break;
                         case 'arrow':
                             drawArrowParticle(p, alpha, progress);
@@ -1520,7 +2301,12 @@
                             updateAndDrawProjectile(p, alpha, progress);
                             break;
                         case 'sword_arc':
-                            drawSwordArcParticle(p, alpha, progress);
+                            // DDOODraw의 화려한 버전 사용!
+                            if (typeof DDOODraw !== 'undefined' && DDOODraw.drawSwordArcParticle) {
+                                DDOODraw.drawSwordArcParticle(vfxCtx, p, alpha, progress);
+                            } else {
+                                drawSwordArcParticle(p, alpha, progress);
+                            }
                             break;
                     }
                     

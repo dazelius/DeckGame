@@ -182,10 +182,19 @@ const ResponsiveSystem = {
             PixiRenderer.resize();
         }
         
-        // 🎯 3. 추가 딜레이 후 한번 더 갱신 (레이아웃 완전 안정화 후)
+        // 🎯 3. DDOOAction 캐릭터 위치 갱신
+        if (typeof DDOOAction !== 'undefined' && DDOOAction.handleResize) {
+            DDOOAction.handleResize();
+        }
+        
+        // 🎯 4. 추가 딜레이 후 한번 더 갱신 (레이아웃 완전 안정화 후)
         setTimeout(() => {
             if (typeof Background3D !== 'undefined' && Background3D.forceUpdateAllCharacters) {
                 Background3D.forceUpdateAllCharacters();
+            }
+            // DDOOAction도 한번 더!
+            if (typeof DDOOAction !== 'undefined' && DDOOAction.handleResize) {
+                DDOOAction.handleResize();
             }
         }, 50);
     },

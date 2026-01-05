@@ -1,62 +1,48 @@
 {
     "id": "sword_slash",
-    "name": "검 베기 궤적",
-    "shake": 8,
+    "name": "검 베기 - 기본",
+    "shake": 10,
+    "duration": 280,
+    "offset": { "x": 25, "y": -15 },
     "particles": [
         {
             "type": "flash",
-            "size": 60,
+            "size": 120,
             "color": "#ffffff",
-            "life": 40
+            "alpha": 1,
+            "fadeOut": true,
+            "life": 50
         },
         {
             "type": "sword_arc",
-            "radius": [70, 90],
-            "thickness": 18,
-            "startAngle": -70,
-            "endAngle": 50,
+            "radius": [120, 150],
+            "thickness": 28,
+            "startAngle": -90,
+            "endAngle": 70,
             "color": "#ffffff",
             "glow": "#60a5fa",
             "trail": true,
-            "life": 180
-        },
-        {
-            "type": "sword_arc",
-            "radius": [50, 65],
-            "thickness": 10,
-            "startAngle": -50,
-            "endAngle": 40,
-            "color": "#93c5fd",
-            "glow": "#3b82f6",
-            "trail": true,
-            "life": 150,
-            "delay": 20
+            "taper": true,
+            "life": 250
         },
         {
             "type": "ring",
             "size": 20,
             "maxSize": 80,
             "color": "#ffffff",
-            "life": 100
+            "alpha": 0.8,
+            "fadeOut": true,
+            "life": 120
         },
         {
             "type": "spark",
-            "count": 18,
-            "spread": 60,
-            "speed": [10, 22],
-            "size": [3, 7],
+            "count": 15,
+            "spread": 70,
+            "speed": [15, 30],
+            "size": [4, 9],
             "colors": ["#ffffff", "#93c5fd", "#60a5fa"],
-            "life": [150, 300]
-        },
-        {
-            "type": "line",
-            "count": 6,
-            "angleStep": 60,
-            "length": [30, 55],
-            "width": 2,
-            "color": "#93c5fd",
-            "life": 100
+            "life": [150, 300],
+            "gravity": 0.2
         }
     ]
 }
-

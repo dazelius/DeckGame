@@ -303,39 +303,52 @@ const TurnEffects = {
     // 패배 연출 - 다크소울 스타일
     // ==========================================
     showDefeat() {
-        const container = document.createElement('div');
-        container.className = 'ds-defeat-container';
-        
-        container.innerHTML = `
-            <div class="ds-defeat-bg"></div>
-            <div class="ds-defeat-blood-vignette"></div>
-            <div class="ds-defeat-letterbox top"></div>
-            <div class="ds-defeat-letterbox bottom"></div>
-            <div class="ds-defeat-content">
-                <div class="ds-defeat-line left"></div>
-                <div class="ds-defeat-text-container">
-                    <div class="ds-defeat-main">YOU DIED</div>
-                    <div class="ds-defeat-korean">죽음을 맞이했다</div>
+        return new Promise((resolve) => {
+            const container = document.createElement('div');
+            container.className = 'ds-defeat-container';
+            
+            container.innerHTML = `
+                <div class="ds-defeat-bg"></div>
+                <div class="ds-defeat-blood-vignette"></div>
+                <div class="ds-defeat-letterbox top"></div>
+                <div class="ds-defeat-letterbox bottom"></div>
+                <div class="ds-defeat-content">
+                    <div class="ds-defeat-line left"></div>
+                    <div class="ds-defeat-text-container">
+                        <div class="ds-defeat-main">YOU DIED</div>
+                        <div class="ds-defeat-korean">죽음을 맞이했다</div>
+                    </div>
+                    <div class="ds-defeat-line right"></div>
                 </div>
-                <div class="ds-defeat-line right"></div>
-            </div>
-            <div class="ds-defeat-particles"></div>
-        `;
-        
-        document.body.appendChild(container);
-        
-        // 핏방울 파티클 생성
-        const particlesEl = container.querySelector('.ds-defeat-particles');
-        for (let i = 0; i < 20; i++) {
-            const particle = document.createElement('div');
-            particle.className = 'ds-defeat-particle';
-            particle.style.cssText = `
-                left: ${Math.random() * 100}%;
-                animation-delay: ${Math.random() * 2}s;
-                animation-duration: ${3 + Math.random() * 2}s;
+                <div class="ds-defeat-particles"></div>
             `;
-            particlesEl.appendChild(particle);
-        }
+            
+            document.body.appendChild(container);
+            
+            // 핏방울 파티클 생성
+            const particlesEl = container.querySelector('.ds-defeat-particles');
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'ds-defeat-particle';
+                particle.style.cssText = `
+                    left: ${Math.random() * 100}%;
+                    animation-delay: ${Math.random() * 2}s;
+                    animation-duration: ${3 + Math.random() * 2}s;
+                `;
+                particlesEl.appendChild(particle);
+            }
+            
+            // 3초 후 연출 완료
+            setTimeout(() => {
+                // 페이드 아웃 시작
+                container.classList.add('fade-out');
+                
+                // 페이드 아웃 후 resolve
+                setTimeout(() => {
+                    resolve();
+                }, 500);
+            }, 3000);
+        });
     }
 };
 
@@ -1028,10 +1041,19 @@ turnEffectStyles.textContent = `
         animation: dsDefeatAppear 1.5s ease-out;
     }
     
+    .ds-defeat-container.fade-out {
+        animation: dsDefeatFadeOut 0.5s ease-out forwards;
+    }
+    
     @keyframes dsDefeatAppear {
         0% { opacity: 0; }
         30% { opacity: 0.3; }
         100% { opacity: 1; }
+    }
+    
+    @keyframes dsDefeatFadeOut {
+        0% { opacity: 1; }
+        100% { opacity: 0; }
     }
     
     .ds-defeat-bg {

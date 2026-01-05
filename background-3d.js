@@ -99,11 +99,11 @@ const Background3D = {
         console.log('[Background3D] 컨테이너 생성됨');
     },
     
-    // Scene 설정 (어두운 던전)
+    // Scene 설정 (어두운 던전 - 붉은빛)
     setupScene() {
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x050508);
-        this.scene.fog = new THREE.FogExp2(0x050508, 0.022);
+        this.scene.background = new THREE.Color(0x030202);  // 더 어두운 붉은 검정
+        this.scene.fog = new THREE.FogExp2(0x080404, 0.028);  // 붉은 안개, 더 짙게
         console.log('[Background3D] Scene 생성됨');
     },
     
@@ -272,13 +272,25 @@ const Background3D = {
         this.dungeonGroup = new THREE.Group();
         this.scene.add(this.dungeonGroup);
         
-        // 조명 (어두운 던전 - 벽면 살짝 보임)
-        // 환경광 - 벽면이 보일 정도
-        const ambient = new THREE.AmbientLight(0x202030, 0.35);
+        // 조명 (어두운 던전 - 붉은빛 분위기)
+        // 환경광 - 매우 어둡게 (붉은 톤)
+        const ambient = new THREE.AmbientLight(0x180808, 0.2);
         this.scene.add(ambient);
         
-        // 약한 상단 조명 (벽면 윤곽용)
-        const topLight = new THREE.DirectionalLight(0x303040, 0.2);
+        // 🔴 붉은빛 글로벌 라이트 (던전 전체에 붉은 분위기)
+        const redAmbient = new THREE.PointLight(0xff2200, 0.8, 100);
+        redAmbient.position.set(0, 15, -10);
+        this.scene.add(redAmbient);
+        this.redAmbientLight = redAmbient;
+        
+        // 🔴 바닥에서 올라오는 붉은 광원 (용암/피 느낌)
+        const floorGlow = new THREE.PointLight(0x661100, 0.5, 60);
+        floorGlow.position.set(0, -2, 0);
+        this.scene.add(floorGlow);
+        this.floorGlowLight = floorGlow;
+        
+        // 약한 상단 조명 (벽면 윤곽용 - 더 어둡게)
+        const topLight = new THREE.DirectionalLight(0x201515, 0.1);
         topLight.position.set(0, 20, 0);
         this.scene.add(topLight);
         
@@ -523,7 +535,7 @@ const Background3D = {
         });
     },
     
-    // 횃불 (어둠 속 유일한 빛)
+    // 횃불 (어둠 속 붉은 빛)
     addTorches() {
         const positions = [
             [-25, 6, -25],
@@ -533,13 +545,13 @@ const Background3D = {
         ];
         
         positions.forEach((pos, i) => {
-            // 메인 포인트 라이트 (강하게, 좁은 범위)
-            const light = new THREE.PointLight(0xff4400, 3.0, 20);
+            // 메인 포인트 라이트 (붉은빛 강조)
+            const light = new THREE.PointLight(0xff3300, 4.0, 25);
             light.position.set(pos[0], pos[1], pos[2]);
             this.dungeonGroup.add(light);
             
-            // 보조 빛 (더 넓게 퍼지는 약한 빛)
-            const ambientLight = new THREE.PointLight(0xff2200, 1.0, 35);
+            // 보조 빛 (더 넓게 퍼지는 진한 붉은빛)
+            const ambientLight = new THREE.PointLight(0xcc1100, 1.5, 40);
             ambientLight.position.set(pos[0], pos[1] + 1, pos[2]);
             this.dungeonGroup.add(ambientLight);
             
@@ -552,9 +564,9 @@ const Background3D = {
             holder.position.set(pos[0], pos[1] - 0.7, pos[2]);
             this.dungeonGroup.add(holder);
             
-            // 불꽃 코어
+            // 불꽃 코어 (더 붉게)
             const flameMat = new THREE.MeshBasicMaterial({ 
-                color: 0xffaa00,
+                color: 0xff6600,
                 transparent: true,
                 opacity: 1.0
             });
@@ -565,11 +577,11 @@ const Background3D = {
             flame.position.set(pos[0], pos[1], pos[2]);
             this.dungeonGroup.add(flame);
             
-            // 불꽃 글로우
+            // 불꽃 글로우 (진한 붉은빛)
             const glowMat = new THREE.MeshBasicMaterial({ 
-                color: 0xff5500,
+                color: 0xff2200,
                 transparent: true,
-                opacity: 0.5
+                opacity: 0.6
             });
             const glow = new THREE.Mesh(
                 new THREE.SphereGeometry(0.5, 8, 8),
@@ -583,7 +595,7 @@ const Background3D = {
                 ambientLight: ambientLight,
                 flame: flame,
                 glow: glow,
-                baseIntensity: 3.0,
+                baseIntensity: 4.0,  // 더 강하게
                 phase: i * 1.5
             });
         });
@@ -712,7 +724,7 @@ const Background3D = {
             
             // 보조 라이트
             if (torch.ambientLight) {
-                torch.ambientLight.intensity = 0.8 + flicker * 0.3;
+                torch.ambientLight.intensity = 1.2 + flicker * 0.4;
             }
             
             // 불꽃 크기
@@ -721,9 +733,19 @@ const Background3D = {
             // 글로우 크기
             if (torch.glow) {
                 torch.glow.scale.setScalar(1 + flicker * 0.4);
-                torch.glow.material.opacity = 0.3 + flicker * 0.15;
+                torch.glow.material.opacity = 0.4 + flicker * 0.2;
             }
         });
+        
+        // 🔴 붉은빛 글로벌 라이트 깜빡임 (느리게)
+        if (this.redAmbientLight) {
+            const redFlicker = Math.sin(t * 2) * 0.15 + Math.sin(t * 3.7) * 0.1;
+            this.redAmbientLight.intensity = 0.8 + redFlicker;
+        }
+        if (this.floorGlowLight) {
+            const floorFlicker = Math.sin(t * 1.5 + 1) * 0.1;
+            this.floorGlowLight.intensity = 0.5 + floorFlicker;
+        }
         
         // 게임 요소 3D 배치
         this.applyGameParallax();
