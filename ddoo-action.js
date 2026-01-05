@@ -1332,8 +1332,11 @@ const DDOOAction = {
         const targetZoom = Math.max(this.config.camera.minZoom, Math.min(this.config.camera.maxZoom, zoom));
         const dur = duration / 1000 / this.config.speed / this.timescale;
         
-        // 🔥 트윈 추적 배열 초기화
-        if (!this._cameraZoomTweens) this._cameraZoomTweens = [];
+        // 🔥 기존 카메라 트윈 정리 (덜컹거림 방지!)
+        if (this._cameraZoomTweens) {
+            this._cameraZoomTweens.forEach(tw => tw?.kill?.());
+        }
+        this._cameraZoomTweens = [];
         
         // 🎬 isRootStage일 때만 캐릭터 스케일 직접 변경 (player + enemy만!)
         // isRootStage가 아니면 stageContainer 줌이 모든 캐릭터에 적용됨
@@ -1482,9 +1485,7 @@ const DDOOAction = {
     resetCamera() {
         if (!this.stageContainer) return;
         
-        console.log('[DDOOAction] 📷 resetCamera 호출됨, characters:', this.characters.size);
-        
-        const dur = 0.25;  // 고정 duration (250ms)
+        const dur = 0.2;  // 빠른 복원 (200ms)
         const centerX = this.pixiApp?.screen.width / 2 || 0;
         const centerY = this.pixiApp?.screen.height / 2 || 0;
         
@@ -1583,15 +1584,21 @@ const DDOOAction = {
         const centerX = this.pixiApp?.screen.width / 2 || 0;
         const centerY = this.pixiApp?.screen.height / 2 || 0;
         
+        // 🔥 진행 중인 카메라 트윈 모두 정리!
+        if (this._cameraZoomTweens) {
+            this._cameraZoomTweens.forEach(tw => tw?.kill?.());
+            this._cameraZoomTweens = [];
+        }
+        
         // 🎬 isRootStage일 때: 모든 캐릭터 스케일/알파 즉시 복원
         if (this.cameraState?.isRootStage) {
             this.characters.forEach((char, id) => {
                 if (char?.container) {
+                    gsap.killTweensOf(char.container);
                     gsap.killTweensOf(char.container.scale);
                     // 🔥 원본 baseScale로 복원!
                     const scale = char._originalBaseScale || char.container.breathingBaseScale || char.baseScale || 1;
                     char.container.scale.set(scale, scale);
-                    if (this.config.debug) console.log(`[DDOOAction] 📷 ${id} 즉시 복원: ${scale}`);
                 }
                 if (char?.sprite) {
                     gsap.killTweensOf(char.sprite);
