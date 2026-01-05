@@ -521,6 +521,12 @@ const EnemyRenderer = {
             }
             
             this.sprites.delete(enemyId);
+            
+            // 🔥 DDOOAction.characters에서도 제거!
+            if (typeof DDOOAction !== 'undefined' && DDOOAction.characters) {
+                DDOOAction.characters.delete(enemyId);
+            }
+            
             console.log(`[EnemyRenderer] Removed enemy: ${enemy.name}`);
         }
     },
@@ -591,6 +597,27 @@ const EnemyRenderer = {
                 onComplete: () => {
                     data.container.zIndex = targetZIndex;
                     this.container.sortChildren();
+                    
+                    // 🔥 breathing 기준 위치/스케일 업데이트! (stopBreathingAnimation에서 사용)
+                    data.container.breathingBaseX = targetX;
+                    data.container.breathingBaseY = targetY;
+                    data.container.breathingBaseScale = targetScale;
+                    
+                    // 🔥 DDOOAction.characters 위치도 업데이트!
+                    if (typeof DDOOAction !== 'undefined' && DDOOAction.characters) {
+                        const charData = DDOOAction.characters.get(enemyId);
+                        if (charData) {
+                            charData.baseX = targetX;
+                            charData.baseY = targetY;
+                            charData.baseScale = targetScale;
+                            charData._originalBaseScale = targetScale;
+                            if (charData.shadow) {
+                                charData.shadow.x = targetX;
+                                charData.shadow.y = targetY + 5;
+                            }
+                        }
+                    }
+                    
                     resolve();
                 }
             });
@@ -2638,6 +2665,11 @@ const EnemyRenderer = {
     syncWithGameState() {
         if (!gameState || !gameState.enemies) return;
         
+        // 🔥 DDOOAction 애니메이션 진행 중이면 재배치 건너뛰기!
+        if (typeof DDOOAction !== 'undefined' && DDOOAction._isPlaying) {
+            return;
+        }
+        
         // 죽은 적 제거
         this.sprites.forEach((data, id) => {
             const enemy = gameState.enemies.find(e => (e.id || e.name) === id);
@@ -2656,7 +2688,8 @@ const EnemyRenderer = {
             } else {
                 // 슬롯 위치 업데이트
                 const data = this.sprites.get(enemyId);
-                if (data.slotIndex !== index) {
+                // 🔥 애니메이션 중인 적은 재배치 건너뛰기!
+                if (data.slotIndex !== index && !data.isAnimating) {
                     this.moveToSlot(enemy, index, 0.2);
                 }
             }

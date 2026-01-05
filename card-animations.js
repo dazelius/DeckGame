@@ -141,9 +141,18 @@ const CardAnimations = {
             return this.fallbackAnimation(options);
         }
         
-        // 원점 저장
-        const baseX = playerContainer.x;
-        const baseY = playerContainer.y;
+        // 원점 저장 (DDOOAction에 등록된 기본 위치 우선 사용)
+        let baseX = playerContainer.x;
+        let baseY = playerContainer.y;
+        
+        // 🔥 DDOOAction에서 원래 기본 위치 가져오기 (이전 애니메이션 잔여값 방지)
+        if (typeof DDOOAction !== 'undefined' && DDOOAction.characters) {
+            const playerChar = DDOOAction.characters.get('player');
+            if (playerChar && playerChar.baseX !== undefined) {
+                baseX = playerChar.baseX;
+                baseY = playerChar.baseY;
+            }
+        }
         
         // 🎯 적 컨테이너/스프라이트 가져오기 (dashToTarget용!)
         let targetContainer = null;

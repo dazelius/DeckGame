@@ -859,8 +859,8 @@ const BreakSystem = {
                 });
         }
         
-        // ===== 2단계: 화면 전체 플래시 (강렬한 화이트) =====
-        this.createDarkSoulsFlash();
+        // ===== 2단계: 개인화된 플래시 (적 위치에서만!) =====
+        this.createLocalizedFlash(screenX, screenY, spriteHeight);
         
         // ===== 3단계: 충격파 (원형 파동) =====
         this.createDarkSoulsShockwave(screenX, screenY);
@@ -875,9 +875,9 @@ const BreakSystem = {
         // ===== 5단계: 에너지 입자 폭발 =====
         this.createDarkSoulsParticles(screenX, screenY);
         
-        // ===== 6단계: 카메라 쉐이크 (강하게) =====
+        // ===== 6단계: 카메라 쉐이크 (가볍게, 개인화 느낌) =====
         if (typeof SpriteAnimation !== 'undefined' && SpriteAnimation.screenShake) {
-            SpriteAnimation.screenShake(25, 0.5);
+            SpriteAnimation.screenShake(8, 0.2);  // 강도 줄임
         }
         
         // ===== 7단계: 사운드 =====
@@ -889,7 +889,41 @@ const BreakSystem = {
         EnemyRenderer.setEnemyBrokenState(enemy, true);
     },
     
-    // 🌟 다크소울 스타일 화면 플래시
+    // 🌟 개인화된 플래시 (적 위치에서만 발생!)
+    createLocalizedFlash(x, y, size = 150) {
+        const flash = document.createElement('div');
+        const flashSize = size * 3;  // 적 크기의 3배
+        flash.style.cssText = `
+            position: fixed;
+            left: ${x - flashSize / 2}px;
+            top: ${y - flashSize / 2}px;
+            width: ${flashSize}px;
+            height: ${flashSize}px;
+            background: radial-gradient(circle, 
+                rgba(255, 255, 255, 1) 0%, 
+                rgba(255, 255, 255, 0.8) 30%, 
+                rgba(255, 200, 100, 0.5) 60%, 
+                transparent 100%);
+            border-radius: 50%;
+            z-index: 99999;
+            pointer-events: none;
+            opacity: 0;
+            transform: scale(0.5);
+        `;
+        document.body.appendChild(flash);
+        
+        if (typeof gsap !== 'undefined') {
+            gsap.timeline()
+                .to(flash, { opacity: 1, scale: 1, duration: 0.05, ease: 'power4.out' })
+                .to(flash, { opacity: 0.7, scale: 1.3, duration: 0.08 })
+                .to(flash, { opacity: 0, scale: 1.8, duration: 0.15, ease: 'power2.out', onComplete: () => flash.remove() });
+        } else {
+            flash.style.opacity = '1';
+            setTimeout(() => flash.remove(), 300);
+        }
+    },
+    
+    // 🌟 다크소울 스타일 화면 플래시 (전체 화면 - 미사용)
     createDarkSoulsFlash() {
         const flash = document.createElement('div');
         flash.style.cssText = `
@@ -1552,17 +1586,10 @@ const BreakSystem = {
         // 파편 효과 (캐릭터 위치)
         this.createShatterParticles(centerX, centerY);
         
-        // 화면 흔들림 (더 강하게!)
-        if (typeof SpriteAnimation !== 'undefined') {
-            SpriteAnimation.screenShake(20, 0.4);
-        } else if (typeof EffectSystem !== 'undefined' && EffectSystem.screenShake) {
-            EffectSystem.screenShake(20, 400);
-        }
+        // 🔥 화면 흔들림 제거 (showBreakEffectPixi에서 이미 처리됨 - 중복 방지)
+        // 개인화된 연출을 위해 전체 화면 흔들림은 최소화
         
-        // 사운드
-        if (typeof SoundSystem !== 'undefined') {
-            SoundSystem.play('break', { volume: 0.8 });
-        }
+        // 사운드 (showBreakEffectPixi에서 이미 재생됨 - 중복 방지)
         
         setTimeout(() => breakText.remove(), 1500);
     },
