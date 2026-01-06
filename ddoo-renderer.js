@@ -556,8 +556,11 @@ const DDOORenderer = {
     
     /**
      * 타겟 글로우 ON/OFF - DropShadowFilter를 글로우로 사용
+     * @param {PIXI.Container} container 
+     * @param {boolean} isTargeted 
+     * @param {number} color - 글로우 색상 (기본: 노란색)
      */
-    setTargeted(container, isTargeted) {
+    setTargeted(container, isTargeted, color = 0xffee00) {
         const data = container?._ddooData;
         if (!data?.sprite) return;
         
@@ -585,12 +588,13 @@ const DDOORenderer = {
         
         // 글로우 활성화
         data.isTargeted = true;
+        data.glowColor = color;
         
         try {
             // DropShadowFilter를 글로우로 사용 (offset 0, 밝은 색상)
             const glow = new PIXI.DropShadowFilter({
                 offset: { x: 0, y: 0 },
-                color: 0xffee00,    // 노란색
+                color: color,
                 alpha: 0.8,
                 blur: 3,
                 quality: 2
@@ -625,11 +629,22 @@ const DDOORenderer = {
     /**
      * 타겟 글로우 토글
      */
-    toggleTargeted(container) {
+    toggleTargeted(container, color = 0xffee00) {
         const data = container?._ddooData;
         if (!data) return;
         
-        this.setTargeted(container, !data.isTargeted);
+        this.setTargeted(container, !data.isTargeted, color);
+    },
+    
+    /**
+     * 글로우 색상 변경
+     */
+    setGlowColor(container, color) {
+        const data = container?._ddooData;
+        if (!data?.glowFilter) return;
+        
+        data.glowFilter.color = color;
+        data.glowColor = color;
     },
     
     // ==================== 유틸리티 ====================
