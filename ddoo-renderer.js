@@ -647,6 +647,266 @@ const DDOORenderer = {
         data.glowColor = color;
     },
     
+    // ==================== 등장 연출 ====================
+    
+    /**
+     * 등장 연출 - 맵 밖에서 빠르게 진입
+     * @param {PIXI.Container} container 
+     * @param {string} direction - 'left', 'right', 'top', 'bottom'
+     * @param {number} duration - 애니메이션 시간 (초)
+     */
+    playSpawn(container, direction = 'left', duration = 0.4) {
+        if (!container) return Promise.resolve();
+        
+        const data = container._ddooData;
+        const sprite = data?.sprite;
+        
+        // 숨쉬기 일시 정지
+        this.pauseBreathing(container);
+        
+        // 최종 위치 저장
+        const finalX = container.x;
+        const finalY = container.y;
+        const finalAlpha = 1;
+        
+        // 시작 위치 계산 (화면 밖)
+        const offset = 300;
+        let startX = finalX;
+        let startY = finalY;
+        
+        switch (direction) {
+            case 'left':
+                startX = finalX - offset;
+                break;
+            case 'right':
+                startX = finalX + offset;
+                break;
+            case 'top':
+                startY = finalY - offset;
+                break;
+            case 'bottom':
+                startY = finalY + offset;
+                break;
+        }
+        
+        // 시작 상태 설정
+        container.x = startX;
+        container.y = startY;
+        container.alpha = 0;
+        if (sprite) {
+            sprite.rotation = direction === 'left' ? 0.3 : direction === 'right' ? -0.3 : 0;
+        }
+        
+        return new Promise(resolve => {
+            const tl = gsap.timeline({
+                onComplete: () => {
+                    if (sprite) sprite.rotation = 0;
+                    this.resumeBreathing(container);
+                    resolve();
+                }
+            });
+            
+            // 빠르게 진입 + 페이드인
+            tl.to(container, {
+                x: finalX,
+                y: finalY,
+                alpha: finalAlpha,
+                duration: duration,
+                ease: 'back.out(1.2)'
+            });
+            
+            // 회전 복구
+            if (sprite) {
+                tl.to(sprite, {
+                    rotation: 0,
+                    duration: duration * 0.5,
+                    ease: 'power2.out'
+                }, `-=${duration * 0.3}`);
+            }
+            
+            // 착지 효과 (살짝 찌그러짐)
+            if (sprite) {
+                tl.to(sprite.scale, {
+                    x: (data?.config?.scale || 1) * 1.1,
+                    y: (data?.config?.scale || 1) * 0.9,
+                    duration: 0.08,
+                    ease: 'power2.out'
+                });
+                tl.to(sprite.scale, {
+                    x: data?.config?.scale || 1,
+                    y: data?.config?.scale || 1,
+                    duration: 0.15,
+                    ease: 'elastic.out(1, 0.5)'
+                });
+            }
+        });
+    },
+    
+    // ==================== 사망 연출 ====================
+    
+    /**
+     * 사망 연출 - 쓰러지면서 마젠타가 되어 가루가 됨
+     * @param {PIXI.Container} container 
+     * @param {PIXI.Application} app - 파티클을 추가할 앱 (optional)
+     */
+    playDeath(container, app = null) {
+        if (!container) return Promise.resolve();
+        
+        const data = container._ddooData;
+        const sprite = data?.sprite;
+        
+        // 숨쉬기 정지
+        this.stopBreathing(container);
+        
+        // 글로우 제거
+        this.setTargeted(container, false);
+        
+        return new Promise(resolve => {
+            const tl = gsap.timeline({
+                onComplete: () => {
+                    // 파티클 생성
+                    if (app) {
+                        this.createDeathParticles(container, app);
+                    }
+                    
+                    // 컨테이너 숨기기
+                    container.visible = false;
+                    resolve();
+                }
+            });
+            
+            // 1단계: 피격 플래시 + 경직
+            if (sprite) {
+                tl.to(sprite, {
+                    duration: 0.1,
+                    onStart: () => { sprite.tint = 0xffffff; }
+                });
+            }
+            
+            // 2단계: 마젠타로 변하면서 흔들림
+            tl.to(container, {
+                x: container.x + 5,
+                duration: 0.05,
+                repeat: 4,
+                yoyo: true,
+                ease: 'none'
+            });
+            
+            if (sprite) {
+                tl.to(sprite, {
+                    duration: 0.2,
+                    onUpdate: function() {
+                        // 흰색 → 마젠타 그라데이션
+                        const p = this.progress();
+                        const r = Math.floor(255);
+                        const g = Math.floor(255 * (1 - p));
+                        const b = Math.floor(255);
+                        sprite.tint = (r << 16) | (g << 8) | b;
+                    }
+                }, '<');
+            }
+            
+            // 3단계: 쓰러지면서 페이드아웃
+            if (sprite) {
+                tl.to(sprite, {
+                    rotation: Math.PI / 2 * (Math.random() > 0.5 ? 1 : -1), // 좌우 랜덤
+                    duration: 0.4,
+                    ease: 'power2.in'
+                });
+                
+                tl.to(sprite.scale, {
+                    x: (data?.config?.scale || 1) * 0.8,
+                    y: (data?.config?.scale || 1) * 0.6,
+                    duration: 0.4,
+                    ease: 'power2.in'
+                }, '<');
+            }
+            
+            // Y 위치 (약간 내려감 - 쓰러지는 느낌)
+            tl.to(container, {
+                y: container.y + 30,
+                duration: 0.4,
+                ease: 'power2.in'
+            }, '<');
+            
+            // 알파 페이드아웃
+            tl.to(container, {
+                alpha: 0,
+                duration: 0.3,
+                ease: 'power2.in'
+            }, '-=0.2');
+        });
+    },
+    
+    /**
+     * 사망 파티클 생성 (가루 효과)
+     */
+    createDeathParticles(container, app) {
+        if (!app?.stage) return;
+        
+        const particleCount = 20;
+        const baseX = container.x;
+        const baseY = container.y - 50; // 스프라이트 중앙 정도
+        
+        for (let i = 0; i < particleCount; i++) {
+            const particle = new PIXI.Graphics();
+            const size = 3 + Math.random() * 5;
+            
+            // 마젠타 ~ 보라 색상
+            const colors = [0xff00ff, 0xff44ff, 0xdd00dd, 0xaa00aa, 0xff88ff];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            
+            particle.rect(-size/2, -size/2, size, size);
+            particle.fill({ color, alpha: 0.9 });
+            
+            particle.x = baseX + (Math.random() - 0.5) * 40;
+            particle.y = baseY + (Math.random() - 0.5) * 60;
+            
+            app.stage.addChild(particle);
+            
+            // 파티클 애니메이션
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 50 + Math.random() * 100;
+            const targetX = particle.x + Math.cos(angle) * speed;
+            const targetY = particle.y + Math.sin(angle) * speed - 30; // 위로 떠오름
+            
+            gsap.to(particle, {
+                x: targetX,
+                y: targetY,
+                alpha: 0,
+                rotation: Math.random() * Math.PI * 4,
+                duration: 0.5 + Math.random() * 0.5,
+                ease: 'power2.out',
+                onComplete: () => {
+                    app.stage.removeChild(particle);
+                    particle.destroy();
+                }
+            });
+        }
+    },
+    
+    /**
+     * 리스폰 (사망 후 다시 등장)
+     */
+    async respawn(container, direction = 'left') {
+        if (!container) return;
+        
+        const data = container._ddooData;
+        const sprite = data?.sprite;
+        
+        // 상태 초기화
+        container.visible = true;
+        container.alpha = 1;
+        if (sprite) {
+            sprite.rotation = 0;
+            sprite.tint = data?.originalTint || 0xffffff;
+            sprite.scale.set(data?.config?.scale || 1);
+        }
+        
+        // 등장 연출
+        await this.playSpawn(container, direction, 0.5);
+    },
+    
     // ==================== 유틸리티 ====================
     
     /**
