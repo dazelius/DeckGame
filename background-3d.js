@@ -109,9 +109,14 @@ const Background3D = {
     
     // Camera 설정
     setupCamera() {
+        // 🔥 battle-arena 크기 기준 (PixiJS와 동기화)
+        const arena = document.querySelector('.battle-arena');
+        const arenaWidth = arena?.offsetWidth || window.innerWidth;
+        const arenaHeight = arena?.offsetHeight || window.innerHeight;
+        
         this.camera = new THREE.PerspectiveCamera(
             65,
-            window.innerWidth / window.innerHeight,
+            arenaWidth / arenaHeight,
             0.1,
             100
         );
@@ -623,19 +628,12 @@ const Background3D = {
         this.cachedArenaRect = null;
         this.arenaRectCacheTime = 0;
         
-        // ResponsiveManager가 있으면 게임 영역 기준, 없으면 전체 화면
-        let width = window.innerWidth;
-        let height = window.innerHeight;
+        // 🔥 battle-arena 크기 기준으로 카메라 aspect 설정 (PixiJS와 동기화)
+        const arenaRect = this.getArenaRect();
+        let width = arenaRect.width || window.innerWidth;
+        let height = arenaRect.height || window.innerHeight;
         
-        if (typeof ResponsiveSystem !== 'undefined') {
-            const gameArea = ResponsiveSystem.getGameArea();
-            if (gameArea) {
-                width = gameArea.width;
-                height = gameArea.height;
-            }
-        }
-        
-        // 카메라 업데이트
+        // 카메라 업데이트 (arena 비율로!)
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
         
