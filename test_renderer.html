@@ -426,19 +426,25 @@
             <div class="panel-section">
                 <h3>💢 데미지 폰트</h3>
                 <div class="btn-group">
-                    <button class="btn" style="background:#ff4444;font-size:0.7rem;" onclick="testDamageFont('damage')">-HP</button>
-                    <button class="btn" style="background:#44ff44;color:#000;font-size:0.7rem;" onclick="testDamageFont('heal')">+HP</button>
-                    <button class="btn" style="background:#ffdd00;color:#000;font-size:0.7rem;" onclick="testDamageFont('crit')">CRIT</button>
+                    <button class="btn" style="background:#cc2222;font-size:0.7rem;" onclick="testDamageFont('damage')">데미지</button>
+                    <button class="btn" style="background:#44ff88;color:#000;font-size:0.7rem;" onclick="testDamageFont('heal')">회복</button>
+                    <button class="btn" style="background:#d4a857;color:#000;font-size:0.7rem;" onclick="testDamageFont('critical')">크리티컬</button>
                 </div>
                 <div class="btn-group" style="margin-top:5px;">
+                    <button class="btn" style="background:#5a9fd4;font-size:0.7rem;" onclick="testDamageFont('block')">🛡️방어</button>
+                    <button class="btn" style="background:#8b1a1a;font-size:0.7rem;" onclick="testDamageFont('bleed')">🩸출혈</button>
+                    <button class="btn" style="background:#2d8a4e;font-size:0.7rem;" onclick="testDamageFont('thorn')">🌵가시</button>
+                </div>
+                <div class="btn-group" style="margin-top:5px;">
+                    <button class="btn" style="background:#a855f7;font-size:0.7rem;" onclick="testDamageFont('magic')">✨마법</button>
                     <button class="btn" style="background:#888;font-size:0.7rem;" onclick="testDamageFont('miss')">MISS</button>
-                    <button class="btn" style="background:#6688ff;font-size:0.7rem;" onclick="testDamageFont('block')">BLOCK</button>
-                    <button class="btn" style="background:#88ff88;color:#000;font-size:0.7rem;" onclick="testDamageFont('poison')">독</button>
+                    <button class="btn" style="background:#ff6666;font-size:0.7rem;" onclick="testDamageFont('self')">자해</button>
                 </div>
                 <div class="btn-group" style="margin-top:5px;">
-                    <button class="btn" style="background:#ff8844;font-size:0.7rem;" onclick="testDamageFont('burn')">화상</button>
-                    <button class="btn" style="background:#ffaa00;color:#000;font-size:0.7rem;" onclick="testDamageFont('exp')">EXP</button>
-                    <button class="btn" style="background:#ffdd44;color:#000;font-size:0.7rem;" onclick="testDamageFont('gold')">GOLD</button>
+                    <button class="btn" style="background:#88ff88;color:#000;font-size:0.65rem;" onclick="testDamageFont('poison')">☠️독</button>
+                    <button class="btn" style="background:#ff8844;font-size:0.65rem;" onclick="testDamageFont('burn')">🔥화상</button>
+                    <button class="btn" style="background:#ffaa00;color:#000;font-size:0.65rem;" onclick="testDamageFont('exp')">EXP</button>
+                    <button class="btn" style="background:#ffdd44;color:#000;font-size:0.65rem;" onclick="testDamageFont('gold')">💰</button>
                 </div>
                 <button class="btn btn-full" style="background:linear-gradient(135deg,#f5576c,#f093fb);" onclick="testCombo()">💥 콤보!</button>
             </div>
@@ -740,12 +746,15 @@
             const values = {
                 damage: Math.floor(Math.random() * 50) + 10,
                 heal: Math.floor(Math.random() * 30) + 5,
-                crit: Math.floor(Math.random() * 100) + 50,
+                critical: Math.floor(Math.random() * 100) + 50,
+                block: Math.floor(Math.random() * 20) + 5,
+                bleed: Math.floor(Math.random() * 15) + 3,
+                thorn: Math.floor(Math.random() * 12) + 2,
+                magic: Math.floor(Math.random() * 40) + 15,
+                self: Math.floor(Math.random() * 10) + 2,
                 miss: 0,
-                block: 0,
                 poison: Math.floor(Math.random() * 10) + 3,
                 burn: Math.floor(Math.random() * 15) + 5,
-                mp: Math.floor(Math.random() * 20) + 5,
                 exp: Math.floor(Math.random() * 100) + 20,
                 gold: Math.floor(Math.random() * 50) + 10
             };
@@ -760,15 +769,24 @@
             const x = enhancedSprite.x;
             const y = enhancedSprite.y - 80;
             
-            const combo = [
-                { value: 12, type: 'damage' },
-                { value: 15, type: 'damage' },
-                { value: 18, type: 'damage' },
-                { value: 45, type: 'crit' }
-            ];
+            // 랜덤 콤보 생성
+            const hitCount = 3 + Math.floor(Math.random() * 3);
+            const combo = [];
             
-            DDOORenderer.showComboDamage(enhancedApp.stage, x, y, combo, 150);
-            log('info', '💥 콤보 데미지!');
+            for (let i = 0; i < hitCount; i++) {
+                combo.push({
+                    value: Math.floor(Math.random() * 20) + 8,
+                    type: 'damage'
+                });
+            }
+            // 마지막은 크리티컬
+            combo.push({
+                value: Math.floor(Math.random() * 50) + 40,
+                type: 'critical'
+            });
+            
+            DDOORenderer.showComboDamage(enhancedApp.stage, x, y, combo, 120);
+            log('info', `💥 ${combo.length}히트 콤보!`);
         }
         
         // ==================== 로그 ====================
