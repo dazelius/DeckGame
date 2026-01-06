@@ -5,10 +5,14 @@
     "type": "once",
     "priority": 18,
     "duration": 100,
+    "vfx": "hit",
+    "shake": 8,
     "keyframes": [
         { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 0 },
-        { "x": -8, "y": -5, "scaleX": 0.85, "scaleY": 1.15, "alpha": 0.8, "rotation": -0.08, "duration": 25, "ease": "power4.out", "color": "hit", "shatter": { "target": "self", "grid": 8, "force": 8, "life": 300, "hideTime": 80 } },
-        { "x": -5, "y": 0, "scaleX": 0.92, "scaleY": 1.08, "alpha": 0.9, "rotation": -0.04, "duration": 35, "ease": "power2.out" },
+        { "x": -6, "y": -4, "scaleX": 0.88, "scaleY": 1.12, "alpha": 0.88, "rotation": -0.06, "duration": 6, "ease": "power4.out", "tint": { "color": "#ffffff", "duration": 6 }, "shatter": { "target": "self", "grid": 8, "force": 8, "life": 300, "hideTime": 80 } },
+        { "x": -7, "y": -3, "scaleX": 0.86, "scaleY": 1.14, "alpha": 0.86, "rotation": -0.07, "duration": 6, "tint": { "color": "#ff0000", "duration": 6 } },
+        { "x": -8, "y": -2, "scaleX": 0.85, "scaleY": 1.15, "alpha": 0.85, "rotation": -0.08, "duration": 8, "tint": { "color": "#ffffff", "duration": 8 } },
+        { "x": -4, "y": 0, "scaleX": 0.92, "scaleY": 1.08, "alpha": 0.92, "rotation": -0.04, "duration": 30, "ease": "power2.out" },
         { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 40, "ease": "power2.out" }
     ]
 }

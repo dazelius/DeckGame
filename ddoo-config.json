@@ -10,7 +10,7 @@
     "enableBreathing": true,
     "enableGlow": true,
     "enableCamera": true,
-    "enableColorGrade": true,
+    "enableColorGrade": false,
     "enableSlowmo": true,
     "enableFilters": false,
     "debug": false,

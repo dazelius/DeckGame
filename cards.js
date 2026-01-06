@@ -271,7 +271,18 @@ Object.assign(cardDatabase, {
         isAllEnemy: true, // 전체 공격 표시
         icon: '<img src="chakramThrow.png" alt="Chakram" class="card-icon-img">',
         description: '<span class="damage">모든 적</span>에게 <span class="damage">4</span> 데미지.<br>뽑기 덱에 \'차크람 되돌아오기\'를 1장 추가.',
-        effect: (state) => {
+        effect: async (state) => {
+            // 🎮 DDOOAction 애니메이션 실행!
+            if (typeof CardAnimations !== 'undefined' && CardAnimations.has('chakramThrow')) {
+                CardAnimations.play('chakramThrow', {
+                    onDamage: (dmg, enemy) => {
+                        if (enemy && enemy.hp > 0) {
+                            dealDamage(enemy, 4);
+                        }
+                    }
+                });
+            }
+            
             // 🎯 PixiJS 좌표 우선 사용
             const playerPos = typeof getPlayerScreenPosition === 'function' ? getPlayerScreenPosition() : null;
             const startX = playerPos?.valid ? playerPos.centerX : 200;
@@ -420,7 +431,18 @@ Object.assign(cardDatabase, {
         icon: '<img src="chakramThrow.png" alt="Chakram" class="card-icon-img">',
         description: '<span class="damage">모든 적</span>에게 <span class="damage">4</span> 데미지.<br>버린 카드에 \'차크람 던지기\'가 있으면 손패로 가져옴.',
         isEthereal: true, // 소멸
-        effect: (state) => {
+        effect: async (state) => {
+            // 🎮 DDOOAction 애니메이션 실행!
+            if (typeof CardAnimations !== 'undefined' && CardAnimations.has('chakramReturn')) {
+                CardAnimations.play('chakramReturn', {
+                    onDamage: (dmg, enemy) => {
+                        if (enemy && enemy.hp > 0) {
+                            dealDamage(enemy, 4);
+                        }
+                    }
+                });
+            }
+            
             // 🎯 PixiJS 좌표 우선 사용
             const playerPos = typeof getPlayerScreenPosition === 'function' ? getPlayerScreenPosition() : null;
             const endX = playerPos?.valid ? playerPos.centerX : 200;

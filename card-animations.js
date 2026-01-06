@@ -31,7 +31,9 @@ const CardAnimations = {
             { id: 'dodgeP', name: '닷지+', jsonId: 'card.dodge' },
             { id: 'dagger', name: '단검 투척', jsonId: 'card.dagger' },
             { id: 'battleOpening', name: '전투 개막', jsonId: 'card.battleopening' },
-            { id: 'battleOpeningP', name: '전투 개막+', jsonId: 'card.battleopeningP' }
+            { id: 'battleOpeningP', name: '전투 개막+', jsonId: 'card.battleopeningP' },
+            { id: 'chakramThrow', name: '차크람 던지기', jsonId: 'card.chakramThrow' },
+            { id: 'chakramReturn', name: '차크람 되돌아오기', jsonId: 'card.chakramReturn' }
         ];
         
         cardAnimations.forEach(anim => {
@@ -202,9 +204,9 @@ const CardAnimations = {
                         onHit(hitCount++, dmgValue);
                     }
                     
-                    // 🎬 DDOOAction을 통한 적 피격 애니메이션! (배열로 랜덤!)
+                    // 🎬 DDOOAction을 통한 적 피격 애니메이션!
                     if (target && typeof DDOOAction !== 'undefined' && targetContainer && targetSprite) {
-                        DDOOAction.play(['enemy.hit_left', 'enemy.hit_right'], {
+                        DDOOAction.play('enemy.hit', {
                             container: targetContainer,
                             sprite: targetSprite,
                             baseX: targetContainer.x,

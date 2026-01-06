@@ -8,14 +8,14 @@
         { "anim": "player.dash", "wait": true },
         
         { "anim": "player.flurry_stab1", "wait": false },
-        { "anim": ["enemy.flurry_hit_left", "enemy.flurry_hit_right"], "wait": true, "delay": 25, "damage": 2 },
+        { "anim": "enemy.hit", "wait": true, "delay": 25, "damage": 2 },
         { "delay": 20 },
         
         { "anim": "player.flurry_stab2", "wait": false },
-        { "anim": ["enemy.flurry_hit_left", "enemy.flurry_hit_right"], "wait": true, "delay": 25, "damage": 2 },
+        { "anim": "enemy.hit", "wait": true, "delay": 25, "damage": 2 },
         { "delay": 20 },
         
         { "anim": "player.flurry_stab3", "wait": false },
-        { "anim": ["enemy.flurry_hit_left", "enemy.flurry_hit_right"], "wait": true, "delay": 25, "damage": 2 }
+        { "anim": "enemy.hit", "wait": true, "delay": 25, "damage": 2 }
     ]
 }

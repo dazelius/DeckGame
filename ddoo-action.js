@@ -17,7 +17,7 @@ const DDOOAction = {
         enableBreathing: true,
         enableGlow: true,
         enableCamera: true,        // 📷 카메라 시스템
-        enableColorGrade: true,    // 🎨 컬러 그레이딩
+        enableColorGrade: false,   // 🎨 컬러 그레이딩 - 전역 필터 문제로 비활성화
         enableSlowmo: true,        // ⏱️ 슬로우모션
         enableFilters: false,      // ✨ PixiJS 필터 - 기본 OFF (성능)
         debug: false,
@@ -235,8 +235,12 @@ const DDOOAction = {
         };
     },
     
-    // 🎨 컬러 그레이딩 필터 초기화
+    // 🎨 컬러 그레이딩 필터 초기화 (현재 비활성화됨)
     initColorFilter() {
+        // ⚠️ 컬러 그레이딩이 전체 화면에 영향을 주는 문제로 비활성화
+        // 개별 스프라이트 tint 효과로 대체됨
+        if (!this.config.enableColorGrade) return;
+        
         if (typeof PIXI !== 'undefined' && PIXI.ColorMatrixFilter) {
             this.colorFilter = new PIXI.ColorMatrixFilter();
             if (this.stageContainer && !this.stageContainer.filters) {
@@ -507,6 +511,19 @@ const DDOOAction = {
     createAfterimageContainer() {
         if (!this.stageContainer) return;
         
+        // 🔧 기존 컨테이너가 있으면 먼저 정리! (중복 생성 방지)
+        const existingShadow = this.stageContainer.children.find(c => c.name === 'ddoo-shadows');
+        const existingAfterimage = this.stageContainer.children.find(c => c.name === 'ddoo-afterimages');
+        
+        if (existingShadow) {
+            this.stageContainer.removeChild(existingShadow);
+            existingShadow.destroy({ children: true });
+        }
+        if (existingAfterimage) {
+            this.stageContainer.removeChild(existingAfterimage);
+            existingAfterimage.destroy({ children: true });
+        }
+        
         // 그림자 컨테이너 (맨 아래)
         this.shadowContainer = new PIXI.Container();
         this.shadowContainer.name = 'ddoo-shadows';
@@ -626,9 +643,19 @@ const DDOOAction = {
     
     // 브레싱 애니메이션
     startBreathing(charData) {
-        const { sprite, baseScale } = charData;
+        if (!charData || !charData.sprite) return;
+        
+        const { sprite, baseScale = 1 } = charData;
         const amount = this.config.character.breathingAmount;
         const speed = this.config.character.breathingSpeed;
+        
+        // effects 객체가 없으면 생성
+        if (!charData.effects) charData.effects = {};
+        
+        // 기존 브레싱 있으면 정리
+        if (charData.effects.breathing) {
+            charData.effects.breathing.kill();
+        }
         
         charData.effects.breathing = gsap.to(sprite.scale, {
             y: baseScale * (1 + amount),
@@ -641,12 +668,14 @@ const DDOOAction = {
     
     // 브레싱 일시정지/재개
     pauseBreathing(charData) {
+        if (!charData || !charData.effects) return;
         if (charData.effects.breathing) {
             charData.effects.breathing.pause();
         }
     },
     
     resumeBreathing(charData) {
+        if (!charData || !charData.effects) return;
         if (charData.effects.breathing) {
             charData.effects.breathing.resume();
         }
@@ -1003,8 +1032,20 @@ const DDOOAction = {
                 }
                 
                 // 📍 게임 이벤트 처리 (애니메이션 없이 이벤트만)
-                if (!step.anim) {
+                if (!step.anim && !step.projectile) {
                     await this.processStepEvents(step, options);
+                    continue;
+                }
+                
+                // 🎯 관통형 발사체 (시퀀스 레벨)
+                if (step.projectile) {
+                    if (this.config.debug) console.log(`[DDOOAction] 🎯 Projectile: ${step.projectile.type}`);
+                    
+                    const promise = this.playProjectile(step.projectile, container, sprite, options);
+                    
+                    if (step.wait) {
+                        await promise;
+                    }
                     continue;
                 }
                 
@@ -1038,21 +1079,23 @@ const DDOOAction = {
                     const animTarget = actualAnimData.target || (animId.startsWith('enemy') ? 'enemy' : 'player');
                     
                     if (animTarget === 'enemy') {
-                        // 적 캐릭터 가져오기
-                        const enemyChar = this.characters.get('enemy');
-                        if (enemyChar) {
-                            stepContainer = enemyChar.container;
-                            stepSprite = enemyChar.sprite;
-                            stepOriginX = enemyChar.baseX;
-                            stepOriginY = enemyChar.baseY;
-                            stepDir = -1;
-                        } else if (options.targetContainer && options.targetSprite) {
-                            // 옵션에서 타겟 정보 사용
+                        // 🔥 옵션의 타겟을 우선 사용 (단일 타겟 공격에서 정확한 대상!)
+                        if (options.targetContainer && options.targetSprite) {
                             stepContainer = options.targetContainer;
                             stepSprite = options.targetSprite;
                             stepOriginX = options.targetBaseX || stepContainer.x;
                             stepOriginY = options.targetBaseY || stepContainer.y;
                             stepDir = -1;
+                        } else {
+                            // 옵션에 타겟 없으면 등록된 'enemy' 캐릭터 사용 (폴백)
+                            const enemyChar = this.characters.get('enemy');
+                            if (enemyChar) {
+                                stepContainer = enemyChar.container;
+                                stepSprite = enemyChar.sprite;
+                                stepOriginX = enemyChar.baseX;
+                                stepOriginY = enemyChar.baseY;
+                                stepDir = -1;
+                            }
                         }
                     }
                     
@@ -1097,10 +1140,18 @@ const DDOOAction = {
         
         // ⚠️ 최종 안전장치: 호출자 컨테이너/스프라이트 강제 복원!
         try {
+            // 🔍 호출자의 baseScale 찾기
+            let callerBaseScale = 1;
+            this.characters.forEach((char) => {
+                if (char.container === container) {
+                    callerBaseScale = char.baseScale || 1;
+                }
+            });
+            
             if (sprite) {
                 sprite.alpha = 1;
                 sprite.rotation = 0;
-                if (sprite.scale) sprite.scale.set(1, 1);
+                if (sprite.scale) sprite.scale.set(callerBaseScale, callerBaseScale);
             }
             if (container) {
                 gsap.killTweensOf(container);  // 진행 중인 트윈 정리!
@@ -1119,7 +1170,8 @@ const DDOOAction = {
                 gsap.killTweensOf(playerChar.sprite);
                 playerChar.sprite.alpha = 1;
                 playerChar.sprite.rotation = 0;
-                if (playerChar.sprite.scale) playerChar.sprite.scale.set(1, 1);
+                const pScale = playerChar.baseScale || 1;
+                if (playerChar.sprite.scale) playerChar.sprite.scale.set(pScale, pScale);
                 playerChar.container.x = playerChar.baseX;
                 playerChar.container.y = playerChar.baseY;
             }
@@ -1127,20 +1179,23 @@ const DDOOAction = {
             console.warn('[DDOOAction] 플레이어 복원 에러:', e);
         }
         
-        // ⚠️ 적 캐릭터도 상태 복원 (죽었으면 건너뜀)
+        // ⚠️ 모든 적 캐릭터 상태 복원! (개별 baseScale 사용)
         try {
-            const enemyChar = this.characters.get('enemy');
-            if (enemyChar && enemyChar.sprite && enemyChar.container && enemyChar.sprite.parent) {
-                gsap.killTweensOf(enemyChar.container);
-                gsap.killTweensOf(enemyChar.sprite);
-                enemyChar.sprite.alpha = 1;
-                enemyChar.sprite.rotation = 0;
-                if (enemyChar.sprite.scale) enemyChar.sprite.scale.set(1, 1);
-                enemyChar.container.x = enemyChar.baseX;
-                enemyChar.container.y = enemyChar.baseY;
-            }
+            this.characters.forEach((char, id) => {
+                if (id === 'player') return;  // 플레이어는 위에서 처리
+                if (!char.sprite || !char.container || !char.sprite.parent) return;  // 죽은 적 스킵
+                
+                gsap.killTweensOf(char.container);
+                gsap.killTweensOf(char.sprite);
+                char.sprite.alpha = 1;
+                char.sprite.rotation = 0;
+                const eScale = char.baseScale || 1;
+                if (char.sprite.scale) char.sprite.scale.set(eScale, eScale);
+                char.container.x = char.baseX;
+                char.container.y = char.baseY;
+            });
         } catch (e) {
-            // 적이 죽었으면 무시
+            console.warn('[DDOOAction] 적 복원 에러:', e);
         }
         
         // 📷 카메라 리셋
@@ -1206,13 +1261,25 @@ const DDOOAction = {
                 const jumpHeight = Math.min(40 + totalDist * 0.1, 80);  // 점프 높이 줄임
                 const tl = gsap.timeline();
                 
-                // 1️⃣ 점프 준비 (웅크림) - 빠르게
+                // 🎨 잔상 생성 함수 (회색 톤)
+                const createJumpAfterimage = (alpha = 0.5, tint = 0x666666) => {
+                    if (this.config.enableAfterimage && sprite && sprite.texture) {
+                        this.createAfterimage(sprite, container, alpha, tint);
+                    }
+                };
+                
+                // 1️⃣ 점프 준비 (웅크림) - 빠르게 + 잔상!
                 tl.to(container.scale, {
                     x: baseScale * 1.1,
                     y: baseScale * 0.85,
                     duration: 0.03,
-                    ease: 'power2.in'
+                    ease: 'power2.in',
+                    onStart: () => createJumpAfterimage(0.6, 0x555555)
                 });
+                
+                // 🎨 잔상 트래킹용 변수
+                let lastAfterimageTime = 0;
+                const afterimageInterval = 35;  // 35ms마다 잔상 생성
                 
                 // 2️⃣ 도약! (위로 튀면서 x 이동)
                 tl.to(container, {
@@ -1227,6 +1294,12 @@ const DDOOAction = {
                             const heightRatio = Math.abs(container.y - originY) / jumpHeight;
                             shadow.scale.set(1 - heightRatio * 0.4);
                             shadow.alpha = (1 - heightRatio * 0.3) * (this.config.character.shadowAlpha || 0.4);
+                        }
+                        // 🎨 주기적 잔상 생성
+                        const now = performance.now();
+                        if (now - lastAfterimageTime > afterimageInterval) {
+                            createJumpAfterimage(0.4, 0x666666);
+                            lastAfterimageTime = now;
                         }
                     }
                 }, '<');
@@ -1249,6 +1322,12 @@ const DDOOAction = {
                             shadow.scale.set(1 - heightRatio * 0.4);
                             shadow.alpha = (1 - heightRatio * 0.3) * (this.config.character.shadowAlpha || 0.4);
                         }
+                        // 🎨 착지 중 잔상
+                        const now = performance.now();
+                        if (now - lastAfterimageTime > afterimageInterval) {
+                            createJumpAfterimage(0.35, 0x555555);
+                            lastAfterimageTime = now;
+                        }
                     }
                 });
                 
@@ -1257,7 +1336,8 @@ const DDOOAction = {
                     x: baseScale * 1.1,
                     y: baseScale * 0.9,
                     duration: 0.03,
-                    ease: 'power4.out'
+                    ease: 'power4.out',
+                    onStart: () => createJumpAfterimage(0.5, 0x444444)
                 }, '-=0.01');
                 
                 // 5️⃣ 복귀 (빠른 탄성)
@@ -1298,11 +1378,19 @@ const DDOOAction = {
     
     // 🔧 복귀 완료 처리 (공통)
     finishReturnToOrigin(container, sprite, originX, originY, resolve) {
+        // 🔍 캐릭터의 baseScale 찾기
+        let baseScale = 1;
+        this.characters.forEach((char) => {
+            if (char.container === container) {
+                baseScale = char.baseScale || 1;
+            }
+        });
+        
         // ⚠️ 최종 확실한 복원 (안전 체크)
         if (sprite && sprite.parent) {
             sprite.alpha = 1;
             sprite.rotation = 0;
-            if (sprite.scale) sprite.scale.set(1, 1);
+            if (sprite.scale) sprite.scale.set(baseScale, baseScale);
         }
         container.x = originX;
         container.y = originY;
@@ -1750,6 +1838,13 @@ const DDOOAction = {
     applyColorGrade(effect, duration = 150) {
         if (!this.config.enableColorGrade || !this.stageContainer) return;
         
+        // ⚠️ 'hit' 효과는 전역 필터 대신 개별 스프라이트 tint 사용 (즉시 리턴!)
+        if (effect === 'hit') {
+            // 전체 화면에 적용하면 모든 캐릭터가 그레이스케일됨
+            // enemy.hit.json의 tint 키프레임으로 대체
+            return;
+        }
+        
         // 필터가 없으면 생성
         if (!this.colorFilter && typeof PIXI !== 'undefined' && PIXI.ColorMatrixFilter) {
             this.colorFilter = new PIXI.ColorMatrixFilter();
@@ -1768,21 +1863,7 @@ const DDOOAction = {
         
         // 효과별 처리
         switch (effect) {
-            case 'hit':  // 피격 - 붉은색 플래시
-                this.colorFilter.reset();
-                this.colorFilter.saturate(0.3);
-                gsap.to(this.colorFilter, {
-                    saturate: 1,
-                    duration: dur,
-                    ease: 'power2.out'
-                });
-                // 임시 틴트 효과
-                if (this.stageContainer.tint !== undefined) {
-                    gsap.fromTo(this.stageContainer, 
-                        { tint: 0xff6666 },
-                        { tint: 0xffffff, duration: dur }
-                    );
-                }
+            case 'hit':  // 위에서 이미 리턴됨
                 break;
                 
             case 'critical':  // 크리티컬 - 흑백 플래시
@@ -1897,22 +1978,25 @@ const DDOOAction = {
                 stepEvents
             } = options;
             
-            // ⚠️ 중요: baseScale은 항상 1.0으로 고정!
-            const baseScale = 1.0;
-            const startX = container.x;
-            
-            // 애니메이션 시작 전 스케일 정규화
-            if (data.keyframes && data.keyframes[0]) {
-                const firstKf = data.keyframes[0];
-                sprite.scale.set(firstKf.scaleX ?? 1, firstKf.scaleY ?? 1);
-            }
-            
-            // 그림자 찾기 (캐릭터 ID로)
+            // 🔍 캐릭터의 실제 baseScale 찾기!
             const charId = [...this.characters.keys()].find(
                 id => this.characters.get(id)?.container === container
             );
             const charData = charId ? this.characters.get(charId) : null;
+            const charBaseScale = charData?.baseScale || 1.0;
             const shadow = charData?.shadow;
+            
+            // ⚠️ 애니메이션 중 스케일은 charBaseScale 기준!
+            const baseScale = charBaseScale;
+            const startX = container.x;
+            
+            // 애니메이션 시작 전 스케일 정규화 (baseScale 적용!)
+            if (data.keyframes && data.keyframes[0]) {
+                const firstKf = data.keyframes[0];
+                const sx = (firstKf.scaleX ?? 1) * baseScale;
+                const sy = (firstKf.scaleY ?? 1) * baseScale;
+                sprite.scale.set(sx, sy);
+            }
             
             // 🎯 현재 애니메이션 대상 스프라이트 저장 (shatter: "self" 용)
             this.currentSprite = sprite;
@@ -1928,14 +2012,37 @@ const DDOOAction = {
                     }
                 },
                 onComplete: () => {
-                    // ⚠️ 마지막 키프레임 상태로 확실히 설정
+                    // ⚠️ 마지막 키프레임 상태로 확실히 설정 (baseScale 적용!)
                     const lastKf = data.keyframes[data.keyframes.length - 1];
                     if (lastKf && sprite && sprite.scale) {
                         if (lastKf.alpha !== undefined) sprite.alpha = lastKf.alpha;
                         if (lastKf.scaleX !== undefined && lastKf.scaleY !== undefined) {
-                            sprite.scale.set(lastKf.scaleX, lastKf.scaleY);
+                            // 🔥 baseScale을 곱해서 원래 크기 유지!
+                            const finalScaleX = (lastKf.scaleX ?? 1) * baseScale;
+                            const finalScaleY = (lastKf.scaleY ?? 1) * baseScale;
+                            sprite.scale.set(finalScaleX, finalScaleY);
+                            
+                            // 🔧 아웃라인 스프라이트도 스케일 복원!
+                            if (container.children) {
+                                container.children.forEach(child => {
+                                    if (child.isOutline) {
+                                        child.scale.set(finalScaleX, finalScaleY);
+                                    }
+                                });
+                            }
                         }
-                        if (lastKf.rotation !== undefined) sprite.rotation = lastKf.rotation;
+                        if (lastKf.rotation !== undefined) {
+                            sprite.rotation = lastKf.rotation;
+                            
+                            // 🔧 아웃라인 스프라이트도 회전 복원!
+                            if (container.children) {
+                                container.children.forEach(child => {
+                                    if (child.isOutline) {
+                                        child.rotation = lastKf.rotation;
+                                    }
+                                });
+                            }
+                        }
                     }
                     resolve();
                 }
@@ -2107,21 +2214,49 @@ const DDOOAction = {
                     tl.to(container, { y: baseY + kf.y, duration: dur, ease }, '<');
                 }
                 
-                // 스케일
+                // 스케일 - 🔧 아웃라인 스프라이트도 함께 스케일!
                 if (kf.scaleX !== undefined || kf.scaleY !== undefined) {
                     const scaleX = (kf.scaleX ?? 1) * baseScale;
                     const scaleY = (kf.scaleY ?? 1) * baseScale;
                     tl.to(sprite.scale, { x: scaleX, y: scaleY, duration: dur, ease }, '<');
+                    
+                    // 🔧 컨테이너 내 아웃라인 스프라이트도 스케일 동기화!
+                    if (container.children) {
+                        container.children.forEach(child => {
+                            if (child.isOutline) {
+                                tl.to(child.scale, { x: scaleX, y: scaleY, duration: dur, ease }, '<');
+                            }
+                        });
+                    }
                 }
                 
-                // 회전
+                // 회전 - 🔧 아웃라인 스프라이트도 함께 회전!
                 if (kf.rotation !== undefined) {
                     tl.to(sprite, { rotation: kf.rotation * dir, duration: dur, ease }, '<');
+                    
+                    // 🔧 컨테이너 내 아웃라인 스프라이트도 회전 동기화!
+                    if (container.children) {
+                        container.children.forEach(child => {
+                            if (child.isOutline) {
+                                tl.to(child, { rotation: kf.rotation * dir, duration: dur, ease }, '<');
+                            }
+                        });
+                    }
                 }
                 
-                // 알파
+                // 알파 - 🔧 아웃라인 스프라이트도 함께!
                 if (kf.alpha !== undefined) {
                     tl.to(sprite, { alpha: kf.alpha, duration: dur, ease }, '<');
+                    
+                    // 🔧 컨테이너 내 아웃라인 스프라이트도 알파 동기화!
+                    if (container.children) {
+                        container.children.forEach(child => {
+                            if (child.isOutline) {
+                                // 아웃라인은 약간 더 투명하게
+                                tl.to(child, { alpha: kf.alpha * 0.9, duration: dur, ease }, '<');
+                            }
+                        });
+                    }
                 }
                 
                 // VFX
@@ -2200,6 +2335,13 @@ const DDOOAction = {
                     }, null, '<');
                 }
                 
+                // 🎯 관통형 발사체 (차크람 등)
+                if (kf.projectile) {
+                    tl.call(async () => {
+                        await this.playProjectile(kf.projectile, container, sprite, options);
+                    }, null, '<');
+                }
+                
                 // 📷 카메라 줌
                 if (kf.camera && this.config.enableCamera) {
                     tl.call(() => {
@@ -2241,8 +2383,34 @@ const DDOOAction = {
                 // 잔상
                 if (kf.afterimage && this.config.enableAfterimage) {
                     tl.call(() => {
-                        const tint = data.target === 'player' ? 0x60a5fa : 0xef4444;
-                        this.createAfterimage(sprite, container, 0.7, tint);
+                        const afterTint = data.target === 'player' ? 0x60a5fa : 0xef4444;
+                        this.createAfterimage(sprite, container, 0.7, afterTint);
+                    }, null, '<');
+                }
+                
+                // 🔴 틴트 플래시 (피격 시 빠른 색상 변화)
+                if (kf.tint) {
+                    tl.call(() => {
+                        const tintColor = typeof kf.tint.color === 'string' 
+                            ? parseInt(kf.tint.color.replace('#', ''), 16) 
+                            : kf.tint.color;
+                        const tintDuration = (kf.tint.duration || 30) / 1000;
+                        
+                        if (sprite && sprite.tint !== undefined) {
+                            sprite.tint = tintColor;
+                            
+                            // duration 후 원래 색상으로 복귀 (다음 tint가 없을 경우)
+                            gsap.delayedCall(tintDuration, () => {
+                                if (sprite && sprite.tint !== undefined) {
+                                    // 다음 키프레임의 tint가 있으면 복귀하지 않음
+                                    const nextKfIdx = idx + 1;
+                                    const nextKf = data.keyframes[nextKfIdx];
+                                    if (!nextKf || !nextKf.tint) {
+                                        sprite.tint = 0xffffff;
+                                    }
+                                }
+                            });
+                        }
                     }, null, '<');
                 }
                 
@@ -2293,7 +2461,14 @@ const DDOOAction = {
         ghost.anchor.set(sourceSprite.anchor.x, sourceSprite.anchor.y);
         ghost.x = sourceContainer.x;
         ghost.y = sourceContainer.y;
-        ghost.scale.set(sourceSprite.scale.x, sourceSprite.scale.y);
+        
+        // 🔧 컨테이너 스케일도 반영! (컨테이너가 스케일링되어 있을 수 있음)
+        const containerScaleX = sourceContainer.scale?.x || 1;
+        const containerScaleY = sourceContainer.scale?.y || 1;
+        ghost.scale.set(
+            sourceSprite.scale.x * containerScaleX, 
+            sourceSprite.scale.y * containerScaleY
+        );
         ghost.rotation = sourceSprite.rotation;
         ghost.alpha = alpha;
         ghost.tint = tint;
@@ -3350,6 +3525,203 @@ const DDOOAction = {
         };
         
         shake();
+    },
+    
+    // ==================== 🎯 관통형 발사체 시스템 ====================
+    async playProjectile(config, container, sprite, options = {}) {
+        const {
+            type = 'chakram',      // 발사체 타입
+            piercing = true,       // 관통 여부
+            targetAll = true,      // 모든 적 타겟
+            reverse = false,       // 역방향 (적→플레이어)
+            speed = 25,            // 속도 (픽셀/프레임)
+            onHitEach = true,      // 각 타겟 타격 시 콜백
+            damage = 4             // 데미지
+        } = config;
+        
+        console.log(`[DDOOAction] 🎯 playProjectile: ${type}, reverse=${reverse}, speed=${speed}`);
+        
+        return new Promise(async (resolve) => {
+            // 🎯 타겟 목록 수집
+            let targets = [];
+            
+            // 1️⃣ 인게임: gameState.enemies
+            if (typeof gameState !== 'undefined' && gameState.enemies && gameState.enemies.length > 0) {
+                gameState.enemies.forEach((enemy, idx) => {
+                    if (enemy.hp <= 0) return;
+                    
+                    let pos = null;
+                    
+                    // EnemyRenderer에서 위치 가져오기
+                    if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                        pos = EnemyRenderer.getEnemyPosition(enemy);
+                    }
+                    
+                    if (pos) {
+                        targets.push({
+                            enemy,
+                            x: pos.centerX,
+                            y: pos.centerY,
+                            idx
+                        });
+                    }
+                });
+            }
+            
+            // 2️⃣ test_animation.html: DDOOAction.characters에서 enemy 찾기
+            if (targets.length === 0 && this.characters.size > 0) {
+                this.characters.forEach((charData, id) => {
+                    if (id.startsWith('enemy') || id === 'target') {
+                        const pos = charData.container;
+                        if (pos) {
+                            targets.push({
+                                enemy: { name: id, hp: 100 },
+                                x: pos.x,
+                                y: pos.y - 50,  // 중심점
+                                idx: targets.length,
+                                charData
+                            });
+                        }
+                    }
+                });
+            }
+            
+            if (targets.length === 0) {
+                console.warn('[DDOOAction] playProjectile: 타겟 없음!');
+                resolve();
+                return;
+            }
+            
+            console.log(`[DDOOAction] 🎯 타겟 ${targets.length}개:`, targets.map(t => `${t.enemy?.name || 'enemy'}(${t.x.toFixed(0)},${t.y.toFixed(0)})`));
+            
+            // X 좌표로 정렬 (왼쪽→오른쪽)
+            targets.sort((a, b) => a.x - b.x);
+            
+            // 역방향이면 순서 뒤집기 (오른쪽→왼쪽)
+            if (reverse) {
+                targets.reverse();
+            }
+            
+            // 🎯 플레이어 위치 (screen 좌표)
+            let playerX, playerY;
+            
+            if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.initialized) {
+                const playerPos = PlayerRenderer.getPlayerPosition();
+                if (playerPos) {
+                    playerX = playerPos.centerX;
+                    playerY = playerPos.centerY;
+                }
+            }
+            
+            // test_animation.html용 폴백
+            if (!playerX) {
+                const playerChar = this.characters.get('player');
+                if (playerChar) {
+                    playerX = playerChar.container.x;
+                    playerY = playerChar.container.y - 50;
+                } else {
+                    playerX = container?.x || 300;
+                    playerY = (container?.y || 400) - 50;
+                }
+            }
+            
+            // 🎯 시작점/끝점 계산
+            let startX, startY, endX, endY;
+            const firstTarget = targets[0];
+            const lastTarget = targets[targets.length - 1];
+            
+            if (reverse) {
+                // 🔄 되돌아오기: 화면 오른쪽 끝 → 플레이어 (플레이어에서 사라짐!)
+                startX = window.innerWidth + 100;  // 화면 밖 오른쪽에서 시작
+                startY = lastTarget.y;
+                endX = playerX;  // 플레이어 위치에서 정확히 종료!
+                endY = playerY;
+            } else {
+                // 🚀 던지기: 플레이어 → 화면 밖 (적들 뚫고 나감)
+                startX = playerX;
+                startY = playerY;
+                endX = window.innerWidth + 200;  // 화면 밖으로 나감
+                endY = lastTarget.y;
+            }
+            
+            console.log(`[DDOOAction] 🚀 발사: (${startX.toFixed(0)},${startY.toFixed(0)}) → (${endX.toFixed(0)},${endY.toFixed(0)})`);
+            
+            // 🎯 비행 속도 (픽셀/ms)
+            const flySpeed = speed * 0.06;  // 60fps 기준
+            
+            // 각 타겟까지의 히트 타이밍 계산
+            targets.forEach((target) => {
+                const dist = Math.sqrt(Math.pow(target.x - startX, 2) + Math.pow(target.y - startY, 2));
+                target.hitTime = dist / flySpeed;  // ms
+                console.log(`[DDOOAction]   - ${target.enemy?.name || 'enemy'}: dist=${dist.toFixed(0)}, hitTime=${target.hitTime.toFixed(0)}ms`);
+            });
+            
+            // 🎯 DDOOChakram으로 발사체 표시!
+            if (typeof DDOOChakram !== 'undefined') {
+                console.log('[DDOOAction] 🎮 DDOOChakram.chakram 호출!');
+                DDOOChakram.chakram(
+                    startX, startY,
+                    endX, endY,
+                    {
+                        color: '#ffd700',
+                        glowColor: '#ff8c00',
+                        size: 80,  // 크기 증가!
+                        speed: speed,
+                        spinSpeed: 35,
+                        passThrough: !reverse,  // 던지기=관통, 되돌아오기=플레이어에서 멈춤
+                        stopAtTarget: reverse   // 되돌아올 때 플레이어에서 정확히 멈춤
+                    }
+                );
+            } else {
+                console.warn('[DDOOAction] ⚠️ DDOOChakram 없음!');
+            }
+            
+            // 🎯 각 타겟 순차 타격!
+            targets.forEach((target, i) => {
+                setTimeout(() => {
+                    console.log(`[DDOOAction] 💥 HIT ${i+1}/${targets.length}: ${target.enemy?.name || 'enemy'}`);
+                    
+                    // 히트 이펙트 (DDOOChakram 사용)
+                    if (typeof DDOOChakram !== 'undefined') {
+                        DDOOChakram.sparks(target.x, target.y, { color: '#ffd700', count: 12, speed: 15 });
+                        DDOOChakram.impact(target.x, target.y, { color: '#ff8c00', size: 60 });
+                    }
+                    
+                    // 스크린쉐이크 (매 타격마다 약하게)
+                    this.screenShake(6);
+                    
+                    // 피격 애니메이션 (인게임)
+                    if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled && target.enemy) {
+                        EnemyRenderer.playHitAnimation(target.enemy, damage);
+                    }
+                    
+                    // 피격 애니메이션 (test_animation.html)
+                    if (target.charData) {
+                        const cont = target.charData.container;
+                        const spr = target.charData.sprite;
+                        if (cont && spr && typeof gsap !== 'undefined') {
+                            gsap.timeline()
+                                .to(cont, { x: cont.x + 15, duration: 0.05 })
+                                .to(spr, { tint: 0xff0000, duration: 0.05 }, '<')
+                                .to(cont, { x: cont.x, duration: 0.15 })
+                                .to(spr, { tint: 0xffffff, duration: 0.15 }, '<');
+                        }
+                    }
+                    
+                    // onDamage 콜백
+                    if (onHitEach && options.onDamage) {
+                        options.onDamage(damage, target.enemy);
+                    }
+                    
+                }, target.hitTime);
+            });
+            
+            // 마지막 타겟 통과 후 완료
+            const lastHitTime = Math.max(...targets.map(t => t.hitTime));
+            setTimeout(() => {
+                resolve();
+            }, lastHitTime + 200);
+        });
     },
     
     // ==================== 유틸리티 ====================

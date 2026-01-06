@@ -5,12 +5,17 @@
     "type": "once",
     "priority": 19,
     "duration": 400,
+    "vfx": "hit",
+    "shake": 16,
+    "hitstop": 70,
     "keyframes": [
-        { "x": 5, "y": -52, "scaleX": 0.8, "scaleY": 1.2, "alpha": 0.88, "rotation": -0.05, "duration": 0 },
-        { "x": 0, "y": 0, "scaleX": 1.4, "scaleY": 0.6, "alpha": 0.6, "rotation": 0.1, "duration": 60, "ease": "power4.out", "color": "critical", "shatter": { "target": "self", "grid": 10, "force": 15, "life": 500, "hideTime": 150, "gravity": 0.5 }, "vfx": "ground_impact" },
-        { "x": 10, "y": 5, "scaleX": 1.1, "scaleY": 0.9, "alpha": 0.7, "rotation": 0.05, "duration": 70, "ease": "power2.out" },
-        { "x": 20, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 0.8, "rotation": 0, "duration": 80, "ease": "power2.out", "vfx": "gold_orbs_rise" },
-        { "x": 15, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 0.9, "rotation": 0, "duration": 90, "ease": "power2.out" },
+        { "x": 5, "y": -52, "scaleX": 0.85, "scaleY": 1.15, "alpha": 0.90, "rotation": -0.05, "duration": 0 },
+        { "x": 0, "y": 0, "scaleX": 1.15, "scaleY": 0.85, "alpha": 0.80, "rotation": 0.08, "duration": 10, "ease": "power4.out", "tint": { "color": "#ffffff", "duration": 10 }, "shatter": { "target": "self", "grid": 10, "force": 15, "life": 500, "hideTime": 150, "gravity": 0.5 } },
+        { "x": 2, "y": 2, "scaleX": 1.12, "scaleY": 0.88, "alpha": 0.78, "rotation": 0.09, "duration": 10, "tint": { "color": "#ff0000", "duration": 10 } },
+        { "x": 4, "y": 3, "scaleX": 1.10, "scaleY": 0.90, "alpha": 0.76, "rotation": 0.10, "duration": 10, "tint": { "color": "#ffffff", "duration": 10 } },
+        { "x": 6, "y": 4, "scaleX": 1.08, "scaleY": 0.92, "alpha": 0.78, "rotation": 0.08, "duration": 12, "tint": { "color": "#ff0000", "duration": 12 } },
+        { "x": 15, "y": 3, "scaleX": 1.02, "scaleY": 0.98, "alpha": 0.85, "rotation": 0.04, "duration": 60, "ease": "power2.out" },
+        { "x": 20, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 0.90, "rotation": 0, "duration": 80, "ease": "power2.out" },
         { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 100, "ease": "power2.out" }
     ]
 }

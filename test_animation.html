@@ -13,10 +13,11 @@
     <!-- DDOO Action Engine v3.2 + 모듈 -->
     <script src="ddoo-utils.js?v=3"></script>
     <script src="ddoo-draw.js?v=4"></script>
-    <script src="ddoo-action.js?v=36"></script>
+    <script src="ddoo-chakram.js?v=2"></script>
+    <script src="ddoo-action.js?v=59"></script>
     <script src="ddoo-vfx-3d.js?v=3"></script>
     <!-- 🎁 번들 (fetch 없이 즉시 로드!) -->
-    <script src="anim-bundle.js?v=18"></script>
+    <script src="anim-bundle.js?v=27"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -716,11 +717,11 @@
             }
             
             // 캐릭터 위치 재계산
-            const groundY = height * 0.75;
+            const groundY = height * 0.78;  // 바닥 위치
             config.baseY = groundY;
-            config.playerBaseX = width * 0.22;
-            const enemyStartX = width * 0.58;
-            const enemySpacing = width * 0.12;
+            config.playerBaseX = width * 0.12;  // 플레이어 왼쪽 끝
+            const enemyStartX = width * 0.50;   // 적 시작 위치 (중앙)
+            const enemySpacing = width * 0.18;  // 적 간격 (넓게)
             
             // 플레이어 위치 업데이트
             if (playerContainer) {
@@ -834,13 +835,13 @@
         }
         
         async function createCharacters(width, height) {
-            const groundY = height * 0.75;  // 바닥을 약간 낮춤
+            const groundY = height * 0.78;  // 바닥 위치
             config.baseY = groundY;
-            config.playerBaseX = width * 0.22;  // 플레이어 위치
+            config.playerBaseX = width * 0.12;  // 플레이어 왼쪽 끝
             
-            // 적 위치 계산 (3명 배치) - 더 오른쪽에, 간격 좁게
-            const enemyStartX = width * 0.58;
-            const enemySpacing = width * 0.12;  // 간격 줄임
+            // 적 위치 계산 (3명 배치) - 넓은 간격
+            const enemyStartX = width * 0.50;   // 적 시작 위치 (중앙)
+            const enemySpacing = width * 0.18;  // 적 간격 (넓게)
             
             // 🎮 DDOOAction 엔진 사용!
             const useDDOOEngine = typeof DDOOAction !== 'undefined';
@@ -867,7 +868,7 @@
                     texture: playerTex,
                     x: config.playerBaseX,
                     y: groundY,
-                    scale: 1.0,
+                    scale: 0.65,  // 캐릭터 크기 줄임
                     team: 'player',
                     enableEffects: true
                 });
@@ -892,8 +893,8 @@
                     const enemyId = i === 0 ? 'enemy' : `enemy${i + 1}`;
                     
                     // 원근감: 뒤로 갈수록 작고 높이 올라감
-                    const depthScale = 0.75 - (i * 0.08);
-                    const depthY = groundY - (i * 15);  // 뒤로 갈수록 약간 위로
+                    const depthScale = 0.55 - (i * 0.05);  // 캐릭터 크기 줄임
+                    const depthY = groundY - (i * 12);  // 뒤로 갈수록 약간 위로
                     const depthZIndex = 50 - (i * 10);  // 앞에 있을수록 높은 zIndex
                     
                     const enemyData = DDOOAction.createCharacter(enemyId, {
@@ -940,7 +941,7 @@
                     const tex = await PIXI.Assets.load('hero.png');
                     playerSprite = new PIXI.Sprite(tex);
                     playerSprite.anchor.set(0.5, 1);
-                    playerSprite.scale.set(1.0);
+                    playerSprite.scale.set(0.65);  // 캐릭터 크기 줄임
                 } catch (e) {
                     playerSprite = createFallback(0x60a5fa, 'P');
                 }
@@ -953,8 +954,8 @@
                 
                 for (let i = 0; i < config.enemyCount; i++) {
                     const enemyX = enemyStartX + (i * enemySpacing);
-                    const depthScale = 0.75 - (i * 0.08);
-                    const depthY = groundY - (i * 15);
+                    const depthScale = 0.55 - (i * 0.05);  // 캐릭터 크기 줄임
+                    const depthY = groundY - (i * 12);
                     
                     const container = new PIXI.Container();
                     container.x = enemyX;
@@ -1084,8 +1085,36 @@
         }
         
         function startBreathing() {
-            gsap.to(playerSprite.scale, { y: 1.02, duration: 1.8, repeat: -1, yoyo: true, ease: 'sine.inOut' });
-            gsap.to(enemySprite.scale, { y: 1.02, duration: 1.5, repeat: -1, yoyo: true, ease: 'sine.inOut' });
+            // DDOOAction이 숨쉬기를 이미 처리하면 스킵!
+            if (typeof DDOOAction !== 'undefined' && DDOOAction.initialized && DDOOAction.config.enableBreathing) {
+                log('info', '🫁 DDOOAction 숨쉬기 사용 중 (로컬 스킵)');
+                return;
+            }
+            
+            // 폴백: DDOOAction 없을 때 로컬 숨쉬기
+            // 플레이어 숨쉬기 (기본 스케일 기준)
+            const playerBaseScale = playerSprite.scale.x || 0.65;
+            gsap.to(playerSprite.scale, { 
+                y: playerBaseScale * 1.03,  // 기본 스케일의 103%
+                duration: 1.8, 
+                repeat: -1, 
+                yoyo: true, 
+                ease: 'sine.inOut' 
+            });
+            
+            // 적 숨쉬기 (각 적의 기본 스케일 기준)
+            enemies.forEach((e, i) => {
+                if (e.sprite) {
+                    const enemyBaseScale = e.scale || (0.55 - (i * 0.05));
+                    gsap.to(e.sprite.scale, { 
+                        y: enemyBaseScale * 1.03,  // 기본 스케일의 103%
+                        duration: 1.5 + (i * 0.2),  // 약간씩 다른 속도
+                        repeat: -1, 
+                        yoyo: true, 
+                        ease: 'sine.inOut' 
+                    });
+                }
+            });
         }
         
         // ==================== 잔상 시스템 ====================
@@ -1228,7 +1257,19 @@
         function renderAnimList() {
             const container = document.getElementById('animList');
             container.innerHTML = '';
-            animCache.forEach((data, id) => {
+            
+            // 🔥 정렬: card > player > enemy > 기타
+            const sortOrder = { card: 0, player: 1, enemy: 2 };
+            const sorted = [...animCache.entries()].sort((a, b) => {
+                const typeA = a[0].split('.')[0];
+                const typeB = b[0].split('.')[0];
+                const orderA = sortOrder[typeA] ?? 99;
+                const orderB = sortOrder[typeB] ?? 99;
+                if (orderA !== orderB) return orderA - orderB;
+                return a[0].localeCompare(b[0]);  // 같은 타입이면 알파벳순
+            });
+            
+            sorted.forEach(([id, data]) => {
                 const type = id.split('.')[0];
                 const name = id.split('.')[1];
                 const item = document.createElement('div');
@@ -1862,7 +1903,7 @@
             playerContainer.x = config.playerBaseX;
             playerContainer.y = config.baseY;
             playerSprite.rotation = 0;
-            playerSprite.scale.set(1.0);
+            playerSprite.scale.set(0.65);  // 캐릭터 크기 줄임
             playerSprite.alpha = 1;
             
             // 모든 적 리셋
@@ -1870,7 +1911,7 @@
                 e.container.x = e.baseX;
                 e.container.y = e.baseY || config.baseY;
                 e.sprite.rotation = 0;
-                e.sprite.scale.set(e.scale || (0.75 - (i * 0.08)));
+                e.sprite.scale.set(e.scale || (0.55 - (i * 0.05)));
                 e.sprite.alpha = 1;
             });
             
@@ -1889,9 +1930,15 @@
                 if (playerChar) {
                     playerChar.sprite.alpha = 1;
                     playerChar.sprite.rotation = 0;
-                    playerChar.sprite.scale.set(1, 1);
+                    const pScale = playerChar.baseScale || 0.65;
+                    playerChar.sprite.scale.set(pScale, pScale);
                     playerChar.container.x = config.playerBaseX;
                     playerChar.container.y = config.baseY;
+                    
+                    // 🫁 숨쉬기 다시 시작!
+                    if (DDOOAction.config.enableBreathing) {
+                        DDOOAction.startBreathing(playerChar);
+                    }
                 }
                 
                 // 모든 적 리셋
@@ -1900,10 +1947,15 @@
                     if (charData) {
                         charData.sprite.alpha = 1;
                         charData.sprite.rotation = 0;
-                        const scale = e.scale || (0.75 - (i * 0.08));
+                        const scale = e.scale || (0.55 - (i * 0.05));
                         charData.sprite.scale.set(scale, scale);
                         charData.container.x = e.baseX;
                         charData.container.y = e.baseY || config.baseY;
+                        
+                        // 🫁 숨쉬기 다시 시작!
+                        if (DDOOAction.config.enableBreathing) {
+                            DDOOAction.startBreathing(charData);
+                        }
                     }
                 });
             }

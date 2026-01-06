@@ -7,6 +7,6 @@
     "steps": [
         { "anim": "player.dagger_throw", "wait": true },
         { "delay": 120 },
-        { "anim": "enemy.dagger_hit", "wait": true, "damage": 4 }
+        { "anim": "enemy.hit", "wait": true, "damage": 4 }
     ]
 }
