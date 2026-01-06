@@ -316,11 +316,18 @@ const PlayerRenderer = {
         this.playerContainer.y = pos.arenaY !== undefined ? pos.arenaY : pos.screenY;
         
         const scale = this.config.baseScale * (pos.scale || 1.0);
-        // 숨쉬기 애니메이션 중이면 그 스케일 유지
-        if (!this.playerContainer.breathingTween) {
+        const oldBaseScale = this.playerContainer.breathingBaseScale;
+        
+        // 🔥 스케일이 변경되었으면 숨쉬기 애니메이션 재시작!
+        if (Math.abs(scale - (oldBaseScale || 0)) > 0.01) {
+            this.stopBreathingAnimation();
             this.playerContainer.scale.set(scale);
+            this.playerContainer.breathingBaseScale = scale;
+            this.startBreathingAnimation();
+        } else if (!this.playerContainer.breathingTween) {
+            this.playerContainer.scale.set(scale);
+            this.playerContainer.breathingBaseScale = scale;
         }
-        this.playerContainer.breathingBaseScale = scale;
     },
     
     // ==========================================

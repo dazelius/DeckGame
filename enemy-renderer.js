@@ -296,10 +296,21 @@ const EnemyRenderer = {
         data.container.y = pos.arenaY !== undefined ? pos.arenaY : pos.screenY;
         
         const scale = this.getSlotScale(slotIndex, enemy);
-        if (!data.container.breathingTween?.isActive?.()) {
+        const oldBaseScale = data.container.breathingBaseScale;
+        
+        // 🔥 스케일이 변경되었으면 숨쉬기 애니메이션 재시작!
+        if (Math.abs(scale - (oldBaseScale || 0)) > 0.01) {
+            // 기존 숨쉬기 정지
+            this.stopBreathingAnimation(data.container);
+            // 새 스케일로 설정
             data.container.scale.set(scale);
+            data.container.breathingBaseScale = scale;
+            // 숨쉬기 재시작
+            this.startBreathingAnimation(data.container, scale);
+        } else if (!data.container.breathingTween?.isActive?.()) {
+            data.container.scale.set(scale);
+            data.container.breathingBaseScale = scale;
         }
-        data.container.breathingBaseScale = scale;
     },
     
     // ==========================================
@@ -2507,6 +2518,19 @@ const EnemyRenderer = {
             const y = this.getSlotY(slotIndex);
             data.container.x = x;
             data.container.y = y;
+            
+            // 🔥 스케일도 업데이트! (리사이즈 시 중요)
+            const scale = this.getSlotScale(slotIndex, data.enemy);
+            const oldBaseScale = data.container.breathingBaseScale;
+            
+            if (Math.abs(scale - (oldBaseScale || 0)) > 0.01) {
+                // 스케일 변경 시 숨쉬기 재시작
+                this.stopBreathingAnimation(data.container);
+                data.container.scale.set(scale);
+                data.container.breathingBaseScale = scale;
+                this.startBreathingAnimation(data.container, scale);
+            }
+            
             this.syncEnemyUI(id);
         });
     },
