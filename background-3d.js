@@ -766,13 +766,13 @@ const Background3D = {
     worldPositions: {
         // 플레이어: 왼쪽 앞쪽에 위치
         // 🔧 Y를 -1.5로 조정하여 시각적 바닥에 맞춤
-        player: { x: -5.5, y: -1.5, z: 0.5 },
+        player: { x: -7.0, y: -1.5, z: 0.5 },  // 🔧 더 왼쪽으로
         
         // 적: 오른쪽에 일렬로 배치 (플레이어와 같은 Z 라인)
         enemies: {
-            baseX: 2.0,    // 첫 번째 적 X 위치 (좀 더 오른쪽)
-            spacingX: 5.0, // 적 사이 X 간격 (더 넓게!)
-            y: -1.5,       // 🔧 시각적 바닥에 맞춤
+            baseX: 3.0,    // 🔧 첫 번째 적 X 위치 (더 오른쪽)
+            spacingX: 6.0, // 🔧 적 사이 X 간격 (더 넓게!)
+            y: -1.5,       // 시각적 바닥에 맞춤
             z: 0.5         // 플레이어와 같은 Z 라인
         },
         
@@ -860,13 +860,6 @@ const Background3D = {
         const arenaRect = this.getArenaRect();
         const arenaX = screenX - arenaRect.left;
         const arenaY = screenY - arenaRect.top;
-        
-        // 🔍 디버그 (첫 몇 번만)
-        if (!this._debugCount) this._debugCount = 0;
-        if (this._debugCount < 5) {
-            console.log(`[3D→2D] world(${x.toFixed(1)},${y.toFixed(1)},${z.toFixed(1)}) → screen(${screenX.toFixed(0)},${screenY.toFixed(0)}) → arena(${arenaX.toFixed(0)},${arenaY.toFixed(0)}) | arenaRect: top=${arenaRect.top.toFixed(0)}, left=${arenaRect.left.toFixed(0)}, w=${arenaRect.width.toFixed(0)}, h=${arenaRect.height.toFixed(0)}`);
-            this._debugCount++;
-        }
         
         // 거리 기반 스케일 (카메라와의 거리)
         const cameraPos = this.camera.position;
