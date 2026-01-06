@@ -1,0 +1,24 @@
+{
+    "id": "blood_burst",
+    "name": "피 분출",
+    "particles": [
+        {
+            "type": "debris",
+            "count": 12,
+            "speed": [4, 10],
+            "size": [4, 8],
+            "colors": ["#ef4444", "#dc2626", "#991b1b"],
+            "gravity": 0.4,
+            "life": [120, 180]
+        },
+        {
+            "type": "spark",
+            "count": 8,
+            "spread": 40,
+            "speed": [3, 6],
+            "size": [2, 5],
+            "colors": ["#ef4444", "#f87171"],
+            "life": [80, 120]
+        }
+    ]
+}

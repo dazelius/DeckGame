@@ -1676,13 +1676,16 @@ const PixiRenderer = {
             let lineLife = 12 + Math.random() * 8;
             const maxLineLife = lineLife;
             const animateLine = () => {
+                // 🔧 객체가 destroy됐거나 container가 없으면 중단
+                if (!line || line.destroyed || !container || container.destroyed) return;
+                
                 lineLife--;
                 line.alpha = lineLife / maxLineLife;
                 line.scale.set(1 + (1 - lineLife / maxLineLife) * 0.5);
                 
                 if (lineLife <= 0) {
-                    container.removeChild(line);
-                    line.destroy();
+                    if (container && !container.destroyed) container.removeChild(line);
+                    if (!line.destroyed) line.destroy();
                 } else {
                     requestAnimationFrame(animateLine);
                 }
@@ -1710,6 +1713,9 @@ const PixiRenderer = {
             container.addChild(blood);
             
             const animateBlood = () => {
+                // 🔧 객체가 destroy됐거나 container가 없으면 중단
+                if (!blood || blood.destroyed || !container || container.destroyed) return;
+                
                 blood.life--;
                 blood.x += blood.vx;
                 blood.y += blood.vy;
@@ -1719,8 +1725,8 @@ const PixiRenderer = {
                 blood.scale.set(1 - (1 - blood.life / blood.maxLife) * 0.5);
                 
                 if (blood.life <= 0) {
-                    container.removeChild(blood);
-                    blood.destroy();
+                    if (container && !container.destroyed) container.removeChild(blood);
+                    if (!blood.destroyed) blood.destroy();
                 } else {
                     requestAnimationFrame(animateBlood);
                 }
@@ -1759,14 +1765,17 @@ const PixiRenderer = {
                 container.addChild(star);
                 
                 const animateStar = () => {
+                    // 🔧 객체가 destroy됐거나 container가 없으면 중단
+                    if (!star || star.destroyed || !container || container.destroyed) return;
+                    
                     star.life--;
                     star.rotation += star.rotationSpeed;
                     star.alpha = star.life / star.maxLife;
                     star.scale.set(1 + (1 - star.life / star.maxLife) * 0.3);
                     
                     if (star.life <= 0) {
-                        container.removeChild(star);
-                        star.destroy();
+                        if (container && !container.destroyed) container.removeChild(star);
+                        if (!star.destroyed) star.destroy();
                     } else {
                         requestAnimationFrame(animateStar);
                     }
@@ -1784,13 +1793,16 @@ const PixiRenderer = {
             
             let ringLife = 20;
             const animateRing = () => {
+                // 🔧 객체가 destroy됐거나 container가 없으면 중단
+                if (!ring || ring.destroyed || !container || container.destroyed) return;
+                
                 ringLife--;
                 ring.scale.set(1 + (1 - ringLife / 20) * 3 * intensity);
                 ring.alpha = ringLife / 20;
                 
                 if (ringLife <= 0) {
-                    container.removeChild(ring);
-                    ring.destroy();
+                    if (container && !container.destroyed) container.removeChild(ring);
+                    if (!ring.destroyed) ring.destroy();
                 } else {
                     requestAnimationFrame(animateRing);
                 }

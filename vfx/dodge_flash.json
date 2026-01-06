@@ -1,0 +1,22 @@
+{
+    "id": "dodge_flash",
+    "name": "회피 섬광",
+    "particles": [
+        {
+            "type": "flash",
+            "count": 1,
+            "size": 100,
+            "color": "#ffffff",
+            "life": 100
+        },
+        {
+            "type": "line",
+            "count": 8,
+            "angleStep": 45,
+            "length": [60, 100],
+            "width": 3,
+            "color": "#60a5fa",
+            "life": 120
+        }
+    ]
+}

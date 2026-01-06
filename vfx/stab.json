@@ -1,0 +1,54 @@
+{
+    "id": "stab",
+    "name": "찌르기",
+    "shake": 4,
+    "particles": [
+        {
+            "type": "flash",
+            "size": 80,
+            "color": "#ffffff",
+            "life": 45
+        },
+        {
+            "type": "arrow",
+            "count": 1,
+            "length": [200, 260],
+            "width": 60,
+            "tipAngle": 32,
+            "color": "#ffffff",
+            "glow": "#60a5fa",
+            "innerColor": "rgba(96, 165, 250, 0.5)",
+            "life": 120
+        },
+        {
+            "type": "arrow",
+            "count": 1,
+            "length": [160, 210],
+            "width": 40,
+            "tipAngle": 28,
+            "color": "#e0f2fe",
+            "glow": "#3b82f6",
+            "innerColor": "rgba(59, 130, 246, 0.3)",
+            "life": 90
+        },
+        {
+            "type": "thrust",
+            "count": 1,
+            "angle": [0],
+            "length": [280, 360],
+            "width": 5,
+            "color": "#ffffff",
+            "glow": "#60a5fa",
+            "life": 100
+        },
+        {
+            "type": "spark",
+            "count": 14,
+            "spread": 50,
+            "speed": [10, 24],
+            "size": [3, 9],
+            "colors": ["#60a5fa", "#93c5fd", "#ffffff"],
+            "life": [90, 180]
+        }
+    ]
+}

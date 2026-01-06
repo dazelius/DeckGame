@@ -1,0 +1,110 @@
+{
+    "version": "3.2",
+    
+    "engine": {
+        "speed": 1.0,
+        "debug": false
+    },
+    
+    "features": {
+        "afterimage": true,
+        "vfx": true,
+        "shake": true,
+        "hitstop": true,
+        "shadow": true,
+        "outline": true,
+        "hitFlash": true,
+        "breathing": true,
+        "glow": true,
+        "camera": true,
+        "colorGrade": true,
+        "slowmo": true,
+        "filters": false
+    },
+    
+    "performance": {
+        "maxParticles": 100,
+        "shadowBlur": false,
+        "maxShadowBlur": 8,
+        "useGradients": true,
+        "particleQuality": 1.0,
+        "skipFrames": 0
+    },
+    
+    "return": {
+        "duration": 250,
+        "ease": "power2.inOut"
+    },
+    
+    "character": {
+        "shadowAlpha": 0.4,
+        "shadowScaleY": 0.3,
+        "shadowOffsetY": 5,
+        "outlineColor": "0xffffff",
+        "outlineThickness": 2,
+        "hitFlashColor": "0xffffff",
+        "hitFlashDuration": 100,
+        "breathingAmount": 0.02,
+        "breathingSpeed": 1.5,
+        "glowColor": "0x60a5fa",
+        "glowStrength": 0.5
+    },
+    
+    "camera": {
+        "defaultZoom": 1.0,
+        "minZoom": 0.5,
+        "maxZoom": 2.0,
+        "zoomSpeed": 0.3,
+        "panSpeed": 0.2
+    },
+    
+    "colorGrade": {
+        "transitionSpeed": 0.15
+    },
+    
+    "slowmo": {
+        "defaultScale": 1.0,
+        "minScale": 0.1,
+        "maxScale": 2.0
+    },
+    
+    "filters": {
+        "bloom": {
+            "enabled": true,
+            "strength": 1.5,
+            "brightness": 1.0,
+            "blur": 3
+        },
+        "glow": {
+            "enabled": true,
+            "distance": 15,
+            "outerStrength": 2,
+            "innerStrength": 0,
+            "color": "0x60a5fa",
+            "quality": 0.3
+        },
+        "shockwave": {
+            "enabled": true,
+            "amplitude": 20,
+            "wavelength": 100,
+            "speed": 400
+        }
+    },
+    
+    "vfx": {
+        "defaultColors": {
+            "slash": "#ffffff",
+            "spark": "#fbbf24",
+            "flash": "#ffffff",
+            "ring": "#60a5fa",
+            "debris": "#888888",
+            "smoke": "#333333",
+            "electric": "#60a5fa",
+            "wave": "#60a5fa",
+            "star": "#fbbf24",
+            "comet": "#fbbf24",
+            "swordArc": "#ffffff"
+        },
+        "trailInterval": 30
+    }
+}

@@ -1,0 +1,46 @@
+{
+    "id": "spin_slash",
+    "name": "회전 베기",
+    "shake": 8,
+    "particles": [
+        {
+            "type": "ring",
+            "size": 30,
+            "maxSize": 120,
+            "color": "#a855f7",
+            "life": 200
+        },
+        {
+            "type": "sword_arc",
+            "radius": [60, 90],
+            "thickness": 18,
+            "startAngle": -120,
+            "endAngle": 120,
+            "color": "#c084fc",
+            "glow": "#a855f7",
+            "trail": true,
+            "life": 200
+        },
+        {
+            "type": "sword_arc",
+            "radius": [45, 65],
+            "thickness": 12,
+            "startAngle": -90,
+            "endAngle": 90,
+            "color": "#e9d5ff",
+            "glow": "#a855f7",
+            "trail": true,
+            "life": 160,
+            "delay": 30
+        },
+        {
+            "type": "spark",
+            "count": 20,
+            "spread": 360,
+            "speed": [12, 25],
+            "size": [3, 8],
+            "colors": ["#a855f7", "#c084fc", "#e9d5ff"],
+            "life": [180, 320]
+        }
+    ]
+}

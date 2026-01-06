@@ -1,0 +1,24 @@
+{
+    "id": "player.chakram_throw",
+    "name": "차크람 던지기",
+    "target": "player",
+    "type": "once",
+    "priority": 15,
+    "duration": 300,
+    "returnToBase": false,
+    "keyframes": [
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "alpha": 1, "duration": 0 },
+        
+        { "x": -15, "y": 5, "scaleX": 0.95, "scaleY": 1.05, "rotation": -0.05, "duration": 50, "ease": "power2.in" },
+        { "x": -25, "y": 8, "scaleX": 0.9, "scaleY": 1.1, "rotation": -0.1, "duration": 40, "ease": "power2.in" },
+        
+        { "x": 30, "y": -5, "scaleX": 1.15, "scaleY": 0.9, "rotation": 0.15, "duration": 40, "ease": "power4.out",
+          "vfx": "throw_burst",
+          "vfxTarget": "self"
+        },
+        
+        { "x": 15, "y": 0, "scaleX": 1.05, "scaleY": 0.98, "rotation": 0.08, "duration": 50, "ease": "power2.out" },
+        { "x": 5, "y": 2, "scaleX": 1.02, "scaleY": 0.99, "rotation": 0.03, "duration": 60, "ease": "power2.out" },
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 60, "ease": "power2.inOut" }
+    ]
+}

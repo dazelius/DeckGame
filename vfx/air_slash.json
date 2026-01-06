@@ -1,0 +1,33 @@
+{
+    "id": "air_slash",
+    "name": "공중 베기",
+    "shake": 5,
+    "particles": [
+        {
+            "type": "flash",
+            "size": 60,
+            "color": "#93c5fd",
+            "life": 40
+        },
+        {
+            "type": "sword_arc",
+            "radius": [60, 85],
+            "thickness": 15,
+            "startAngle": -50,
+            "endAngle": 50,
+            "color": "#60a5fa",
+            "glow": "#3b82f6",
+            "trail": true,
+            "life": 180
+        },
+        {
+            "type": "spark",
+            "count": 12,
+            "spread": 50,
+            "speed": [12, 24],
+            "size": [3, 7],
+            "colors": ["#60a5fa", "#93c5fd", "#ffffff"],
+            "life": [120, 250]
+        }
+    ]
+}

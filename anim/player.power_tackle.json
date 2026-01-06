@@ -1,0 +1,24 @@
+{
+    "id": "player.power_tackle",
+    "name": "파워 태클 (강화)",
+    "target": "player",
+    "type": "once",
+    "priority": 15,
+    "duration": 520,
+    "keyframes": [
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 0 },
+        
+        { "x": -15, "y": 5, "scaleX": 0.85, "scaleY": 1.15, "alpha": 1, "rotation": -0.08, "duration": 30, "ease": "power2.in", "color": "power", "afterimage": true, "camera": { "zoom": 1.15, "focus": "player", "duration": 200 } },
+        { "x": -25, "y": 8, "scaleX": 0.78, "scaleY": 1.22, "alpha": 1, "rotation": -0.12, "duration": 25, "ease": "power3.in", "vfx": "energy_burst", "vfxTarget": "self" },
+        
+        { "x": 30, "y": -5, "scaleX": 1.15, "scaleY": 0.88, "alpha": 1, "rotation": 0.06, "duration": 30, "ease": "power3.out", "afterimage": true, "camera": { "zoom": 1.35, "focus": "midpoint", "duration": 250 } },
+        { "x": 60, "y": -8, "scaleX": 1.3, "scaleY": 0.75, "alpha": 1, "rotation": 0.12, "duration": 35, "ease": "power2.inOut", "afterimage": true, "vfx": "speed_lines", "vfxTarget": "self" },
+        { "dashToTarget": "enemy", "dashOffset": 10, "y": -10, "scaleX": 1.5, "scaleY": 0.6, "alpha": 1, "rotation": 0.18, "duration": 60, "dashEase": "power3.inOut", "afterimage": true, "camera": { "zoom": 1.45, "focus": "enemy", "duration": 200 } },
+        
+        { "x": 0, "y": -5, "scaleX": 1.55, "scaleY": 0.55, "alpha": 1, "rotation": 0.22, "duration": 35, "ease": "power4.out", "vfx": "power_impact", "vfxTarget": "target", "shake": 22, "hitstop": 80, "afterimage": true, "slowmo": { "scale": 0.15, "duration": 200 }, "color": "critical", "colorDuration": 200, "camera": { "zoom": 1.5, "focus": "enemy", "duration": 150 } },
+        
+        { "x": -15, "y": 0, "scaleX": 1.25, "scaleY": 0.8, "alpha": 1, "rotation": 0.12, "duration": 55, "ease": "power2.out", "slowmo": { "scale": 1.0, "duration": 200 } },
+        { "x": -30, "y": 3, "scaleX": 1.1, "scaleY": 0.92, "alpha": 1, "rotation": 0.05, "duration": 55, "ease": "power2.out" },
+        { "x": -40, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 50, "ease": "elastic.out(1, 0.6)" }
+    ]
+}

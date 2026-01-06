@@ -338,11 +338,18 @@ const BreakSystem = {
         
         // 🔥 2단계: 연출 후 UI 업데이트 (500ms 딜레이)
         setTimeout(() => {
+            // ✅ PixiJS EnemyRenderer 환경
+            if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                EnemyRenderer.setEnemyBrokenState(enemy, true);
+                EnemyRenderer.updateEnemyIntent(enemy);
+            }
+            
+            // DOM 환경
             if (enemyEl) {
                 enemyEl.classList.add('enemy-broken');
                 
-                // 🌟 지속적인 3D 별 이펙트 시작!
-                if (typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized) {
+                // 🌟 지속적인 3D 별 이펙트 시작! (DOM용)
+                if (typeof PixiRenderer !== 'undefined' && PixiRenderer.initialized && PixiRenderer.startPersistentStunLoop) {
                     PixiRenderer.startPersistentStunLoop(enemyEl);
                 }
                 
@@ -377,12 +384,21 @@ const BreakSystem = {
             enemy.breakProgress = [];
             console.log(`[BreakSystem] ${enemy.name} 브레이크 해제`);
             
+            // 🎆 리커버리 연출!
+            this.showRecoveryEffect(enemy);
+            
+            // ✅ PixiJS EnemyRenderer 환경
+            if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                EnemyRenderer.setEnemyBrokenState(enemy, false);
+                EnemyRenderer.updateEnemyIntent(enemy);
+            }
+            
             const enemyIndex = gameState.enemies?.indexOf(enemy);
             if (enemyIndex !== -1) {
                 const enemyEl = document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`);
                 if (enemyEl) {
-                    // 🌟 지속 별 이펙트 중지!
-                    if (typeof PixiRenderer !== 'undefined') {
+                    // 🌟 지속 별 이펙트 중지! (DOM용)
+                    if (typeof PixiRenderer !== 'undefined' && PixiRenderer.stopPersistentStunLoop) {
                         PixiRenderer.stopPersistentStunLoop(enemyEl);
                     }
                     
@@ -420,12 +436,299 @@ const BreakSystem = {
     },
     
     // ==========================================
+    // 리커버리 연출 (브레이크에서 회복!)
+    // ==========================================
+    showRecoveryEffect(enemy) {
+        // 위치 계산
+        let centerX = window.innerWidth / 2;
+        let centerY = window.innerHeight / 2 - 50;
+        
+        // EnemyRenderer에서 위치 가져오기
+        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+            const enemyId = enemy.pixiId || enemy.id || enemy.name;
+            const data = EnemyRenderer.sprites?.get(enemyId);
+            if (data && data.container) {
+                const globalPos = data.container.getGlobalPosition();
+                const canvas = EnemyRenderer.app?.canvas;
+                if (canvas) {
+                    const canvasRect = canvas.getBoundingClientRect();
+                    centerX = canvasRect.left + globalPos.x;
+                    centerY = canvasRect.top + globalPos.y - 80;
+                }
+                
+                // 🎆 PixiJS 스프라이트 리커버리 애니메이션
+                if (typeof gsap !== 'undefined' && data.sprite) {
+                    const baseScale = data.container.breathingBaseScale || 1;
+                    
+                    // 🔧 이전 리커버리 애니메이션이 있으면 정리!
+                    if (data.currentRecoveryTween) {
+                        data.currentRecoveryTween.kill();
+                        data.currentRecoveryTween = null;
+                    }
+                    
+                    // 🎬 애니메이션 중 플래그 설정 (위치 리셋 방지!)
+                    data.isAnimating = true;
+                    
+                    // 밝아지면서 일어나는 효과
+                    const recoveryTl = gsap.timeline({
+                        onComplete: () => {
+                            // 🎬 애니메이션 종료
+                            data.isAnimating = false;
+                            data.currentRecoveryTween = null;
+                        }
+                    });
+                    
+                    // 🔧 현재 timeline 저장 (나중에 정리용)
+                    data.currentRecoveryTween = recoveryTl;
+                    
+                    recoveryTl
+                        .set(data.sprite, { tint: 0xffffff })
+                        .fromTo(data.container.scale, 
+                            { x: baseScale * 0.8, y: baseScale * 0.8 },
+                            { 
+                                x: baseScale * 1.15, 
+                                y: baseScale * 1.15,
+                                duration: 0.25,
+                                ease: "back.out(2)"
+                            }
+                        )
+                        .to(data.container.scale, {
+                            x: baseScale,
+                            y: baseScale,
+                            duration: 0.15,
+                            ease: "power2.out"
+                        });
+                }
+            }
+        } else {
+            // DOM 환경
+            const enemyIndex = gameState.enemies?.indexOf(enemy);
+            if (enemyIndex !== -1) {
+                const enemyEl = document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`);
+                if (enemyEl) {
+                    const rect = enemyEl.getBoundingClientRect();
+                    centerX = rect.left + rect.width / 2;
+                    centerY = rect.top + rect.height / 3;
+                    
+                    // DOM 스프라이트 애니메이션
+                    const sprite = enemyEl.querySelector('.enemy-sprite-img');
+                    if (sprite && typeof gsap !== 'undefined') {
+                        gsap.timeline()
+                            .set(sprite, { filter: 'brightness(2) saturate(1.5)' })
+                            .to(sprite, {
+                                filter: 'brightness(1) saturate(1)',
+                                duration: 0.4,
+                                ease: "power2.out"
+                            });
+                    }
+                }
+            }
+        }
+        
+        // 🌟 리커버리 텍스트
+        const recoveryText = document.createElement('div');
+        recoveryText.className = 'recovery-effect-text';
+        recoveryText.textContent = 'RECOVER!';
+        recoveryText.style.cssText = `
+            position: fixed;
+            left: ${centerX}px;
+            top: ${centerY}px;
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 0;
+            z-index: 99999;
+            pointer-events: none;
+            font-family: 'Cinzel', serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #a855f7;
+            text-shadow: 
+                0 0 15px rgba(168, 85, 247, 1),
+                0 0 30px rgba(168, 85, 247, 0.7),
+                2px 2px 0 #000;
+            letter-spacing: 4px;
+        `;
+        document.body.appendChild(recoveryText);
+        
+        // 리커버리 파티클 (보라색 + 하얀색)
+        this.createRecoveryParticles(centerX, centerY + 30);
+        
+        // 상승 링 이펙트
+        this.createRecoveryRing(centerX, centerY + 50);
+        
+        // GSAP 애니메이션
+        if (typeof gsap !== 'undefined') {
+            gsap.timeline()
+                .to(recoveryText, {
+                    scale: 1.2,
+                    opacity: 1,
+                    duration: 0.2,
+                    ease: "back.out(2)"
+                })
+                .to(recoveryText, {
+                    scale: 1,
+                    duration: 0.1
+                })
+                .to(recoveryText, {
+                    y: -40,
+                    opacity: 0,
+                    duration: 0.5,
+                    delay: 0.3,
+                    ease: "power2.in",
+                    onComplete: () => recoveryText.remove()
+                });
+        } else {
+            recoveryText.style.animation = 'recoveryTextAnim 1s ease-out forwards';
+            setTimeout(() => recoveryText.remove(), 1000);
+        }
+        
+        // 화면 플래시 (보라색)
+        this.createRecoveryFlash();
+        
+        // 사운드
+        if (typeof SoundSystem !== 'undefined') {
+            SoundSystem.play('recover', { volume: 0.6 });
+        }
+        
+        console.log(`[BreakSystem] 🎆 ${enemy.name} 리커버리 연출!`);
+    },
+    
+    // ==========================================
+    // 리커버리 파티클
+    // ==========================================
+    createRecoveryParticles(x, y) {
+        const colors = ['#a855f7', '#c084fc', '#e879f9', '#ffffff', '#d8b4fe'];
+        
+        for (let i = 0; i < 15; i++) {
+            const particle = document.createElement('div');
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 30 + Math.random() * 60;
+            const size = 4 + Math.random() * 6;
+            const delay = Math.random() * 100;
+            
+            particle.style.cssText = `
+                position: fixed;
+                left: ${x}px;
+                top: ${y}px;
+                width: ${size}px;
+                height: ${size}px;
+                background: ${colors[Math.floor(Math.random() * colors.length)]};
+                border-radius: 50%;
+                transform: translate(-50%, -50%);
+                z-index: 99998;
+                pointer-events: none;
+                box-shadow: 0 0 ${size}px currentColor;
+                opacity: 0;
+            `;
+            document.body.appendChild(particle);
+            
+            // 상승하면서 사라지는 애니메이션
+            if (typeof gsap !== 'undefined') {
+                gsap.timeline({ delay: delay / 1000 })
+                    .fromTo(particle, 
+                        { opacity: 0, scale: 0 },
+                        { opacity: 1, scale: 1, duration: 0.15 }
+                    )
+                    .to(particle, {
+                        x: Math.cos(angle) * distance,
+                        y: -50 - Math.random() * 40,  // 위로 상승
+                        opacity: 0,
+                        scale: 0.3,
+                        duration: 0.6 + Math.random() * 0.3,
+                        ease: "power2.out",
+                        onComplete: () => particle.remove()
+                    });
+            } else {
+                setTimeout(() => particle.remove(), 800);
+            }
+        }
+    },
+    
+    // ==========================================
+    // 리커버리 링 이펙트 (상승)
+    // ==========================================
+    createRecoveryRing(x, y) {
+        for (let i = 0; i < 3; i++) {
+            const ring = document.createElement('div');
+            ring.style.cssText = `
+                position: fixed;
+                left: ${x}px;
+                top: ${y}px;
+                width: 60px;
+                height: 20px;
+                border: 2px solid rgba(168, 85, 247, 0.8);
+                border-radius: 50%;
+                transform: translate(-50%, -50%) scale(0.5);
+                z-index: 99997;
+                pointer-events: none;
+                opacity: 0;
+                box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+            `;
+            document.body.appendChild(ring);
+            
+            if (typeof gsap !== 'undefined') {
+                gsap.timeline({ delay: i * 0.15 })
+                    .to(ring, {
+                        opacity: 0.8,
+                        scale: 1,
+                        duration: 0.2
+                    })
+                    .to(ring, {
+                        y: -80 - i * 20,
+                        scale: 1.5,
+                        opacity: 0,
+                        duration: 0.5,
+                        ease: "power2.out",
+                        onComplete: () => ring.remove()
+                    });
+            } else {
+                setTimeout(() => ring.remove(), 700);
+            }
+        }
+    },
+    
+    // ==========================================
+    // 리커버리 화면 플래시
+    // ==========================================
+    createRecoveryFlash() {
+        const flash = document.createElement('div');
+        flash.style.cssText = `
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at center, rgba(168, 85, 247, 0.3), transparent 70%);
+            z-index: 9998;
+            pointer-events: none;
+            opacity: 0;
+        `;
+        document.body.appendChild(flash);
+        
+        if (typeof gsap !== 'undefined') {
+            gsap.timeline()
+                .to(flash, { opacity: 1, duration: 0.1 })
+                .to(flash, {
+                    opacity: 0,
+                    duration: 0.3,
+                    ease: "power2.out",
+                    onComplete: () => flash.remove()
+                });
+        } else {
+            setTimeout(() => flash.remove(), 400);
+        }
+    },
+    
+    // ==========================================
     // 브레이크 UI 업데이트 (인텐트 내부 통합)
     // ==========================================
     updateBreakUI(enemy) {
         const enemyIndex = gameState.enemies?.indexOf(enemy);
         if (enemyIndex === -1) return;
         
+        // ✅ PixiJS 환경에서는 EnemyRenderer 사용
+        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+            this.updateBreakUIPixi(enemy);
+            return;
+        }
+        
+        // DOM 환경
         const enemyEl = document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`);
         if (!enemyEl) return;
         
@@ -469,6 +772,583 @@ const BreakSystem = {
     },
     
     // ==========================================
+    // PixiJS 브레이크 UI 업데이트
+    // ==========================================
+    updateBreakUIPixi(enemy) {
+        // 인텐트 업데이트
+        EnemyRenderer.updateEnemyIntent(enemy);
+        
+        // 브레이크 게이지 업데이트
+        EnemyRenderer.updateEnemyBreak(enemy);
+        
+        // 브레이크 상태 스프라이트 효과
+        if (enemy.isBroken) {
+            EnemyRenderer.setEnemyBrokenState(enemy, true);
+        } else {
+            EnemyRenderer.setEnemyBrokenState(enemy, false);
+        }
+    },
+    
+    // ==========================================
+    // 🎮 다크소울 스타일 브레이크 이펙트 (PixiJS)
+    // ==========================================
+    showBreakEffectPixi(enemy) {
+        if (typeof EnemyRenderer === 'undefined' || !EnemyRenderer.enabled) return;
+        
+        const enemyId = enemy.pixiId || enemy.id || enemy.name;
+        const data = EnemyRenderer.sprites?.get(enemyId);
+        if (!data || !data.container) return;
+        
+        const globalPos = data.container.getGlobalPosition();
+        const canvas = EnemyRenderer.app?.canvas;
+        if (!canvas) return;
+        
+        const canvasRect = canvas.getBoundingClientRect();
+        const screenX = canvasRect.left + globalPos.x;
+        const spriteHeight = data.sprite?.texture?.height * (data.container.scale?.y || 1) || 150;
+        const screenY = canvasRect.top + globalPos.y - spriteHeight / 2;
+        const baseScale = data.container.breathingBaseScale || 1;
+        
+        console.log('[BreakSystem] 🔥 다크소울 스타일 브레이크 시작!', screenX, screenY);
+        
+        // ===== 1단계: 히트스탑 + 화이트 플래시 =====
+        if (typeof gsap !== 'undefined' && data.sprite) {
+            // 히트스탑: 적이 하얗게 번쩍이며 멈춤
+            gsap.killTweensOf(data.container.scale);
+            gsap.killTweensOf(data.sprite);
+            
+            gsap.timeline()
+                // 하얗게 번쩍! (히트스탑)
+                .set(data.sprite, { tint: 0xffffff })
+                .to(data.container.scale, {
+                    x: baseScale * 1.15,
+                    y: baseScale * 0.9,
+                    duration: 0.05,
+                    ease: 'power4.out'
+                })
+                // 잠시 멈춤 (히트스탑)
+                .to({}, { duration: 0.12 })
+                // 찌그러지며 붕괴
+                .to(data.container.scale, {
+                    x: baseScale * 0.85,
+                    y: baseScale * 1.2,
+                    duration: 0.08,
+                    ease: 'power2.in'
+                })
+                // 떨림
+                .to(data.sprite, {
+                    x: 8, duration: 0.02
+                })
+                .to(data.sprite, {
+                    x: -8, duration: 0.02
+                })
+                .to(data.sprite, {
+                    x: 5, duration: 0.02
+                })
+                .to(data.sprite, {
+                    x: -5, duration: 0.02
+                })
+                .to(data.sprite, {
+                    x: 0,
+                    duration: 0.02
+                })
+                // 스턴 색상으로 전환
+                .to(data.sprite, {
+                    tint: 0x6666dd,
+                    duration: 0.2
+                });
+        }
+        
+        // ===== 2단계: 개인화된 플래시 (적 위치에서만!) =====
+        this.createLocalizedFlash(screenX, screenY, spriteHeight);
+        
+        // ===== 3단계: 충격파 (원형 파동) =====
+        this.createDarkSoulsShockwave(screenX, screenY);
+        
+        // ===== 4단계: 균열 + 유리 파편 =====
+        if (typeof ShieldBreakVFX !== 'undefined') {
+            ShieldBreakVFX.play(screenX, screenY, 1.8);
+        }
+        this.createDarkSoulsCracks(screenX, screenY);
+        this.createDarkSoulsShards(screenX, screenY);
+        
+        // ===== 5단계: 에너지 입자 폭발 =====
+        this.createDarkSoulsParticles(screenX, screenY);
+        
+        // ===== 6단계: 카메라 쉐이크 (가볍게, 개인화 느낌) =====
+        if (typeof SpriteAnimation !== 'undefined' && SpriteAnimation.screenShake) {
+            SpriteAnimation.screenShake(8, 0.2);  // 강도 줄임
+        }
+        
+        // ===== 7단계: 사운드 =====
+        if (typeof SoundSystem !== 'undefined') {
+            SoundSystem.play('break', { volume: 1.0 });
+        }
+        
+        // 브레이크 상태 설정
+        EnemyRenderer.setEnemyBrokenState(enemy, true);
+    },
+    
+    // 🌟 개인화된 플래시 (적 위치에서만 발생!)
+    createLocalizedFlash(x, y, size = 150) {
+        const flash = document.createElement('div');
+        const flashSize = size * 3;  // 적 크기의 3배
+        flash.style.cssText = `
+            position: fixed;
+            left: ${x - flashSize / 2}px;
+            top: ${y - flashSize / 2}px;
+            width: ${flashSize}px;
+            height: ${flashSize}px;
+            background: radial-gradient(circle, 
+                rgba(255, 255, 255, 1) 0%, 
+                rgba(255, 255, 255, 0.8) 30%, 
+                rgba(255, 200, 100, 0.5) 60%, 
+                transparent 100%);
+            border-radius: 50%;
+            z-index: 99999;
+            pointer-events: none;
+            opacity: 0;
+            transform: scale(0.5);
+        `;
+        document.body.appendChild(flash);
+        
+        if (typeof gsap !== 'undefined') {
+            gsap.timeline()
+                .to(flash, { opacity: 1, scale: 1, duration: 0.05, ease: 'power4.out' })
+                .to(flash, { opacity: 0.7, scale: 1.3, duration: 0.08 })
+                .to(flash, { opacity: 0, scale: 1.8, duration: 0.15, ease: 'power2.out', onComplete: () => flash.remove() });
+        } else {
+            flash.style.opacity = '1';
+            setTimeout(() => flash.remove(), 300);
+        }
+    },
+    
+    // 🌟 다크소울 스타일 화면 플래시 (전체 화면 - 미사용)
+    createDarkSoulsFlash() {
+        const flash = document.createElement('div');
+        flash.style.cssText = `
+            position: fixed;
+            inset: 0;
+            background: white;
+            z-index: 99999;
+            pointer-events: none;
+            opacity: 0;
+        `;
+        document.body.appendChild(flash);
+        
+        if (typeof gsap !== 'undefined') {
+            gsap.timeline()
+                .to(flash, { opacity: 0.9, duration: 0.02 })
+                .to(flash, { opacity: 0.5, duration: 0.03 })
+                .to(flash, { opacity: 0.7, duration: 0.02 })
+                .to(flash, {
+                    opacity: 0,
+                    duration: 0.4,
+                    ease: 'power2.out',
+                    onComplete: () => flash.remove()
+                });
+        } else {
+            flash.style.opacity = '0.9';
+            setTimeout(() => { flash.style.opacity = '0'; }, 50);
+            setTimeout(() => flash.remove(), 500);
+        }
+    },
+    
+    // 🌀 충격파 효과
+    createDarkSoulsShockwave(x, y) {
+        // 여러 겹의 충격파
+        for (let i = 0; i < 3; i++) {
+            const ring = document.createElement('div');
+            ring.style.cssText = `
+                position: fixed;
+                left: ${x}px;
+                top: ${y}px;
+                width: 20px;
+                height: 20px;
+                border: 3px solid rgba(255, 200, 50, ${1 - i * 0.2});
+                border-radius: 50%;
+                transform: translate(-50%, -50%) scale(0);
+                z-index: 99998;
+                pointer-events: none;
+                box-shadow: 
+                    0 0 20px rgba(255, 200, 50, 0.8),
+                    inset 0 0 20px rgba(255, 200, 50, 0.4);
+            `;
+            document.body.appendChild(ring);
+            
+            if (typeof gsap !== 'undefined') {
+                gsap.to(ring, {
+                    scale: 8 + i * 2,
+                    opacity: 0,
+                    borderWidth: 1,
+                    duration: 0.5 + i * 0.1,
+                    delay: i * 0.05,
+                    ease: 'power2.out',
+                    onComplete: () => ring.remove()
+                });
+            } else {
+                setTimeout(() => ring.remove(), 700);
+            }
+        }
+    },
+    
+    // ⚡ 균열 효과 (다크소울 스타일)
+    createDarkSoulsCracks(x, y) {
+        const crackCount = 8;
+        
+        for (let i = 0; i < crackCount; i++) {
+            const crack = document.createElement('div');
+            const angle = (i / crackCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
+            const length = 60 + Math.random() * 80;
+            
+            // 갈라지는 균열 SVG
+            crack.innerHTML = `
+                <svg width="${length}" height="6" style="overflow:visible">
+                    <path d="M0,3 ${this.generateCrackPath(length)}" 
+                          stroke="rgba(255,220,100,0.9)" 
+                          stroke-width="2" 
+                          fill="none"
+                          stroke-linecap="round"/>
+                    <path d="M0,3 ${this.generateCrackPath(length)}" 
+                          stroke="white" 
+                          stroke-width="4" 
+                          fill="none"
+                          stroke-linecap="round"
+                          opacity="0.5"/>
+                </svg>
+            `;
+            
+            crack.style.cssText = `
+                position: fixed;
+                left: ${x}px;
+                top: ${y}px;
+                transform-origin: left center;
+                transform: rotate(${angle}rad) scaleX(0);
+                z-index: 99997;
+                pointer-events: none;
+                filter: drop-shadow(0 0 8px rgba(255, 200, 50, 1));
+            `;
+            document.body.appendChild(crack);
+            
+            if (typeof gsap !== 'undefined') {
+                gsap.timeline()
+                    .to(crack, {
+                        scaleX: 1,
+                        duration: 0.15,
+                        ease: 'power2.out'
+                    })
+                    .to(crack, {
+                        opacity: 0,
+                        duration: 0.3,
+                        delay: 0.1,
+                        ease: 'power2.in',
+                        onComplete: () => crack.remove()
+                    });
+            } else {
+                setTimeout(() => crack.remove(), 600);
+            }
+        }
+    },
+    
+    // 균열 패스 생성
+    generateCrackPath(length) {
+        let path = '';
+        let currentX = 0;
+        const segments = 5 + Math.floor(Math.random() * 4);
+        
+        for (let i = 0; i < segments; i++) {
+            currentX += length / segments;
+            const y = 3 + (Math.random() - 0.5) * 4;
+            path += ` L${currentX},${y}`;
+        }
+        return path;
+    },
+    
+    // 💎 유리 파편 효과
+    createDarkSoulsShards(x, y) {
+        const shardCount = 20;
+        const colors = ['#ffd700', '#ffec8b', '#ffffff', '#ffa500', '#ff6b6b'];
+        
+        for (let i = 0; i < shardCount; i++) {
+            const shard = document.createElement('div');
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 80 + Math.random() * 120;
+            const size = 8 + Math.random() * 15;
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            
+            // 불규칙한 다이아몬드 모양
+            const points = [];
+            for (let j = 0; j < 4; j++) {
+                const a = (j / 4) * Math.PI * 2;
+                const r = (j % 2 === 0 ? 50 : 30) + Math.random() * 20;
+                points.push(`${50 + Math.cos(a) * r}% ${50 + Math.sin(a) * r}%`);
+            }
+            
+            shard.style.cssText = `
+                position: fixed;
+                left: ${x}px;
+                top: ${y}px;
+                width: ${size}px;
+                height: ${size}px;
+                background: linear-gradient(135deg, ${color}, rgba(255,255,255,0.8));
+                clip-path: polygon(${points.join(', ')});
+                transform: translate(-50%, -50%) rotate(${Math.random() * 360}deg);
+                z-index: 99996;
+                pointer-events: none;
+                box-shadow: 0 0 ${size/2}px ${color};
+            `;
+            document.body.appendChild(shard);
+            
+            const endX = Math.cos(angle) * distance;
+            const endY = Math.sin(angle) * distance + 50; // 중력
+            const rotation = 360 + Math.random() * 720;
+            
+            if (typeof gsap !== 'undefined') {
+                gsap.to(shard, {
+                    x: endX,
+                    y: endY,
+                    rotation: rotation,
+                    scale: 0,
+                    opacity: 0,
+                    duration: 0.6 + Math.random() * 0.3,
+                    ease: 'power2.out',
+                    onComplete: () => shard.remove()
+                });
+            } else {
+                setTimeout(() => shard.remove(), 900);
+            }
+        }
+    },
+    
+    // ✨ 에너지 입자 폭발
+    createDarkSoulsParticles(x, y) {
+        const particleCount = 30;
+        
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 50 + Math.random() * 100;
+            const size = 3 + Math.random() * 5;
+            
+            // 빛나는 원형 입자
+            particle.style.cssText = `
+                position: fixed;
+                left: ${x}px;
+                top: ${y}px;
+                width: ${size}px;
+                height: ${size}px;
+                background: radial-gradient(circle, #fff 0%, #ffd700 50%, transparent 100%);
+                border-radius: 50%;
+                transform: translate(-50%, -50%);
+                z-index: 99995;
+                pointer-events: none;
+            `;
+            document.body.appendChild(particle);
+            
+            if (typeof gsap !== 'undefined') {
+                gsap.to(particle, {
+                    x: Math.cos(angle) * distance,
+                    y: Math.sin(angle) * distance - 30,
+                    scale: 0,
+                    opacity: 0,
+                    duration: 0.4 + Math.random() * 0.3,
+                    delay: Math.random() * 0.1,
+                    ease: 'power2.out',
+                    onComplete: () => particle.remove()
+                });
+            } else {
+                setTimeout(() => particle.remove(), 700);
+            }
+        }
+    },
+    
+    // ==========================================
+    // 🎮 다크소울 스타일 BREAK 텍스트 (공통)
+    // ==========================================
+    showBreakText(enemy) {
+        // 화면 중앙에 표시 (다크소울처럼)
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+        
+        // 📺 슬로우 모션 느낌의 검은 띠 (시네마틱)
+        const topBar = document.createElement('div');
+        const bottomBar = document.createElement('div');
+        [topBar, bottomBar].forEach((bar, i) => {
+            bar.style.cssText = `
+                position: fixed;
+                left: 0;
+                ${i === 0 ? 'top: 0' : 'bottom: 0'};
+                width: 100%;
+                height: 0;
+                background: #000;
+                z-index: 99998;
+                pointer-events: none;
+            `;
+            document.body.appendChild(bar);
+        });
+        
+        // 🔥 BREAK 메인 텍스트 (다크소울 스타일)
+        const breakText = document.createElement('div');
+        breakText.innerHTML = `
+            <div class="ds-break-main">BREAK</div>
+            <div class="ds-break-sub">THE ENEMY STAGGERS</div>
+        `;
+        breakText.style.cssText = `
+            position: fixed;
+            left: ${centerX}px;
+            top: ${centerY}px;
+            transform: translate(-50%, -50%);
+            z-index: 99999;
+            pointer-events: none;
+            text-align: center;
+            opacity: 0;
+        `;
+        document.body.appendChild(breakText);
+        
+        // 인라인 스타일 (CSS 충돌 방지)
+        const mainText = breakText.querySelector('.ds-break-main');
+        const subText = breakText.querySelector('.ds-break-sub');
+        
+        if (mainText) {
+            mainText.style.cssText = `
+                font-family: 'Cinzel', 'Times New Roman', serif;
+                font-size: 5rem;
+                font-weight: 900;
+                color: transparent;
+                background: linear-gradient(180deg, 
+                    #fff 0%, 
+                    #ffd700 30%, 
+                    #ff8c00 60%, 
+                    #ff4500 100%);
+                -webkit-background-clip: text;
+                background-clip: text;
+                letter-spacing: 20px;
+                text-transform: uppercase;
+                filter: drop-shadow(0 0 30px rgba(255, 200, 50, 1))
+                        drop-shadow(0 4px 0 #000)
+                        drop-shadow(0 8px 20px rgba(0, 0, 0, 0.8));
+                transform: scaleX(1.2);
+            `;
+        }
+        
+        if (subText) {
+            subText.style.cssText = `
+                font-family: 'Cinzel', 'Times New Roman', serif;
+                font-size: 1.2rem;
+                font-weight: 400;
+                color: #ccc;
+                letter-spacing: 8px;
+                margin-top: 10px;
+                text-transform: uppercase;
+                opacity: 0;
+            `;
+        }
+        
+        // 취약 상태 알림
+        const vulnTurns = Math.max(1, (enemy.currentBreakRecipe?.length || 2) - 1);
+        const vulnerableText = document.createElement('div');
+        vulnerableText.innerHTML = `<span style="color:#ff6b6b">▼</span> VULNERABLE +${vulnTurns}`;
+        vulnerableText.style.cssText = `
+            position: fixed;
+            left: ${centerX}px;
+            top: ${centerY + 80}px;
+            transform: translate(-50%, -50%);
+            z-index: 99998;
+            pointer-events: none;
+            font-family: 'Cinzel', serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #ff6b6b;
+            letter-spacing: 4px;
+            text-shadow: 0 0 15px rgba(255, 100, 100, 0.8), 0 2px 0 #000;
+            opacity: 0;
+        `;
+        document.body.appendChild(vulnerableText);
+        
+        // 🎬 GSAP 시네마틱 애니메이션
+        if (typeof gsap !== 'undefined') {
+            const tl = gsap.timeline();
+            
+            // 검은 띠 등장
+            tl.to([topBar, bottomBar], {
+                height: '8%',
+                duration: 0.15,
+                ease: 'power2.out'
+            });
+            
+            // 메인 텍스트 등장 (다크소울 스타일)
+            tl.to(breakText, {
+                opacity: 1,
+                duration: 0.01
+            }, '-=0.1');
+            
+            if (mainText) {
+                tl.fromTo(mainText, 
+                    { 
+                        letterSpacing: '50px',
+                        opacity: 0,
+                        filter: 'drop-shadow(0 0 60px rgba(255, 255, 255, 1)) drop-shadow(0 4px 0 #000) drop-shadow(0 8px 20px rgba(0, 0, 0, 0.8))'
+                    },
+                    { 
+                        letterSpacing: '20px',
+                        opacity: 1,
+                        filter: 'drop-shadow(0 0 30px rgba(255, 200, 50, 1)) drop-shadow(0 4px 0 #000) drop-shadow(0 8px 20px rgba(0, 0, 0, 0.8))',
+                        duration: 0.3,
+                        ease: 'power3.out'
+                    }, '-=0.05');
+            }
+            
+            // 서브 텍스트 페이드인
+            if (subText) {
+                tl.to(subText, {
+                    opacity: 0.8,
+                    duration: 0.3,
+                    ease: 'power2.out'
+                }, '-=0.1');
+            }
+            
+            // 취약 텍스트 등장
+            tl.to(vulnerableText, {
+                opacity: 1,
+                y: -10,
+                duration: 0.25,
+                ease: 'back.out(2)'
+            }, '-=0.1');
+            
+            // 유지
+            tl.to({}, { duration: 0.8 });
+            
+            // 페이드아웃
+            tl.to([breakText, vulnerableText], {
+                opacity: 0,
+                y: -30,
+                duration: 0.4,
+                ease: 'power2.in'
+            });
+            
+            tl.to([topBar, bottomBar], {
+                height: 0,
+                duration: 0.3,
+                ease: 'power2.in',
+                onComplete: () => {
+                    breakText.remove();
+                    vulnerableText.remove();
+                    topBar.remove();
+                    bottomBar.remove();
+                }
+            }, '-=0.3');
+        } else {
+            breakText.style.opacity = '1';
+            setTimeout(() => {
+                breakText.remove();
+                vulnerableText.remove();
+                topBar.remove();
+                bottomBar.remove();
+            }, 2000);
+        }
+    },
+    
+    // ==========================================
     // 인텐트 + 게이지 통합 빌드
     // ==========================================
     rebuildIntentWithGauge(intentEl, enemy, remaining, total) {
@@ -499,6 +1379,13 @@ const BreakSystem = {
     // 브레이크 이펙트 (GSAP + PixiJS 업그레이드!)
     // ==========================================
     showBreakEffect(enemy) {
+        // ✅ PixiJS EnemyRenderer 환경이면 전용 이펙트 사용
+        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+            this.showBreakEffectPixi(enemy);
+            this.showBreakText(enemy);  // BREAK 텍스트는 공통
+            return;
+        }
+        
         const enemyIndex = gameState.enemies?.indexOf(enemy);
         if (enemyIndex === -1) return;
         
@@ -509,6 +1396,11 @@ const BreakSystem = {
         const rect = enemyEl.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
+        
+        // 🎆 ShieldBreakVFX로 유리 깨지는 이펙트!
+        if (typeof ShieldBreakVFX !== 'undefined') {
+            ShieldBreakVFX.play(centerX, centerY, 1.5);
+        }
         
         // 🔥 1단계: 히트스탑 (GSAP) - 게임이 잠시 멈추는 느낌!
         if (typeof gsap !== 'undefined') {
@@ -694,17 +1586,10 @@ const BreakSystem = {
         // 파편 효과 (캐릭터 위치)
         this.createShatterParticles(centerX, centerY);
         
-        // 화면 흔들림 (더 강하게!)
-        if (typeof SpriteAnimation !== 'undefined') {
-            SpriteAnimation.screenShake(20, 0.4);
-        } else if (typeof EffectSystem !== 'undefined' && EffectSystem.screenShake) {
-            EffectSystem.screenShake(20, 400);
-        }
+        // 🔥 화면 흔들림 제거 (showBreakEffectPixi에서 이미 처리됨 - 중복 방지)
+        // 개인화된 연출을 위해 전체 화면 흔들림은 최소화
         
-        // 사운드
-        if (typeof SoundSystem !== 'undefined') {
-            SoundSystem.play('break', { volume: 0.8 });
-        }
+        // 사운드 (showBreakEffectPixi에서 이미 재생됨 - 중복 방지)
         
         setTimeout(() => breakText.remove(), 1500);
     },
@@ -1278,6 +2163,44 @@ const BreakSystem = {
                     transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) rotate(360deg) scale(0);
                     opacity: 0;
                 }
+            }
+            
+            /* 리커버리 텍스트 애니메이션 (GSAP 폴백) */
+            @keyframes recoveryTextAnim {
+                0% {
+                    transform: translate(-50%, -50%) scale(0);
+                    opacity: 0;
+                }
+                20% {
+                    transform: translate(-50%, -50%) scale(1.2);
+                    opacity: 1;
+                }
+                40% {
+                    transform: translate(-50%, -50%) scale(1);
+                }
+                70% {
+                    transform: translate(-50%, -50%) scale(1);
+                    opacity: 1;
+                }
+                100% {
+                    transform: translate(-50%, calc(-50% - 40px));
+                    opacity: 0;
+                }
+            }
+            
+            /* 리커버리 텍스트 스타일 */
+            .recovery-effect-text {
+                font-family: 'Cinzel', serif;
+                font-size: 2.5rem;
+                font-weight: 800;
+                background: linear-gradient(180deg, #e879f9 0%, #a855f7 50%, #7c3aed 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                filter: 
+                    drop-shadow(0 0 10px rgba(168, 85, 247, 1))
+                    drop-shadow(0 0 20px rgba(168, 85, 247, 0.6))
+                    drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.8));
+                letter-spacing: 4px;
             }
             
             /* 위협 상태 몬스터 - 하얀 외곽선 + 붉은 글로우 */

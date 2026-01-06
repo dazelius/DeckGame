@@ -113,7 +113,7 @@ const OverkillSystem = {
     },
     
     // ==========================================
-    // 오버킬 효과 실행 (적 사망 처리 시 호출)
+    // 오버킬 효과 실행 (적 사망 처리 시 호출) - DOM 버전
     // ==========================================
     executeOverkill(enemyIndex, enemyEl) {
         console.log('[Overkill] executeOverkill 호출:', enemyIndex, enemyEl);
@@ -212,7 +212,165 @@ const OverkillSystem = {
     },
     
     // ==========================================
-    // 티어별 효과 실행
+    // 오버킬 효과 실행 - PixiJS 버전
+    // ==========================================
+    executeOverkillPixi(enemyIndex, enemy, pixiPos) {
+        console.log('[Overkill] executeOverkillPixi 호출:', enemyIndex, enemy?.name, pixiPos);
+        
+        if (!this.config.enabled) {
+            console.log('[Overkill] 시스템 비활성화');
+            return false;
+        }
+        if (!pixiPos) {
+            console.log('[Overkill] pixiPos 없음');
+            return false;
+        }
+        
+        const overkillData = this.pendingOverkills.get(enemyIndex);
+        console.log('[Overkill] pendingOverkills:', this.pendingOverkills.size, 'overkillData:', overkillData);
+        
+        if (!overkillData) {
+            console.log('[Overkill] 오버킬 데이터 없음 - 등록되지 않음');
+            return false;
+        }
+        
+        const { overkillDamage, tier } = overkillData;
+        
+        // PixiJS 좌표 사용
+        const x = pixiPos.centerX;
+        const y = pixiPos.centerY;
+        const width = pixiPos.width || 100;
+        const height = pixiPos.height || 150;
+        
+        // ✅ PixiJS 스프라이트 이미지 소스 가져오기
+        let imgSrc = null;
+        if (typeof EnemyRenderer !== 'undefined') {
+            imgSrc = EnemyRenderer.getEnemySpriteSrc(enemy);
+        }
+        
+        console.log('[Overkill] PixiJS 실행:', { 
+            enemy: enemy.name, 
+            overkillDamage, 
+            tier, 
+            x, y, 
+            width, height,
+            imgSrc
+        });
+        
+        // GoreVFX 체크 (VFX 폴백)
+        const hasGore = typeof GoreVFX !== 'undefined';
+        const hasVFX = typeof VFX !== 'undefined';
+        console.log('[Overkill] GoreVFX:', hasGore, 'VFX:', hasVFX);
+        
+        if (!hasGore && !hasVFX) {
+            console.warn('[Overkill] VFX 시스템 없음');
+            this.pendingOverkills.delete(enemyIndex);
+            return false;
+        }
+        
+        // 💀 오버킬 데미지 표시
+        this.showOverkillDamageText(x, y, overkillDamage, tier);
+        
+        // 티어별 효과 실행 (imgSrc 포함)
+        this.executeEffectWithSprite(tier, x, y, width, height, overkillDamage, imgSrc);
+        
+        // PixiJS 스프라이트 즉시 제거! (절단 효과가 대신함)
+        if (typeof EnemyRenderer !== 'undefined') {
+            EnemyRenderer.hideEnemyUI(enemy);
+            // 🎯 스프라이트 즉시 제거 (페이드아웃 없이!)
+            EnemyRenderer.removeEnemy(enemy);
+            console.log('[Overkill] PixiJS 스프라이트 제거됨:', enemy.name);
+        }
+        
+        // 로그
+        if (this.config.showLog) {
+            this.showOverkillLog(enemy.name, overkillDamage, tier);
+        }
+        
+        // 정리
+        this.pendingOverkills.delete(enemyIndex);
+        return true;
+    },
+    
+    // ==========================================
+    // 티어별 효과 실행 (스프라이트 이미지 포함)
+    // ==========================================
+    executeEffectWithSprite(tier, x, y, width, height, overkillDamage, imgSrc) {
+        console.log('[Overkill] executeEffectWithSprite:', tier, imgSrc);
+        
+        // 화면 플래시
+        this.doScreenFlash(tier);
+        
+        // 화면 흔들림
+        this.doScreenShake(tier, overkillDamage);
+        
+        // 🩸 피 튀김 (무조건)
+        this.doBloodSplatter(x, y, overkillDamage, tier);
+        
+        // ⚔️ 티어별 다양한 절단 효과!
+        this.doSpriteDismember(x, y, width, height, overkillDamage, tier, imgSrc);
+        
+        // 🩸 피 웅덩이
+        setTimeout(() => {
+            this.doBloodPool(x, y + height/2 + 50, tier);
+        }, 500);
+        
+        // OBLITERATE 텍스트
+        if (tier === 'obliterate') {
+            this.showObliterateText(x, y);
+        }
+    },
+    
+    // ==========================================
+    // 🗡️ 스프라이트 절단 효과 (다양한 형태)
+    // ==========================================
+    doSpriteDismember(x, y, width, height, overkillDamage, tier, imgSrc) {
+        console.log('[Overkill] 🗡️ 스프라이트 절단:', tier, imgSrc);
+        
+        if (typeof GoreVFX === 'undefined') {
+            console.warn('[Overkill] GoreVFX 없음');
+            return;
+        }
+        
+        const options = { width, height, duration: 2500, imgSrc };
+        
+        // 티어별 절단 패턴
+        switch (tier) {
+            case 'obliterate':
+                // 완전 분쇄 (4조각 폭발)
+                GoreVFX.explodeDismember(x, y, { ...options, size: Math.max(width, height) });
+                break;
+                
+            case 'brutal':
+                // 조각조각 (6~8조각)
+                GoreVFX.shatterDismember(x, y, options);
+                break;
+                
+            case 'major':
+                // 랜덤 절단 (가로/세로/대각선 중 하나)
+                GoreVFX.randomDismember(x, y, options);
+                break;
+                
+            case 'normal':
+                // 대각선 절단
+                const reverse = Math.random() > 0.5;
+                GoreVFX.diagonalDismember(x, y, { ...options, reverse });
+                break;
+                
+            case 'minor':
+            default:
+                // 기본 절단 (가로 또는 세로)
+                if (Math.random() > 0.5) {
+                    GoreVFX.dismember(x, y, options);  // 가로 절단
+                } else {
+                    GoreVFX.verticalDismember(x, y, options);  // 세로 절단
+                }
+                break;
+        }
+    },
+    
+    // ==========================================
+    // 티어별 효과 실행 (DOM 버전)
     // ==========================================
     executeEffect(tier, x, y, rect, overkillDamage, enemy, enemyEl) {
         const width = rect.width * 0.8;
@@ -221,28 +379,8 @@ const OverkillSystem = {
         // 적 이미지 소스 추출
         const imgSrc = this.getEnemyImageSrc(enemyEl);
         
-        // 🩸 모든 티어에서 무조건 절단 + 파편!
-        switch (tier) {
-            case 'obliterate':
-                this.effectObliterate(x, y, width, height, overkillDamage, imgSrc);
-                break;
-            case 'brutal':
-                this.effectBrutal(x, y, width, height, overkillDamage, imgSrc);
-                break;
-            case 'major':
-                this.effectMajor(x, y, width, height, overkillDamage, imgSrc);
-                break;
-            case 'normal':
-                this.effectNormal(x, y, width, height, overkillDamage, imgSrc);
-                break;
-            case 'minor':
-                this.effectMinor(x, y, width, height, overkillDamage, imgSrc);
-                break;
-            default:
-                // 오버킬 없음 - 기본 사망도 파편!
-                this.effectMinor(x, y, width, height, 1, imgSrc);
-                break;
-        }
+        // ✅ 통합 함수 사용 (스프라이트 이미지 포함)
+        this.executeEffectWithSprite(tier, x, y, width, height, overkillDamage, imgSrc);
     },
     
     // 적 이미지 소스 추출 (GoreVFX 사용)
@@ -265,52 +403,34 @@ const OverkillSystem = {
     },
     
     // ==========================================
-    // 🩸 모든 티어에서 무조건 절단!
+    // 🩸 (레거시 함수들 - 호환성 유지)
     // ==========================================
     effectMinor(x, y, width, height, overkillDamage, imgSrc) {
-        // minor도 절단!
-        this.forceDisember(x, y, width, height, overkillDamage, 'minor');
+        this.executeEffectWithSprite('minor', x, y, width, height, overkillDamage, imgSrc);
     },
     
     effectNormal(x, y, width, height, overkillDamage, imgSrc) {
-        this.forceDisember(x, y, width, height, overkillDamage, 'normal');
+        this.executeEffectWithSprite('normal', x, y, width, height, overkillDamage, imgSrc);
     },
     
     effectMajor(x, y, width, height, overkillDamage, imgSrc) {
-        this.forceDisember(x, y, width, height, overkillDamage, 'major');
+        this.executeEffectWithSprite('major', x, y, width, height, overkillDamage, imgSrc);
     },
     
     effectBrutal(x, y, width, height, overkillDamage, imgSrc) {
-        this.forceDisember(x, y, width, height, overkillDamage, 'brutal');
+        this.executeEffectWithSprite('brutal', x, y, width, height, overkillDamage, imgSrc);
     },
     
     effectObliterate(x, y, width, height, overkillDamage, imgSrc) {
-        this.forceDisember(x, y, width, height, overkillDamage, 'obliterate');
-        this.showObliterateText(x, y);
+        this.executeEffectWithSprite('obliterate', x, y, width, height, overkillDamage, imgSrc);
     },
     
     // ==========================================
-    // 💀 강제 절단 효과 (무조건 실행!)
+    // 💀 강제 절단 효과 (레거시 - 호환성 유지)
     // ==========================================
-    forceDisember(x, y, width, height, overkillDamage, tier) {
+    forceDisember(x, y, width, height, overkillDamage, tier, imgSrc = null) {
         console.log('[Overkill] 강제 절단 실행:', tier, overkillDamage);
-        
-        // 화면 플래시
-        this.doScreenFlash(tier);
-        
-        // 화면 흔들림
-        this.doScreenShake(tier, overkillDamage);
-        
-        // 🩸 피 튀김 (무조건)
-        this.doBloodSplatter(x, y, overkillDamage, tier);
-        
-        // ⚔️ 절단 파편 (무조건!) - Canvas 직접 그리기
-        this.doForcedFragments(x, y, width, height, overkillDamage, tier);
-        
-        // 🩸 피 웅덩이
-        setTimeout(() => {
-            this.doBloodPool(x, y + height/2 + 50, tier);
-        }, 500);
+        this.executeEffectWithSprite(tier, x, y, width, height, overkillDamage, imgSrc);
     },
     
     // 화면 플래시

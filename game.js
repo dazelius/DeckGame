@@ -3,6 +3,27 @@
 // ==========================================
 
 // ==========================================
+// 🧹 GSAP 애니메이션 유틸리티 (누수 방지)
+// ==========================================
+function safeGsapAnimate(element, animationConfig) {
+    if (!element || typeof gsap === 'undefined') return null;
+    
+    // 기존 애니메이션 정리 후 새 애니메이션 시작
+    gsap.killTweensOf(element);
+    return gsap.to(element, animationConfig);
+}
+
+function safeGsapTimeline(elements = []) {
+    if (typeof gsap === 'undefined') return null;
+    
+    // 모든 타겟 요소의 기존 애니메이션 정리
+    elements.forEach(el => {
+        if (el) gsap.killTweensOf(el);
+    });
+    return gsap.timeline();
+}
+
+// ==========================================
 // 🛡️ 인텐트 안전 체크 시스템
 // ==========================================
 let intentSafetyCheckInterval = null;
@@ -259,7 +280,7 @@ function loadPlayerDeck() {
 // ==========================================
 // 전투 시작
 // ==========================================
-function startBattle() {
+async function startBattle() {
     // 🎬 전투 시작 트랜지션
     if (typeof ScreenTransition !== 'undefined') {
         ScreenTransition.battleEnter();
@@ -281,6 +302,27 @@ function startBattle() {
     // 🎬 핸드헬드 카메라 효과 시작
     if (typeof CameraEffects !== 'undefined') {
         CameraEffects.onBattleStart();
+    }
+    
+    // 🎮 DDOOAction 엔진 사전 초기화 (첫 공격 지연 방지!)
+    if (typeof DDOOAction !== 'undefined' && !DDOOAction.initialized) {
+        if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.app) {
+            console.log('[Game] 🎮 DDOOAction 사전 초기화...');
+            try {
+                await DDOOAction.init(PlayerRenderer.app, PlayerRenderer.app.stage);
+                
+                // ⏳ 애니메이션/VFX 캐시 로드 대기 (최대 3초)
+                let waitCount = 0;
+                while ((DDOOAction.animCache.size === 0 || DDOOAction.vfxCache.size === 0) && waitCount < 30) {
+                    await new Promise(r => setTimeout(r, 100));
+                    waitCount++;
+                }
+                
+                console.log(`[Game] ✅ DDOOAction 준비 완료! (anim:${DDOOAction.animCache.size}, vfx:${DDOOAction.vfxCache.size})`);
+            } catch (e) {
+                console.warn('[Game] DDOOAction 초기화 실패:', e);
+            }
+        }
     }
     
     // 🎰 GamblerVFX 사전 초기화 (첫 카드 지연 방지)
@@ -725,6 +767,12 @@ function renderEnemies(withEntrance = true) {
     const enemyArea = document.querySelector('.enemy-area');
     if (!enemyArea) return;
     
+    // ✅ PixiJS EnemyRenderer 사용 시 (실험적)
+    if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+        renderEnemiesWithPixi(withEntrance);
+        return;
+    }
+    
     // 기존 적 컨테이너 제거
     const existingContainer = document.getElementById('enemies-container');
     if (existingContainer) existingContainer.remove();
@@ -801,6 +849,75 @@ function renderEnemies(withEntrance = true) {
             MonsterPassiveSystem.updateAllEnemiesDisplay(gameState.enemies);
         }, withEntrance ? 600 : 100);
     }
+}
+
+// ==========================================
+// PixiJS 기반 적 렌더링 (실험적)
+// ==========================================
+async function renderEnemiesWithPixi(withEntrance = true) {
+    if (!EnemyRenderer.initialized) {
+        await EnemyRenderer.init();
+    }
+    
+    // ✅ PlayerRenderer도 함께 초기화 (동일한 좌표 시스템)
+    if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled) {
+        if (!PlayerRenderer.initialized) {
+            await PlayerRenderer.init();
+        }
+        // 플레이어 생성 (아직 없으면)
+        if (!PlayerRenderer.playerContainer) {
+            await PlayerRenderer.createPlayer();
+        }
+    }
+    
+    // ✅ PixiProjectile 발사체 시스템 초기화
+    if (typeof PixiProjectile !== 'undefined' && !PixiProjectile.initialized) {
+        await PixiProjectile.init();
+    }
+    
+    // 기존 DOM 적 숨기기
+    const existingContainer = document.getElementById('enemies-container');
+    if (existingContainer) {
+        existingContainer.style.display = 'none';
+    }
+    
+    // 🔑 ID 기반 오버라이드! 더 이상 인덱스 매핑 불필요
+    // 기존 스프라이트 클리어
+    EnemyRenderer.clearAllEnemies();
+    
+    // 살아있는 적만 렌더링
+    let slotIndex = 0;
+    for (let originalIndex = 0; originalIndex < gameState.enemies.length; originalIndex++) {
+        const enemy = gameState.enemies[originalIndex];
+        if (!enemy || enemy.hp <= 0) continue;
+        
+        // 스프라이트 경로 설정
+        enemy.sprite = enemy.sprite || enemy.img || enemy.image || getEnemySpritePath(enemy);
+        
+        // 🔑 고유 인스턴스 ID (한 번 생성되면 유지!)
+        // enemy.id는 종류 ID라서 같은 종류 적들이 겹침 → instanceId 사용
+        if (!enemy.instanceId) {
+            enemy.instanceId = `${enemy.id || enemy.name || 'enemy'}_${originalIndex}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+        }
+        enemy.pixiId = enemy.instanceId;
+        
+        await EnemyRenderer.addEnemy(enemy, slotIndex);
+        slotIndex++;
+    }
+    
+    // console.log(`[renderEnemiesWithPixi] 총 ${slotIndex}마리 렌더링 완료`);
+    
+    // 인텐트 업데이트
+    if (typeof updateAllIntents === 'function') {
+        setTimeout(() => updateAllIntents(), 100);
+    }
+}
+
+// 적 스프라이트 경로 헬퍼
+function getEnemySpritePath(enemy) {
+    const name = enemy.name || 'goblin';
+    const baseName = name.toLowerCase().replace(/\s+/g, '');
+    return `${baseName}.png`;
 }
 
 // 등장 애니메이션 적용 헬퍼
@@ -1102,6 +1219,16 @@ function selectEnemy(index) {
 }
 
 function updateSelectedEnemy() {
+    // ✅ PixiJS EnemyRenderer 사용 시
+    if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+        gameState.enemies.forEach((enemy, i) => {
+            if (enemy.hp > 0) {
+                EnemyRenderer.setEnemySelected(enemy, i === gameState.selectedEnemyIndex);
+            }
+        });
+        return;
+    }
+    
     const container = document.getElementById('enemies-container');
     if (!container) return;
     
@@ -1112,6 +1239,11 @@ function updateSelectedEnemy() {
 
 // 적 UI 업데이트
 function updateEnemiesUI() {
+    // ✅ PixiJS EnemyRenderer 사용 시 UI 업데이트
+    if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+        EnemyRenderer.updateAllEnemyUI();
+    }
+    
     gameState.enemies.forEach((enemy, index) => {
         const container = document.getElementById('enemies-container');
         if (!container) return;
@@ -1550,18 +1682,31 @@ function showReviveEffect() {
 
 // 플레이어 취약 이펙트
 function showPlayerVulnerableEffect() {
-    const playerEl = document.getElementById('player');
-    if (!playerEl) return;
-    
-    const rect = playerEl.getBoundingClientRect();
+    // ✅ PixiJS PlayerRenderer 위치 우선 사용
+    let effectX, effectY;
+    if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
+        const playerPos = PlayerRenderer.getPlayerPosition();
+        if (playerPos) {
+            effectX = playerPos.centerX;
+            effectY = playerPos.top;
+        }
+    }
+    // DOM 폴백
+    if (effectX === undefined) {
+        const playerEl = document.getElementById('player');
+        if (!playerEl) return;
+        const rect = playerEl.getBoundingClientRect();
+        effectX = rect.left + rect.width / 2;
+        effectY = rect.top;
+    }
     
     // 취약 텍스트 팝업
     const popup = document.createElement('div');
     popup.innerHTML = '💔 취약!';
     popup.style.cssText = `
         position: fixed;
-        left: ${rect.left + rect.width / 2}px;
-        top: ${rect.top}px;
+        left: ${effectX}px;
+        top: ${effectY}px;
         transform: translateX(-50%);
         font-family: 'Cinzel', serif;
         font-size: 1.8rem;
@@ -2499,6 +2644,11 @@ function checkEnemyDefeated() {
             enemy.processed = true;  // 즉시 플래그 설정
             console.log(`[checkEnemyDefeated] ${enemy.name} 처치됨!`);
             
+            // ✅ PixiJS EnemyRenderer 사망 애니메이션
+            if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                EnemyRenderer.playDeathAnimation(enemy);
+            }
+            
             const enemyEl = document.querySelector(`.enemy-unit[data-index="${enemyIndex}"]`);
             
             // 🩸 즉시 적 UI 숨기기 (모든 요소 확실히 숨김!)
@@ -2571,8 +2721,17 @@ function checkEnemyDefeated() {
             if (typeof OverkillSystem !== 'undefined') {
                 const overkillData = OverkillSystem.pendingOverkills.get(enemyIndex);
                 if (overkillData) {
-                    OverkillSystem.executeOverkill(enemyIndex, enemyEl);
-                    console.log(`[Overkill] ${enemy.name} 조각조각 VFX 실행`);
+                    // PixiJS 환경에서는 가상 요소 또는 위치 정보 사용
+                    if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                        const pixiPos = EnemyRenderer.getEnemyPosition(enemy);
+                        if (pixiPos) {
+                            OverkillSystem.executeOverkillPixi(enemyIndex, enemy, pixiPos);
+                            console.log(`[Overkill] ${enemy.name} PixiJS 조각조각 VFX 실행`);
+                        }
+                    } else if (enemyEl) {
+                        OverkillSystem.executeOverkill(enemyIndex, enemyEl);
+                        console.log(`[Overkill] ${enemy.name} DOM 조각조각 VFX 실행`);
+                    }
                 }
             }
             
@@ -4102,14 +4261,29 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
         if (typeof EffectSystem !== 'undefined' && playerEl) {
             EffectSystem.debuff(playerEl);
         }
-        if (typeof VFX !== 'undefined' && playerEl) {
-            const rect = playerEl.getBoundingClientRect();
-            // 보라색 스파크로 저주 효과 표현
-            VFX.sparks(rect.left + rect.width / 2, rect.top + rect.height / 2, { 
-                color: '#a855f7', 
-                count: 12,
-                speed: 8
-            });
+        if (typeof VFX !== 'undefined') {
+            // ✅ PixiJS PlayerRenderer 위치 우선 사용
+            let effectX, effectY;
+            if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
+                const playerPos = PlayerRenderer.getPlayerPosition();
+                if (playerPos) {
+                    effectX = playerPos.centerX;
+                    effectY = playerPos.centerY;
+                }
+            }
+            if (effectX === undefined && playerEl) {
+                const rect = playerEl.getBoundingClientRect();
+                effectX = rect.left + rect.width / 2;
+                effectY = rect.top + rect.height / 2;
+            }
+            if (effectX !== undefined) {
+                // 보라색 스파크로 저주 효과 표현
+                VFX.sparks(effectX, effectY, { 
+                    color: '#a855f7', 
+                    count: 12,
+                    speed: 8
+                });
+            }
         }
         
         // 취약 표시
@@ -4135,17 +4309,32 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
         }
         
         // 도발 이펙트
-        const playerEl = document.getElementById('player');
-        if (typeof EffectSystem !== 'undefined' && playerEl) {
-            EffectSystem.debuff(playerEl);
+        const tauntPlayerEl = document.getElementById('player');
+        if (typeof EffectSystem !== 'undefined' && tauntPlayerEl) {
+            EffectSystem.debuff(tauntPlayerEl);
         }
-        if (typeof VFX !== 'undefined' && playerEl) {
-            const rect = playerEl.getBoundingClientRect();
-            VFX.sparks(rect.left + rect.width / 2, rect.top + rect.height / 2, { 
-                color: '#f59e0b', 
-                count: 10,
-                speed: 6
-            });
+        if (typeof VFX !== 'undefined') {
+            // ✅ PixiJS PlayerRenderer 위치 우선 사용
+            let tauntEffectX, tauntEffectY;
+            if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
+                const tauntPlayerPos = PlayerRenderer.getPlayerPosition();
+                if (tauntPlayerPos) {
+                    tauntEffectX = tauntPlayerPos.centerX;
+                    tauntEffectY = tauntPlayerPos.centerY;
+                }
+            }
+            if (tauntEffectX === undefined && tauntPlayerEl) {
+                const tauntRect = tauntPlayerEl.getBoundingClientRect();
+                tauntEffectX = tauntRect.left + tauntRect.width / 2;
+                tauntEffectY = tauntRect.top + tauntRect.height / 2;
+            }
+            if (tauntEffectX !== undefined) {
+                VFX.sparks(tauntEffectX, tauntEffectY, { 
+                    color: '#f59e0b', 
+                    count: 10,
+                    speed: 6
+                });
+            }
         }
         
         if (typeof updatePlayerStatusUI === 'function') {
@@ -4171,6 +4360,30 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
         
         // 후퇴 완료 처리 (슬롯 기반 - DOM 재배치 없음!)
         const executeRetreatWithGSAP = () => {
+            // ✅ PixiJS EnemyRenderer 사용 시
+            if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                const aliveMinions = gameState.enemies.filter(e => e.hp > 0 && !e.isBoss && !e.isElite);
+                const myMinionIndex = aliveMinions.indexOf(enemy);
+                
+                if (myMinionIndex < aliveMinions.length - 1) {
+                    const backEnemy = aliveMinions[myMinionIndex + 1];
+                    const myArrayIndex = gameState.enemies.indexOf(enemy);
+                    const backArrayIndex = gameState.enemies.indexOf(backEnemy);
+                    
+                    // gameState 배열 교환
+                    gameState.enemies[myArrayIndex] = backEnemy;
+                    gameState.enemies[backArrayIndex] = enemy;
+                    
+                    // PixiJS 슬롯 교환
+                    EnemyRenderer.swapSlots(enemy, backEnemy, 0.25);
+                }
+                
+                enemy.battlePosition = (enemy.battlePosition || 0) + 1;
+                updateSelectedEnemy();
+                onRetreatComplete();
+                return;
+            }
+            
             const container = document.getElementById('enemies-container');
             const enemyEls = container ? Array.from(container.querySelectorAll('.enemy-unit')) : [];
             
@@ -4316,6 +4529,30 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
         
         // 전진 완료 처리 (슬롯 기반 - DOM 재배치 없음!)
         const executeAdvanceWithGSAP = () => {
+            // ✅ PixiJS EnemyRenderer 사용 시
+            if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                const aliveMinions = gameState.enemies.filter(e => e.hp > 0 && !e.isBoss && !e.isElite);
+                const myMinionIndex = aliveMinions.indexOf(enemy);
+                
+                if (myMinionIndex > 0) {
+                    const frontEnemy = aliveMinions[myMinionIndex - 1];
+                    const myArrayIndex = gameState.enemies.indexOf(enemy);
+                    const frontArrayIndex = gameState.enemies.indexOf(frontEnemy);
+                    
+                    // gameState 배열 교환
+                    gameState.enemies[myArrayIndex] = frontEnemy;
+                    gameState.enemies[frontArrayIndex] = enemy;
+                    
+                    // PixiJS 슬롯 교환
+                    EnemyRenderer.swapSlots(enemy, frontEnemy, 0.25);
+                }
+                
+                enemy.battlePosition = Math.max(0, (enemy.battlePosition || 0) - 1);
+                updateSelectedEnemy();
+                onAdvanceComplete();
+                return;
+            }
+            
             const container = document.getElementById('enemies-container');
             const enemyEls = container ? Array.from(container.querySelectorAll('.enemy-unit')) : [];
             
@@ -4536,11 +4773,27 @@ function executeEnemyIntentForEnemy(enemy, enemyIndex, onComplete) {
             
             // 불꽃 파티클
             if (typeof VFX !== 'undefined') {
-                const rect = playerEl.getBoundingClientRect();
-                VFX.fire(rect.left + rect.width / 2, rect.top + rect.height / 2, {
-                    count: 25,
-                    spread: 80
-                });
+                let fireX, fireY;
+                // 🎯 PlayerRenderer 우선!
+                if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.initialized) {
+                    const pos = PlayerRenderer.getPlayerPosition();
+                    if (pos) {
+                        fireX = pos.screenX || pos.centerX;
+                        fireY = pos.screenY || pos.centerY;
+                    }
+                }
+                // DOM 폴백
+                if (!fireX && playerEl) {
+                    const rect = playerEl.getBoundingClientRect();
+                    fireX = rect.left + rect.width / 2;
+                    fireY = rect.top + rect.height / 2;
+                }
+                if (fireX) {
+                    VFX.fire(fireX, fireY, {
+                        count: 25,
+                        spread: 80
+                    });
+                }
             }
         }
         
@@ -4762,6 +5015,45 @@ function healAllMinions(healSource, healAmount) {
 }
 
 function getEnemyElement(index) {
+    // ✅ PixiJS 사용 시 가상 요소 반환 (이펙트 위치 참조용)
+    if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+        const enemy = gameState.enemies?.[index];
+        if (enemy) {
+            const pos = EnemyRenderer.getEnemyPosition(enemy);
+            if (pos) {
+                // 가상 요소 객체 반환 (DOM API 모방)
+                return {
+                    dataset: { index: String(index) },
+                    classList: {
+                        add: () => {},
+                        remove: () => {},
+                        contains: () => false,
+                        toggle: () => {}
+                    },
+                    getBoundingClientRect: () => ({
+                        left: pos.left,
+                        right: pos.right,
+                        top: pos.top,
+                        bottom: pos.bottom,
+                        width: pos.width,
+                        height: pos.height,
+                        x: pos.left,
+                        y: pos.top
+                    }),
+                    querySelector: () => null,
+                    querySelectorAll: () => [],
+                    appendChild: () => {},
+                    removeChild: () => {},
+                    contains: () => false,
+                    style: {},
+                    // PixiJS 요소 플래그
+                    isPixiElement: true,
+                    enemy: enemy
+                };
+            }
+        }
+    }
+    
     // 다중 적 컨테이너에서 요소 찾기
     const container = document.getElementById('enemies-container');
     if (container) {
@@ -4773,6 +5065,11 @@ function getEnemyElement(index) {
 
 // 현재 선택된 적 요소 가져오기 (카드 이펙트용)
 function getSelectedEnemyElement() {
+    // ✅ PixiJS 사용 시 getEnemyElement 사용
+    if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+        return getEnemyElement(gameState.selectedEnemyIndex);
+    }
+    
     const container = document.getElementById('enemies-container');
     if (container) {
         return container.querySelector(`[data-index="${gameState.selectedEnemyIndex}"]`);
@@ -4995,6 +5292,11 @@ function updateUI() {
     const playerHpPercent = (gameState.player.hp / gameState.player.maxHp) * 100;
     elements.playerHpBar.style.width = `${playerHpPercent}%`;
     elements.playerHpText.textContent = `${gameState.player.hp}/${gameState.player.maxHp}`;
+    
+    // ✅ PixiJS PlayerRenderer UI 업데이트
+    if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
+        PlayerRenderer.updatePlayerUI();
+    }
     
     // 플레이어 방어도 (ShieldSystem 사용)
     ShieldSystem.updateBlockUI(gameState.player);

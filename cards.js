@@ -133,15 +133,26 @@ Object.assign(cardDatabase, {
         cost: 1,
         icon: '<img src="slash.png" alt="Slash" class="card-icon-img">',
         description: '<span class="damage">6</span> 데미지를 줍니다.',
+        animationId: 'strike',  // 🎬 DDOO Action 연결!
         effect: (state) => {
-            const playerEl = document.getElementById('player');
-            const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
-            
-            // 플레이어 돌진
-            EffectSystem.playerAttack(playerEl, enemyEl, () => {
-                EffectSystem.slash(enemyEl, { color: '#ff4444', count: 1 });
-                dealDamage(state.enemy, 6);
-            });
+            // 🎬 CardAnimations 사용 (DDOOAction 연결)
+            // ⚠️ 대미지는 DDOOAction의 onDamage에서만 적용됨!
+            if (typeof CardAnimations !== 'undefined' && CardAnimations.has('strike')) {
+                CardAnimations.play('strike', {
+                    target: state.enemy,
+                    targetEl: typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : null,
+                    damage: 6,
+                    onComplete: () => {}
+                });
+            } else {
+                // 폴백
+                const playerEl = document.getElementById('player');
+                const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
+                EffectSystem.playerAttack(playerEl, enemyEl, () => {
+                    EffectSystem.slash(enemyEl, { color: '#ff4444', count: 1 });
+                    dealDamage(state.enemy, 6);
+                });
+            }
             
             addLog('베기로 6 데미지!', 'damage');
         }
@@ -163,7 +174,7 @@ Object.assign(cardDatabase, {
         }
     },
     
-    // 닷지
+    // 💨 닷지 - 민첩한 회피!
     dodge: {
         id: 'dodge',
         name: '닷지',
@@ -172,28 +183,38 @@ Object.assign(cardDatabase, {
         cost: 0,
         icon: '<img src="dodge.png" alt="Dodge" class="card-icon-img">',
         description: '<span class="block-val">3</span> 방어도. 카드 1장 드로우.',
+        animationId: 'dodge',
         effect: (state) => {
-            const playerEl = document.getElementById('player');
-            
-            // 연막 VFX
-            if (playerEl && typeof VFX !== 'undefined') {
-                const rect = playerEl.getBoundingClientRect();
-                VFX.smoke(
-                    rect.left + rect.width / 2,
-                    rect.top + rect.height / 2,
-                    { color: '#667788', size: 150, duration: 700, count: 12 }
-                );
+            // 🎮 DDOO Action 엔진 사용!
+            if (typeof CardAnimations !== 'undefined' && CardAnimations.play) {
+                CardAnimations.play('dodge', {
+                    onComplete: () => {
+                        // 방어도 획득
+                        gainBlock(state.player, 3);
+                        
+                        // 카드 1장 드로우 (딜레이 후)
+                        setTimeout(() => {
+                            drawCards(1, true);
+                        }, 200);
+                    }
+                });
+            } else {
+                // 폴백
+                const playerPos = typeof getPlayerScreenPosition === 'function' 
+                    ? getPlayerScreenPosition() 
+                    : null;
+                
+                if (playerPos?.valid && typeof VFX !== 'undefined') {
+                    VFX.smoke(playerPos.centerX, playerPos.centerY, {
+                        color: '#667788', size: 150, duration: 700, count: 12
+                    });
+                }
+                
+                gainBlock(state.player, 3);
+                setTimeout(() => drawCards(1, true), 400);
             }
             
-            // 방어도 획득
-            gainBlock(state.player, 3);
-            
-            // 카드 1장 드로우 (딜레이 후)
-            setTimeout(() => {
-                drawCards(1, true);
-            }, 400);
-            
-            addLog('닷지! 3 방어도 + 1 드로우!', 'block');
+            addLog('💨 닷지! 3 방어도 + 1 드로우!', 'block');
         }
     },
     
@@ -206,22 +227,33 @@ Object.assign(cardDatabase, {
         cost: 2,
         icon: '<img src="gangta.png" alt="Bash" class="card-icon-img">',
         description: '<span class="damage">12</span> 데미지.<br><span class="debuff-val">취약</span> 2턴 부여.',
+        animationId: 'bash',  // 🎬 DDOO Action 연결!
         effect: (state) => {
-            const playerEl = document.getElementById('player');
-            const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
+            // 🎬 CardAnimations 사용 (DDOOAction 연결)
+            // ⚠️ 대미지/디버프는 DDOOAction의 onDamage/onDebuff에서 적용됨!
+            if (typeof CardAnimations !== 'undefined' && CardAnimations.has('bash')) {
+                CardAnimations.play('bash', {
+                    target: state.enemy,
+                    targetEl: typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : null,
+                    damage: 12,
+                    onComplete: () => {
+                        addLog(`${state.enemy.name}에게 취약 2턴!`, 'debuff');
+                    }
+                });
+            } else {
+                // 폴백
+                const playerEl = document.getElementById('player');
+                const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
+                EffectSystem.playerAttack(playerEl, enemyEl, () => {
+                    EffectSystem.impact(enemyEl, { color: '#ff6b35', size: 200 });
+                    EffectSystem.screenShake(12, 300);
+                    dealDamage(state.enemy, 12);
+                    state.enemy.vulnerable = (state.enemy.vulnerable || 0) + 2;
+                    addLog(`${state.enemy.name}에게 취약 2턴!`, 'debuff');
+                });
+            }
             
-            // 플레이어 돌진
-            EffectSystem.playerAttack(playerEl, enemyEl, () => {
-                EffectSystem.impact(enemyEl, { color: '#ff6b35', size: 200 });
-                EffectSystem.screenShake(12, 300);
-                dealDamage(state.enemy, 12);
-                
-                // 취약 부여
-                state.enemy.vulnerable = (state.enemy.vulnerable || 0) + 2;
-                addLog(`${state.enemy.name}에게 취약 2턴!`, 'debuff');
-            });
-            
-            addLog('강타로 10 데미지!', 'damage');
+            addLog('강타로 12 데미지!', 'damage');
         }
     },
     
@@ -239,11 +271,22 @@ Object.assign(cardDatabase, {
         isAllEnemy: true, // 전체 공격 표시
         icon: '<img src="chakramThrow.png" alt="Chakram" class="card-icon-img">',
         description: '<span class="damage">모든 적</span>에게 <span class="damage">4</span> 데미지.<br>뽑기 덱에 \'차크람 되돌아오기\'를 1장 추가.',
-        effect: (state) => {
-            const playerEl = document.getElementById('player');
-            const playerRect = playerEl ? playerEl.getBoundingClientRect() : null;
-            const startX = playerRect ? playerRect.left + playerRect.width / 2 : 200;
-            const startY = playerRect ? playerRect.top + playerRect.height / 2 : window.innerHeight / 2;
+        effect: async (state) => {
+            // 🎮 DDOOAction 애니메이션 실행!
+            if (typeof CardAnimations !== 'undefined' && CardAnimations.has('chakramThrow')) {
+                CardAnimations.play('chakramThrow', {
+                    onDamage: (dmg, enemy) => {
+                        if (enemy && enemy.hp > 0) {
+                            dealDamage(enemy, 4);
+                        }
+                    }
+                });
+            }
+            
+            // 🎯 PixiJS 좌표 우선 사용
+            const playerPos = typeof getPlayerScreenPosition === 'function' ? getPlayerScreenPosition() : null;
+            const startX = playerPos?.valid ? playerPos.centerX : 200;
+            const startY = playerPos?.valid ? playerPos.centerY : window.innerHeight / 2;
             
             // 모든 적 수집 (x좌표 기준 정렬 - 왼쪽부터)
             const targets = [];
@@ -252,8 +295,19 @@ Object.assign(cardDatabase, {
             if (gameState.enemies && gameState.enemies.length > 0) {
                 gameState.enemies.forEach((enemy, index) => {
                     if (enemy.hp > 0) {
+                        // 🎯 PixiJS 좌표 우선 사용
+                        const enemyPos = typeof getEnemyScreenPosition === 'function' ? getEnemyScreenPosition(enemy) : null;
                         const enemyEl = document.querySelector(`.enemy-unit[data-index="${index}"]`);
-                        if (enemyEl) {
+                        
+                        if (enemyPos?.valid) {
+                            targets.push({
+                                x: enemyPos.centerX,
+                                y: enemyPos.centerY,
+                                enemy: enemy,
+                                enemyEl: enemyEl
+                            });
+                            lastEnemyEl = enemyEl;
+                        } else if (enemyEl) {
                             const rect = enemyEl.getBoundingClientRect();
                             targets.push({
                                 x: rect.left + rect.width / 2,
@@ -268,8 +322,18 @@ Object.assign(cardDatabase, {
                 // x좌표 기준 정렬 (왼→오)
                 targets.sort((a, b) => a.x - b.x);
             } else if (state.enemy && state.enemy.hp > 0) {
+                const enemyPos = typeof getEnemyScreenPosition === 'function' ? getEnemyScreenPosition(state.enemy) : null;
                 const enemyEl = document.getElementById('enemy');
-                if (enemyEl) {
+                
+                if (enemyPos?.valid) {
+                    targets.push({
+                        x: enemyPos.centerX,
+                        y: enemyPos.centerY,
+                        enemy: state.enemy,
+                        enemyEl: enemyEl
+                    });
+                    lastEnemyEl = enemyEl;
+                } else if (enemyEl) {
                     const rect = enemyEl.getBoundingClientRect();
                     targets.push({
                         x: rect.left + rect.width / 2,
@@ -367,11 +431,22 @@ Object.assign(cardDatabase, {
         icon: '<img src="chakramThrow.png" alt="Chakram" class="card-icon-img">',
         description: '<span class="damage">모든 적</span>에게 <span class="damage">4</span> 데미지.<br>버린 카드에 \'차크람 던지기\'가 있으면 손패로 가져옴.',
         isEthereal: true, // 소멸
-        effect: (state) => {
-            const playerEl = document.getElementById('player');
-            const playerRect = playerEl ? playerEl.getBoundingClientRect() : null;
-            const endX = playerRect ? playerRect.left + playerRect.width / 2 : 200;
-            const endY = playerRect ? playerRect.top + playerRect.height / 2 : window.innerHeight / 2;
+        effect: async (state) => {
+            // 🎮 DDOOAction 애니메이션 실행!
+            if (typeof CardAnimations !== 'undefined' && CardAnimations.has('chakramReturn')) {
+                CardAnimations.play('chakramReturn', {
+                    onDamage: (dmg, enemy) => {
+                        if (enemy && enemy.hp > 0) {
+                            dealDamage(enemy, 4);
+                        }
+                    }
+                });
+            }
+            
+            // 🎯 PixiJS 좌표 우선 사용
+            const playerPos = typeof getPlayerScreenPosition === 'function' ? getPlayerScreenPosition() : null;
+            const endX = playerPos?.valid ? playerPos.centerX : 200;
+            const endY = playerPos?.valid ? playerPos.centerY : window.innerHeight / 2;
             
             // 시작점 (화면 오른쪽 밖)
             const startX = window.innerWidth + 100;
@@ -383,8 +458,18 @@ Object.assign(cardDatabase, {
             if (gameState.enemies && gameState.enemies.length > 0) {
                 gameState.enemies.forEach((enemy, index) => {
                     if (enemy.hp > 0) {
+                        // 🎯 PixiJS 좌표 우선 사용
+                        const enemyPos = typeof getEnemyScreenPosition === 'function' ? getEnemyScreenPosition(enemy) : null;
                         const enemyEl = document.querySelector(`.enemy-unit[data-index="${index}"]`);
-                        if (enemyEl) {
+                        
+                        if (enemyPos?.valid) {
+                            targets.push({
+                                x: enemyPos.centerX,
+                                y: enemyPos.centerY,
+                                enemy: enemy,
+                                enemyEl: enemyEl
+                            });
+                        } else if (enemyEl) {
                             const rect = enemyEl.getBoundingClientRect();
                             targets.push({
                                 x: rect.left + rect.width / 2,
@@ -398,12 +483,13 @@ Object.assign(cardDatabase, {
                 // x좌표 기준 역정렬 (오→왼, 돌아오는 방향)
                 targets.sort((a, b) => b.x - a.x);
             } else if (state.enemy && state.enemy.hp > 0) {
+                const enemyPos = typeof getEnemyScreenPosition === 'function' ? getEnemyScreenPosition(state.enemy) : null;
                 const enemyEl = document.getElementById('enemy');
-                if (enemyEl) {
-                    const rect = enemyEl.getBoundingClientRect();
+                
+                if (enemyPos?.valid) {
                     targets.push({
-                        x: rect.left + rect.width / 2,
-                        y: rect.top + rect.height / 2,
+                        x: enemyPos.centerX,
+                        y: enemyPos.centerY,
                         enemy: state.enemy,
                         enemyEl: enemyEl
                     });
@@ -488,7 +574,7 @@ Object.assign(cardDatabase, {
         }
     },
     
-    // 전투 개막 (선천성 + 소멸)
+    // 전투 개막 (선천성 + 소멸) - 파워태클!
     battleOpening: {
         id: 'battleOpening',
         name: '전투 개막',
@@ -499,16 +585,26 @@ Object.assign(cardDatabase, {
         description: '<span class="damage">8</span> 데미지.<br><span class="innate">선천성</span> · <span class="ethereal">소멸</span>',
         innate: true,      // 선천성: 전투 시작 시 항상 손패에
         ethereal: true,    // 소멸: 턴 종료 시 소멸
+        animationId: 'battleOpening',  // 🎬 파워태클 애니메이션!
         effect: (state) => {
-            const playerEl = document.getElementById('player');
-            const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
+            // 🎮 DDOO Action 엔진 - 파워태클!
+            if (typeof CardAnimations !== 'undefined' && CardAnimations.has('battleOpening')) {
+                CardAnimations.play('battleOpening', {
+                    target: state.enemy,
+                    targetEl: typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : null,
+                    damage: 8,
+                    onComplete: () => {}
+                });
+            } else {
+                // 폴백
+                const playerEl = document.getElementById('player');
+                const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
+                EffectSystem.bodySlam(playerEl, enemyEl, () => {
+                    dealDamage(state.enemy, 8);
+                });
+            }
             
-            // 몸통박치기 이펙트
-            EffectSystem.bodySlam(playerEl, enemyEl, () => {
-                dealDamage(state.enemy, 8);
-            });
-            
-            addLog('전투 개막! 8 데미지!', 'damage');
+            addLog('⚡ 전투 개막! 파워태클 8 데미지!', 'damage');
         }
     },
 
@@ -564,27 +660,47 @@ Object.assign(cardDatabase, {
         description: '<span class="damage">2</span> 데미지를 줍니다. 소멸.',
         isEthereal: true, // 소멸 카드
         effect: (state) => {
-            const playerEl = document.getElementById('player');
-            const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
+            // 🎯 PixiJS 좌표 우선 사용
+            const playerPos = typeof getPlayerScreenPosition === 'function' ? getPlayerScreenPosition() : null;
+            const enemyPos = typeof getEnemyScreenPosition === 'function' ? getEnemyScreenPosition(state.enemy) : null;
             
             // 단검 투척 VFX
-            if (playerEl && enemyEl && typeof VFX !== 'undefined') {
-                const playerRect = playerEl.getBoundingClientRect();
-                const enemyRect = enemyEl.getBoundingClientRect();
+            if (typeof VFX !== 'undefined') {
+                let startX, startY, endX, endY;
                 
-                VFX.dagger(
-                    playerRect.left + playerRect.width / 2,
-                    playerRect.top + playerRect.height / 2,
-                    enemyRect.left + enemyRect.width / 2,
-                    enemyRect.top + enemyRect.height / 2,
-                    { 
+                if (playerPos?.valid) {
+                    startX = playerPos.centerX;
+                    startY = playerPos.centerY;
+                } else {
+                    const playerEl = document.getElementById('player');
+                    if (playerEl) {
+                        const rect = playerEl.getBoundingClientRect();
+                        startX = rect.left + rect.width / 2;
+                        startY = rect.top + rect.height / 2;
+                    }
+                }
+                
+                if (enemyPos?.valid) {
+                    endX = enemyPos.centerX;
+                    endY = enemyPos.centerY;
+                } else {
+                    const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
+                    if (enemyEl) {
+                        const rect = enemyEl.getBoundingClientRect();
+                        endX = rect.left + rect.width / 2;
+                        endY = rect.top + rect.height / 2;
+                    }
+                }
+                
+                if (startX && endX) {
+                    VFX.dagger(startX, startY, endX, endY, { 
                         color: '#c0c0c0',
                         glowColor: '#60a5fa',
                         size: 45,
                         speed: 32,
                         spinSpeed: 22
-                    }
-                );
+                    });
+                }
             }
             
             setTimeout(() => {
@@ -721,56 +837,50 @@ Object.assign(cardDatabase, {
         icon: '<img src="yungyuk.png" alt="Flurry" class="card-icon-img">',
         description: '<span class="damage">2</span> 데미지를 3회 줍니다.',
         hitCount: 3,
-        hitInterval: 100,
+        hitInterval: 120,
+        animationId: 'flurry',  // 🎬 카드 애니메이션 ID 참조!
         effect: (state) => {
-            const playerEl = document.getElementById('player');
-            const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
             const totalHits = 3;
-            const interval = 100; // 더 빠르게!
+            const damage = 2;
             
-            // 플레이어 돌진 → 돌진 후에 공격 시작!
-            EffectSystem.playerAttack(playerEl, enemyEl, () => {
-                // 돌진 완료 후 연속 찌르기 시작!
-                let hitCount = 0;
+            // 🎬 CardAnimations 사용 (고유 애니메이션!)
+            // ⚠️ 대미지는 DDOOAction의 onDamage에서만 적용됨!
+            if (typeof CardAnimations !== 'undefined' && CardAnimations.has('flurry')) {
+                CardAnimations.play('flurry', {
+                    target: state.enemy,
+                    targetEl: typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : null,
+                    hitCount: totalHits,
+                    damage: damage,
+                    interval: 120,
+                    onHit: (hitIndex, dmg) => {
+                        // 대미지는 DDOOAction에서 이미 적용됨
+                        // 추가 콤보 카운트 (2번째, 3번째 타격)
+                        if (hitIndex > 0 && state.enemy.hp > 0 && typeof RelicSystem !== 'undefined') {
+                            RelicSystem.onCardPlayed({ type: CardType.ATTACK }, state);
+                        }
+                    },
+                    onComplete: () => {
+                        console.log('[Flurry] 연속 찌르기 완료!');
+                    }
+                });
+            } else {
+                // 폴백: 기존 방식
+                const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
+                const playerEl = document.getElementById('player');
                 
-                const doHit = () => {
-                    if (hitCount >= totalHits) return;
-                    if (state.enemy.hp <= 0) return; // 적 사망 체크
-                    
-                    // 슬래시 이펙트 + 데미지 동시에!
-                    const rect = enemyEl.getBoundingClientRect();
-                    const centerX = rect.left + rect.width / 2;
-                    const centerY = rect.top + rect.height / 2;
-                    const offsetY = (hitCount - 1) * 25;
-                    
-                    if (typeof VFX !== 'undefined') {
-                        VFX.slash(centerX, centerY + offsetY, {
-                            color: '#60a5fa',
-                            length: 200,
-                            width: 10,
-                            angle: (Math.random() - 0.5) * 20
-                        });
-                        VFX.sparks(centerX + 30, centerY + offsetY, { color: '#60a5fa', count: 8 });
-                    }
-                    
-                    // 데미지
-                    dealDamage(state.enemy, 2);
-                    
-                    hitCount++;
-                    
-                    // 추가 콤보 카운트 (2번째, 3번째 타격)
-                    if (hitCount < totalHits && typeof RelicSystem !== 'undefined') {
-                        RelicSystem.onCardPlayed({ type: CardType.ATTACK }, state);
-                    }
-                    
-                    // 다음 타격
-                    if (hitCount < totalHits && state.enemy.hp > 0) {
-                        setTimeout(doHit, interval);
-                    }
-                };
-                
-                doHit();
-            });
+                EffectSystem.playerAttack(playerEl, enemyEl, () => {
+                    let hitCount = 0;
+                    const doHit = () => {
+                        if (hitCount >= totalHits || state.enemy.hp <= 0) return;
+                        dealDamage(state.enemy, damage);
+                        hitCount++;
+                        if (hitCount < totalHits && state.enemy.hp > 0) {
+                            setTimeout(doHit, 100);
+                        }
+                    };
+                    doHit();
+                });
+            }
             
             addLog('연속 찌르기! 2×3 데미지!', 'damage');
         }
@@ -846,7 +956,7 @@ Object.assign(cardDatabase, {
         }
     },
     
-    // 비열한 일격
+    // 💀 비열한 일격 - 그림자 백스탭!
     dirtyStrike: {
         id: 'dirtyStrike',
         name: '비열한 일격',
@@ -855,27 +965,39 @@ Object.assign(cardDatabase, {
         cost: 1,
         icon: '<img src="skill_biyul.png" alt="Dirty Strike" class="card-icon-img">',
         description: '<span class="damage">4</span> 데미지.<br><span class="debuff">취약</span> 1턴 부여.',
+        animationId: 'dirtyStrike',
         effect: (state) => {
-            const playerEl = document.getElementById('player');
             const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
             
-            // 플레이어 돌진
-            EffectSystem.playerAttack(playerEl, enemyEl, () => {
-                EffectSystem.slash(enemyEl, { color: '#9333ea', count: 1 });
-                dealDamage(state.enemy, 4);
-                
-                // 취약 상태 부여
-                if (!state.enemy.vulnerable) state.enemy.vulnerable = 0;
-                state.enemy.vulnerable += 1;
-                
-                // 취약 이펙트
-                showVulnerableEffect(enemyEl);
-                
-                // UI 업데이트
-                if (typeof updateEnemiesUI === 'function') updateEnemiesUI();
-            });
+            // 🎮 DDOO Action 엔진 사용!
+            // ⚠️ 대미지/디버프는 DDOOAction의 onDamage/onDebuff에서 적용됨!
+            if (typeof CardAnimations !== 'undefined' && CardAnimations.play) {
+                CardAnimations.play('dirtyStrike', {
+                    target: state.enemy,
+                    targetEl: enemyEl,
+                    damage: 4,
+                    onComplete: () => {
+                        // 취약 이펙트
+                        showVulnerableEffect(enemyEl);
+                        // UI 업데이트
+                        if (typeof updateEnemiesUI === 'function') updateEnemiesUI();
+                    }
+                });
+            } else {
+                // 폴백
+                const playerEl = document.getElementById('player');
+                EffectSystem.playerAttack(playerEl, enemyEl, () => {
+                    EffectSystem.slash(enemyEl, { color: '#9333ea', count: 1 });
+                    dealDamage(state.enemy, 4);
+                    
+                    if (!state.enemy.vulnerable) state.enemy.vulnerable = 0;
+                    state.enemy.vulnerable += 1;
+                    showVulnerableEffect(enemyEl);
+                    if (typeof updateEnemiesUI === 'function') updateEnemiesUI();
+                });
+            }
             
-            addLog('비열한 일격! 4 데미지 + 취약 부여!', 'damage');
+            addLog('💀 비열한 일격! 4 데미지 + 취약 부여!', 'damage');
         }
     },
     
@@ -1179,12 +1301,17 @@ Object.assign(cardDatabase, {
         description: '<span class="block-val">15</span> 방어도를 얻습니다.',
         effect: (state) => {
             const playerEl = document.getElementById('player');
+            const playerPos = typeof getPlayerScreenPosition === 'function' ? getPlayerScreenPosition() : null;
+            
             EffectSystem.shield(playerEl, { color: '#a0a0a0', duration: 800 });
-            EffectSystem.particleRise(
-                playerEl.getBoundingClientRect().left + playerEl.getBoundingClientRect().width / 2,
-                playerEl.getBoundingClientRect().top + 100,
-                { color: '#a0a0a0', count: 10, symbol: '🛡️' }
-            );
+            
+            if (playerPos?.valid) {
+                EffectSystem.particleRise(playerPos.centerX, playerPos.centerY + 100, { color: '#a0a0a0', count: 10, symbol: '🛡️' });
+            } else if (playerEl) {
+                const rect = playerEl.getBoundingClientRect();
+                EffectSystem.particleRise(rect.left + rect.width / 2, rect.top + 100, { color: '#a0a0a0', count: 10, symbol: '🛡️' });
+            }
+            
             gainBlock(state.player, 15);
             addLog('철의 요새! 15 방어도!', 'block');
         }
@@ -1328,17 +1455,12 @@ Object.assign(cardDatabase, {
         icon: '🎁',
         description: '카드를 <span class="draw">3장</span> 드로우합니다.',
         effect: (state) => {
-            const playerEl = document.getElementById('player');
+            const playerPos = typeof getPlayerScreenPosition === 'function' ? getPlayerScreenPosition() : null;
             
             // 이펙트
-            if (typeof VFX !== 'undefined') {
-                const rect = playerEl.getBoundingClientRect();
-                VFX.buff(rect.left + rect.width / 2, rect.top + rect.height / 2, { color: '#ffd700', size: 120 });
-                VFX.sparks(rect.left + rect.width / 2, rect.top + rect.height / 2, { 
-                    color: '#ffd700', 
-                    count: 15, 
-                    speed: 300 
-                });
+            if (playerPos?.valid && typeof VFX !== 'undefined') {
+                VFX.buff(playerPos.centerX, playerPos.centerY, { color: '#ffd700', size: 120 });
+                VFX.sparks(playerPos.centerX, playerPos.centerY, { color: '#ffd700', count: 15, speed: 300 });
             }
             
             // 3장 드로우
@@ -1363,16 +1485,15 @@ Object.assign(cardDatabase, {
         icon: '<img src="threepower.png" alt="Triforce" class="card-icon-img">',
         description: '이번 턴 <span class="damage">공격력 +3</span>.<br><span class="retain">보존</span>. <span class="ethereal">소멸</span>. <span class="special">트라이포스</span>',
         effect: (state) => {
-            const playerEl = document.getElementById('player');
+            const playerPos = typeof getPlayerScreenPosition === 'function' ? getPlayerScreenPosition() : null;
             
             // 공격력 증가 버프
             if (!state.player.tempStrength) state.player.tempStrength = 0;
             state.player.tempStrength += 3;
             
             // 이펙트
-            if (typeof VFX !== 'undefined') {
-                const rect = playerEl.getBoundingClientRect();
-                VFX.buff(rect.left + rect.width / 2, rect.top + rect.height / 2, { color: '#ef4444', size: 100 });
+            if (playerPos?.valid && typeof VFX !== 'undefined') {
+                VFX.buff(playerPos.centerX, playerPos.centerY, { color: '#ef4444', size: 100 });
             }
             
             // 트라이포스 추적
@@ -1395,12 +1516,11 @@ Object.assign(cardDatabase, {
         icon: '<img src="threepower.png" alt="Triforce" class="card-icon-img">',
         description: '<span class="block-val">10</span> 방어도.<br><span class="retain">보존</span>. <span class="ethereal">소멸</span>. <span class="special">트라이포스</span>',
         effect: (state) => {
-            const playerEl = document.getElementById('player');
+            const playerPos = typeof getPlayerScreenPosition === 'function' ? getPlayerScreenPosition() : null;
             
             // 방어도 획득
-            if (typeof VFX !== 'undefined') {
-                const rect = playerEl.getBoundingClientRect();
-                VFX.shield(rect.left + rect.width / 2, rect.top + rect.height / 2, { color: '#22c55e', size: 100 });
+            if (playerPos?.valid && typeof VFX !== 'undefined') {
+                VFX.shield(playerPos.centerX, playerPos.centerY, { color: '#22c55e', size: 100 });
             }
             gainBlock(state.player, 10);
             
@@ -1424,12 +1544,11 @@ Object.assign(cardDatabase, {
         icon: '<img src="threepower.png" alt="Triforce" class="card-icon-img">',
         description: '카드를 <span class="draw">3장</span> 드로우.<br><span class="retain">보존</span>. <span class="ethereal">소멸</span>. <span class="special">트라이포스</span>',
         effect: (state) => {
-            const playerEl = document.getElementById('player');
+            const playerPos = typeof getPlayerScreenPosition === 'function' ? getPlayerScreenPosition() : null;
             
             // 이펙트
-            if (typeof VFX !== 'undefined') {
-                const rect = playerEl.getBoundingClientRect();
-                VFX.buff(rect.left + rect.width / 2, rect.top + rect.height / 2, { color: '#3b82f6', size: 100 });
+            if (playerPos?.valid && typeof VFX !== 'undefined') {
+                VFX.buff(playerPos.centerX, playerPos.centerY, { color: '#3b82f6', size: 100 });
             }
             
             // 카드 3장 드로우
@@ -1602,10 +1721,10 @@ Object.assign(cardDatabase, {
             
             EnergyBoltSystem.addBolt();
             
-            // MageVFX 에너지 볼트
-            if (playerEl && typeof MageVFX !== 'undefined') {
-                const rect = playerEl.getBoundingClientRect();
-                MageVFX.energyBolt(rect.left + rect.width / 2, rect.top + rect.height / 2);
+            // MageVFX 에너지 볼트 - PixiJS 좌표 우선!
+            const playerPos = typeof getPlayerScreenPosition === 'function' ? getPlayerScreenPosition() : null;
+            if (playerPos?.valid && typeof MageVFX !== 'undefined') {
+                MageVFX.energyBolt(playerPos.centerX, playerPos.centerY);
             }
             
             // 볼트 추가 후 손패 업데이트 (3스택이면 과부하 카드로 변경)
@@ -1682,11 +1801,10 @@ Object.assign(cardDatabase, {
         icon: '💨',
         description: '<span class="block-val">6</span> 방어도.<br>카드 1장 드로우.',
         effect: (state) => {
-            const playerEl = document.getElementById('player');
+            const playerPos = typeof getPlayerScreenPosition === 'function' ? getPlayerScreenPosition() : null;
             
-            if (playerEl && typeof VFX !== 'undefined') {
-                const rect = playerEl.getBoundingClientRect();
-                VFX.smoke(rect.left + rect.width/2, rect.top + rect.height/2, {
+            if (playerPos?.valid && typeof VFX !== 'undefined') {
+                VFX.smoke(playerPos.centerX, playerPos.centerY, {
                     color: '#4a5568', size: 150, count: 20, duration: 800
                 });
             }
@@ -1713,13 +1831,13 @@ Object.assign(cardDatabase, {
                 return;
             }
             
-            const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
             ShadowCloneSystem.sacrificeClone();
             
             setTimeout(() => {
-                if (enemyEl && typeof VFX !== 'undefined') {
-                    const rect = enemyEl.getBoundingClientRect();
-                    VFX.impact(rect.left + rect.width/2, rect.top + rect.height/2, { color: '#4a00b4', size: 200 });
+                const enemyPos = typeof getEnemyScreenPosition === 'function' ? getEnemyScreenPosition(state.enemy) : null;
+                
+                if (enemyPos?.valid && typeof VFX !== 'undefined') {
+                    VFX.impact(enemyPos.centerX, enemyPos.centerY, { color: '#4a00b4', size: 200 });
                 }
                 EffectSystem.screenShake(15, 300);
                 dealDamage(state.enemy, 15);
@@ -1741,10 +1859,10 @@ Object.assign(cardDatabase, {
         description: '카드 2장 드로우.<br><span class="innate">선천성</span> · <span class="ethereal">소멸</span>',
         isEthereal: true,
         effect: (state) => {
-            const playerEl = document.getElementById('player');
-            if (playerEl && typeof VFX !== 'undefined') {
-                const rect = playerEl.getBoundingClientRect();
-                VFX.buff(rect.left + rect.width/2, rect.top + rect.height/2, { color: '#4a00b4', size: 80 });
+            const playerPos = typeof getPlayerScreenPosition === 'function' ? getPlayerScreenPosition() : null;
+            
+            if (playerPos?.valid && typeof VFX !== 'undefined') {
+                VFX.buff(playerPos.centerX, playerPos.centerY, { color: '#4a00b4', size: 80 });
             }
             setTimeout(() => { drawCards(2, true); }, 200);
             addLog('🌙 잠입! 2장 드로우!', 'draw');
@@ -1803,15 +1921,14 @@ Object.assign(cardDatabase, {
         incantationBonus: 1, // 기본 1 + 보너스 1 = 총 2
         description: '<span class="block-val">3</span> 방어도.',
         effect: (state) => {
-            const playerEl = document.getElementById('player');
+            const playerPos = typeof getPlayerScreenPosition === 'function' ? getPlayerScreenPosition() : null;
             
             // 방어도
             gainBlock(state.player, 3);
             
             // MageVFX 마력 집중
-            if (playerEl && typeof MageVFX !== 'undefined') {
-                const rect = playerEl.getBoundingClientRect();
-                MageVFX.manaFocus(rect.left + rect.width/2, rect.top + rect.height/2);
+            if (playerPos?.valid && typeof MageVFX !== 'undefined') {
+                MageVFX.manaFocus(playerPos.centerX, playerPos.centerY);
             }
             
             addLog('🔮 마력 집중! 방어도 3!', 'block');
@@ -1831,15 +1948,16 @@ Object.assign(cardDatabase, {
         hitInterval: 150,
         description: '무작위 적에게 <span class="damage">2</span> 데미지를 <span class="damage">5</span>회 발사.',
         effect: (state) => {
-            const playerEl = document.getElementById('player');
+            const playerPos = typeof getPlayerScreenPosition === 'function' ? getPlayerScreenPosition() : null;
             
             // 살아있는 적 수집
             const aliveEnemies = [];
             if (gameState.enemies && gameState.enemies.length > 0) {
                 gameState.enemies.forEach((enemy, index) => {
                     if (enemy.hp > 0) {
+                        const enemyPos = typeof getEnemyScreenPosition === 'function' ? getEnemyScreenPosition(enemy) : null;
                         const el = document.querySelector(`.enemy-unit[data-index="${index}"]`);
-                        if (el) aliveEnemies.push({ enemy, el, index });
+                        aliveEnemies.push({ enemy, el, index, pos: enemyPos });
                     }
                 });
             }
@@ -1850,9 +1968,8 @@ Object.assign(cardDatabase, {
             }
             
             // 난사 시작 VFX (캐릭터 차지업)
-            if (playerEl && typeof MageVFX !== 'undefined') {
-                const pRect = playerEl.getBoundingClientRect();
-                MageVFX.castCircle(pRect.left + pRect.width/2, pRect.top + pRect.height/2, '#a855f7', 60);
+            if (playerPos?.valid && typeof MageVFX !== 'undefined') {
+                MageVFX.castCircle(playerPos.centerX, playerPos.centerY, '#a855f7', 60);
             }
             
             // 5연발 무작위 타겟 (빠른 난사)
@@ -1869,14 +1986,15 @@ Object.assign(cardDatabase, {
                     
                     const target = currentAlive[Math.floor(Math.random() * currentAlive.length)];
                     
-                    // VFX
-                    if (playerEl && target.el && typeof MageVFX !== 'undefined') {
-                        const pRect = playerEl.getBoundingClientRect();
-                        const eRect = target.el.getBoundingClientRect();
-                        MageVFX.arcaneBolt(
-                            pRect.left + pRect.width/2, pRect.top + pRect.height/2,
-                            eRect.left + eRect.width/2, eRect.top + eRect.height/2
-                        );
+                    // VFX - PixiJS 좌표 우선!
+                    if (playerPos?.valid && typeof MageVFX !== 'undefined') {
+                        const ePos = target.pos || (typeof getEnemyScreenPosition === 'function' ? getEnemyScreenPosition(target.enemy) : null);
+                        if (ePos?.valid) {
+                            MageVFX.arcaneBolt(playerPos.centerX, playerPos.centerY, ePos.centerX, ePos.centerY);
+                        } else if (target.el) {
+                            const eRect = target.el.getBoundingClientRect();
+                            MageVFX.arcaneBolt(playerPos.centerX, playerPos.centerY, eRect.left + eRect.width/2, eRect.top + eRect.height/2);
+                        }
                     }
                     
                     // 데미지 (볼트가 도착하는 타이밍에)
@@ -1906,12 +2024,11 @@ Object.assign(cardDatabase, {
         isIncantation: true, // [영창] 카드
         description: '카드 1장 드로우.',
         effect: (state) => {
-            const playerEl = document.getElementById('player');
+            const playerPos = typeof getPlayerScreenPosition === 'function' ? getPlayerScreenPosition() : null;
             
             // MageVFX 명상
-            if (playerEl && typeof MageVFX !== 'undefined') {
-                const rect = playerEl.getBoundingClientRect();
-                MageVFX.meditation(rect.left + rect.width/2, rect.top + rect.height/2);
+            if (playerPos?.valid && typeof MageVFX !== 'undefined') {
+                MageVFX.meditation(playerPos.centerX, playerPos.centerY);
             }
             
             // 드로우
@@ -1933,13 +2050,12 @@ Object.assign(cardDatabase, {
         incantationBonus: 3, // 기본 1 + 보너스 3 = 총 4
         description: '마력을 증폭시킨다.',
         effect: (state) => {
-            const playerEl = document.getElementById('player');
+            const playerPos = typeof getPlayerScreenPosition === 'function' ? getPlayerScreenPosition() : null;
             
             // 대형 이펙트
-            if (playerEl && typeof VFX !== 'undefined') {
-                const rect = playerEl.getBoundingClientRect();
-                VFX.shockwave(rect.left + rect.width/2, rect.top + rect.height/2, { color: '#8b5cf6', size: 150 });
-                VFX.sparks(rect.left + rect.width/2, rect.top + rect.height/2, { color: '#c084fc', count: 25, speed: 200 });
+            if (playerPos?.valid && typeof VFX !== 'undefined') {
+                VFX.shockwave(playerPos.centerX, playerPos.centerY, { color: '#8b5cf6', size: 150 });
+                VFX.sparks(playerPos.centerX, playerPos.centerY, { color: '#c084fc', count: 25, speed: 200 });
             }
             
             addLog('💠 마나 증폭!', 'buff');
@@ -1959,12 +2075,11 @@ Object.assign(cardDatabase, {
         isEthereal: true, // 소멸
         description: '직전에 사용한 카드를<br>한번 더 사용한다.<br><span class="ethereal">소멸</span>',
         effect: (state) => {
-            const playerEl = document.getElementById('player');
+            const playerPos = typeof getPlayerScreenPosition === 'function' ? getPlayerScreenPosition() : null;
             
             // MageVFX 시간 왜곡
-            if (playerEl && typeof MageVFX !== 'undefined') {
-                const rect = playerEl.getBoundingClientRect();
-                MageVFX.timeWarp(rect.left + rect.width/2, rect.top + rect.height/2);
+            if (playerPos?.valid && typeof MageVFX !== 'undefined') {
+                MageVFX.timeWarp(playerPos.centerX, playerPos.centerY);
             }
             
             // 직전 카드 재사용
@@ -3485,7 +3600,7 @@ const upgradedCardDatabase = {
         }
     },
     
-    // 전투 개막 -> 전투 개막+
+    // 전투 개막 -> 전투 개막+ - 초폭발 파워태클!
     battleOpeningP: {
         id: 'battleOpeningP',
         name: '전투 개막+',
@@ -3497,15 +3612,26 @@ const upgradedCardDatabase = {
         innate: true,
         ethereal: true,
         upgraded: true,
+        animationId: 'battleOpeningP',  // 🎬 초폭발 파워태클!
         effect: (state) => {
-            const playerEl = document.getElementById('player');
-            const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
+            // 🎮 DDOO Action 엔진 - 초폭발 파워태클!
+            if (typeof CardAnimations !== 'undefined' && CardAnimations.has('battleOpeningP')) {
+                CardAnimations.play('battleOpeningP', {
+                    target: state.enemy,
+                    targetEl: typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : null,
+                    damage: 12,
+                    onComplete: () => {}
+                });
+            } else {
+                // 폴백
+                const playerEl = document.getElementById('player');
+                const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
+                EffectSystem.bodySlam(playerEl, enemyEl, () => {
+                    dealDamage(state.enemy, 12);
+                });
+            }
             
-            EffectSystem.bodySlam(playerEl, enemyEl, () => {
-                dealDamage(state.enemy, 12);
-            });
-            
-            addLog('전투 개막+! 12 데미지!', 'damage');
+            addLog('🔥 전투 개막+! 초폭발 파워태클 12 데미지!', 'damage');
         }
     },
     
@@ -3601,56 +3727,57 @@ const upgradedCardDatabase = {
         hitCount: 4,
         hitInterval: 80,
         upgraded: true,
+        animationId: 'flurryP',  // 🎬 카드 애니메이션 ID!
         effect: (state) => {
-            const playerEl = document.getElementById('player');
-            const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
             const totalHits = 4;
-            const interval = 80; // 업그레이드라 더 빠르게!
+            const damage = 3;
             
-            // 플레이어 돌진 → 콜백 안에서 공격!
-            EffectSystem.playerAttack(playerEl, enemyEl, () => {
-                let hits = 0;
-                const doHit = () => {
-                    if (hits >= totalHits) return;
-                    if (state.enemy.hp <= 0) return;
-                    
-                    // 슬래시 이펙트 + 데미지 동시에!
-                    const rect = enemyEl.getBoundingClientRect();
-                    const centerX = rect.left + rect.width / 2;
-                    const centerY = rect.top + rect.height / 2;
-                    const offsetY = (hits - 1) * 20;
-                    
-                    if (typeof VFX !== 'undefined') {
-                        VFX.slash(centerX, centerY + offsetY, {
-                            color: '#60a5fa',
-                            length: 180,
-                            width: 8,
-                            angle: (Math.random() - 0.5) * 25
-                        });
-                        VFX.sparks(centerX + 25, centerY + offsetY, { color: '#60a5fa', count: 6 });
+            // 🎬 CardAnimations 사용 (강화 버전!)
+            // ⚠️ 대미지는 DDOOAction의 onDamage에서만 적용됨!
+            if (typeof CardAnimations !== 'undefined' && CardAnimations.has('flurryP')) {
+                CardAnimations.play('flurryP', {
+                    target: state.enemy,
+                    targetEl: typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : null,
+                    hitCount: totalHits,
+                    damage: damage,
+                    interval: 160,  // 더 빠른 간격 (기본 200ms보다 빠름)
+                    onHit: (hitIndex, dmg) => {
+                        // 대미지는 DDOOAction에서 이미 적용됨
+                        // 추가 콤보 카운트 (2번째 타격부터)
+                        if (hitIndex > 0 && state.enemy.hp > 0 && typeof RelicSystem !== 'undefined') {
+                            RelicSystem.incrementCombo();
+                            RelicSystem.showComboFloater(RelicSystem.combo.count);
+                        }
+                    },
+                    onComplete: () => {
+                        console.log('[FlurryP] 연속 찌르기+ 완료!');
                     }
-                    
-                    dealDamage(state.enemy, 3);
-                    
-                    if (hits > 0 && typeof RelicSystem !== 'undefined') {
-                        RelicSystem.incrementCombo();
-                        RelicSystem.showComboFloater(RelicSystem.combo.count);
-                    }
-                    
-                    hits++;
-                    if (hits < totalHits && state.enemy.hp > 0) {
-                        setTimeout(doHit, interval);
-                    }
-                };
+                });
+            } else {
+                // 폴백: 기존 방식
+                const playerEl = document.getElementById('player');
+                const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
                 
-                doHit();
-            });
+                EffectSystem.playerAttack(playerEl, enemyEl, () => {
+                    let hits = 0;
+                    const doHit = () => {
+                        if (hits >= totalHits) return;
+                        if (state.enemy.hp <= 0) return;
+                        dealDamage(state.enemy, damage);
+                        hits++;
+                        if (hits < totalHits && state.enemy.hp > 0) {
+                            setTimeout(doHit, 80);
+                        }
+                    };
+                    doHit();
+                });
+            }
             
             addLog('연속 찌르기+! 3x4 데미지!', 'damage');
         }
     },
     
-    // 비열한 일격 -> 비열한 일격+
+    // 💀 비열한 일격+ - 강화된 그림자 백스탭!
     dirtyStrikeP: {
         id: 'dirtyStrikeP',
         name: '비열한 일격+',
@@ -3660,19 +3787,34 @@ const upgradedCardDatabase = {
         icon: '<img src="skill_biyul.png" alt="Dirty Strike" class="card-icon-img">',
         description: '<span class="damage">7</span> 데미지.<br>적에게 <span class="debuff">취약</span> 2턴.',
         upgraded: true,
+        animationId: 'dirtyStrikeP',
         effect: (state) => {
-            const playerEl = document.getElementById('player');
             const enemyEl = typeof getSelectedEnemyElement === 'function' ? getSelectedEnemyElement() : document.getElementById('enemy');
             
-            EffectSystem.playerAttack(playerEl, enemyEl, () => {
-                EffectSystem.slash(enemyEl, { color: '#9b59b6', count: 1 });
-                dealDamage(state.enemy, 7);
-                
-                state.enemy.vulnerable = (state.enemy.vulnerable || 0) + 2;
-                showVulnerableEffect(enemyEl, 2);
-            });
+            // 🎮 DDOO Action 엔진 사용!
+            // ⚠️ 대미지/디버프는 DDOOAction의 onDamage/onDebuff에서 적용됨!
+            if (typeof CardAnimations !== 'undefined' && CardAnimations.play) {
+                CardAnimations.play('dirtyStrikeP', {
+                    target: state.enemy,
+                    targetEl: enemyEl,
+                    damage: 7,
+                    onComplete: () => {
+                        showVulnerableEffect(enemyEl, 2);
+                        if (typeof updateEnemiesUI === 'function') updateEnemiesUI();
+                    }
+                });
+            } else {
+                // 폴백
+                const playerEl = document.getElementById('player');
+                EffectSystem.playerAttack(playerEl, enemyEl, () => {
+                    EffectSystem.slash(enemyEl, { color: '#9b59b6', count: 1 });
+                    dealDamage(state.enemy, 7);
+                    state.enemy.vulnerable = (state.enemy.vulnerable || 0) + 2;
+                    showVulnerableEffect(enemyEl, 2);
+                });
+            }
             
-            addLog('비열한 일격+! 7 데미지 + 취약 2턴!', 'damage');
+            addLog('💀 비열한 일격+! 7 데미지 + 취약 2턴!', 'damage');
         }
     },
     

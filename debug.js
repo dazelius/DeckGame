@@ -472,6 +472,101 @@ const DebugSystem = {
             </div>
             
             <div class="debug-section">
+                <h3>🎯 3D 위치 디버그</h3>
+                <div class="debug-tool-row">
+                    <button class="debug-btn ${typeof Background3D !== 'undefined' && Background3D.debugMarkers?.length > 0 ? 'active' : ''}" onclick="DebugSystem.toggle3DMarkers()">
+                        ${typeof Background3D !== 'undefined' && Background3D.debugMarkers?.length > 0 ? '🟢 마커 ON' : '⚪ 마커 OFF'}
+                    </button>
+                    <button class="debug-btn" onclick="DebugSystem.debug3DPositions()">📊 좌표 출력</button>
+                </div>
+                <div class="debug-tool-row">
+                    <span style="font-size: 0.8rem; color: #888;">플레이어 Y:</span>
+                    <input type="range" min="-2" max="5" step="0.5" 
+                        value="${typeof Background3D !== 'undefined' ? Background3D.worldPositions?.player?.y || 0 : 0}" 
+                        id="player-y-slider" 
+                        style="flex: 1; margin: 0 10px;"
+                        oninput="DebugSystem.setPlayerY(this.value)">
+                    <span id="player-y-display" style="min-width: 30px; text-align: center; color: #3498db;">
+                        ${typeof Background3D !== 'undefined' ? Background3D.worldPositions?.player?.y || 0 : 0}
+                    </span>
+                </div>
+                <div class="debug-tool-row">
+                    <span style="font-size: 0.8rem; color: #888;">플레이어 Z:</span>
+                    <input type="range" min="-2" max="12" step="0.5" 
+                        value="${typeof Background3D !== 'undefined' ? Background3D.worldPositions?.player?.z || 0.5 : 0.5}" 
+                        id="player-z-slider" 
+                        style="flex: 1; margin: 0 10px;"
+                        oninput="DebugSystem.setPlayerZ(this.value)">
+                    <span id="player-z-display" style="min-width: 30px; text-align: center; color: #3498db;">
+                        ${typeof Background3D !== 'undefined' ? Background3D.worldPositions?.player?.z || 0.5 : 0.5}
+                    </span>
+                </div>
+                <div class="debug-tool-row">
+                    <button class="debug-btn ${typeof Background3D !== 'undefined' && Background3D.autoZoom?.enabled ? 'active' : ''}" onclick="DebugSystem.toggleAutoZoom()">
+                        🎥 자동줌 ${typeof Background3D !== 'undefined' && Background3D.autoZoom?.enabled ? 'ON' : 'OFF'}
+                    </button>
+                    <span style="font-size: 0.8rem; color: #888; margin-left: 10px;">수동 줌:</span>
+                    <input type="range" min="0.5" max="2" step="0.1" value="1" 
+                        id="camera-zoom-slider" 
+                        style="flex: 1; margin: 0 10px;"
+                        oninput="DebugSystem.setManualZoom(this.value)">
+                </div>
+                <div class="debug-hint">파란색=플레이어, 빨간색=적 | 자동줌: 적 수에 따라 카메라 거리 조절</div>
+            </div>
+            
+            <div class="debug-section">
+                <h3>💥 전투 동작 테스트</h3>
+                <div class="debug-tool-row">
+                    <button class="debug-btn" onclick="DebugSystem.testPlayerDash()" style="background: linear-gradient(135deg, #3498db, #2980b9);">
+                        🏃 플레이어 대시
+                    </button>
+                    <button class="debug-btn" onclick="DebugSystem.testAOEKnockback()" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
+                        💣 AOE 넉백
+                    </button>
+                    <button class="debug-btn" onclick="DebugSystem.testResetPositions()">
+                        ↩️ 원위치
+                    </button>
+                </div>
+                <div class="debug-tool-row">
+                    <span style="font-size: 0.8rem; color: #888;">넉백 강도:</span>
+                    <input type="range" min="0.5" max="4" step="0.5" value="2" 
+                        id="aoe-strength-slider" 
+                        style="flex: 1; margin: 0 10px;"
+                        oninput="document.getElementById('aoe-strength-display').textContent = this.value">
+                    <span id="aoe-strength-display" style="min-width: 30px; text-align: center; color: #e74c3c;">2</span>
+                </div>
+                <div class="debug-tool-row">
+                    <button class="debug-btn" onclick="DebugSystem.testSingleKnockback(0)" style="font-size: 0.75rem;">
+                        적1 넉백
+                    </button>
+                    <button class="debug-btn" onclick="DebugSystem.testSingleKnockback(1)" style="font-size: 0.75rem;">
+                        적2 넉백
+                    </button>
+                    <button class="debug-btn" onclick="DebugSystem.testSingleKnockback(2)" style="font-size: 0.75rem;">
+                        적3 넉백
+                    </button>
+                </div>
+                <div class="debug-hint">LOL 장판 스타일! 적 위치 실제 변위 테스트</div>
+            </div>
+            
+            <div class="debug-section">
+                <h3>🔧 개발자 테스트 도구</h3>
+                <div class="debug-tool-row">
+                    <button class="debug-btn" onclick="window.open('test_animation.html', '_blank')" style="background: linear-gradient(180deg, #8b5cf6 0%, #6d28d9 100%);">
+                        🎬 애니메이션 테스트
+                    </button>
+                    <button class="debug-btn" onclick="window.open('testvfx.html', '_blank')" style="background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);">
+                        ✨ VFX 테스트
+                    </button>
+                </div>
+                <div class="debug-tool-row">
+                    <button class="debug-btn" onclick="window.open('cardtest.html', '_blank')">🃏 카드 테스트</button>
+                    <button class="debug-btn" onclick="window.open('memory.html', '_blank')">🧠 메모리 테스트</button>
+                </div>
+                <div class="debug-hint">별도 창에서 테스트 도구를 열어 사용할 수 있습니다</div>
+            </div>
+            
+            <div class="debug-section">
                 <h3>⚠️ 위험 도구</h3>
                 <div class="debug-tool-row">
                     <button class="debug-btn danger" onclick="DebugSystem.resetAllData()">전체 데이터 초기화</button>
@@ -941,6 +1036,202 @@ const DebugSystem = {
             alert('데이터가 초기화되었습니다.\n페이지를 새로고침합니다.');
             location.reload();
         }
+    },
+    
+    // ==========================================
+    // 3D 위치 디버그 시스템
+    // ==========================================
+    toggle3DMarkers() {
+        if (typeof Background3D === 'undefined' || !Background3D.isInitialized) {
+            alert('Background3D가 초기화되지 않았습니다.');
+            return;
+        }
+        
+        Background3D.toggleDebugMarkers();
+        this.refresh();
+    },
+    
+    debug3DPositions() {
+        if (typeof Background3D === 'undefined' || !Background3D.isInitialized) {
+            alert('Background3D가 초기화되지 않았습니다.');
+            return;
+        }
+        
+        Background3D.debugPositions();
+    },
+    
+    setPlayerY(value) {
+        const y = parseFloat(value);
+        if (typeof Background3D !== 'undefined' && Background3D.worldPositions) {
+            Background3D.worldPositions.player.y = y;
+            Background3D.worldPositions.enemies.y = y;  // 적도 같은 높이로
+            
+            // 디스플레이 업데이트
+            const display = document.getElementById('player-y-display');
+            if (display) display.textContent = y;
+            
+            // 마커가 켜져있으면 업데이트
+            if (Background3D.debugMarkers?.length > 0) {
+                Background3D.showDebugMarkers();
+            }
+        }
+    },
+    
+    setPlayerZ(value) {
+        const z = parseFloat(value);
+        if (typeof Background3D !== 'undefined' && Background3D.worldPositions) {
+            Background3D.worldPositions.player.z = z;
+            Background3D.worldPositions.enemies.z = z;  // 적도 같은 Z로
+            
+            // 디스플레이 업데이트
+            const display = document.getElementById('player-z-display');
+            if (display) display.textContent = z;
+            
+            // 마커가 켜져있으면 업데이트
+            if (Background3D.debugMarkers?.length > 0) {
+                Background3D.showDebugMarkers();
+            }
+        }
+    },
+    
+    toggleAutoZoom() {
+        if (typeof Background3D !== 'undefined' && Background3D.autoZoom) {
+            Background3D.autoZoom.enabled = !Background3D.autoZoom.enabled;
+            console.log(`[Debug] 자동 줌: ${Background3D.autoZoom.enabled ? 'ON' : 'OFF'}`);
+            this.refresh();
+        }
+    },
+    
+    setManualZoom(value) {
+        const zoom = parseFloat(value);
+        if (typeof Background3D !== 'undefined') {
+            Background3D.setZoom(zoom);
+        }
+    },
+    
+    // ==========================================
+    // 전투 동작 테스트 시스템
+    // ==========================================
+    
+    testPlayerDash() {
+        if (typeof Background3D === 'undefined' || !Background3D.isInitialized) {
+            alert('Background3D가 초기화되지 않았습니다. 전투 중에 테스트하세요!');
+            return;
+        }
+        
+        // 가장 가까운 살아있는 적 찾기
+        const enemies = gameState?.enemies || [];
+        let targetIndex = -1;
+        for (let i = 0; i < enemies.length; i++) {
+            if (enemies[i] && enemies[i].hp > 0) {
+                targetIndex = i;
+                break;
+            }
+        }
+        
+        console.log(`[Debug] 🏃 플레이어 대시 테스트, 타겟: ${targetIndex}`);
+        
+        // 3D 대시!
+        Background3D.dashPlayer(targetIndex, () => {
+            console.log('[Debug] 대시 히트!');
+            // 히트 시 이펙트
+            if (typeof VFX !== 'undefined' && VFX.impact) {
+                const targetPos = targetIndex >= 0 ? Background3D.getEnemyScreenPosition(targetIndex) : null;
+                if (targetPos) {
+                    VFX.impact(targetPos.screenX, targetPos.screenY, { color: '#3498db', size: 60 });
+                }
+            }
+        });
+    },
+    
+    testAOEKnockback() {
+        if (typeof Background3D === 'undefined' || !Background3D.isInitialized) {
+            alert('Background3D가 초기화되지 않았습니다. 전투 중에 테스트하세요!');
+            return;
+        }
+        
+        // 강도 슬라이더에서 값 가져오기
+        const strengthSlider = document.getElementById('aoe-strength-slider');
+        const strength = strengthSlider ? parseFloat(strengthSlider.value) : 2;
+        
+        // 플레이어 위치 기준으로 AOE 넉백
+        const playerPos = Background3D.worldPositions.player;
+        const centerX = playerPos.x + 6;  // 플레이어 오른쪽 (적들 사이)
+        const centerZ = playerPos.z;
+        
+        // AOE 넉백 실행!
+        Background3D.aoeKnockback(centerX, centerZ, strength, 15);
+        
+        // 이펙트 (있으면)
+        if (typeof VFX !== 'undefined' && VFX.explosion) {
+            const screenPos = Background3D.project3DToScreen(centerX, 0, centerZ);
+            if (screenPos) {
+                VFX.explosion(screenPos.screenX, screenPos.screenY, { 
+                    color: '#ff4444', 
+                    count: 30 
+                });
+            }
+        }
+        
+        console.log(`[Debug] 💣 AOE 넉백 테스트: 중심(${centerX.toFixed(1)}, ${centerZ.toFixed(1)}), 강도: ${strength}`);
+    },
+    
+    testPushAll() {
+        if (typeof Background3D === 'undefined' || !Background3D.isInitialized) {
+            alert('Background3D가 초기화되지 않았습니다. 전투 중에 테스트하세요!');
+            return;
+        }
+        
+        const enemyCount = gameState?.enemies?.length || 0;
+        
+        for (let i = 0; i < enemyCount; i++) {
+            const enemy = gameState.enemies[i];
+            if (!enemy || enemy.hp <= 0) continue;
+            
+            const pos = Background3D.getEnemyWorldPosition(i);
+            if (!pos) continue;
+            
+            // 뒤로 밀어내기
+            Background3D.pushEnemyTo(i, pos.x, pos.z - 3, 0.4);
+        }
+        
+        // 1.5초 후 원위치
+        setTimeout(() => {
+            Background3D.resetAllEnemyPositions(0.6);
+        }, 1500);
+        
+        console.log('[Debug] 🌊 모든 적 밀어내기 테스트');
+    },
+    
+    testResetPositions() {
+        if (typeof Background3D === 'undefined' || !Background3D.isInitialized) {
+            alert('Background3D가 초기화되지 않았습니다.');
+            return;
+        }
+        
+        Background3D.resetAllPositions(0.5);
+        console.log('[Debug] ↩️ 모든 캐릭터 원위치로 복귀');
+    },
+    
+    testSingleKnockback(index) {
+        if (typeof Background3D === 'undefined' || !Background3D.isInitialized) {
+            alert('Background3D가 초기화되지 않았습니다. 전투 중에 테스트하세요!');
+            return;
+        }
+        
+        const enemy = gameState?.enemies?.[index];
+        if (!enemy || enemy.hp <= 0) {
+            alert(`적 ${index + 1}이(가) 없거나 사망했습니다.`);
+            return;
+        }
+        
+        // 강도 슬라이더에서 값 가져오기
+        const strengthSlider = document.getElementById('aoe-strength-slider');
+        const damage = strengthSlider ? parseFloat(strengthSlider.value) * 10 : 20;
+        
+        Background3D.knockbackEnemy(index, damage);
+        
+        console.log(`[Debug] 적 ${index + 1} 흔들림: 강도=${damage}`);
     },
     
     // ==========================================

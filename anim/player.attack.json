@@ -1,0 +1,24 @@
+{
+    "id": "player.attack",
+    "name": "플레이어 공격 - 날카로운 검 베기",
+    "target": "player",
+    "type": "once",
+    "priority": 10,
+    "duration": 380,
+    "keyframes": [
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "alpha": 1, "duration": 0 },
+        
+        { "x": -8, "y": 3, "scaleX": 0.95, "scaleY": 1.05, "rotation": -0.03, "duration": 20, "ease": "power2.out" },
+        { "x": -20, "y": 10, "scaleX": 0.85, "scaleY": 1.15, "rotation": -0.1, "duration": 30, "ease": "power2.in", "afterimage": true },
+        { "x": -30, "y": 18, "scaleX": 0.75, "scaleY": 1.25, "rotation": -0.18, "duration": 25, "ease": "power3.in", "color": "power" },
+        
+        { "x": 30, "y": -15, "scaleX": 1.25, "scaleY": 0.8, "rotation": 0.15, "duration": 15, "ease": "power4.out", "afterimage": true, "camera": { "zoom": 1.15, "focus": "enemy", "duration": 150 } },
+        { "x": 80, "y": -25, "scaleX": 1.45, "scaleY": 0.65, "rotation": 0.3, "duration": 18, "ease": "power4.out", "vfx": "sword_slash", "vfxTarget": "target", "shake": 14, "hitstop": 90, "afterimage": true, "color": "hit" },
+        { "x": 90, "y": -18, "scaleX": 1.35, "scaleY": 0.7, "rotation": 0.25, "duration": 20, "ease": "power2.out" },
+        
+        { "x": 75, "y": -8, "scaleX": 1.2, "scaleY": 0.85, "rotation": 0.15, "duration": 35, "ease": "power2.inOut" },
+        { "x": 50, "y": -2, "scaleX": 1.1, "scaleY": 0.92, "rotation": 0.08, "duration": 40, "ease": "power2.out" },
+        { "x": 25, "y": 0, "scaleX": 1.03, "scaleY": 0.98, "rotation": 0.03, "duration": 35, "ease": "power2.out" },
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 30, "ease": "elastic.out(1, 0.5)" }
+    ]
+}

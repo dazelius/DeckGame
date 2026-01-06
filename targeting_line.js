@@ -99,30 +99,81 @@ const TargetingLine = {
         let newHoveredTarget = null;
         
         if (this.targetType === 'enemy' || this.targetType === 'allEnemy') {
-            const container = document.getElementById('enemies-container');
-            if (container) {
-                const enemies = container.querySelectorAll('.enemy-unit:not(.dead)');
-                enemies.forEach(el => {
-                    const rect = el.getBoundingClientRect();
-                    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-                        newHoveredTarget = el;
-                    }
-                });
+            // ✅ PixiJS EnemyRenderer 사용 시
+            if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                const enemyData = EnemyRenderer.getEnemyAtPosition(x, y);
+                if (enemyData) {
+                    // PixiJS용 가상 타겟 객체 생성
+                    newHoveredTarget = {
+                        isPixiTarget: true,
+                        enemy: enemyData.enemy,
+                        centerX: enemyData.centerX,
+                        centerY: enemyData.centerY,
+                        width: enemyData.width,
+                        height: enemyData.height,
+                        getBoundingClientRect: () => ({
+                            left: enemyData.left,
+                            right: enemyData.right,
+                            top: enemyData.top,
+                            bottom: enemyData.bottom,
+                            width: enemyData.width,
+                            height: enemyData.height
+                        })
+                    };
+                }
             } else {
-                const enemyEl = document.getElementById('enemy');
-                if (enemyEl) {
-                    const rect = enemyEl.getBoundingClientRect();
-                    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-                        newHoveredTarget = enemyEl;
+                // 기존 DOM 방식
+                const container = document.getElementById('enemies-container');
+                if (container) {
+                    const enemies = container.querySelectorAll('.enemy-unit:not(.dead)');
+                    enemies.forEach(el => {
+                        const rect = el.getBoundingClientRect();
+                        if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+                            newHoveredTarget = el;
+                        }
+                    });
+                } else {
+                    const enemyEl = document.getElementById('enemy');
+                    if (enemyEl) {
+                        const rect = enemyEl.getBoundingClientRect();
+                        if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+                            newHoveredTarget = enemyEl;
+                        }
                     }
                 }
             }
         } else if (this.targetType === 'self') {
-            const playerEl = document.getElementById('player');
-            if (playerEl) {
-                const rect = playerEl.getBoundingClientRect();
-                if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-                    newHoveredTarget = playerEl;
+            // ✅ PixiJS PlayerRenderer 사용 시
+            if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
+                const playerPos = PlayerRenderer.getPlayerPosition();
+                if (playerPos) {
+                    if (x >= playerPos.left && x <= playerPos.right && y >= playerPos.top && y <= playerPos.bottom) {
+                        newHoveredTarget = {
+                            isPixiTarget: true,
+                            isPlayer: true,
+                            centerX: playerPos.centerX,
+                            centerY: playerPos.centerY,
+                            width: playerPos.width,
+                            height: playerPos.height,
+                            getBoundingClientRect: () => ({
+                                left: playerPos.left,
+                                right: playerPos.right,
+                                top: playerPos.top,
+                                bottom: playerPos.bottom,
+                                width: playerPos.width,
+                                height: playerPos.height
+                            })
+                        };
+                    }
+                }
+            } else {
+                // 기존 DOM 방식
+                const playerEl = document.getElementById('player');
+                if (playerEl) {
+                    const rect = playerEl.getBoundingClientRect();
+                    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+                        newHoveredTarget = playerEl;
+                    }
                 }
             }
         }
@@ -315,6 +366,17 @@ const TargetingLine = {
     getTargetName(element) {
         if (!element) return null;
         
+        // ✅ PixiJS 타겟인 경우
+        if (element.isPixiTarget) {
+            if (element.isPlayer) {
+                return 'Player';
+            }
+            if (element.enemy) {
+                return element.enemy.name || 'Enemy';
+            }
+            return null;
+        }
+        
         // 적 이름 찾기
         const nameEl = element.querySelector('.enemy-name');
         if (nameEl) return nameEl.textContent;
@@ -352,27 +414,95 @@ const TargetingLine = {
         let targets = [];
         
         if (this.targetType === 'enemy' || this.targetType === 'allEnemy') {
-            const container = document.getElementById('enemies-container');
-            if (container) {
-                container.querySelectorAll('.enemy-unit:not(.dead)').forEach(el => {
-                    targets.push(el);
+            // ✅ PixiJS EnemyRenderer 사용 시
+            if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
+                const positions = EnemyRenderer.getEnemyScreenPositions();
+                positions.forEach(pos => {
+                    targets.push({
+                        isPixiTarget: true,
+                        centerX: pos.centerX,
+                        centerY: pos.centerY,
+                        enemy: pos.enemy,
+                        getBoundingClientRect: () => ({
+                            left: pos.left,
+                            right: pos.right,
+                            top: pos.top,
+                            bottom: pos.bottom,
+                            width: pos.width,
+                            height: pos.height
+                        })
+                    });
                 });
             } else {
-                const enemyEl = document.getElementById('enemy');
-                if (enemyEl) targets.push(enemyEl);
+                // 기존 DOM 방식
+                const container = document.getElementById('enemies-container');
+                if (container) {
+                    container.querySelectorAll('.enemy-unit:not(.dead)').forEach(el => {
+                        targets.push(el);
+                    });
+                } else {
+                    const enemyEl = document.getElementById('enemy');
+                    if (enemyEl) targets.push(enemyEl);
+                }
             }
         } else if (this.targetType === 'self') {
-            const playerEl = document.getElementById('player');
-            if (playerEl) targets.push(playerEl);
+            // ✅ PixiJS PlayerRenderer 사용 시
+            if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
+                const playerPos = PlayerRenderer.getPlayerPosition();
+                if (playerPos) {
+                    targets.push({
+                        isPixiTarget: true,
+                        isPlayer: true,
+                        centerX: playerPos.centerX,
+                        centerY: playerPos.centerY,
+                        getBoundingClientRect: () => ({
+                            left: playerPos.left,
+                            right: playerPos.right,
+                            top: playerPos.top,
+                            bottom: playerPos.bottom,
+                            width: playerPos.width,
+                            height: playerPos.height
+                        })
+                    });
+                }
+            } else {
+                // 기존 DOM 방식
+                const playerEl = document.getElementById('player');
+                if (playerEl) targets.push(playerEl);
+            }
         }
         
         // 각 타겟에 라인과 마커 그리기
         targets.forEach(targetEl => {
-            const rect = targetEl.getBoundingClientRect();
-            const targetX = rect.left + rect.width / 2;
-            const targetY = rect.top + rect.height / 2;
+            let targetX, targetY;
             
-            const isHovered = targetEl === this.hoveredTarget;
+            // ✅ PixiJS 타겟인 경우 centerX/Y 사용
+            if (targetEl.isPixiTarget) {
+                targetX = targetEl.centerX;
+                targetY = targetEl.centerY;
+            } else {
+                const rect = targetEl.getBoundingClientRect();
+                targetX = rect.left + rect.width / 2;
+                targetY = rect.top + rect.height / 2;
+            }
+            
+            // 호버 체크 (PixiJS는 enemy/player 객체 비교)
+            let isHovered = false;
+            if (this.hoveredTarget) {
+                if (targetEl.isPixiTarget && this.hoveredTarget.isPixiTarget) {
+                    // 플레이어 타겟 비교
+                    if (targetEl.isPlayer && this.hoveredTarget.isPlayer) {
+                        isHovered = true;
+                    }
+                    // 적 타겟 비교
+                    else if (targetEl.enemy && this.hoveredTarget.enemy) {
+                        isHovered = targetEl.enemy === this.hoveredTarget.enemy;
+                    }
+                } else {
+                    isHovered = targetEl === this.hoveredTarget;
+                }
+            }
+            
             const isAllTarget = this.targetType === 'allEnemy';
             
             // 라인 그리기

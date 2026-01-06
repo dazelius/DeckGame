@@ -1,0 +1,22 @@
+{
+    "id": "enemy.plunder_finish",
+    "name": "강탈 마무리 피격 (대형 복셀)",
+    "target": "enemy",
+    "type": "once",
+    "priority": 19,
+    "duration": 350,
+    "vfx": "hit",
+    "shake": 18,
+    "hitstop": 100,
+    "keyframes": [
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 0 },
+        { "x": -18, "y": -12, "scaleX": 0.78, "scaleY": 1.22, "alpha": 0.78, "rotation": -0.16, "duration": 10, "ease": "power4.out", "tint": { "color": "#ffffff", "duration": 10 }, "shatter": { "target": "self", "grid": 12, "force": 18, "life": 600, "hideTime": 200, "gravity": 0.5 } },
+        { "x": -20, "y": -13, "scaleX": 0.75, "scaleY": 1.25, "alpha": 0.75, "rotation": -0.18, "duration": 10, "tint": { "color": "#ff0000", "duration": 10 } },
+        { "x": -23, "y": -14, "scaleX": 0.72, "scaleY": 1.28, "alpha": 0.72, "rotation": -0.19, "duration": 10, "tint": { "color": "#ffffff", "duration": 10 } },
+        { "x": -25, "y": -15, "scaleX": 0.70, "scaleY": 1.30, "alpha": 0.70, "rotation": -0.20, "duration": 12, "tint": { "color": "#ff0000", "duration": 12 } },
+        { "x": -12, "y": -5, "scaleX": 0.82, "scaleY": 1.18, "alpha": 0.82, "rotation": -0.10, "duration": 50, "ease": "power2.out" },
+        { "x": 30, "y": 3, "scaleX": 0.90, "scaleY": 1.10, "alpha": 0.88, "rotation": 0.08, "duration": 60, "ease": "power3.out" },
+        { "x": 40, "y": 0, "scaleX": 0.95, "scaleY": 1.05, "alpha": 0.94, "rotation": 0.04, "duration": 50, "ease": "power2.out" },
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 40, "ease": "power2.out" }
+    ]
+}

@@ -1,0 +1,48 @@
+{
+    "id": "drain_burst",
+    "name": "착취 완료 폭발",
+    "shake": 6,
+    "particles": [
+        {
+            "type": "flash",
+            "size": 80,
+            "color": "#dc2626",
+            "life": 50
+        },
+        {
+            "type": "ring",
+            "size": 20,
+            "maxSize": 100,
+            "color": "#991b1b",
+            "life": 150
+        },
+        {
+            "type": "line",
+            "count": 12,
+            "angleStep": 30,
+            "length": [30, 60],
+            "width": 3,
+            "color": "#ef4444",
+            "life": 120
+        },
+        {
+            "type": "spark",
+            "count": 25,
+            "spread": 360,
+            "speed": [10, 25],
+            "size": [4, 9],
+            "colors": ["#dc2626", "#b91c1c", "#991b1b"],
+            "life": [180, 320]
+        },
+        {
+            "type": "debris",
+            "count": 18,
+            "speed": [8, 20],
+            "size": [3, 6],
+            "colors": ["#7f1d1d", "#450a0a", "#1c1917"],
+            "gravity": 0.35,
+            "life": [200, 380]
+        }
+    ]
+}
+

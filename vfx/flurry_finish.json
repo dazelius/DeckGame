@@ -1,0 +1,89 @@
+{
+    "id": "flurry_finish",
+    "name": "연속 찌르기 피니시 이펙트 - 강화",
+    "shake": 12,
+    "particles": [
+        {
+            "type": "flash",
+            "size": 100,
+            "color": "#ffffff",
+            "life": 45
+        },
+        {
+            "type": "flash",
+            "size": 70,
+            "color": "#60a5fa",
+            "life": 75
+        },
+        {
+            "type": "arrow",
+            "length": 220,
+            "width": 100,
+            "tipAngle": 18,
+            "color": "#ffffff",
+            "glow": "#60a5fa",
+            "life": 160
+        },
+        {
+            "type": "arrow",
+            "length": 180,
+            "width": 70,
+            "tipAngle": 16,
+            "color": "#93c5fd",
+            "glow": "#3b82f6",
+            "life": 130,
+            "delay": 20
+        },
+        {
+            "type": "ring",
+            "size": 30,
+            "maxSize": 140,
+            "color": "#ffffff",
+            "life": 110
+        },
+        {
+            "type": "ring",
+            "size": 50,
+            "maxSize": 100,
+            "color": "#60a5fa",
+            "life": 150
+        },
+        {
+            "type": "slash",
+            "count": 3,
+            "angle": [-30, 0, 30],
+            "length": [100, 160],
+            "width": 10,
+            "color": "#ffffff",
+            "glow": "#60a5fa",
+            "life": 130
+        },
+        {
+            "type": "line",
+            "count": 5,
+            "angleStep": 0,
+            "length": [100, 150],
+            "width": 4,
+            "color": "#93c5fd",
+            "life": 100
+        },
+        {
+            "type": "spark",
+            "count": 35,
+            "spread": 90,
+            "speed": [14, 32],
+            "size": [4, 9],
+            "colors": ["#60a5fa", "#93c5fd", "#ffffff", "#3b82f6"],
+            "life": [200, 400]
+        },
+        {
+            "type": "debris",
+            "count": 18,
+            "speed": [12, 26],
+            "size": [4, 7],
+            "colors": ["#60a5fa", "#93c5fd", "#ffffff"],
+            "gravity": 0.35,
+            "life": [300, 550]
+        }
+    ]
+}

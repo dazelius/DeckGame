@@ -1,0 +1,20 @@
+{
+    "id": "player.sneak",
+    "name": "그림자 접근",
+    "target": "player",
+    "type": "once",
+    "priority": 15,
+    "duration": 280,
+    "keyframes": [
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 0 },
+        
+        { "x": -10, "y": 8, "scaleX": 0.85, "scaleY": 1.15, "alpha": 1, "rotation": 0, "duration": 25, "ease": "power2.in", "color": "shadow" },
+        { "x": -5, "y": 15, "scaleX": 0.75, "scaleY": 1.25, "alpha": 0.5, "rotation": 0, "duration": 20, "ease": "power3.in", "vfx": "shadow_fade", "vfxTarget": "self" },
+        
+        { "dashToTarget": "enemy", "dashOffset": 15, "y": -8, "scaleX": 1.25, "scaleY": 0.75, "alpha": 0.3, "rotation": 0.12, "duration": 50, "dashEase": "power4.out", "afterimage": true, "camera": { "zoom": 1.5, "focus": "enemy", "duration": 200 } },
+        
+        { "y": -3, "scaleX": 1.1, "scaleY": 0.9, "alpha": 0.6, "rotation": 0.06, "duration": 35, "ease": "power3.out", "afterimage": true, "vfx": "shadow_appear", "vfxTarget": "self" },
+        { "y": 0, "scaleX": 1.02, "scaleY": 0.98, "alpha": 0.9, "rotation": 0.02, "duration": 30, "ease": "power2.out" },
+        { "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 25, "ease": "power2.out" }
+    ]
+}

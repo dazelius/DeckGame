@@ -1,0 +1,21 @@
+{
+    "id": "card.flurry",
+    "name": "연속 찌르기",
+    "type": "sequence",
+    "description": "3번 연속으로 빠르게 찌른다",
+    "returnToBase": true,
+    "steps": [
+        { "anim": "player.dash", "wait": true },
+        
+        { "anim": "player.flurry_stab1", "wait": false },
+        { "anim": "enemy.hit", "wait": true, "delay": 25, "damage": 2 },
+        { "delay": 20 },
+        
+        { "anim": "player.flurry_stab2", "wait": false },
+        { "anim": "enemy.hit", "wait": true, "delay": 25, "damage": 2 },
+        { "delay": 20 },
+        
+        { "anim": "player.flurry_stab3", "wait": false },
+        { "anim": "enemy.hit", "wait": true, "delay": 25, "damage": 2 }
+    ]
+}

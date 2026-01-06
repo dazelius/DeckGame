@@ -1,0 +1,38 @@
+{
+    "id": "gold_burst",
+    "name": "강탈 피격 - 피의 약탈",
+    "shake": 6,
+    "particles": [
+        {
+            "type": "flash",
+            "size": 55,
+            "color": "#fecaca",
+            "life": 45
+        },
+        {
+            "type": "spark",
+            "count": 25,
+            "spread": 65,
+            "speed": [7, 20],
+            "size": [3, 8],
+            "colors": ["#dc2626", "#b91c1c", "#991b1b", "#7f1d1d", "#450a0a"],
+            "life": [150, 320]
+        },
+        {
+            "type": "debris",
+            "count": 18,
+            "speed": [5, 16],
+            "size": [2, 7],
+            "colors": ["#991b1b", "#7f1d1d", "#450a0a", "#1f2937"],
+            "gravity": 0.4,
+            "life": [200, 400]
+        },
+        {
+            "type": "ring",
+            "size": 15,
+            "maxSize": 75,
+            "color": "#dc2626",
+            "life": 160
+        }
+    ]
+}

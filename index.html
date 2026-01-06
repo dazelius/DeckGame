@@ -17,6 +17,8 @@
     
     <!-- PIXI.js for Canvas-based card animations -->
     <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.x/dist/pixi.min.js"></script>
+    <!-- PixiJS Filters for glow/bloom/shockwave effects -->
+    <script src="https://cdn.jsdelivr.net/npm/pixi-filters@6.x/dist/pixi-filters.min.js"></script>
 </head>
 <body>
     <!-- 즉시 표시되는 초기 로딩 화면 -->
@@ -206,6 +208,9 @@
         </div>
     </div>
 
+    <!-- 개발자 모드 / 점검 시스템 (최우선 로드) -->
+    <script src="dev.js?v=3"></script>
+    
     <!-- 반응형 시스템 (최우선 로드) -->
     <script src="responsive.js"></script>
     
@@ -218,6 +223,9 @@
     <script src="effects.js"></script>
     <script src="vfx.js"></script>
     <script src="pixi-renderer.js"></script>
+    <script src="enemy-renderer.js?v=6"></script>
+    <script src="player-renderer.js?v=6"></script>
+    <script src="pixi-projectile.js"></script>
     <script src="sprite-animation.js"></script>
     <script src="shield-break-vfx.js"></script>
     <script src="background.js"></script>
@@ -232,18 +240,29 @@
     <script src="relics-ui.js"></script>
     <script src="relic-loadout.js"></script>
     <script src="relic-fourcard.js"></script>
-    <script src="break-system.js"></script>
+    <script src="break-system.js?v=2"></script>
     <script src="ally.js"></script>
     <script src="monster-dialogue.js"></script>
     <script src="card-animation.js"></script>
-    <script src="result.js"></script>
+    <script src="result.js?v=2"></script>
     <script src="monster.js"></script>
     <script src="monster-animations.js"></script>
     
     <!-- 카드 시스템 (분리됨) -->
     <script src="card-types.js"></script>
     <script src="card-database.js"></script>
-    <script src="cards.js"></script>
+    <!-- DDOO Action Engine v3.2 + 모듈 -->
+    <script src="ddoo-utils.js?v=5"></script>
+    <script src="ddoo-draw.js?v=5"></script>
+    <script src="ddoo-chakram.js?v=2"></script>
+    <script src="ddoo-renderer.js?v=1"></script>
+    <script src="ddoo-action.js?v=60"></script>
+    <!-- 🎁 VFX/애니메이션 번들 (업데이트된 sword_arc 포함) -->
+    <script src="anim-bundle.js?v=27"></script>
+    <script src="animation-system.js"></script>
+    <script src="animation-loader.js"></script>
+    <script src="card-animations.js?v=6"></script>
+    <script src="cards.js?v=2"></script>
     <script src="field-system.js"></script>
     <script src="field-vfx.js"></script>
     <script src="card-triforce.js"></script>
@@ -283,11 +302,11 @@
     <script src="gambler_vfx.js"></script>
     <script src="hero-gambler.js"></script>
     <script src="town.js"></script>
-    <script src="title.js"></script>
+    <script src="title.js?v=2"></script>
     <script src="debug.js"></script>
     <script src="monster-passives.js"></script>
     <script src="buff.js"></script>
-    <script src="turn-effects.js"></script>
+    <script src="turn-effects.js?v=2"></script>
     <!-- 분리된 게임 모듈 -->
     <script src="targeting_line.js"></script>
     <script src="card-drag.js"></script>
@@ -303,7 +322,7 @@
     <script src="overkill-system.js"></script>
     <script src="gimmick-system.js"></script>
     <script src="battle-test.js"></script>
-    <script src="background-3d.js"></script>
+    <script src="background-3d.js?v=2"></script>
     <script src="image-preloader.js"></script>
     <script src="loading-screen.js"></script>
     <script src="deck-viewer.js"></script>
@@ -315,6 +334,6 @@
     <script src="mobile-touch.js"></script>
     <script src="camera-effects.js"></script>
     <script src="tutorial.js"></script>
-    <script src="game.js"></script>
+    <script src="game.js?v=3"></script>
 </body>
 </html>
