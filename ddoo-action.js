@@ -645,9 +645,21 @@ const DDOOAction = {
     startBreathing(charData) {
         if (!charData || !charData.sprite) return;
         
-        const { sprite, baseScale = 1 } = charData;
+        const { sprite, container, baseScale = 1 } = charData;
         const amount = this.config.character.breathingAmount;
         const speed = this.config.character.breathingSpeed;
+        
+        // 🔥 EnemyRenderer 판단: container.scale < 0.95면 EnemyRenderer가 숨쉬기 담당
+        // DDOOAction은 숨쉬기 건너뜀 (충돌 방지!)
+        const containerScale = container?.scale?.x || 1;
+        if (containerScale < 0.95) {
+            // EnemyRenderer가 이미 container.scale로 숨쉬기 중
+            // sprite.scale은 건드리지 않음
+            if (this.config.debug) {
+                console.log('[DDOOAction] 🫁 EnemyRenderer 숨쉬기 사용 중 (스킵)');
+            }
+            return;
+        }
         
         // effects 객체가 없으면 생성
         if (!charData.effects) charData.effects = {};
@@ -657,6 +669,7 @@ const DDOOAction = {
             charData.effects.breathing.kill();
         }
         
+        // DDOOAction 캐릭터 (container.scale=1, sprite.scale=baseScale)
         charData.effects.breathing = gsap.to(sprite.scale, {
             y: baseScale * (1 + amount),
             duration: speed,
