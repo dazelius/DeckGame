@@ -5,412 +5,263 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🖼️ DDOORenderer Studio</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
             background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
             color: #eee;
             font-family: 'Segoe UI', 'Noto Sans KR', sans-serif;
             min-height: 100vh;
-            overflow-x: hidden;
         }
         
-        /* 헤더 */
         .header {
             background: linear-gradient(90deg, #1a1a2e, #16213e);
-            padding: 15px 30px;
+            padding: 12px 25px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             border-bottom: 2px solid #fbbf24;
-            position: sticky;
-            top: 0;
-            z-index: 100;
         }
         
-        .header h1 {
-            font-size: 1.5rem;
-            color: #fbbf24;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .header-links {
-            display: flex;
-            gap: 15px;
-        }
-        
+        .header h1 { font-size: 1.3rem; color: #fbbf24; }
+        .header-links { display: flex; gap: 15px; }
         .header-links a {
-            color: #888;
-            text-decoration: none;
-            padding: 8px 15px;
-            border-radius: 6px;
-            transition: all 0.2s;
+            color: #888; text-decoration: none;
+            padding: 6px 12px; border-radius: 6px;
         }
+        .header-links a:hover { color: #fff; background: rgba(255,255,255,0.1); }
         
-        .header-links a:hover {
-            color: #fff;
-            background: rgba(255,255,255,0.1);
-        }
-        
-        /* 메인 레이아웃 */
         .main-container {
             display: flex;
-            gap: 20px;
-            padding: 20px;
-            max-width: 1600px;
-            margin: 0 auto;
+            gap: 15px;
+            padding: 15px;
+            height: calc(100vh - 60px);
         }
         
-        /* 왼쪽 패널 - 설정 */
+        /* 왼쪽 설정 패널 */
         .control-panel {
-            width: 320px;
+            width: 280px;
             background: #12121a;
-            border-radius: 12px;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            max-height: calc(100vh - 120px);
+            border-radius: 10px;
+            padding: 12px;
             overflow-y: auto;
+            flex-shrink: 0;
         }
         
         .panel-section {
             background: rgba(255,255,255,0.03);
             border-radius: 8px;
-            padding: 12px;
+            padding: 10px;
+            margin-bottom: 10px;
         }
         
         .panel-section h3 {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: #fbbf24;
-            margin-bottom: 12px;
-            padding-bottom: 8px;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
             border-bottom: 1px solid #333;
         }
         
         .setting-row {
             display: flex;
             align-items: center;
-            margin-bottom: 10px;
-            gap: 10px;
+            margin-bottom: 8px;
+            gap: 8px;
         }
         
         .setting-row label {
-            width: 80px;
+            width: 70px;
             color: #888;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
         }
         
         .setting-row input[type="text"],
         .setting-row select {
             flex: 1;
-            padding: 8px 10px;
+            padding: 6px 8px;
             background: #1a1a28;
             border: 1px solid #333;
             color: #fff;
-            border-radius: 6px;
-            font-size: 0.85rem;
+            border-radius: 5px;
+            font-size: 0.8rem;
         }
         
         .setting-row input[type="color"] {
-            width: 50px;
-            height: 32px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
+            width: 40px; height: 28px;
+            border: none; border-radius: 4px; cursor: pointer;
         }
         
         .setting-row input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
+            width: 18px; height: 18px; cursor: pointer;
         }
         
-        .setting-row input[type="range"] {
-            flex: 1;
-            cursor: pointer;
-        }
-        
+        .setting-row input[type="range"] { flex: 1; cursor: pointer; }
         .setting-row .value {
-            width: 40px;
-            text-align: right;
-            color: #60a5fa;
-            font-size: 0.8rem;
+            width: 35px; text-align: right;
+            color: #60a5fa; font-size: 0.75rem;
         }
         
         /* 버튼 */
         .btn {
-            padding: 10px 15px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            font-weight: 600;
+            padding: 8px 12px;
+            border: none; border-radius: 6px;
+            cursor: pointer; font-size: 0.8rem;
             transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
         }
-        
-        .btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-        }
-        
-        .btn-success {
-            background: linear-gradient(135deg, #11998e, #38ef7d);
-            color: white;
-        }
-        
-        .btn-danger {
-            background: linear-gradient(135deg, #f5576c, #f093fb);
-            color: white;
-        }
-        
-        .btn-warning {
-            background: linear-gradient(135deg, #f5af19, #f12711);
-            color: white;
-        }
-        
-        .btn-info {
-            background: linear-gradient(135deg, #4facfe, #00f2fe);
-            color: white;
-        }
-        
-        .btn-full {
-            width: 100%;
-        }
+        .btn:hover { transform: translateY(-1px); }
+        .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+        .btn-success { background: linear-gradient(135deg, #11998e, #38ef7d); color: white; }
+        .btn-danger { background: linear-gradient(135deg, #f5576c, #f093fb); color: white; }
+        .btn-full { width: 100%; margin-top: 8px; }
         
         .btn-group {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
+            display: flex; gap: 5px; flex-wrap: wrap;
         }
+        .btn-group .btn { flex: 1; min-width: 60px; font-size: 0.75rem; padding: 6px; }
         
-        .btn-group .btn {
-            flex: 1;
-            min-width: 80px;
+        /* 스프라이트 빠른 선택 */
+        .sprite-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            margin-top: 8px;
         }
-        
-        /* 스프라이트 리스트 */
-        .sprite-list {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        
-        .sprite-item {
-            padding: 8px 12px;
+        .sprite-btn {
+            padding: 8px 4px;
             background: #1a1a28;
+            border: 1px solid #333;
             border-radius: 6px;
             cursor: pointer;
+            text-align: center;
+            font-size: 0.7rem;
+            color: #aaa;
             transition: all 0.2s;
-            font-size: 0.85rem;
+        }
+        .sprite-btn:hover { background: #2a2a3e; border-color: #667eea; }
+        .sprite-btn.active { background: #667eea33; border-color: #667eea; color: #fff; }
+        .sprite-btn .icon { font-size: 1.2rem; display: block; margin-bottom: 2px; }
+        
+        /* 중앙 - 비교 뷰 */
+        .compare-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .compare-header {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 8px;
+            background: #12121a;
+            border-radius: 8px;
+        }
+        
+        .compare-header label {
             display: flex;
             align-items: center;
             gap: 8px;
+            cursor: pointer;
+            color: #888;
         }
         
-        .sprite-item:hover {
-            background: #2a2a3e;
-        }
+        .compare-header input:checked + span { color: #fbbf24; }
         
-        .sprite-item.active {
-            background: linear-gradient(135deg, #667eea33, #764ba233);
-            border: 1px solid #667eea;
-        }
-        
-        .sprite-item .icon {
-            font-size: 1.1rem;
-        }
-        
-        /* 중앙 - 프리뷰 스테이지 */
-        .stage-container {
+        .preview-wrapper {
             flex: 1;
             display: flex;
-            flex-direction: column;
             gap: 15px;
         }
         
-        .preview-stage {
-            background: #1a1a2e;
-            border-radius: 12px;
+        .preview-box {
             flex: 1;
-            min-height: 500px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background: #1a1a2e;
+            border-radius: 10px;
             position: relative;
             overflow: hidden;
             border: 2px solid #333;
+            min-height: 400px;
         }
         
-        #pixiContainer {
-            width: 100%;
-            height: 100%;
-        }
+        .preview-box.original { border-color: #666; }
+        .preview-box.enhanced { border-color: #fbbf24; }
         
-        #pixiContainer canvas {
-            border-radius: 10px;
-        }
-        
-        .stage-info {
+        .preview-label {
             position: absolute;
             top: 10px;
             left: 10px;
             background: rgba(0,0,0,0.7);
-            padding: 8px 12px;
-            border-radius: 6px;
+            padding: 5px 12px;
+            border-radius: 4px;
             font-size: 0.75rem;
-            color: #888;
+            z-index: 10;
         }
         
-        .stage-controls {
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 8px;
-            background: rgba(0,0,0,0.7);
-            padding: 8px 15px;
-            border-radius: 20px;
+        .preview-label.original { color: #888; }
+        .preview-label.enhanced { color: #fbbf24; }
+        
+        .preview-canvas {
+            width: 100%;
+            height: 100%;
         }
         
-        /* 오른쪽 패널 - 로그 & 프리셋 */
+        /* 오른쪽 - 상태 테스트 & 로그 */
         .side-panel {
-            width: 280px;
+            width: 200px;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 10px;
+            flex-shrink: 0;
         }
         
         .log-panel {
             background: #12121a;
-            border-radius: 12px;
-            padding: 15px;
+            border-radius: 10px;
+            padding: 10px;
             flex: 1;
             display: flex;
             flex-direction: column;
         }
         
         .log-panel h3 {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: #fbbf24;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
         
         .log-container {
             flex: 1;
             overflow-y: auto;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-family: monospace;
             background: #0a0a12;
-            padding: 10px;
-            border-radius: 6px;
-            max-height: 300px;
+            padding: 8px;
+            border-radius: 5px;
         }
         
-        .log-entry {
-            padding: 4px 0;
-            border-bottom: 1px solid #1a1a28;
-            color: #888;
-        }
-        
+        .log-entry { padding: 3px 0; border-bottom: 1px solid #1a1a28; color: #888; }
         .log-entry.info { color: #60a5fa; }
         .log-entry.success { color: #34d399; }
         .log-entry.error { color: #f87171; }
-        .log-entry.warn { color: #fbbf24; }
         
-        /* 프리셋 패널 */
-        .preset-panel {
-            background: #12121a;
-            border-radius: 12px;
-            padding: 15px;
-        }
-        
-        .preset-panel h3 {
-            font-size: 0.9rem;
-            color: #fbbf24;
-            margin-bottom: 10px;
-        }
-        
-        .preset-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-        }
-        
-        .preset-btn {
-            padding: 12px;
-            background: #1a1a28;
-            border: 1px solid #333;
-            border-radius: 8px;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.2s;
-        }
-        
-        .preset-btn:hover {
-            background: #2a2a3e;
-            border-color: #667eea;
-        }
-        
-        .preset-btn.active {
-            background: linear-gradient(135deg, #667eea33, #764ba233);
-            border-color: #667eea;
-        }
-        
-        .preset-btn .icon {
-            font-size: 1.5rem;
-            display: block;
-            margin-bottom: 5px;
-        }
-        
-        .preset-btn .name {
-            font-size: 0.8rem;
-            color: #aaa;
-        }
-        
-        /* 로딩 */
-        .loading {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 15px;
-            color: #666;
-        }
-        
-        .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid #333;
-            border-top-color: #667eea;
+        /* 실시간 표시 */
+        .live-indicator {
+            display: inline-block;
+            width: 8px; height: 8px;
+            background: #34d399;
             border-radius: 50%;
-            animation: spin 1s linear infinite;
+            margin-right: 5px;
+            animation: pulse 1s infinite;
         }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
     </style>
 </head>
 <body>
-    <!-- 헤더 -->
     <div class="header">
         <h1>🖼️ DDOORenderer Studio</h1>
         <div class="header-links">
@@ -419,255 +270,198 @@
         </div>
     </div>
     
-    <!-- 메인 컨테이너 -->
     <div class="main-container">
         <!-- 왼쪽 - 설정 패널 -->
         <div class="control-panel">
             <!-- 스프라이트 선택 -->
             <div class="panel-section">
-                <h3>📁 스프라이트 선택</h3>
+                <h3>📁 스프라이트</h3>
                 <div class="setting-row">
-                    <label>이미지</label>
-                    <input type="text" id="sprite-path" value="goblin.png" placeholder="이미지 경로">
+                    <label>경로</label>
+                    <input type="text" id="sprite-path" value="goblin.png">
                 </div>
-                <button class="btn btn-primary btn-full" onclick="loadSprite()" style="margin-top:10px;">
-                    🔄 로드
-                </button>
-                
-                <div style="margin-top:12px;">
-                    <div style="color:#666; font-size:0.75rem; margin-bottom:8px;">빠른 선택:</div>
-                    <div class="sprite-list" id="spriteList">
-                        <!-- JS로 생성 -->
-                    </div>
-                </div>
+                <div class="sprite-grid" id="spriteGrid"></div>
             </div>
             
-            <!-- 아웃라인 설정 -->
+            <!-- 아웃라인 -->
             <div class="panel-section">
                 <h3>✏️ 아웃라인</h3>
                 <div class="setting-row">
-                    <label>활성화</label>
-                    <input type="checkbox" id="outline-enabled" checked>
+                    <label>사용</label>
+                    <input type="checkbox" id="outline-enabled" checked onchange="updatePreview()">
                 </div>
                 <div class="setting-row">
                     <label>색상</label>
-                    <input type="color" id="outline-color" value="#000000">
+                    <input type="color" id="outline-color" value="#000000" onchange="updatePreview()">
                 </div>
                 <div class="setting-row">
                     <label>두께</label>
-                    <input type="range" id="outline-thickness" min="1" max="8" value="2">
+                    <input type="range" id="outline-thickness" min="1" max="6" value="2" oninput="updateValue(this, 'outline-thickness-val'); updatePreview()">
                     <span class="value" id="outline-thickness-val">2</span>
-                </div>
-                <div class="setting-row">
-                    <label>방향</label>
-                    <select id="outline-directions">
-                        <option value="4">4방향</option>
-                        <option value="8" selected>8방향</option>
-                    </select>
                 </div>
             </div>
             
-            <!-- 그림자 설정 -->
+            <!-- 그림자 -->
             <div class="panel-section">
                 <h3>🌑 그림자</h3>
                 <div class="setting-row">
-                    <label>활성화</label>
-                    <input type="checkbox" id="shadow-enabled" checked>
+                    <label>사용</label>
+                    <input type="checkbox" id="shadow-enabled" checked onchange="updatePreview()">
                 </div>
                 <div class="setting-row">
                     <label>불투명도</label>
-                    <input type="range" id="shadow-alpha" min="0" max="100" value="40">
+                    <input type="range" id="shadow-alpha" min="0" max="100" value="40" oninput="updateValue(this, 'shadow-alpha-val', v => (v/100).toFixed(2)); updatePreview()">
                     <span class="value" id="shadow-alpha-val">0.40</span>
-                </div>
-                <div class="setting-row">
-                    <label>Y 스케일</label>
-                    <input type="range" id="shadow-scaleY" min="10" max="50" value="25">
-                    <span class="value" id="shadow-scaleY-val">0.25</span>
                 </div>
             </div>
             
-            <!-- 환경광 설정 -->
+            <!-- 환경광 -->
             <div class="panel-section">
                 <h3>💡 환경광</h3>
                 <div class="setting-row">
-                    <label>활성화</label>
-                    <input type="checkbox" id="env-enabled" checked>
+                    <label>사용</label>
+                    <input type="checkbox" id="env-enabled" checked onchange="updatePreview()">
                 </div>
                 <div class="setting-row">
                     <label>밝기</label>
-                    <input type="range" id="env-brightness" min="50" max="150" value="95">
+                    <input type="range" id="env-brightness" min="50" max="150" value="95" oninput="updateValue(this, 'env-brightness-val', v => (v/100).toFixed(2)); updatePreview()">
                     <span class="value" id="env-brightness-val">0.95</span>
-                </div>
-                <div class="setting-row">
-                    <label>채도</label>
-                    <input type="range" id="env-saturation" min="50" max="150" value="90">
-                    <span class="value" id="env-saturation-val">0.90</span>
                 </div>
             </div>
             
-            <!-- 숨쉬기 설정 -->
+            <!-- 숨쉬기 -->
             <div class="panel-section">
                 <h3>🫁 숨쉬기</h3>
                 <div class="setting-row">
-                    <label>활성화</label>
-                    <input type="checkbox" id="breathing-enabled" checked>
+                    <label>사용</label>
+                    <input type="checkbox" id="breathing-enabled" checked onchange="updatePreview()">
                 </div>
                 <div class="setting-row">
                     <label>강도</label>
-                    <input type="range" id="breathing-amount" min="1" max="10" value="2">
+                    <input type="range" id="breathing-amount" min="1" max="10" value="2" oninput="updateValue(this, 'breathing-amount-val', v => (v/100).toFixed(2)); updatePreview()">
                     <span class="value" id="breathing-amount-val">0.02</span>
-                </div>
-                <div class="setting-row">
-                    <label>속도</label>
-                    <input type="range" id="breathing-speed" min="10" max="50" value="25">
-                    <span class="value" id="breathing-speed-val">2.5s</span>
                 </div>
             </div>
             
             <!-- 스케일 -->
             <div class="panel-section">
-                <h3>📐 스케일</h3>
+                <h3>📐 크기</h3>
                 <div class="setting-row">
-                    <label>크기</label>
-                    <input type="range" id="sprite-scale" min="50" max="300" value="150">
+                    <label>스케일</label>
+                    <input type="range" id="sprite-scale" min="50" max="300" value="150" oninput="updateValue(this, 'sprite-scale-val', v => (v/100).toFixed(1) + 'x'); updatePreview()">
                     <span class="value" id="sprite-scale-val">1.5x</span>
                 </div>
             </div>
         </div>
         
-        <!-- 중앙 - 프리뷰 스테이지 -->
-        <div class="stage-container">
-            <div class="preview-stage">
-                <div id="pixiContainer">
-                    <div class="loading">
-                        <div class="loading-spinner"></div>
-                        <span>PixiJS 로딩 중...</span>
-                    </div>
+        <!-- 중앙 - 비교 뷰 -->
+        <div class="compare-container">
+            <div class="compare-header">
+                <label>
+                    <input type="checkbox" id="show-original" checked onchange="toggleCompare()">
+                    <span>📷 원본 표시</span>
+                </label>
+                <span style="color:#666;">|</span>
+                <span><span class="live-indicator"></span>실시간 반영</span>
+            </div>
+            
+            <div class="preview-wrapper">
+                <!-- 원본 (효과 없음) -->
+                <div class="preview-box original" id="originalBox">
+                    <div class="preview-label original">📷 원본 (효과 없음)</div>
+                    <div class="preview-canvas" id="originalCanvas"></div>
                 </div>
-                <div class="stage-info">
-                    <span id="stageInfo">스프라이트 로드 대기 중...</span>
-                </div>
-                <div class="stage-controls">
-                    <button class="btn btn-success" onclick="testState('idle')">😊 Idle</button>
-                    <button class="btn btn-danger" onclick="testHit()">💥 Hit</button>
-                    <button class="btn btn-warning" onclick="testState('stunned')">😵 Stun</button>
-                    <button class="btn btn-info" onclick="testState('buffed')">✨ Buff</button>
-                    <button class="btn btn-primary" onclick="testState('debuffed')">💀 Debuff</button>
+                
+                <!-- 적용 후 -->
+                <div class="preview-box enhanced">
+                    <div class="preview-label enhanced">✨ 효과 적용</div>
+                    <div class="preview-canvas" id="enhancedCanvas"></div>
                 </div>
             </div>
         </div>
         
-        <!-- 오른쪽 - 프리셋 & 로그 -->
+        <!-- 오른쪽 - 상태 테스트 -->
         <div class="side-panel">
-            <!-- 프리셋 -->
-            <div class="preset-panel">
-                <h3>🎨 프리셋</h3>
-                <div class="preset-grid">
-                    <div class="preset-btn" onclick="applyPreset('player')">
-                        <span class="icon">🎮</span>
-                        <span class="name">Player</span>
-                    </div>
-                    <div class="preset-btn active" onclick="applyPreset('enemy')">
-                        <span class="icon">👹</span>
-                        <span class="name">Enemy</span>
-                    </div>
-                    <div class="preset-btn" onclick="applyPreset('boss')">
-                        <span class="icon">💀</span>
-                        <span class="name">Boss</span>
-                    </div>
-                    <div class="preset-btn" onclick="applyPreset('npc')">
-                        <span class="icon">🧙</span>
-                        <span class="name">NPC</span>
-                    </div>
+            <div class="panel-section">
+                <h3>🎬 상태 테스트</h3>
+                <div class="btn-group">
+                    <button class="btn btn-success" onclick="testState('idle')">😊 Idle</button>
+                    <button class="btn btn-danger" onclick="testHit()">💥 Hit</button>
+                </div>
+                <div class="btn-group" style="margin-top:5px;">
+                    <button class="btn" style="background:#6366f1;color:#fff;" onclick="testState('stunned')">😵 Stun</button>
+                    <button class="btn" style="background:#f59e0b;color:#fff;" onclick="testState('buffed')">✨ Buff</button>
                 </div>
             </div>
             
-            <!-- 로그 -->
             <div class="log-panel">
                 <h3>📜 로그</h3>
-                <div class="log-container" id="logContainer">
-                    <div class="log-entry info">DDOORenderer Studio 시작...</div>
-                </div>
-            </div>
-            
-            <!-- 내보내기 -->
-            <div class="panel-section">
-                <h3>💾 설정 내보내기</h3>
-                <button class="btn btn-primary btn-full" onclick="exportConfig()">
-                    📋 JSON 복사
-                </button>
+                <div class="log-container" id="logContainer"></div>
             </div>
         </div>
     </div>
     
-    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.x/dist/pixi.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/gsap.min.js"></script>
     <script src="ddoo-renderer.js"></script>
     
     <script>
         // ==================== 전역 변수 ====================
-        let app = null;
-        let mainContainer = null;
-        let currentSprite = null;
-        let currentPreset = 'enemy';
+        let originalApp = null;
+        let enhancedApp = null;
+        let originalSprite = null;
+        let enhancedSprite = null;
+        let updateTimeout = null;
         
-        // 스프라이트 목록
         const spriteList = [
             { name: 'Goblin', path: 'goblin.png', icon: '👹' },
-            { name: 'Goblin Archer', path: 'goblinarcher.png', icon: '🏹' },
+            { name: 'Archer', path: 'goblinarcher.png', icon: '🏹' },
             { name: 'Slime', path: 'slime.png', icon: '🟢' },
             { name: 'Skeleton', path: 'skeleton.png', icon: '💀' },
             { name: 'Spider', path: 'spider.png', icon: '🕷️' },
-            { name: 'Golem', path: 'golem.png', icon: '🪨' },
             { name: 'Hero', path: 'hero.png', icon: '⚔️' },
-            { name: 'Mage', path: 'hero_mage.png', icon: '🧙' },
-            { name: 'Rogue', path: 'hero_rogue.png', icon: '🗡️' },
-            { name: 'Ninja', path: 'hero_ninja.png', icon: '🥷' },
         ];
         
         // ==================== 초기화 ====================
         async function init() {
-            log('info', '🖼️ DDOORenderer Studio 초기화 중...');
+            log('info', '초기화 중...');
             
             try {
-                // PixiJS 앱 생성
-                const container = document.getElementById('pixiContainer');
-                container.innerHTML = '';
-                
-                app = new PIXI.Application();
-                await app.init({
-                    width: container.clientWidth || 800,
-                    height: container.clientHeight || 500,
+                // 원본 캔버스
+                const origContainer = document.getElementById('originalCanvas');
+                originalApp = new PIXI.Application();
+                await originalApp.init({
+                    width: origContainer.clientWidth || 350,
+                    height: origContainer.clientHeight || 400,
                     backgroundColor: 0x1a1a2e,
                     antialias: false,
-                    resolution: window.devicePixelRatio || 1,
-                    autoDensity: true
+                    resolution: 1
                 });
+                origContainer.appendChild(originalApp.canvas);
                 
-                container.appendChild(app.canvas);
+                // 효과 적용 캔버스
+                const enhContainer = document.getElementById('enhancedCanvas');
+                enhancedApp = new PIXI.Application();
+                await enhancedApp.init({
+                    width: enhContainer.clientWidth || 350,
+                    height: enhContainer.clientHeight || 400,
+                    backgroundColor: 0x1a1a2e,
+                    antialias: false,
+                    resolution: 1
+                });
+                enhContainer.appendChild(enhancedApp.canvas);
                 
-                // 메인 컨테이너
-                mainContainer = new PIXI.Container();
-                mainContainer.sortableChildren = true;
-                app.stage.addChild(mainContainer);
+                // 바닥선 그리기
+                drawFloor(originalApp);
+                drawFloor(enhancedApp);
                 
-                // 바닥 그리기
-                drawFloor();
+                // 스프라이트 그리드 생성
+                renderSpriteGrid();
                 
-                // 스프라이트 리스트 렌더링
-                renderSpriteList();
+                // 초기 로드
+                await loadSprites();
                 
-                // 이벤트 바인딩
-                bindEvents();
-                
-                // 리사이즈 핸들러
-                window.addEventListener('resize', handleResize);
-                
-                log('success', '✅ 초기화 완료!');
-                
-                // 기본 스프라이트 로드
-                setTimeout(() => loadSprite(), 500);
+                log('success', '✅ 초기화 완료');
                 
             } catch (e) {
                 log('error', `초기화 실패: ${e.message}`);
@@ -675,74 +469,70 @@
             }
         }
         
-        // ==================== 바닥 그리기 ====================
-        function drawFloor() {
+        // ==================== 바닥선 ====================
+        function drawFloor(app) {
             const floor = new PIXI.Graphics();
-            const width = app.screen.width;
-            const height = app.screen.height;
-            const floorY = height * 0.85;
+            const w = app.screen.width;
+            const h = app.screen.height;
+            const floorY = h * 0.85;
             
-            // 바닥 영역
-            floor.rect(0, floorY, width, height - floorY);
+            floor.rect(0, floorY, w, h - floorY);
             floor.fill({ color: 0x0f0f1a });
             
-            // 바닥선
             floor.moveTo(0, floorY);
-            floor.lineTo(width, floorY);
+            floor.lineTo(w, floorY);
             floor.stroke({ color: 0x4a4a6a, width: 2 });
             
-            // 그리드
-            for (let x = 0; x < width; x += 50) {
-                floor.moveTo(x, floorY);
-                floor.lineTo(x, height);
-                floor.stroke({ color: 0x2a2a3a, width: 1 });
-            }
-            
-            floor.zIndex = -100;
-            mainContainer.addChild(floor);
+            app.stage.addChild(floor);
         }
         
         // ==================== 스프라이트 로드 ====================
-        async function loadSprite() {
+        async function loadSprites() {
             const path = document.getElementById('sprite-path').value || 'goblin.png';
             const scale = parseInt(document.getElementById('sprite-scale').value) / 100;
             
-            log('info', `🔄 로딩: ${path}`);
-            updateStageInfo(`로딩: ${path}...`);
+            log('info', `로딩: ${path}`);
             
-            // 기존 스프라이트 제거
-            if (currentSprite) {
-                DDOORenderer.destroy(currentSprite);
-                currentSprite = null;
+            // 기존 제거
+            if (originalSprite) {
+                originalApp.stage.removeChild(originalSprite);
+                originalSprite.destroy();
+                originalSprite = null;
+            }
+            if (enhancedSprite) {
+                DDOORenderer.destroy(enhancedSprite);
+                enhancedSprite = null;
             }
             
             try {
-                // 설정 수집
-                const config = getConfig();
+                // 텍스처 로드
+                const texture = await PIXI.Assets.load(path);
                 
-                // DDOORenderer로 스프라이트 생성
-                currentSprite = await DDOORenderer.createSprite(path, {
+                // === 원본 스프라이트 (효과 없음) ===
+                originalSprite = new PIXI.Sprite(texture);
+                originalSprite.anchor.set(0.5, 1);
+                originalSprite.scale.set(scale);
+                originalSprite.x = originalApp.screen.width / 2;
+                originalSprite.y = originalApp.screen.height * 0.85;
+                originalApp.stage.addChild(originalSprite);
+                
+                // === 효과 적용 스프라이트 ===
+                const config = getConfig();
+                enhancedSprite = await DDOORenderer.createSprite(path, {
                     ...config,
-                    scale: scale,
-                    label: path
+                    scale: scale
                 });
                 
-                if (!currentSprite) {
-                    throw new Error('스프라이트 생성 실패');
+                if (enhancedSprite) {
+                    enhancedSprite.x = enhancedApp.screen.width / 2;
+                    enhancedSprite.y = enhancedApp.screen.height * 0.85;
+                    enhancedApp.stage.addChild(enhancedSprite);
                 }
                 
-                // 위치 설정 (중앙 하단)
-                currentSprite.x = app.screen.width / 2;
-                currentSprite.y = app.screen.height * 0.85;
-                
-                mainContainer.addChild(currentSprite);
-                
-                log('success', `✅ 로드 완료: ${path}`);
-                updateStageInfo(`${path} (${(scale * 100).toFixed(0)}%)`);
+                log('success', `✅ ${path} 로드 완료`);
                 
             } catch (e) {
-                log('error', `❌ 로드 실패: ${e.message}`);
-                updateStageInfo('로드 실패');
+                log('error', `로드 실패: ${e.message}`);
             }
         }
         
@@ -753,191 +543,109 @@
                     enabled: document.getElementById('outline-enabled').checked,
                     color: parseInt(document.getElementById('outline-color').value.replace('#', ''), 16),
                     thickness: parseInt(document.getElementById('outline-thickness').value),
-                    directions: parseInt(document.getElementById('outline-directions').value)
+                    directions: 8
                 },
                 shadow: {
                     enabled: document.getElementById('shadow-enabled').checked,
                     alpha: parseInt(document.getElementById('shadow-alpha').value) / 100,
-                    scaleY: parseInt(document.getElementById('shadow-scaleY').value) / 100
+                    scaleY: 0.25
                 },
                 environment: {
                     enabled: document.getElementById('env-enabled').checked,
                     brightness: parseInt(document.getElementById('env-brightness').value) / 100,
-                    saturation: parseInt(document.getElementById('env-saturation').value) / 100
+                    saturation: 0.9
                 },
                 breathing: {
                     enabled: document.getElementById('breathing-enabled').checked,
                     scaleAmount: parseInt(document.getElementById('breathing-amount').value) / 100,
-                    speed: parseInt(document.getElementById('breathing-speed').value) / 10,
+                    speed: 2.5,
                     randomDelay: false
                 }
             };
         }
         
-        // ==================== 프리셋 적용 ====================
-        function applyPreset(presetName) {
-            currentPreset = presetName;
+        // ==================== 실시간 업데이트 ====================
+        function updatePreview() {
+            // 디바운스
+            if (updateTimeout) clearTimeout(updateTimeout);
+            updateTimeout = setTimeout(() => {
+                loadSprites();
+            }, 150);
+        }
+        
+        function updateValue(input, valId, formatter) {
+            const val = document.getElementById(valId);
+            if (val) {
+                val.textContent = formatter ? formatter(input.value) : input.value;
+            }
+        }
+        
+        // ==================== 비교 토글 ====================
+        function toggleCompare() {
+            const show = document.getElementById('show-original').checked;
+            document.getElementById('originalBox').style.display = show ? 'block' : 'none';
+        }
+        
+        // ==================== 스프라이트 그리드 ====================
+        function renderSpriteGrid() {
+            const grid = document.getElementById('spriteGrid');
+            grid.innerHTML = '';
             
-            // UI 업데이트
-            document.querySelectorAll('.preset-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.textContent.toLowerCase().includes(presetName));
+            spriteList.forEach(item => {
+                const btn = document.createElement('div');
+                btn.className = 'sprite-btn';
+                btn.innerHTML = `<span class="icon">${item.icon}</span>${item.name}`;
+                btn.onclick = () => {
+                    document.getElementById('sprite-path').value = item.path;
+                    document.querySelectorAll('.sprite-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    loadSprites();
+                };
+                grid.appendChild(btn);
             });
-            
-            const preset = DDOORenderer.presets[presetName];
-            if (!preset) return;
-            
-            // 설정 적용
-            if (preset.outline) {
-                document.getElementById('outline-enabled').checked = preset.outline.enabled ?? true;
-                if (preset.outline.color !== undefined) {
-                    document.getElementById('outline-color').value = '#' + preset.outline.color.toString(16).padStart(6, '0');
-                }
-                if (preset.outline.thickness) {
-                    document.getElementById('outline-thickness').value = preset.outline.thickness;
-                    document.getElementById('outline-thickness-val').textContent = preset.outline.thickness;
-                }
-            }
-            
-            if (preset.shadow) {
-                document.getElementById('shadow-enabled').checked = preset.shadow.enabled ?? true;
-                if (preset.shadow.alpha) {
-                    document.getElementById('shadow-alpha').value = preset.shadow.alpha * 100;
-                    document.getElementById('shadow-alpha-val').textContent = preset.shadow.alpha.toFixed(2);
-                }
-            }
-            
-            if (preset.breathing) {
-                document.getElementById('breathing-enabled').checked = preset.breathing.enabled ?? true;
-                if (preset.breathing.scaleAmount) {
-                    document.getElementById('breathing-amount').value = preset.breathing.scaleAmount * 100;
-                    document.getElementById('breathing-amount-val').textContent = preset.breathing.scaleAmount.toFixed(2);
-                }
-                if (preset.breathing.speed) {
-                    document.getElementById('breathing-speed').value = preset.breathing.speed * 10;
-                    document.getElementById('breathing-speed-val').textContent = preset.breathing.speed + 's';
-                }
-            }
-            
-            log('info', `🎨 프리셋 적용: ${presetName}`);
-            
-            // 다시 로드
-            loadSprite();
         }
         
         // ==================== 상태 테스트 ====================
         function testState(state) {
-            if (!currentSprite) {
-                log('warn', '스프라이트가 없습니다');
-                return;
+            if (enhancedSprite) {
+                DDOORenderer.setState(enhancedSprite, state);
+                log('info', `상태: ${state}`);
             }
-            
-            DDOORenderer.setState(currentSprite, state);
-            log('info', `🎬 상태: ${state}`);
         }
         
         function testHit() {
-            if (!currentSprite) {
-                log('warn', '스프라이트가 없습니다');
-                return;
-            }
-            
-            DDOORenderer.rapidFlash(currentSprite);
-            DDOORenderer.damageShake(currentSprite, 10, 300);
-            log('info', '💥 히트 테스트');
-        }
-        
-        // ==================== 설정 내보내기 ====================
-        function exportConfig() {
-            const config = getConfig();
-            const json = JSON.stringify(config, null, 2);
-            
-            navigator.clipboard.writeText(json).then(() => {
-                log('success', '📋 설정이 클립보드에 복사됨');
-            }).catch(() => {
-                log('error', '복사 실패');
-                console.log(json);
-            });
-        }
-        
-        // ==================== 유틸리티 ====================
-        function renderSpriteList() {
-            const container = document.getElementById('spriteList');
-            container.innerHTML = '';
-            
-            spriteList.forEach(item => {
-                const el = document.createElement('div');
-                el.className = 'sprite-item';
-                el.innerHTML = `<span class="icon">${item.icon}</span>${item.name}`;
-                el.onclick = () => {
-                    document.getElementById('sprite-path').value = item.path;
-                    document.querySelectorAll('.sprite-item').forEach(i => i.classList.remove('active'));
-                    el.classList.add('active');
-                    loadSprite();
-                };
-                container.appendChild(el);
-            });
-        }
-        
-        function bindEvents() {
-            // 슬라이더 값 표시
-            const sliders = [
-                { id: 'outline-thickness', valId: 'outline-thickness-val', format: v => v },
-                { id: 'shadow-alpha', valId: 'shadow-alpha-val', format: v => (v / 100).toFixed(2) },
-                { id: 'shadow-scaleY', valId: 'shadow-scaleY-val', format: v => (v / 100).toFixed(2) },
-                { id: 'env-brightness', valId: 'env-brightness-val', format: v => (v / 100).toFixed(2) },
-                { id: 'env-saturation', valId: 'env-saturation-val', format: v => (v / 100).toFixed(2) },
-                { id: 'breathing-amount', valId: 'breathing-amount-val', format: v => (v / 100).toFixed(2) },
-                { id: 'breathing-speed', valId: 'breathing-speed-val', format: v => (v / 10).toFixed(1) + 's' },
-                { id: 'sprite-scale', valId: 'sprite-scale-val', format: v => (v / 100).toFixed(1) + 'x' },
-            ];
-            
-            sliders.forEach(({ id, valId, format }) => {
-                const slider = document.getElementById(id);
-                const val = document.getElementById(valId);
-                if (slider && val) {
-                    slider.oninput = () => {
-                        val.textContent = format(slider.value);
-                    };
-                }
-            });
-        }
-        
-        function handleResize() {
-            if (!app) return;
-            
-            const container = document.getElementById('pixiContainer');
-            app.renderer.resize(container.clientWidth, container.clientHeight);
-            
-            // 바닥 다시 그리기
-            const floor = mainContainer.children.find(c => c.zIndex === -100);
-            if (floor) {
-                mainContainer.removeChild(floor);
-                floor.destroy();
-            }
-            drawFloor();
-            
-            // 스프라이트 위치 조정
-            if (currentSprite) {
-                currentSprite.x = app.screen.width / 2;
-                currentSprite.y = app.screen.height * 0.85;
+            if (enhancedSprite) {
+                DDOORenderer.rapidFlash(enhancedSprite);
+                DDOORenderer.damageShake(enhancedSprite, 8, 250);
+                log('info', '💥 히트!');
             }
         }
         
-        function log(type, message) {
+        // ==================== 로그 ====================
+        function log(type, msg) {
             const container = document.getElementById('logContainer');
             const entry = document.createElement('div');
             entry.className = `log-entry ${type}`;
-            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            entry.textContent = msg;
             container.appendChild(entry);
             container.scrollTop = container.scrollHeight;
-        }
-        
-        function updateStageInfo(text) {
-            document.getElementById('stageInfo').textContent = text;
+            
+            // 최대 50개 유지
+            while (container.children.length > 50) {
+                container.removeChild(container.firstChild);
+            }
         }
         
         // ==================== 시작 ====================
         document.addEventListener('DOMContentLoaded', init);
+        
+        // 리사이즈
+        window.addEventListener('resize', () => {
+            if (updateTimeout) clearTimeout(updateTimeout);
+            updateTimeout = setTimeout(() => {
+                location.reload();
+            }, 500);
+        });
     </script>
 </body>
 </html>
