@@ -908,118 +908,257 @@ const DDOORenderer = {
     },
     
     // ==================== 데미지 폰트 시스템 ====================
+    // 기존 인게임 showDamagePopup과 호환되는 스타일
     
     damageFont: {
-        // 프리셋 스타일
+        // 다크소울 스타일 프리셋 (기존 인게임과 동일)
         styles: {
+            // 일반 데미지 - 진한 빨강
             damage: {
-                color: '#ff4444',
-                stroke: '#220000',
-                fontSize: 28,
-                prefix: '-'
+                color: '#cc2222',
+                stroke: '#000000',
+                fontSize: 32,
+                fontFamily: 'Cinzel, Times New Roman, serif',
+                prefix: '-',
+                animation: 'default'
             },
+            // 회복 - 초록
             heal: {
-                color: '#44ff44',
+                color: '#44ff88',
                 stroke: '#002200',
+                fontSize: 30,
+                prefix: '+',
+                icon: '💚',
+                animation: 'default'
+            },
+            // 크리티컬 - 금색 + 빨강, 특수 연출
+            critical: {
+                color: '#aa1111',
+                stroke: '#000000',
+                fontSize: 48,
+                fontFamily: 'Cinzel, serif',
+                labelColor: '#d4a857',
+                label: '💥 CRITICAL!',
+                animation: 'critical'
+            },
+            // 방어 - 푸른 강철
+            block: {
+                color: '#5a9fd4',
+                stroke: '#000000',
                 fontSize: 28,
-                prefix: '+'
+                icon: '🛡️',
+                animation: 'block'
             },
-            crit: {
-                color: '#ffdd00',
-                stroke: '#442200',
-                fontSize: 38,
-                prefix: '',
-                suffix: '!',
-                shake: true
+            // 출혈 - 어두운 핏빛
+            bleed: {
+                color: '#8b1a1a',
+                stroke: '#000000',
+                fontSize: 28,
+                icon: '🩸',
+                prefix: '-',
+                animation: 'default'
             },
+            // 가시 - 독의 초록
+            thorn: {
+                color: '#2d8a4e',
+                stroke: '#000000',
+                fontSize: 28,
+                icon: '🌵',
+                prefix: '-',
+                animation: 'default'
+            },
+            // 마법 데미지 - 보라
+            magic: {
+                color: '#a855f7',
+                stroke: '#000000',
+                fontSize: 30,
+                icon: '✨',
+                prefix: '-',
+                animation: 'default'
+            },
+            // 자해 데미지 - 회색빨강
+            self: {
+                color: '#ff6666',
+                stroke: '#000000',
+                fontSize: 26,
+                prefix: '-',
+                animation: 'default'
+            },
+            // MISS
             miss: {
                 color: '#888888',
                 stroke: '#222222',
-                fontSize: 22,
-                text: 'MISS'
-            },
-            block: {
-                color: '#6688ff',
-                stroke: '#001144',
                 fontSize: 24,
-                text: 'BLOCK'
+                text: 'MISS',
+                animation: 'miss'
             },
+            // 독 - 연두
             poison: {
                 color: '#88ff88',
                 stroke: '#004400',
-                fontSize: 24,
-                prefix: '-'
+                fontSize: 26,
+                icon: '☠️',
+                prefix: '-',
+                animation: 'default'
             },
+            // 화상 - 주황
             burn: {
                 color: '#ff8844',
                 stroke: '#441100',
-                fontSize: 24,
-                prefix: '-'
+                fontSize: 26,
+                icon: '🔥',
+                prefix: '-',
+                animation: 'default'
             },
-            mp: {
-                color: '#4488ff',
-                stroke: '#001144',
-                fontSize: 22,
-                prefix: '-'
-            },
+            // 경험치
             exp: {
                 color: '#ffaa00',
                 stroke: '#442200',
-                fontSize: 20,
+                fontSize: 22,
                 prefix: '+',
-                suffix: ' EXP'
+                suffix: ' EXP',
+                animation: 'float'
             },
+            // 골드
             gold: {
                 color: '#ffdd44',
                 stroke: '#443300',
-                fontSize: 20,
+                fontSize: 22,
+                icon: '💰',
                 prefix: '+',
-                suffix: ' G'
+                suffix: ' G',
+                animation: 'float'
             }
         }
     },
     
     /**
-     * 데미지 텍스트 표시
-     * @param {PIXI.Container} parent - 부모 컨테이너 (app.stage 또는 캐릭터 컨테이너)
+     * 데미지 텍스트 표시 (PixiJS)
+     * @param {PIXI.Container} parent - 부모 컨테이너
      * @param {number} x - X 위치
      * @param {number} y - Y 위치
      * @param {number|string} value - 값 또는 텍스트
-     * @param {string} type - 타입 ('damage', 'heal', 'crit', 'miss', 'block', 'poison', 'burn', 'mp', 'exp', 'gold')
+     * @param {string} type - 타입
      * @param {Object} options - 추가 옵션
      */
     showDamage(parent, x, y, value, type = 'damage', options = {}) {
         if (!parent) return null;
         
-        const style = { ...this.damageFont.styles[type], ...options };
+        const preset = this.damageFont.styles[type] || this.damageFont.styles.damage;
+        const style = { ...preset, ...options };
         
-        // 텍스트 생성
-        let displayText = style.text || `${style.prefix || ''}${value}${style.suffix || ''}`;
+        // 크리티컬은 특수 처리
+        if (style.animation === 'critical') {
+            return this._showCriticalDamage(parent, x, y, value, style);
+        }
+        
+        // 텍스트 내용
+        let displayText = style.text || 
+            `${style.icon ? style.icon + ' ' : ''}${style.prefix || ''}${value}${style.suffix || ''}`;
+        
+        // 데미지 크기에 따른 폰트 크기 조절
+        const intensity = Math.min(Math.abs(value) / 20, 1.5);
+        const fontSize = (style.fontSize || 28) * (1 + intensity * 0.2);
         
         const textStyle = new PIXI.TextStyle({
-            fontFamily: 'Arial Black, Arial Bold, sans-serif',
-            fontSize: style.fontSize || 28,
+            fontFamily: style.fontFamily || 'Arial Black, Arial Bold, sans-serif',
+            fontSize: fontSize,
             fontWeight: 'bold',
             fill: style.color || '#ffffff',
-            stroke: { color: style.stroke || '#000000', width: 4 },
+            stroke: { color: style.stroke || '#000000', width: 5 },
             dropShadow: {
                 color: '#000000',
-                blur: 2,
+                blur: 3,
                 angle: Math.PI / 4,
-                distance: 2
-            }
+                distance: 3
+            },
+            letterSpacing: 1
         });
         
         const text = new PIXI.Text({ text: displayText, style: textStyle });
         text.anchor.set(0.5, 0.5);
-        text.x = x + (Math.random() - 0.5) * 20; // 약간의 랜덤 오프셋
+        text.x = x + (Math.random() - 0.5) * 30;
         text.y = y;
         text.alpha = 1;
         text.zIndex = 1000;
         
         parent.addChild(text);
         
-        // 애니메이션
+        // 애니메이션 타입별 처리
+        this._animateDamageText(text, y, style.animation || 'default', parent);
+        
+        return text;
+    },
+    
+    /**
+     * 크리티컬 데미지 특수 연출
+     */
+    _showCriticalDamage(parent, x, y, value, style) {
+        const container = new PIXI.Container();
+        container.x = x;
+        container.y = y;
+        container.zIndex = 1001;
+        
+        // 라벨 (CRITICAL!)
+        const labelStyle = new PIXI.TextStyle({
+            fontFamily: 'Cinzel, serif',
+            fontSize: 18,
+            fontWeight: '600',
+            fill: style.labelColor || '#d4a857',
+            stroke: { color: '#000000', width: 3 },
+            letterSpacing: 4
+        });
+        const label = new PIXI.Text({ text: style.label || '💥 CRITICAL!', style: labelStyle });
+        label.anchor.set(0.5, 0.5);
+        label.y = -30;
+        container.addChild(label);
+        
+        // 값
+        const valueStyle = new PIXI.TextStyle({
+            fontFamily: 'Cinzel, serif',
+            fontSize: style.fontSize || 48,
+            fontWeight: 'bold',
+            fill: style.color || '#aa1111',
+            stroke: { color: '#000000', width: 6 },
+            dropShadow: {
+                color: '#000000',
+                blur: 4,
+                distance: 4
+            }
+        });
+        const valueText = new PIXI.Text({ text: `${value}`, style: valueStyle });
+        valueText.anchor.set(0.5, 0.5);
+        valueText.y = 10;
+        container.addChild(valueText);
+        
+        parent.addChild(container);
+        
+        // 크리티컬 애니메이션
+        const tl = gsap.timeline({
+            onComplete: () => {
+                parent.removeChild(container);
+                container.destroy({ children: true });
+            }
+        });
+        
+        // 등장 (펑!)
+        tl.fromTo(container.scale, { x: 0.3, y: 0.3 }, { x: 1.2, y: 1.2, duration: 0.15, ease: 'back.out(3)' });
+        tl.to(container.scale, { x: 1, y: 1, duration: 0.1, ease: 'power2.out' });
+        
+        // 흔들림
+        tl.to(container, { x: x + 5, duration: 0.03, repeat: 8, yoyo: true, ease: 'none' }, 0.1);
+        
+        // 위로 + 페이드
+        tl.to(container, { y: y - 80, duration: 1.2, ease: 'power2.out' }, 0.3);
+        tl.to(container, { alpha: 0, duration: 0.4 }, 0.9);
+        
+        return container;
+    },
+    
+    /**
+     * 데미지 텍스트 애니메이션
+     */
+    _animateDamageText(text, startY, animType, parent) {
         const tl = gsap.timeline({
             onComplete: () => {
                 parent.removeChild(text);
@@ -1027,46 +1166,40 @@ const DDOORenderer = {
             }
         });
         
-        // 크리티컬이면 흔들림 효과
-        if (style.shake) {
-            tl.to(text, {
-                x: text.x + 3,
-                duration: 0.03,
-                repeat: 6,
-                yoyo: true,
-                ease: 'none'
-            }, 0);
-            
-            // 스케일 펀치
-            tl.fromTo(text.scale, 
-                { x: 1.5, y: 1.5 },
-                { x: 1, y: 1, duration: 0.2, ease: 'back.out(2)' },
-                0
-            );
-        } else {
-            // 일반: 팝업 효과
-            tl.fromTo(text.scale,
-                { x: 0.5, y: 0.5 },
-                { x: 1, y: 1, duration: 0.15, ease: 'back.out(2)' },
-                0
-            );
+        switch (animType) {
+            case 'block':
+                // 방어: 튀어오름 + 빠르게 사라짐
+                tl.fromTo(text.scale, { x: 0.5, y: 0.5 }, { x: 1.1, y: 1.1, duration: 0.1, ease: 'back.out(2)' });
+                tl.to(text.scale, { x: 1, y: 1, duration: 0.1 });
+                tl.to(text, { y: startY - 40, alpha: 0, duration: 0.6, ease: 'power2.out' }, 0.1);
+                break;
+                
+            case 'miss':
+                // 미스: 작게 + 옆으로 흘러감
+                tl.fromTo(text, { alpha: 0.5 }, { alpha: 1, duration: 0.1 });
+                tl.to(text, { 
+                    x: text.x + (Math.random() > 0.5 ? 50 : -50),
+                    y: startY - 30,
+                    alpha: 0,
+                    duration: 0.7,
+                    ease: 'power2.out'
+                }, 0);
+                break;
+                
+            case 'float':
+                // 플로트: 천천히 위로
+                tl.fromTo(text.scale, { x: 0.8, y: 0.8 }, { x: 1, y: 1, duration: 0.2 });
+                tl.to(text, { y: startY - 80, duration: 1.5, ease: 'power1.out' }, 0);
+                tl.to(text, { alpha: 0, duration: 0.5 }, 1);
+                break;
+                
+            default:
+                // 기본: 팝 + 위로 + 페이드
+                tl.fromTo(text.scale, { x: 0.3, y: 0.3 }, { x: 1.1, y: 1.1, duration: 0.12, ease: 'back.out(3)' });
+                tl.to(text.scale, { x: 1, y: 1, duration: 0.08 });
+                tl.to(text, { y: startY - 60, duration: 0.8, ease: 'power2.out' }, 0.1);
+                tl.to(text, { alpha: 0, duration: 0.3 }, 0.6);
         }
-        
-        // 위로 떠오름
-        tl.to(text, {
-            y: y - 60,
-            duration: 0.8,
-            ease: 'power2.out'
-        }, 0);
-        
-        // 페이드아웃
-        tl.to(text, {
-            alpha: 0,
-            duration: 0.3,
-            ease: 'power2.in'
-        }, 0.5);
-        
-        return text;
     },
     
     /**
@@ -1076,7 +1209,7 @@ const DDOORenderer = {
         if (!container?.parent) return null;
         
         const x = container.x;
-        const y = container.y - 80; // 캐릭터 위
+        const y = container.y - 80;
         
         return this.showDamage(container.parent, x, y, value, type, options);
     },
@@ -1084,11 +1217,12 @@ const DDOORenderer = {
     /**
      * 콤보 데미지 (연속 히트)
      */
-    showComboDamage(parent, x, y, damages, interval = 100) {
+    showComboDamage(parent, x, y, damages, interval = 120) {
         damages.forEach((dmg, i) => {
             setTimeout(() => {
-                const offsetY = y - (i * 15);
-                this.showDamage(parent, x, offsetY, dmg.value, dmg.type || 'damage');
+                const offsetY = y - (i * 20);
+                const offsetX = x + (Math.random() - 0.5) * 30;
+                this.showDamage(parent, offsetX, offsetY, dmg.value, dmg.type || 'damage');
             }, i * interval);
         });
     },
