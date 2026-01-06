@@ -414,6 +414,13 @@
                     <button class="btn" style="background:#6366f1;color:#fff;" onclick="testState('stunned')">😵 Stun</button>
                     <button class="btn" style="background:#f59e0b;color:#fff;" onclick="testState('buffed')">✨ Buff</button>
                 </div>
+                <div class="btn-group" style="margin-top:5px;">
+                    <button class="btn" style="background:linear-gradient(135deg,#00c9ff,#92fe9d);color:#000;" onclick="testSpawn()">⚡ 등장</button>
+                    <button class="btn" style="background:linear-gradient(135deg,#ff00ff,#8b00ff);color:#fff;" onclick="testDeath()">💀 사망</button>
+                </div>
+                <div class="btn-group" style="margin-top:5px;">
+                    <button class="btn" style="background:#444;color:#fff;font-size:0.7rem;" onclick="testRespawn()">🔄 리스폰</button>
+                </div>
             </div>
             
             <div class="log-panel">
@@ -677,6 +684,33 @@
                 // 글로우 다시 적용 (색상 변경)
                 DDOORenderer.setTargeted(enhancedSprite, true, color);
                 log('info', `🎯 글로우 적용`);
+            }
+        }
+        
+        async function testSpawn() {
+            if (enhancedSprite) {
+                // 방향 랜덤
+                const directions = ['left', 'right'];
+                const dir = directions[Math.floor(Math.random() * directions.length)];
+                log('info', `⚡ 등장 (${dir})`);
+                await DDOORenderer.playSpawn(enhancedSprite, dir, 0.4);
+                log('success', '✅ 등장 완료');
+            }
+        }
+        
+        async function testDeath() {
+            if (enhancedSprite) {
+                log('info', '💀 사망 연출...');
+                await DDOORenderer.playDeath(enhancedSprite, enhancedApp);
+                log('success', '✅ 사망 완료');
+            }
+        }
+        
+        async function testRespawn() {
+            if (enhancedSprite) {
+                log('info', '🔄 리스폰...');
+                await DDOORenderer.respawn(enhancedSprite, 'left');
+                log('success', '✅ 리스폰 완료');
             }
         }
         
