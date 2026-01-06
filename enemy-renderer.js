@@ -1998,17 +1998,13 @@ const EnemyRenderer = {
             }
         });
         
-        // 들숨: 살짝 늘어나면서 위로 (미세하게!)
+        // 들숨: 스케일만 변경 (위치는 3D 시스템이 관리하므로 건드리지 않음!)
         breathTl.to(container.scale, {
-            y: baseScale * 1.02,    // Y 2% 늘어남
-            x: baseScale * 0.99,    // X 1% 줄어듦
+            y: baseScale * 1.015,   // Y 1.5% 늘어남 (더 미세하게)
+            x: baseScale * 0.995,   // X 0.5% 줄어듦
             duration: breathDuration
         }, 0);
-        
-        breathTl.to(container, {
-            y: baseY - 3,           // 위로 3px만
-            duration: breathDuration
-        }, 0);
+        // 🚫 Y 위치 애니메이션 제거 - 3D 좌표 시스템과 충돌 방지!
         
         // 참조 저장 (심플하게)
         container.breathingTween = breathTl;

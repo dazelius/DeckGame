@@ -839,17 +839,13 @@ const PlayerRenderer = {
             }
         });
         
-        // ✅ 더 미세한 숨쉬기 (1% 변화만)
+        // ✅ 스케일만 변경 (위치는 3D 시스템이 관리!)
         breathTl.to(this.playerContainer.scale, {
-            y: baseScale * 1.01,    // 1%만 늘어남 (기존 2%)
-            x: baseScale * 0.995,   // 0.5%만 줄어듦 (기존 1%)
+            y: baseScale * 1.01,    // 1%만 늘어남
+            x: baseScale * 0.995,   // 0.5%만 줄어듦
             duration: breathDuration
         }, 0);
-        
-        breathTl.to(this.playerContainer, {
-            y: baseY - 2,           // 2px만 위로 (기존 3px)
-            duration: breathDuration
-        }, 0);
+        // 🚫 Y 위치 애니메이션 제거 - 3D 좌표 시스템과 충돌 방지!
         
         this.playerContainer.breathingTween = breathTl;
         this.playerContainer.breathingBaseScale = baseScale;
