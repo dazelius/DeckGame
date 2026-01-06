@@ -1922,6 +1922,8 @@ const EnemyRenderer = {
             directions.forEach(dir => {
                 const outline = new PIXI.Sprite(sprite.texture);
                 outline.anchor.set(sprite.anchor.x, sprite.anchor.y);
+                // ⚠️ 스케일 동기화! (없으면 원본 크기로 표시됨)
+                outline.scale.set(sprite.scale.x, sprite.scale.y);
                 outline.x = dir.x;
                 outline.y = dir.y;
                 outline.tint = outlineColor;

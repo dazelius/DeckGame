@@ -7,7 +7,7 @@
     "steps": [
         { "anim": "player.sneak", "wait": true },
         { "anim": "player.backstab_strike", "wait": true, "damage": 4 },
-        { "anim": ["enemy.stabbed"], "wait": true, "delay": 5, "debuff": { "name": "vulnerable", "value": 1 } },
+        { "anim": "enemy.hit", "wait": true, "delay": 5, "debuff": { "name": "vulnerable", "value": 1 } },
         { "delay": 100 }
     ]
 }

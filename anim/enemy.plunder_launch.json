@@ -5,11 +5,15 @@
     "type": "once",
     "priority": 18,
     "duration": 200,
+    "vfx": "hit",
+    "shake": 10,
     "keyframes": [
         { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "alpha": 1, "rotation": 0, "duration": 0 },
-        { "x": 10, "y": -20, "scaleX": 0.85, "scaleY": 1.15, "alpha": 0.9, "rotation": -0.1, "duration": 40, "ease": "power4.out", "color": "hit" },
-        { "x": 15, "y": -60, "scaleX": 0.75, "scaleY": 1.25, "alpha": 0.85, "rotation": -0.2, "duration": 80, "ease": "power2.out", "vfx": "launch_wind" },
-        { "x": 10, "y": -50, "scaleX": 0.8, "scaleY": 1.2, "alpha": 0.9, "rotation": -0.15, "duration": 80, "ease": "power2.inOut" }
+        { "x": 8, "y": -15, "scaleX": 0.88, "scaleY": 1.12, "alpha": 0.92, "rotation": -0.08, "duration": 8, "ease": "power4.out", "tint": { "color": "#ffffff", "duration": 8 } },
+        { "x": 9, "y": -18, "scaleX": 0.86, "scaleY": 1.14, "alpha": 0.90, "rotation": -0.09, "duration": 8, "tint": { "color": "#ff0000", "duration": 8 } },
+        { "x": 10, "y": -20, "scaleX": 0.85, "scaleY": 1.15, "alpha": 0.88, "rotation": -0.10, "duration": 10, "tint": { "color": "#ffffff", "duration": 10 } },
+        { "x": 15, "y": -60, "scaleX": 0.80, "scaleY": 1.20, "alpha": 0.88, "rotation": -0.20, "duration": 80, "ease": "power2.out" },
+        { "x": 10, "y": -50, "scaleX": 0.85, "scaleY": 1.15, "alpha": 0.92, "rotation": -0.15, "duration": 80, "ease": "power2.inOut" }
     ]
 }
 

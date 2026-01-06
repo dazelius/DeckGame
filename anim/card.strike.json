@@ -7,6 +7,6 @@
     "steps": [
         { "anim": "player.dash", "wait": true },
         { "anim": "player.attack", "wait": true, "damage": 6 },
-        { "anim": ["enemy.hit_left", "enemy.hit_right"], "wait": true, "delay": 10 }
+        { "anim": "enemy.hit", "wait": true, "delay": 10 }
     ]
 }
