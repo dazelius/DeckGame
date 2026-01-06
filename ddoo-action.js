@@ -1990,16 +1990,14 @@ const DDOOAction = {
             const baseScale = charBaseScale;
             const startX = container.x;
             
-            // 🔥 스프라이트의 원래 스케일 저장! 
-            // EnemyRenderer 캐릭터: sprite.scale = 1 (컨테이너가 스케일 담당)
-            // DDOOAction 캐릭터: sprite.scale = baseScale
-            const spriteOriginalScale = sprite.scale.x;
-            sprite._originalScale = spriteOriginalScale;
+            // 🔥 스프라이트 스케일 기준 결정 (컨테이너 스케일로 판단!)
+            // EnemyRenderer: container.scale < 1 (컨테이너가 스케일 담당) → sprite는 1.0 기준
+            // DDOOAction: container.scale = 1 (스프라이트가 스케일 담당) → sprite는 baseScale 기준
+            const containerScale = container.scale?.x || 1;
+            const isContainerScaled = containerScale < 0.95;  // 컨테이너가 스케일되어 있으면 EnemyRenderer 방식
+            const spriteBaseScale = isContainerScaled ? 1 : baseScale;
             
-            // 🔥 스프라이트 스케일 기준 결정
-            // 스프라이트 스케일이 0.9 이상이면 EnemyRenderer 방식 (컨테이너 스케일링)
-            // 그 외에는 DDOOAction 방식 (스프라이트 스케일링)
-            const spriteBaseScale = spriteOriginalScale > 0.9 ? 1 : baseScale;
+            console.log(`[DDOOAction] 스케일 판단: container=${containerScale.toFixed(2)}, spriteBase=${spriteBaseScale}`);
             
             // 애니메이션 시작 전 스케일 정규화
             if (data.keyframes && data.keyframes[0]) {
