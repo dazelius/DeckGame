@@ -123,7 +123,7 @@ const ImagePreloader = {
             
             img.onerror = () => {
                 this.loadedCount++;
-                // 경고 제거 - 없는 파일은 조용히 스킵
+                console.warn(`[ImagePreloader] 로드 실패: ${path}`);
                 
                 if (onProgress) {
                     onProgress(this.loadedCount, this.totalCount, path);
@@ -131,7 +131,7 @@ const ImagePreloader = {
                 
                 if (this.loadedCount >= this.totalCount) {
                     this.isLoaded = true;
-                    console.log('[ImagePreloader] ✅ 이미지 로드 완료');
+                    console.log('[ImagePreloader] ✅ 이미지 로드 완료 (일부 실패)');
                     if (onComplete) onComplete();
                 }
             };

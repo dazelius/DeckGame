@@ -52,9 +52,7 @@ const HealSystem = {
             previewBar.style.width = `${prevPercent}%`;
             previewBar.style.opacity = '1';
             
-            // 🧹 기존 애니메이션 정리 후 타임라인 생성
-            gsap.killTweensOf(hpBar);
-            gsap.killTweensOf(previewBar);
+            // 타임라인 애니메이션
             const tl = gsap.timeline();
             
             // 1단계: 프리뷰 바가 먼저 빠르게 확장 (흰색 빛)
@@ -173,9 +171,6 @@ const HealSystem = {
             previewBar.style.width = `${prevPercent}%`;
             previewBar.style.opacity = '1';
             
-            // 🧹 기존 애니메이션 정리 후 타임라인 생성
-            gsap.killTweensOf(hpBar);
-            gsap.killTweensOf(previewBar);
             const tl = gsap.timeline();
             
             tl.to(previewBar, {

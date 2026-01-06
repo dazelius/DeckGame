@@ -93,19 +93,6 @@ const ChainScytheSystem = {
     // 슬롯 기반 위치 재배치 (DOM 재배치 없음!)
     // [1,2,3] 에서 3을 당기면 → [3,1,2] (타겟이 맨 앞, 나머지 뒤로 밀림)
     swapEnemyPositions(targetIndex, targetEnemy, onComplete) {
-        // ✅ PixiJS EnemyRenderer 사용 시
-        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
-            // gameState 배열 재배치
-            const pulled = gameState.enemies.splice(targetIndex, 1)[0];
-            gameState.enemies.unshift(pulled);
-            
-            // PixiJS로 애니메이션
-            EnemyRenderer.pullToSlotZero(targetEnemy, gameState.enemies, 0.25).then(() => {
-                if (onComplete) onComplete();
-            });
-            return;
-        }
-        
         const container = document.getElementById('enemies-container');
         if (!container) {
             if (onComplete) onComplete();

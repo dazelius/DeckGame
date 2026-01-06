@@ -223,25 +223,16 @@ const CardDragSystem = {
         });
 
         if (target === 'enemy') {
-            // ✅ PixiJS EnemyRenderer 사용 시
-            if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
-                gameState.enemies.forEach(enemy => {
-                    if (enemy.hp > 0) {
-                        EnemyRenderer.highlightAsTarget(enemy, true);
+            const container = document.getElementById('enemies-container');
+            if (container) {
+                container.querySelectorAll('.enemy-unit').forEach(el => {
+                    if (!el.classList.contains('dead')) {
+                        el.classList.add('drop-target');
                     }
                 });
             } else {
-                const container = document.getElementById('enemies-container');
-                if (container) {
-                    container.querySelectorAll('.enemy-unit').forEach(el => {
-                        if (!el.classList.contains('dead')) {
-                            el.classList.add('drop-target');
-                        }
-                    });
-                } else {
-                    const enemyEl = document.getElementById('enemy');
-                    if (enemyEl) enemyEl.classList.add('drop-target');
-                }
+                const enemyEl = document.getElementById('enemy');
+                if (enemyEl) enemyEl.classList.add('drop-target');
             }
             // 🔥 기믹도 드롭 타겟으로 표시 (별도 컨테이너)
             const gimmickContainer = document.getElementById('gimmicks-container');
@@ -284,15 +275,6 @@ const CardDragSystem = {
     clearTargetHighlights() {
         const playerEl = document.getElementById('player');
         const container = document.getElementById('enemies-container');
-        
-        // ✅ PixiJS EnemyRenderer 하이라이트 제거
-        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
-            gameState.enemies.forEach(enemy => {
-                if (enemy.hp > 0) {
-                    EnemyRenderer.highlightAsTarget(enemy, false);
-                }
-            });
-        }
         
         // ✅ 드래그 종료 후 3D parallax 재활성화
         const arena = document.querySelector('.battle-arena');
@@ -373,50 +355,30 @@ const CardDragSystem = {
         this.checkInvalidTarget(card, target, x, y);
 
         if (target === 'enemy') {
-            // ✅ PixiJS EnemyRenderer 사용 시
-            if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
-                const enemyData = EnemyRenderer.getEnemyAtPosition(x, y);
-                if (enemyData) {
-                    isOnTarget = true;
-                    this.dragGhost?.classList.add('can-drop');
-                    this.currentPixiTarget = enemyData;
-                    // PixiJS 하이라이트
-                    EnemyRenderer.highlightAsTarget(enemyData.enemy, true);
-                } else {
+            const container = document.getElementById('enemies-container');
+            if (container) {
+                let foundTarget = false;
+                
+                // 적 유닛 체크
+                container.querySelectorAll('.enemy-unit').forEach(el => {
+                    if (el.classList.contains('dead')) return;
+
+                    const rect = el.getBoundingClientRect();
+                    const isOver = x >= rect.left && x <= rect.right && 
+                                   y >= rect.top && y <= rect.bottom;
+
+                    if (isOver) {
+                        foundTarget = true;
+                        isOnTarget = true;
+                        el.classList.add('drop-target-active');
+                        this.dragGhost?.classList.add('can-drop');
+                    } else {
+                        el.classList.remove('drop-target-active');
+                    }
+                });
+                
+                if (!foundTarget) {
                     this.dragGhost?.classList.remove('can-drop');
-                    // 이전 하이라이트 제거
-                    if (this.currentPixiTarget) {
-                        EnemyRenderer.highlightAsTarget(this.currentPixiTarget.enemy, false);
-                        this.currentPixiTarget = null;
-                    }
-                }
-            } else {
-                // 기존 DOM 방식
-                const container = document.getElementById('enemies-container');
-                if (container) {
-                    let foundTarget = false;
-                    
-                    // 적 유닛 체크
-                    container.querySelectorAll('.enemy-unit').forEach(el => {
-                        if (el.classList.contains('dead')) return;
-
-                        const rect = el.getBoundingClientRect();
-                        const isOver = x >= rect.left && x <= rect.right && 
-                                       y >= rect.top && y <= rect.bottom;
-
-                        if (isOver) {
-                            foundTarget = true;
-                            isOnTarget = true;
-                            el.classList.add('drop-target-active');
-                            this.dragGhost?.classList.add('can-drop');
-                        } else {
-                            el.classList.remove('drop-target-active');
-                        }
-                    });
-                    
-                    if (!foundTarget) {
-                        this.dragGhost?.classList.remove('can-drop');
-                    }
                 }
             }
             
@@ -454,90 +416,54 @@ const CardDragSystem = {
                 }
             }
         } else if (target === 'allEnemy') {
-            // ✅ PixiJS EnemyRenderer 사용 시
-            if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
-                const enemyData = EnemyRenderer.getEnemyAtPosition(x, y);
-                if (enemyData) {
+            const container = document.getElementById('enemies-container');
+            if (container) {
+                let foundAny = false;
+                const enemies = container.querySelectorAll('.enemy-unit:not(.dead)');
+                
+                enemies.forEach(el => {
+                    const rect = el.getBoundingClientRect();
+                    if (x >= rect.left && x <= rect.right && 
+                        y >= rect.top && y <= rect.bottom) {
+                        foundAny = true;
+                    }
+                });
+                
+                if (foundAny) {
                     isOnTarget = true;
                     this.dragGhost?.classList.add('can-drop');
                 } else {
                     this.dragGhost?.classList.remove('can-drop');
                 }
             } else {
-                // 기존 DOM 방식
-                const container = document.getElementById('enemies-container');
-                if (container) {
-                    let foundAny = false;
-                    const enemies = container.querySelectorAll('.enemy-unit:not(.dead)');
-                    
-                    enemies.forEach(el => {
-                        const rect = el.getBoundingClientRect();
-                        if (x >= rect.left && x <= rect.right && 
-                            y >= rect.top && y <= rect.bottom) {
-                            foundAny = true;
-                        }
-                    });
-                    
-                    if (foundAny) {
-                        isOnTarget = true;
-                        this.dragGhost?.classList.add('can-drop');
-                    } else {
-                        this.dragGhost?.classList.remove('can-drop');
-                    }
-                } else {
-                    const enemyEl = document.getElementById('enemy');
-                    if (enemyEl) {
-                        const rect = enemyEl.getBoundingClientRect();
-                        const isOver = x >= rect.left && x <= rect.right && 
-                                       y >= rect.top && y <= rect.bottom;
-
-                        if (isOver) {
-                            isOnTarget = true;
-                            this.dragGhost?.classList.add('can-drop');
-                        } else {
-                            this.dragGhost?.classList.remove('can-drop');
-                        }
-                    }
-                }
-            }
-        } else if (target === 'self') {
-            // ✅ PixiJS PlayerRenderer 사용 시
-            if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
-                const playerPos = PlayerRenderer.getPlayerPosition();
-                if (playerPos) {
-                    const isOver = x >= playerPos.left && x <= playerPos.right && 
-                                   y >= playerPos.top && y <= playerPos.bottom;
-                    
-                    if (isOver) {
-                        isOnTarget = true;
-                        this.dragGhost?.classList.add('can-drop');
-                        this.currentPixiPlayerTarget = playerPos;
-                        // PixiJS 하이라이트
-                        PlayerRenderer.highlightAsTarget?.(true);
-                    } else {
-                        this.dragGhost?.classList.remove('can-drop');
-                        if (this.currentPixiPlayerTarget) {
-                            PlayerRenderer.highlightAsTarget?.(false);
-                            this.currentPixiPlayerTarget = null;
-                        }
-                    }
-                }
-            } else {
-                // 기존 DOM 방식
-                const playerEl = document.getElementById('player');
-                if (playerEl) {
-                    const rect = playerEl.getBoundingClientRect();
+                const enemyEl = document.getElementById('enemy');
+                if (enemyEl) {
+                    const rect = enemyEl.getBoundingClientRect();
                     const isOver = x >= rect.left && x <= rect.right && 
                                    y >= rect.top && y <= rect.bottom;
 
                     if (isOver) {
                         isOnTarget = true;
-                        playerEl.classList.add('drop-target-self-active');
                         this.dragGhost?.classList.add('can-drop');
                     } else {
-                        playerEl.classList.remove('drop-target-self-active');
                         this.dragGhost?.classList.remove('can-drop');
                     }
+                }
+            }
+        } else if (target === 'self') {
+            const playerEl = document.getElementById('player');
+            if (playerEl) {
+                const rect = playerEl.getBoundingClientRect();
+                const isOver = x >= rect.left && x <= rect.right && 
+                               y >= rect.top && y <= rect.bottom;
+
+                if (isOver) {
+                    isOnTarget = true;
+                    playerEl.classList.add('drop-target-self-active');
+                    this.dragGhost?.classList.add('can-drop');
+                } else {
+                    playerEl.classList.remove('drop-target-self-active');
+                    this.dragGhost?.classList.remove('can-drop');
                 }
             }
         } else if (target === 'field') {
@@ -581,62 +507,35 @@ const CardDragSystem = {
     
     // 잘못된 대상 체크 및 표시
     checkInvalidTarget(card, target, x, y) {
-        // ✅ PixiJS PlayerRenderer로 플레이어 위치 체크
-        let isOverPlayer = false;
-        let playerEl = null;
+        const playerEl = document.getElementById('player');
+        const playerRect = playerEl?.getBoundingClientRect();
+        const isOverPlayer = playerRect && 
+                            x >= playerRect.left && x <= playerRect.right && 
+                            y >= playerRect.top && y <= playerRect.bottom;
         
-        if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
-            const playerPos = PlayerRenderer.getPlayerPosition();
-            if (playerPos) {
-                isOverPlayer = x >= playerPos.left && x <= playerPos.right && 
-                              y >= playerPos.top && y <= playerPos.bottom;
-                if (isOverPlayer) {
-                    // 가상 요소 생성 (표시용)
-                    playerEl = { isPixiTarget: true, isPlayer: true };
-                }
-            }
-        } else {
-            playerEl = document.getElementById('player');
-            const playerRect = playerEl?.getBoundingClientRect();
-            isOverPlayer = playerRect && 
-                          x >= playerRect.left && x <= playerRect.right && 
-                          y >= playerRect.top && y <= playerRect.bottom;
-        }
-        
-        // ✅ PixiJS EnemyRenderer로 적 위치 체크
+        // 적 위에 있는지 체크
         let isOverEnemy = false;
-        let invalidEl = null;
-        
-        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
-            const enemyData = EnemyRenderer.getEnemyAtPosition(x, y);
-            if (enemyData) {
-                isOverEnemy = true;
-                invalidEl = { isPixiTarget: true, enemy: enemyData.enemy };
-            }
-        } else {
-            const container = document.getElementById('enemies-container');
-            if (container) {
-                container.querySelectorAll('.enemy-unit:not(.dead)').forEach(el => {
-                    const rect = el.getBoundingClientRect();
-                    if (x >= rect.left && x <= rect.right && 
-                        y >= rect.top && y <= rect.bottom) {
-                        isOverEnemy = true;
-                        invalidEl = el;
-                    }
-                });
-            } else {
-                const enemyEl = document.getElementById('enemy');
-                if (enemyEl) {
-                    const rect = enemyEl.getBoundingClientRect();
-                    isOverEnemy = x >= rect.left && x <= rect.right && 
-                                 y >= rect.top && y <= rect.bottom;
-                    if (isOverEnemy) invalidEl = enemyEl;
+        const container = document.getElementById('enemies-container');
+        if (container) {
+            container.querySelectorAll('.enemy-unit:not(.dead)').forEach(el => {
+                const rect = el.getBoundingClientRect();
+                if (x >= rect.left && x <= rect.right && 
+                    y >= rect.top && y <= rect.bottom) {
+                    isOverEnemy = true;
                 }
+            });
+        } else {
+            const enemyEl = document.getElementById('enemy');
+            if (enemyEl) {
+                const rect = enemyEl.getBoundingClientRect();
+                isOverEnemy = x >= rect.left && x <= rect.right && 
+                             y >= rect.top && y <= rect.bottom;
             }
         }
         
         // 잘못된 대상 판정
         let isInvalid = false;
+        let invalidEl = null;
         
         // 공격 카드인데 플레이어 위에 있을 때
         if (target === 'enemy' && isOverPlayer) {
@@ -646,7 +545,18 @@ const CardDragSystem = {
         // 자기 대상 카드인데 적 위에 있을 때
         else if (target === 'self' && isOverEnemy) {
             isInvalid = true;
-            // invalidEl은 이미 위에서 설정됨
+            // 적 요소 찾기
+            if (container) {
+                container.querySelectorAll('.enemy-unit:not(.dead)').forEach(el => {
+                    const rect = el.getBoundingClientRect();
+                    if (x >= rect.left && x <= rect.right && 
+                        y >= rect.top && y <= rect.bottom) {
+                        invalidEl = el;
+                    }
+                });
+            } else {
+                invalidEl = document.getElementById('enemy');
+            }
         }
         
         // 잘못된 대상 표시/숨김
@@ -725,23 +635,6 @@ const CardDragSystem = {
                 }
             }
             
-            // ✅ PixiJS EnemyRenderer 사용 시
-            if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
-                const enemyData = EnemyRenderer.getEnemyAtPosition(x, y);
-                if (enemyData) {
-                    // 적 인덱스 찾기
-                    const enemyIndex = gameState.enemies.indexOf(enemyData.enemy);
-                    if (enemyIndex !== -1) {
-                        selectEnemy(enemyIndex);
-                        // 하이라이트 제거
-                        EnemyRenderer.highlightAsTarget(enemyData.enemy, false);
-                        return true;
-                    }
-                }
-                return false;
-            }
-            
-            // 기존 DOM 방식
             const container = document.getElementById('enemies-container');
             if (container) {
                 const enemyUnits = container.querySelectorAll('.enemy-unit');
@@ -767,13 +660,7 @@ const CardDragSystem = {
                 }
             }
         } else if (target === 'allEnemy') {
-            // ✅ PixiJS EnemyRenderer 사용 시
-            if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
-                const enemyData = EnemyRenderer.getEnemyAtPosition(x, y);
-                return enemyData !== null;
-            }
-            
-            // 기존 DOM 방식: 아무 적 위에 드롭하면 성공
+            // 전체 공격: 아무 적 위에 드롭하면 성공
             const container = document.getElementById('enemies-container');
             if (container) {
                 const enemyUnits = container.querySelectorAll('.enemy-unit:not(.dead)');
@@ -796,22 +683,6 @@ const CardDragSystem = {
                 }
             }
         } else if (target === 'self') {
-            // ✅ PixiJS PlayerRenderer 사용 시
-            if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
-                const playerPos = PlayerRenderer.getPlayerPosition();
-                if (playerPos) {
-                    const isOver = x >= playerPos.left && x <= playerPos.right && 
-                                   y >= playerPos.top && y <= playerPos.bottom;
-                    if (isOver) {
-                        // 하이라이트 제거
-                        PlayerRenderer.highlightAsTarget?.(false);
-                        return true;
-                    }
-                }
-                return false;
-            }
-            
-            // 기존 DOM 방식
             const playerEl = document.getElementById('player');
             if (playerEl) {
                 const rect = playerEl.getBoundingClientRect();

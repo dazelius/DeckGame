@@ -13,15 +13,6 @@ function decideEnemyIntent() {
     
     // UI 업데이트
     updateEnemiesUI();
-    
-    // ✅ PixiJS 인텐트 업데이트
-    if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
-        gameState.enemies.forEach(enemy => {
-            if (enemy.hp > 0) {
-                EnemyRenderer.updateEnemyIntent(enemy);
-            }
-        });
-    }
 }
 
 // 개별 적의 의도 결정

@@ -236,13 +236,7 @@ function dealDamage(target, amount, card = null) {
         
         if (typeof SpriteAnimation !== 'undefined') {
             if (isPlayer) {
-                // ✅ PixiJS PlayerRenderer 사용 시
-                if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
-                    PlayerRenderer.playHitAnimation(animDamage, isCriticalHit);
-                    PlayerRenderer.updatePlayerHP();
-                } else {
-                    SpriteAnimation.playerHit(animDamage);
-                }
+                SpriteAnimation.playerHit(animDamage);
                 // 🔦 3D 광원 효과 - 플레이어 피격
                 if (typeof Background3D !== 'undefined' && Background3D.playerHit) {
                     Background3D.playerHit();
@@ -250,16 +244,8 @@ function dealDamage(target, amount, card = null) {
             } else if (isEnemy) {
                 console.log('[DealDamage] 🎯 적 피격 애니메이션 시작', { targetEl: !!targetEl, animDamage });
                 try {
-                    // 🎮 PixiJS 적 렌더러 사용 시 - PixiJS 기반 애니메이션
-                    if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
-                        EnemyRenderer.playHitAnimation(target, animDamage, isCriticalHit);
-                        EnemyRenderer.updateEnemyHP(target);
-                        console.log('[DealDamage] ✅ EnemyRenderer.playHitAnimation 호출 완료');
-                    } else {
-                        // DOM 기반 애니메이션
-                        SpriteAnimation.enemyHit(targetEl, animDamage);
-                        console.log('[DealDamage] ✅ SpriteAnimation.enemyHit 호출 완료');
-                    }
+                    SpriteAnimation.enemyHit(targetEl, animDamage);
+                    console.log('[DealDamage] ✅ SpriteAnimation.enemyHit 호출 완료');
                     
                     // 🔦 3D 광원 효과 - 적 피격
                     if (typeof Background3D !== 'undefined' && Background3D.enemyHit) {
@@ -294,8 +280,7 @@ function dealDamage(target, amount, card = null) {
         
         if (result.actualDamage > 0) {
             setTimeout(() => {
-                // ✅ PixiJS 적 렌더링 시 enemy 객체도 전달
-                showDamagePopup(targetEl, result.actualDamage, isCriticalHit ? 'critical' : 'damage', isEnemy ? target : null);
+                showDamagePopup(targetEl, result.actualDamage, isCriticalHit ? 'critical' : 'damage');
             }, damagePopupDelay);
         }
         
@@ -436,7 +421,7 @@ function dealDamage(target, amount, card = null) {
 // ==========================================
 // 데미지 팝업 표시
 // ==========================================
-function showDamagePopup(element, value, type, enemy = null) {
+function showDamagePopup(element, value, type) {
     const popup = document.createElement('div');
     popup.className = `damage-popup ${type}`;
     
@@ -466,46 +451,11 @@ function showDamagePopup(element, value, type, enemy = null) {
         popup.style.fontSize = `${fontSize}rem`;
     }
     
-    // 🎮 PixiJS 렌더링 사용 시 좌표 가져오기
-    let centerX, topY;
+    const rect = element.getBoundingClientRect();
     
-    // 🎯 적 대미지 - EnemyRenderer에서 좌표
-    if (enemy && typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
-        const pos = EnemyRenderer.getEnemyPosition(enemy);
-        if (pos) {
-            centerX = pos.centerX;
-            topY = pos.top - 20;
-        }
-    }
-    
-    // 🎯 플레이어 대미지 - PlayerRenderer에서 좌표
-    const isPlayerElement = element && (
-        element.classList?.contains('player-character') ||
-        element.classList?.contains('player-container') ||
-        element.id === 'player-character' ||
-        element.closest?.('.player-character')
-    );
-    
-    if (!centerX && isPlayerElement && typeof PlayerRenderer !== 'undefined' && PlayerRenderer.initialized) {
-        const pos = PlayerRenderer.getPlayerPosition();
-        if (pos) {
-            centerX = pos.screenX || pos.centerX;
-            topY = (pos.screenY || pos.top) - 80;  // 플레이어 머리 위
-        }
-    }
-    
-    // DOM 요소에서 좌표 가져오기 (폴백)
-    if (!centerX && element && element.getBoundingClientRect) {
-        const rect = element.getBoundingClientRect();
-        centerX = rect.left + rect.width / 2;
-        topY = rect.top - 20;
-    }
-    
-    // 좌표가 없으면 리턴
-    if (!centerX) {
-        console.warn('[showDamagePopup] 좌표를 가져올 수 없음');
-        return;
-    }
+    // 위치: 캐릭터 머리 위쪽 중앙
+    const centerX = rect.left + rect.width / 2;
+    const topY = rect.top - 20;
     
     // 크리티컬은 정중앙, 일반 데미지는 살짝 흩어지게
     if (type === 'critical') {

@@ -2,76 +2,6 @@
 // Shadow Deck - 이펙트 시스템 (VFX 기반)
 // ==========================================
 
-// 🎯 전역 좌표 헬퍼 함수들 (PixiJS 우선, DOM 폴백)
-function getPlayerScreenPosition() {
-    // PixiJS PlayerRenderer 우선!
-    if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.initialized) {
-        const pos = PlayerRenderer.getPlayerPosition();
-        if (pos) {
-            return {
-                x: pos.screenX || pos.centerX,
-                y: pos.screenY || pos.centerY,
-                centerX: pos.screenX || pos.centerX,
-                centerY: pos.screenY || pos.centerY,
-                top: (pos.screenY || pos.centerY) - 80,
-                valid: true
-            };
-        }
-    }
-    
-    // DOM 폴백
-    const playerEl = document.getElementById('player');
-    if (playerEl) {
-        const rect = playerEl.getBoundingClientRect();
-        return {
-            x: rect.left + rect.width / 2,
-            y: rect.top + rect.height / 2,
-            centerX: rect.left + rect.width / 2,
-            centerY: rect.top + rect.height / 2,
-            top: rect.top,
-            valid: true
-        };
-    }
-    
-    return { x: 0, y: 0, centerX: 0, centerY: 0, top: 0, valid: false };
-}
-
-function getEnemyScreenPosition(enemy, enemyEl = null) {
-    // PixiJS EnemyRenderer 우선!
-    if (enemy && typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
-        const pos = EnemyRenderer.getEnemyPosition(enemy);
-        if (pos) {
-            return {
-                x: pos.centerX,
-                y: pos.centerY,
-                centerX: pos.centerX,
-                centerY: pos.centerY,
-                top: pos.top,
-                valid: true
-            };
-        }
-    }
-    
-    // DOM 폴백
-    if (enemyEl) {
-        const rect = enemyEl.getBoundingClientRect();
-        return {
-            x: rect.left + rect.width / 2,
-            y: rect.top + rect.height / 2,
-            centerX: rect.left + rect.width / 2,
-            centerY: rect.top + rect.height / 2,
-            top: rect.top,
-            valid: true
-        };
-    }
-    
-    return { x: 0, y: 0, centerX: 0, centerY: 0, top: 0, valid: false };
-}
-
-// 전역 노출
-window.getPlayerScreenPosition = getPlayerScreenPosition;
-window.getEnemyScreenPosition = getEnemyScreenPosition;
-
 const EffectSystem = {
     // 초기화 - VFX 시스템 초기화
     init() {
@@ -248,62 +178,20 @@ const EffectSystem = {
             isDagger = true
         } = options;
         
-        // ✅ PixiJS 좌표 우선 사용
-        let startX, startY, endX, endY;
+        const playerEl = document.getElementById('player');
+        if (!playerEl) return;
         
-        // 플레이어 위치 (PixiJS 우선)
-        if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
-            const playerPos = PlayerRenderer.getPlayerPosition();
-            if (playerPos) {
-                startX = playerPos.centerX;
-                startY = playerPos.centerY;
-            }
-        }
-        if (startX === undefined) {
-            const playerEl = document.getElementById('player');
-            if (!playerEl) return;
-            const playerRect = playerEl.getBoundingClientRect();
-            startX = playerRect.left + playerRect.width / 2;
-            startY = playerRect.top + playerRect.height / 2;
-        }
+        const playerRect = playerEl.getBoundingClientRect();
+        const targetRect = targetEl.getBoundingClientRect();
         
-        // 적 위치 (PixiJS 우선)
-        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
-            const positions = EnemyRenderer.getEnemyScreenPositions();
-            if (positions && positions.length > 0) {
-                const enemyIndex = gameState?.selectedEnemyIndex || 0;
-                const enemyPos = positions[enemyIndex] || positions[0];
-                endX = enemyPos.centerX;
-                endY = enemyPos.centerY;
-            }
-        }
-        if (endX === undefined && targetEl) {
-            const targetRect = targetEl.getBoundingClientRect();
-            endX = targetRect.left + targetRect.width / 2;
-            endY = targetRect.top + targetRect.height / 2;
-        }
+        const startX = playerRect.left + playerRect.width / 2;
+        const startY = playerRect.top + playerRect.height / 2;
+        const endX = targetRect.left + targetRect.width / 2;
+        const endY = targetRect.top + targetRect.height / 2;
         
-        if (endX === undefined) return;
-        
-        // ✅ PixiProjectile 우선 사용
-        if (typeof PixiProjectile !== 'undefined' && PixiProjectile.initialized && PixiProjectile.enabled) {
+        if (typeof VFX !== 'undefined') {
             if (isDagger) {
-                PixiProjectile.dagger(startX, startY, endX, endY, { 
-                    color: '#c0c0c0',
-                    glowColor: glowColor,
-                    size: 45,
-                    speed: 30,
-                    spinSpeed: 20
-                });
-            } else {
-                PixiProjectile.projectile(startX, startY, endX, endY, { 
-                    color, 
-                    size: 15,
-                    speed: 20
-                });
-            }
-        } else if (typeof VFX !== 'undefined') {
-            if (isDagger) {
+                // 단검 투척
                 VFX.dagger(startX, startY, endX, endY, { 
                     color: '#c0c0c0',
                     glowColor: glowColor,
@@ -312,6 +200,7 @@ const EffectSystem = {
                     spinSpeed: 20
                 });
             } else {
+                // 일반 발사체
                 VFX.projectile(startX, startY, endX, endY, { 
                     color, 
                     size: 15,
@@ -326,53 +215,20 @@ const EffectSystem = {
     // ==========================================
     throwDaggerFromEnemy(enemyEl, targetEl, options = {}) {
         const {
-            glowColor = '#ef4444',
-            enemyIndex = 0
+            glowColor = '#ef4444'
         } = options;
         
-        // ✅ PixiJS 좌표 우선 사용
-        let startX, startY, endX, endY;
+        if (!enemyEl || !targetEl) return;
         
-        // 적 위치 (PixiJS 우선)
-        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled) {
-            const positions = EnemyRenderer.getEnemyScreenPositions();
-            if (positions && positions[enemyIndex]) {
-                startX = positions[enemyIndex].centerX;
-                startY = positions[enemyIndex].centerY;
-            }
-        }
-        if (startX === undefined && enemyEl) {
-            const enemyRect = enemyEl.getBoundingClientRect();
-            startX = enemyRect.left + enemyRect.width / 2;
-            startY = enemyRect.top + enemyRect.height / 2;
-        }
+        const enemyRect = enemyEl.getBoundingClientRect();
+        const targetRect = targetEl.getBoundingClientRect();
         
-        // 플레이어 위치 (PixiJS 우선)
-        if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
-            const playerPos = PlayerRenderer.getPlayerPosition();
-            if (playerPos) {
-                endX = playerPos.centerX;
-                endY = playerPos.centerY;
-            }
-        }
-        if (endX === undefined && targetEl) {
-            const targetRect = targetEl.getBoundingClientRect();
-            endX = targetRect.left + targetRect.width / 2;
-            endY = targetRect.top + targetRect.height / 2;
-        }
+        const startX = enemyRect.left + enemyRect.width / 2;
+        const startY = enemyRect.top + enemyRect.height / 2;
+        const endX = targetRect.left + targetRect.width / 2;
+        const endY = targetRect.top + targetRect.height / 2;
         
-        if (startX === undefined || endX === undefined) return;
-        
-        // ✅ PixiProjectile 우선 사용
-        if (typeof PixiProjectile !== 'undefined' && PixiProjectile.initialized && PixiProjectile.enabled) {
-            PixiProjectile.dagger(startX, startY, endX, endY, { 
-                color: '#c0c0c0',
-                glowColor: glowColor,
-                size: 45,
-                speed: 28,
-                spinSpeed: 18
-            });
-        } else if (typeof VFX !== 'undefined') {
+        if (typeof VFX !== 'undefined') {
             VFX.dagger(startX, startY, endX, endY, { 
                 color: '#c0c0c0',
                 glowColor: glowColor,
@@ -760,7 +616,7 @@ const EffectSystem = {
     },
     
     // ==========================================
-    // 플레이어 공격 이펙트 (돌진 + 3D 대시!)
+    // 플레이어 공격 이펙트 (돌진)
     // ==========================================
     playerAttack(playerEl, enemyEl, callback) {
         if (!playerEl || !enemyEl) {
@@ -773,32 +629,7 @@ const EffectSystem = {
             ShadowCloneSystem.playerAttacking = true;
         }
         
-        // 🎯 타겟 적 인덱스 찾기
-        let targetEnemyIndex = -1;
-        if (enemyEl && enemyEl.dataset && enemyEl.dataset.index !== undefined) {
-            targetEnemyIndex = parseInt(enemyEl.dataset.index);
-        } else if (typeof gameState !== 'undefined' && gameState.enemies) {
-            // DOM 요소에서 data-name 또는 다른 속성으로 찾기
-            const enemyName = enemyEl?.dataset?.name;
-            if (enemyName) {
-                targetEnemyIndex = gameState.enemies.findIndex(e => e && e.name === enemyName);
-            }
-        }
-        
-        // ✅ PixiJS PlayerRenderer 사용 시
-        if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
-            PlayerRenderer.playAttackAnimation('melee', () => {
-                if (callback) callback();
-            }, () => {
-                // 분신 시스템에 플레이어 공격 종료 알림
-                if (typeof ShadowCloneSystem !== 'undefined') {
-                    ShadowCloneSystem.playerAttacking = false;
-                }
-            }, targetEnemyIndex);  // 🏃 타겟 인덱스 전달!
-            return;
-        }
-        
-        // DOM 기반 플레이어 돌진
+        // 플레이어 돌진
         playerEl.classList.add('player-attacking');
         
         // 돌진 후 콜백 실행
@@ -866,25 +697,11 @@ const EffectSystem = {
     // 적 공격 이펙트
     // ==========================================
     enemyAttack(enemyEl, playerEl, damage, attackType = 'melee') {
-        // ✅ 플레이어 위치 (PixiJS PlayerRenderer 우선!)
-        let playerCenterX, playerCenterY;
+        if (!enemyEl || !playerEl) return;
         
-        if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
-            const playerPos = PlayerRenderer.getPlayerPosition();
-            if (playerPos) {
-                playerCenterX = playerPos.centerX;
-                playerCenterY = playerPos.centerY;
-            }
-        }
-        
-        // DOM 폴백
-        if (playerCenterX === undefined && playerEl) {
-            const playerRect = playerEl.getBoundingClientRect();
-            playerCenterX = playerRect.left + playerRect.width / 2;
-            playerCenterY = playerRect.top + playerRect.height / 2;
-        }
-        
-        if (playerCenterX === undefined) return;
+        const playerRect = playerEl.getBoundingClientRect();
+        const playerCenterX = playerRect.left + playerRect.width / 2;
+        const playerCenterY = playerRect.top + playerRect.height / 2;
         
         // 🏹 원거리 공격 (궁수 등)
         if (attackType === 'ranged') {
@@ -892,32 +709,9 @@ const EffectSystem = {
             return;
         }
         
-        // ✅ PixiJS 환경에서는 EnemyRenderer로 애니메이션 실행
-        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled && enemyEl && enemyEl.isPixiElement) {
-            EnemyRenderer.playAttackAnimation(enemyEl.enemy, 'melee', damage);
-            
-            // 충돌 이펙트 (PixiJS 플레이어 좌표에!)
-            setTimeout(() => {
-                if (typeof VFX !== 'undefined') {
-                    VFX.slash(playerCenterX, playerCenterY, { 
-                        color: '#ef4444', 
-                        slashCount: 2,
-                        randomOffset: 50
-                    });
-                    VFX.impact(playerCenterX, playerCenterY, { color: '#ef4444', size: 80 });
-                }
-                
-                this.screenShake(damage > 15 ? 20 : 12, 400);
-                this.showDamageVignette();
-            }, 200);
-            return;
-        }
-        
-        // DOM 폴백: 근접 공격 (기본)
-        // 적 돌진 애니메이션 (DOM 요소 있을 때만)
-        if (enemyEl && !enemyEl.isPixiElement) {
-            enemyEl.classList.add('enemy-attacking');
-        }
+        // 근접 공격 (기본)
+        // 적 돌진 애니메이션
+        enemyEl.classList.add('enemy-attacking');
         
         // 충돌 이펙트
         setTimeout(() => {
@@ -934,11 +728,9 @@ const EffectSystem = {
             this.showDamageVignette();
         }, 300);
         
-        // 적 원위치 (DOM 요소 있을 때만)
+        // 적 원위치
         setTimeout(() => {
-            if (enemyEl && !enemyEl.isPixiElement) {
-                enemyEl.classList.remove('enemy-attacking');
-            }
+            enemyEl.classList.remove('enemy-attacking');
         }, 600);
     },
     
@@ -946,74 +738,32 @@ const EffectSystem = {
     // 🏹 원거리 공격 이펙트 (화살)
     // ==========================================
     enemyRangedAttack(enemyEl, playerEl, damage) {
-        if (!playerEl) return;
+        if (!enemyEl || !playerEl) return;
         
-        // ✅ PixiJS 적 렌더링 사용 시 EnemyRenderer에서 좌표 가져오기
-        let enemyCenterX, enemyCenterY;
+        const enemyRect = enemyEl.getBoundingClientRect();
+        const playerRect = playerEl.getBoundingClientRect();
         
-        if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled && enemyEl && enemyEl.isPixiElement) {
-            const pos = EnemyRenderer.getEnemyPosition(enemyEl.enemy);
-            if (pos) {
-                enemyCenterX = pos.centerX;
-                enemyCenterY = pos.top + (pos.height * 0.4);
-                
-                // PixiJS 공격 애니메이션
-                EnemyRenderer.playAttackAnimation(enemyEl.enemy, 'ranged', damage);
-            }
-        }
+        // 적 위치 (화살 발사 지점)
+        const enemyCenterX = enemyRect.left + enemyRect.width / 2;
+        const enemyCenterY = enemyRect.top + enemyRect.height * 0.4;
         
-        // DOM 폴백
-        if (!enemyCenterX && enemyEl && !enemyEl.isPixiElement) {
-            const enemyRect = enemyEl.getBoundingClientRect();
-            enemyCenterX = enemyRect.left + enemyRect.width / 2;
-            enemyCenterY = enemyRect.top + enemyRect.height * 0.4;
-        }
+        // 플레이어 위치 (화살 도착 지점)
+        const playerCenterX = playerRect.left + playerRect.width / 2;
+        const playerCenterY = playerRect.top + playerRect.height / 2;
         
-        // ✅ 플레이어 위치 (PixiJS PlayerRenderer 우선)
-        let playerCenterX, playerCenterY;
-        if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
-            const playerPos = PlayerRenderer.getPlayerPosition();
-            if (playerPos) {
-                playerCenterX = playerPos.centerX;
-                playerCenterY = playerPos.centerY;
-            }
-        }
-        if (playerCenterX === undefined) {
-            const playerRect = playerEl.getBoundingClientRect();
-            playerCenterX = playerRect.left + playerRect.width / 2;
-            playerCenterY = playerRect.top + playerRect.height / 2;
-        }
-        
-        // 발사 위치가 없으면 리턴
-        if (!enemyCenterX) {
-            console.warn('[EffectSystem] enemyRangedAttack: 적 위치 없음');
-            return;
-        }
-        
-        // 활 쏘기 애니메이션 (DOM 요소 있을 때만)
-        if (enemyEl && !enemyEl.isPixiElement) {
-            enemyEl.classList.add('enemy-shooting');
-        }
-        
-        const self = this;
+        // 활 쏘기 애니메이션
+        enemyEl.classList.add('enemy-shooting');
         
         // 활 당기는 모션 후 발사
         setTimeout(() => {
-            const onArrowHit = () => {
-                self.screenShake(damage > 10 ? 15 : 10, 300);
-                self.showDamageVignette();
-            };
-            
-            // ✅ PixiProjectile 우선 사용
-            if (typeof PixiProjectile !== 'undefined' && PixiProjectile.initialized && PixiProjectile.enabled) {
-                PixiProjectile.arrow(enemyCenterX, enemyCenterY, playerCenterX, playerCenterY, {
-                    speed: 28,
-                    onHit: onArrowHit
-                });
-            } else if (typeof VFX !== 'undefined' && VFX.arrow) {
+            // 화살 투사체 발사
+            if (typeof VFX !== 'undefined' && VFX.arrow) {
                 VFX.arrow(enemyCenterX, enemyCenterY, playerCenterX, playerCenterY, {
                     speed: 28,
-                    onHit: onArrowHit
+                    onHit: () => {
+                        this.screenShake(damage > 10 ? 15 : 10, 300);
+                        this.showDamageVignette();
+                    }
                 });
             } else if (typeof VFX !== 'undefined') {
                 // VFX.arrow가 없으면 projectile 사용
@@ -1021,16 +771,17 @@ const EffectSystem = {
                     color: '#f59e0b',
                     speed: 25,
                     size: 8,
-                    onHit: onArrowHit
+                    onHit: () => {
+                        this.screenShake(damage > 10 ? 15 : 10, 300);
+                        this.showDamageVignette();
+                    }
                 });
             }
         }, 200);
         
-        // 적 원위치 (DOM 요소 있을 때만)
+        // 적 원위치
         setTimeout(() => {
-            if (enemyEl) {
-                enemyEl.classList.remove('enemy-shooting');
-            }
+            enemyEl.classList.remove('enemy-shooting');
         }, 600);
     },
     

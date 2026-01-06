@@ -514,43 +514,17 @@ const DoppelgangerSystem = {
             }
             
             // NPC 공통 공격 모션
-            // 단도 투척은 VFX.dagger 사용
-            if ((card.id === 'shiv' || card.id === 'shivP') && typeof VFX !== 'undefined') {
-                // ✅ PixiJS 기반 좌표 우선 사용
-                let enemyCX, enemyCY, playerCX, playerCY;
-                
-                // 적 위치
-                if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled && enemy) {
-                    const enemyPos = EnemyRenderer.getEnemyPosition(enemy);
-                    if (enemyPos) {
-                        enemyCX = enemyPos.centerX;
-                        enemyCY = enemyPos.centerY;
-                    }
-                }
-                if (enemyCX === undefined && enemyEl) {
+            if (enemyEl && playerEl) {
+                // 단도 투척은 VFX.dagger 사용
+                if ((card.id === 'shiv' || card.id === 'shivP') && typeof VFX !== 'undefined') {
                     const enemyRect = enemyEl.getBoundingClientRect();
-                    enemyCX = enemyRect.left + enemyRect.width / 2;
-                    enemyCY = enemyRect.top + enemyRect.height / 2;
-                }
-                
-                // 플레이어 위치
-                if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
-                    const playerPos = PlayerRenderer.getPlayerPosition();
-                    if (playerPos) {
-                        playerCX = playerPos.centerX;
-                        playerCY = playerPos.centerY;
-                    }
-                }
-                if (playerCX === undefined && playerEl) {
                     const playerRect = playerEl.getBoundingClientRect();
-                    playerCX = playerRect.left + playerRect.width / 2;
-                    playerCY = playerRect.top + playerRect.height / 2;
-                }
-                
-                if (enemyCX !== undefined && playerCX !== undefined) {
+                    
                     VFX.dagger(
-                        enemyCX, enemyCY,
-                        playerCX, playerCY,
+                        enemyRect.left + enemyRect.width / 2,
+                        enemyRect.top + enemyRect.height / 2,
+                        playerRect.left + playerRect.width / 2,
+                        playerRect.top + playerRect.height / 2,
                         { 
                             color: '#c0c0c0',
                             glowColor: card.id === 'shivP' ? '#fbbf24' : '#ef4444',  // 강화면 금색, 아니면 빨간색
@@ -559,9 +533,9 @@ const DoppelgangerSystem = {
                             spinSpeed: 20
                         }
                     );
+                } else if (typeof EffectSystem !== 'undefined') {
+                    EffectSystem.enemyAttack(enemyEl, playerEl, damage);
                 }
-            } else if (typeof EffectSystem !== 'undefined' && (enemyEl || enemy) && (playerEl || typeof PlayerRenderer !== 'undefined')) {
-                EffectSystem.enemyAttack(enemyEl, playerEl, damage);
             }
             
             // 데미지 계산
@@ -680,51 +654,24 @@ const DoppelgangerSystem = {
         this.showCardAnimation(enemy, shiv, enemyEl, playerEl, () => {
             addLog(`🗡️ ${enemy.name}: ${shiv.name}`, 'enemy');
             
-            // 단검 투척 VFX (PixiJS 기반 좌표 우선!)
-            if (typeof VFX !== 'undefined') {
-                let enemyCX, enemyCY, playerCX, playerCY;
+            // 단검 투척 VFX
+            if (typeof VFX !== 'undefined' && enemyEl && playerEl) {
+                const enemyRect = enemyEl.getBoundingClientRect();
+                const playerRect = playerEl.getBoundingClientRect();
                 
-                // 적 위치
-                if (typeof EnemyRenderer !== 'undefined' && EnemyRenderer.enabled && enemy) {
-                    const enemyPos = EnemyRenderer.getEnemyPosition(enemy);
-                    if (enemyPos) {
-                        enemyCX = enemyPos.centerX;
-                        enemyCY = enemyPos.centerY;
+                VFX.dagger(
+                    enemyRect.left + enemyRect.width / 2,
+                    enemyRect.top + enemyRect.height / 2,
+                    playerRect.left + playerRect.width / 2,
+                    playerRect.top + playerRect.height / 2,
+                    { 
+                        color: '#c0c0c0',
+                        glowColor: shiv.id === 'shivP' ? '#fbbf24' : '#ef4444',
+                        size: 45,
+                        speed: 32,
+                        spinSpeed: 22
                     }
-                }
-                if (enemyCX === undefined && enemyEl) {
-                    const enemyRect = enemyEl.getBoundingClientRect();
-                    enemyCX = enemyRect.left + enemyRect.width / 2;
-                    enemyCY = enemyRect.top + enemyRect.height / 2;
-                }
-                
-                // 플레이어 위치
-                if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
-                    const playerPos = PlayerRenderer.getPlayerPosition();
-                    if (playerPos) {
-                        playerCX = playerPos.centerX;
-                        playerCY = playerPos.centerY;
-                    }
-                }
-                if (playerCX === undefined && playerEl) {
-                    const playerRect = playerEl.getBoundingClientRect();
-                    playerCX = playerRect.left + playerRect.width / 2;
-                    playerCY = playerRect.top + playerRect.height / 2;
-                }
-                
-                if (enemyCX !== undefined && playerCX !== undefined) {
-                    VFX.dagger(
-                        enemyCX, enemyCY,
-                        playerCX, playerCY,
-                        { 
-                            color: '#c0c0c0',
-                            glowColor: shiv.id === 'shivP' ? '#fbbf24' : '#ef4444',
-                            size: 45,
-                            speed: 32,
-                            spinSpeed: 22
-                        }
-                    );
-                }
+                );
             }
             
             // 데미지 적용
@@ -1025,33 +972,17 @@ const DoppelgangerSystem = {
     },
     
     showDamageNumber(damage) {
-        // ✅ PixiJS PlayerRenderer 위치 우선 사용
-        let left, top;
+        const playerEl = document.getElementById('player');
+        if (!playerEl) return;
         
-        if (typeof PlayerRenderer !== 'undefined' && PlayerRenderer.enabled && PlayerRenderer.initialized) {
-            const playerPos = PlayerRenderer.getPlayerPosition();
-            if (playerPos) {
-                left = playerPos.centerX;
-                top = playerPos.centerY - playerPos.height / 3;
-            }
-        }
-        
-        // DOM 폴백
-        if (left === undefined) {
-            const playerEl = document.getElementById('player');
-            if (!playerEl) return;
-            const rect = playerEl.getBoundingClientRect();
-            left = rect.left + rect.width / 2;
-            top = rect.top + rect.height / 3;
-        }
-        
+        const rect = playerEl.getBoundingClientRect();
         const popup = document.createElement('div');
         popup.className = 'damage-popup';
         popup.textContent = `-${damage}`;
         popup.style.cssText = `
             position: fixed;
-            left: ${left}px;
-            top: ${top}px;
+            left: ${rect.left + rect.width / 2}px;
+            top: ${rect.top + rect.height / 3}px;
             transform: translateX(-50%);
             z-index: 1000;
         `;
