@@ -863,9 +863,13 @@ const Background3D = {
         const screenY = (-vec.y * 0.5 + 0.5) * window.innerHeight;
         
         // 🎯 battle-arena 로컬 좌표 계산 (PixiJS 렌더러용)
+        // 🔥 window와 arena 크기 차이를 비율로 보정!
         const arenaRect = this.getArenaRect();
-        const arenaX = screenX - arenaRect.left;
-        const arenaY = screenY - arenaRect.top;
+        
+        // NDC를 arena 크기로 직접 변환 (window 크기 대신)
+        // 이렇게 하면 3D 좌표가 arena 영역에 맞게 투영됨
+        const arenaX = (vec.x * 0.5 + 0.5) * arenaRect.width;
+        const arenaY = (-vec.y * 0.5 + 0.5) * arenaRect.height;
         
         // 거리 기반 스케일 (카메라와의 거리)
         const cameraPos = this.camera.position;
