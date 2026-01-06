@@ -1386,11 +1386,17 @@ const DDOOAction = {
             }
         });
         
+        // 🔥 컨테이너 스케일로 EnemyRenderer 판단
+        const containerScale = container.scale?.x || 1;
+        const isContainerScaled = containerScale < 0.95;
+        // EnemyRenderer: sprite는 1.0으로, DDOOAction: sprite는 baseScale로
+        const spriteTargetScale = isContainerScaled ? 1 : baseScale;
+        
         // ⚠️ 최종 확실한 복원 (안전 체크)
         if (sprite && sprite.parent) {
             sprite.alpha = 1;
             sprite.rotation = 0;
-            if (sprite.scale) sprite.scale.set(baseScale, baseScale);
+            if (sprite.scale) sprite.scale.set(spriteTargetScale, spriteTargetScale);
         }
         container.x = originX;
         container.y = originY;
@@ -1995,9 +2001,12 @@ const DDOOAction = {
             // DDOOAction: container.scale = 1 (스프라이트가 스케일 담당) → sprite는 baseScale 기준
             const containerScale = container.scale?.x || 1;
             const isContainerScaled = containerScale < 0.95;  // 컨테이너가 스케일되어 있으면 EnemyRenderer 방식
-            const spriteBaseScale = isContainerScaled ? 1 : baseScale;
             
-            console.log(`[DDOOAction] 스케일 판단: container=${containerScale.toFixed(2)}, spriteBase=${spriteBaseScale}`);
+            // 🔥 스프라이트의 목표 스케일 (EnemyRenderer=1.0, DDOOAction=baseScale)
+            // 이전 애니메이션의 영향을 받지 않도록 고정값 사용!
+            const spriteBaseScale = isContainerScaled ? 1 : baseScale;
+            const originalSpriteScaleX = spriteBaseScale;
+            const originalSpriteScaleY = spriteBaseScale;
             
             // 🔧 애니메이션 시작 전 아웃라인 스프라이트 숨기기!
             // (복잡한 동기화 대신 단순히 숨겼다가 복원)
@@ -2011,7 +2020,12 @@ const DDOOAction = {
                 });
             }
             
-            // 애니메이션 시작 전 스케일 정규화
+            // 🔥 애니메이션 시작 전 스케일 초기화 (누적 스케일 방지!)
+            // 먼저 기본 스케일로 리셋
+            sprite.scale.set(spriteBaseScale, spriteBaseScale);
+            sprite.rotation = 0;
+            
+            // 첫 키프레임 스케일 적용
             if (data.keyframes && data.keyframes[0]) {
                 const firstKf = data.keyframes[0];
                 const sx = (firstKf.scaleX ?? 1) * spriteBaseScale;
@@ -2033,23 +2047,27 @@ const DDOOAction = {
                     }
                 },
                 onComplete: () => {
-                    // ⚠️ 마지막 키프레임 상태로 확실히 설정
+                    // 🔥 마지막 키프레임 상태로 확실히 설정
                     const lastKf = data.keyframes[data.keyframes.length - 1];
                     if (lastKf && sprite && sprite.scale) {
                         if (lastKf.alpha !== undefined) sprite.alpha = lastKf.alpha;
-                        if (lastKf.scaleX !== undefined && lastKf.scaleY !== undefined) {
-                            const finalScaleX = (lastKf.scaleX ?? 1) * spriteBaseScale;
-                            const finalScaleY = (lastKf.scaleY ?? 1) * spriteBaseScale;
-                            sprite.scale.set(finalScaleX, finalScaleY);
-                        }
-                        if (lastKf.rotation !== undefined) {
-                            sprite.rotation = lastKf.rotation;
-                        }
+                        
+                        // 🔥 스케일 복원: spriteBaseScale 기준! (누적 방지)
+                        const finalScaleX = (lastKf.scaleX ?? 1) * spriteBaseScale;
+                        const finalScaleY = (lastKf.scaleY ?? 1) * spriteBaseScale;
+                        sprite.scale.set(finalScaleX, finalScaleY);
+                        
+                        // rotation도 복원
+                        sprite.rotation = lastKf.rotation ?? 0;
                     }
                     
-                    // 🔧 숨겼던 아웃라인 스프라이트 복원!
+                    // 🔧 숨겼던 아웃라인 스프라이트 복원! + 스케일 동기화
                     hiddenOutlines.forEach(outline => {
                         outline.visible = true;
+                        // 메인 스프라이트와 스케일 동기화!
+                        if (sprite && sprite.scale) {
+                            outline.scale.set(sprite.scale.x, sprite.scale.y);
+                        }
                     });
                     
                     resolve();
