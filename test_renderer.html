@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🖼️ DDOORenderer Studio</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #eee;
+            font-family: 'Segoe UI', 'Noto Sans KR', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        /* 헤더 */
+        .header {
+            background: linear-gradient(90deg, #1a1a2e, #16213e);
+            padding: 15px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #fbbf24;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            color: #fbbf24;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .header-links {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .header-links a {
+            color: #888;
+            text-decoration: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        
+        .header-links a:hover {
+            color: #fff;
+            background: rgba(255,255,255,0.1);
+        }
+        
+        /* 메인 레이아웃 */
+        .main-container {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        /* 왼쪽 패널 - 설정 */
+        .control-panel {
+            width: 320px;
+            background: #12121a;
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+        }
+        
+        .panel-section {
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            padding: 12px;
+        }
+        
+        .panel-section h3 {
+            font-size: 0.9rem;
+            color: #fbbf24;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .setting-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 10px;
+        }
+        
+        .setting-row label {
+            width: 80px;
+            color: #888;
+            font-size: 0.85rem;
+        }
+        
+        .setting-row input[type="text"],
+        .setting-row select {
+            flex: 1;
+            padding: 8px 10px;
+            background: #1a1a28;
+            border: 1px solid #333;
+            color: #fff;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+        
+        .setting-row input[type="color"] {
+            width: 50px;
+            height: 32px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        
+        .setting-row input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        .setting-row input[type="range"] {
+            flex: 1;
+            cursor: pointer;
+        }
+        
+        .setting-row .value {
+            width: 40px;
+            text-align: right;
+            color: #60a5fa;
+            font-size: 0.8rem;
+        }
+        
+        /* 버튼 */
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #f5576c, #f093fb);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #f5af19, #f12711);
+            color: white;
+        }
+        
+        .btn-info {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            color: white;
+        }
+        
+        .btn-full {
+            width: 100%;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-group .btn {
+            flex: 1;
+            min-width: 80px;
+        }
+        
+        /* 스프라이트 리스트 */
+        .sprite-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .sprite-item {
+            padding: 8px 12px;
+            background: #1a1a28;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .sprite-item:hover {
+            background: #2a2a3e;
+        }
+        
+        .sprite-item.active {
+            background: linear-gradient(135deg, #667eea33, #764ba233);
+            border: 1px solid #667eea;
+        }
+        
+        .sprite-item .icon {
+            font-size: 1.1rem;
+        }
+        
+        /* 중앙 - 프리뷰 스테이지 */
+        .stage-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .preview-stage {
+            background: #1a1a2e;
+            border-radius: 12px;
+            flex: 1;
+            min-height: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid #333;
+        }
+        
+        #pixiContainer {
+            width: 100%;
+            height: 100%;
+        }
+        
+        #pixiContainer canvas {
+            border-radius: 10px;
+        }
+        
+        .stage-info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            color: #888;
+        }
+        
+        .stage-controls {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            background: rgba(0,0,0,0.7);
+            padding: 8px 15px;
+            border-radius: 20px;
+        }
+        
+        /* 오른쪽 패널 - 로그 & 프리셋 */
+        .side-panel {
+            width: 280px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .log-panel {
+            background: #12121a;
+            border-radius: 12px;
+            padding: 15px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .log-panel h3 {
+            font-size: 0.9rem;
+            color: #fbbf24;
+            margin-bottom: 10px;
+        }
+        
+        .log-container {
+            flex: 1;
+            overflow-y: auto;
+            font-size: 0.75rem;
+            font-family: monospace;
+            background: #0a0a12;
+            padding: 10px;
+            border-radius: 6px;
+            max-height: 300px;
+        }
+        
+        .log-entry {
+            padding: 4px 0;
+            border-bottom: 1px solid #1a1a28;
+            color: #888;
+        }
+        
+        .log-entry.info { color: #60a5fa; }
+        .log-entry.success { color: #34d399; }
+        .log-entry.error { color: #f87171; }
+        .log-entry.warn { color: #fbbf24; }
+        
+        /* 프리셋 패널 */
+        .preset-panel {
+            background: #12121a;
+            border-radius: 12px;
+            padding: 15px;
+        }
+        
+        .preset-panel h3 {
+            font-size: 0.9rem;
+            color: #fbbf24;
+            margin-bottom: 10px;
+        }
+        
+        .preset-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        
+        .preset-btn {
+            padding: 12px;
+            background: #1a1a28;
+            border: 1px solid #333;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        
+        .preset-btn:hover {
+            background: #2a2a3e;
+            border-color: #667eea;
+        }
+        
+        .preset-btn.active {
+            background: linear-gradient(135deg, #667eea33, #764ba233);
+            border-color: #667eea;
+        }
+        
+        .preset-btn .icon {
+            font-size: 1.5rem;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .preset-btn .name {
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+        
+        /* 로딩 */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            color: #666;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #333;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- 헤더 -->
+    <div class="header">
+        <h1>🖼️ DDOORenderer Studio</h1>
+        <div class="header-links">
+            <a href="test_animation.html">🎬 Action Studio</a>
+            <a href="index.html">🎮 Game</a>
+        </div>
+    </div>
+    
+    <!-- 메인 컨테이너 -->
+    <div class="main-container">
+        <!-- 왼쪽 - 설정 패널 -->
+        <div class="control-panel">
+            <!-- 스프라이트 선택 -->
+            <div class="panel-section">
+                <h3>📁 스프라이트 선택</h3>
+                <div class="setting-row">
+                    <label>이미지</label>
+                    <input type="text" id="sprite-path" value="goblin.png" placeholder="이미지 경로">
+                </div>
+                <button class="btn btn-primary btn-full" onclick="loadSprite()" style="margin-top:10px;">
+                    🔄 로드
+                </button>
+                
+                <div style="margin-top:12px;">
+                    <div style="color:#666; font-size:0.75rem; margin-bottom:8px;">빠른 선택:</div>
+                    <div class="sprite-list" id="spriteList">
+                        <!-- JS로 생성 -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 아웃라인 설정 -->
+            <div class="panel-section">
+                <h3>✏️ 아웃라인</h3>
+                <div class="setting-row">
+                    <label>활성화</label>
+                    <input type="checkbox" id="outline-enabled" checked>
+                </div>
+                <div class="setting-row">
+                    <label>색상</label>
+                    <input type="color" id="outline-color" value="#000000">
+                </div>
+                <div class="setting-row">
+                    <label>두께</label>
+                    <input type="range" id="outline-thickness" min="1" max="8" value="2">
+                    <span class="value" id="outline-thickness-val">2</span>
+                </div>
+                <div class="setting-row">
+                    <label>방향</label>
+                    <select id="outline-directions">
+                        <option value="4">4방향</option>
+                        <option value="8" selected>8방향</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- 그림자 설정 -->
+            <div class="panel-section">
+                <h3>🌑 그림자</h3>
+                <div class="setting-row">
+                    <label>활성화</label>
+                    <input type="checkbox" id="shadow-enabled" checked>
+                </div>
+                <div class="setting-row">
+                    <label>불투명도</label>
+                    <input type="range" id="shadow-alpha" min="0" max="100" value="40">
+                    <span class="value" id="shadow-alpha-val">0.40</span>
+                </div>
+                <div class="setting-row">
+                    <label>Y 스케일</label>
+                    <input type="range" id="shadow-scaleY" min="10" max="50" value="25">
+                    <span class="value" id="shadow-scaleY-val">0.25</span>
+                </div>
+            </div>
+            
+            <!-- 환경광 설정 -->
+            <div class="panel-section">
+                <h3>💡 환경광</h3>
+                <div class="setting-row">
+                    <label>활성화</label>
+                    <input type="checkbox" id="env-enabled" checked>
+                </div>
+                <div class="setting-row">
+                    <label>밝기</label>
+                    <input type="range" id="env-brightness" min="50" max="150" value="95">
+                    <span class="value" id="env-brightness-val">0.95</span>
+                </div>
+                <div class="setting-row">
+                    <label>채도</label>
+                    <input type="range" id="env-saturation" min="50" max="150" value="90">
+                    <span class="value" id="env-saturation-val">0.90</span>
+                </div>
+            </div>
+            
+            <!-- 숨쉬기 설정 -->
+            <div class="panel-section">
+                <h3>🫁 숨쉬기</h3>
+                <div class="setting-row">
+                    <label>활성화</label>
+                    <input type="checkbox" id="breathing-enabled" checked>
+                </div>
+                <div class="setting-row">
+                    <label>강도</label>
+                    <input type="range" id="breathing-amount" min="1" max="10" value="2">
+                    <span class="value" id="breathing-amount-val">0.02</span>
+                </div>
+                <div class="setting-row">
+                    <label>속도</label>
+                    <input type="range" id="breathing-speed" min="10" max="50" value="25">
+                    <span class="value" id="breathing-speed-val">2.5s</span>
+                </div>
+            </div>
+            
+            <!-- 스케일 -->
+            <div class="panel-section">
+                <h3>📐 스케일</h3>
+                <div class="setting-row">
+                    <label>크기</label>
+                    <input type="range" id="sprite-scale" min="50" max="300" value="150">
+                    <span class="value" id="sprite-scale-val">1.5x</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 중앙 - 프리뷰 스테이지 -->
+        <div class="stage-container">
+            <div class="preview-stage">
+                <div id="pixiContainer">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <span>PixiJS 로딩 중...</span>
+                    </div>
+                </div>
+                <div class="stage-info">
+                    <span id="stageInfo">스프라이트 로드 대기 중...</span>
+                </div>
+                <div class="stage-controls">
+                    <button class="btn btn-success" onclick="testState('idle')">😊 Idle</button>
+                    <button class="btn btn-danger" onclick="testHit()">💥 Hit</button>
+                    <button class="btn btn-warning" onclick="testState('stunned')">😵 Stun</button>
+                    <button class="btn btn-info" onclick="testState('buffed')">✨ Buff</button>
+                    <button class="btn btn-primary" onclick="testState('debuffed')">💀 Debuff</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 오른쪽 - 프리셋 & 로그 -->
+        <div class="side-panel">
+            <!-- 프리셋 -->
+            <div class="preset-panel">
+                <h3>🎨 프리셋</h3>
+                <div class="preset-grid">
+                    <div class="preset-btn" onclick="applyPreset('player')">
+                        <span class="icon">🎮</span>
+                        <span class="name">Player</span>
+                    </div>
+                    <div class="preset-btn active" onclick="applyPreset('enemy')">
+                        <span class="icon">👹</span>
+                        <span class="name">Enemy</span>
+                    </div>
+                    <div class="preset-btn" onclick="applyPreset('boss')">
+                        <span class="icon">💀</span>
+                        <span class="name">Boss</span>
+                    </div>
+                    <div class="preset-btn" onclick="applyPreset('npc')">
+                        <span class="icon">🧙</span>
+                        <span class="name">NPC</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 로그 -->
+            <div class="log-panel">
+                <h3>📜 로그</h3>
+                <div class="log-container" id="logContainer">
+                    <div class="log-entry info">DDOORenderer Studio 시작...</div>
+                </div>
+            </div>
+            
+            <!-- 내보내기 -->
+            <div class="panel-section">
+                <h3>💾 설정 내보내기</h3>
+                <button class="btn btn-primary btn-full" onclick="exportConfig()">
+                    📋 JSON 복사
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.x/dist/pixi.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/gsap.min.js"></script>
+    <script src="ddoo-renderer.js"></script>
+    
+    <script>
+        // ==================== 전역 변수 ====================
+        let app = null;
+        let mainContainer = null;
+        let currentSprite = null;
+        let currentPreset = 'enemy';
+        
+        // 스프라이트 목록
+        const spriteList = [
+            { name: 'Goblin', path: 'goblin.png', icon: '👹' },
+            { name: 'Goblin Archer', path: 'goblinarcher.png', icon: '🏹' },
+            { name: 'Slime', path: 'slime.png', icon: '🟢' },
+            { name: 'Skeleton', path: 'skeleton.png', icon: '💀' },
+            { name: 'Spider', path: 'spider.png', icon: '🕷️' },
+            { name: 'Golem', path: 'golem.png', icon: '🪨' },
+            { name: 'Hero', path: 'hero.png', icon: '⚔️' },
+            { name: 'Mage', path: 'hero_mage.png', icon: '🧙' },
+            { name: 'Rogue', path: 'hero_rogue.png', icon: '🗡️' },
+            { name: 'Ninja', path: 'hero_ninja.png', icon: '🥷' },
+        ];
+        
+        // ==================== 초기화 ====================
+        async function init() {
+            log('info', '🖼️ DDOORenderer Studio 초기화 중...');
+            
+            try {
+                // PixiJS 앱 생성
+                const container = document.getElementById('pixiContainer');
+                container.innerHTML = '';
+                
+                app = new PIXI.Application();
+                await app.init({
+                    width: container.clientWidth || 800,
+                    height: container.clientHeight || 500,
+                    backgroundColor: 0x1a1a2e,
+                    antialias: false,
+                    resolution: window.devicePixelRatio || 1,
+                    autoDensity: true
+                });
+                
+                container.appendChild(app.canvas);
+                
+                // 메인 컨테이너
+                mainContainer = new PIXI.Container();
+                mainContainer.sortableChildren = true;
+                app.stage.addChild(mainContainer);
+                
+                // 바닥 그리기
+                drawFloor();
+                
+                // 스프라이트 리스트 렌더링
+                renderSpriteList();
+                
+                // 이벤트 바인딩
+                bindEvents();
+                
+                // 리사이즈 핸들러
+                window.addEventListener('resize', handleResize);
+                
+                log('success', '✅ 초기화 완료!');
+                
+                // 기본 스프라이트 로드
+                setTimeout(() => loadSprite(), 500);
+                
+            } catch (e) {
+                log('error', `초기화 실패: ${e.message}`);
+                console.error(e);
+            }
+        }
+        
+        // ==================== 바닥 그리기 ====================
+        function drawFloor() {
+            const floor = new PIXI.Graphics();
+            const width = app.screen.width;
+            const height = app.screen.height;
+            const floorY = height * 0.85;
+            
+            // 바닥 영역
+            floor.rect(0, floorY, width, height - floorY);
+            floor.fill({ color: 0x0f0f1a });
+            
+            // 바닥선
+            floor.moveTo(0, floorY);
+            floor.lineTo(width, floorY);
+            floor.stroke({ color: 0x4a4a6a, width: 2 });
+            
+            // 그리드
+            for (let x = 0; x < width; x += 50) {
+                floor.moveTo(x, floorY);
+                floor.lineTo(x, height);
+                floor.stroke({ color: 0x2a2a3a, width: 1 });
+            }
+            
+            floor.zIndex = -100;
+            mainContainer.addChild(floor);
+        }
+        
+        // ==================== 스프라이트 로드 ====================
+        async function loadSprite() {
+            const path = document.getElementById('sprite-path').value || 'goblin.png';
+            const scale = parseInt(document.getElementById('sprite-scale').value) / 100;
+            
+            log('info', `🔄 로딩: ${path}`);
+            updateStageInfo(`로딩: ${path}...`);
+            
+            // 기존 스프라이트 제거
+            if (currentSprite) {
+                DDOORenderer.destroy(currentSprite);
+                currentSprite = null;
+            }
+            
+            try {
+                // 설정 수집
+                const config = getConfig();
+                
+                // DDOORenderer로 스프라이트 생성
+                currentSprite = await DDOORenderer.createSprite(path, {
+                    ...config,
+                    scale: scale,
+                    label: path
+                });
+                
+                if (!currentSprite) {
+                    throw new Error('스프라이트 생성 실패');
+                }
+                
+                // 위치 설정 (중앙 하단)
+                currentSprite.x = app.screen.width / 2;
+                currentSprite.y = app.screen.height * 0.85;
+                
+                mainContainer.addChild(currentSprite);
+                
+                log('success', `✅ 로드 완료: ${path}`);
+                updateStageInfo(`${path} (${(scale * 100).toFixed(0)}%)`);
+                
+            } catch (e) {
+                log('error', `❌ 로드 실패: ${e.message}`);
+                updateStageInfo('로드 실패');
+            }
+        }
+        
+        // ==================== 설정 수집 ====================
+        function getConfig() {
+            return {
+                outline: {
+                    enabled: document.getElementById('outline-enabled').checked,
+                    color: parseInt(document.getElementById('outline-color').value.replace('#', ''), 16),
+                    thickness: parseInt(document.getElementById('outline-thickness').value),
+                    directions: parseInt(document.getElementById('outline-directions').value)
+                },
+                shadow: {
+                    enabled: document.getElementById('shadow-enabled').checked,
+                    alpha: parseInt(document.getElementById('shadow-alpha').value) / 100,
+                    scaleY: parseInt(document.getElementById('shadow-scaleY').value) / 100
+                },
+                environment: {
+                    enabled: document.getElementById('env-enabled').checked,
+                    brightness: parseInt(document.getElementById('env-brightness').value) / 100,
+                    saturation: parseInt(document.getElementById('env-saturation').value) / 100
+                },
+                breathing: {
+                    enabled: document.getElementById('breathing-enabled').checked,
+                    scaleAmount: parseInt(document.getElementById('breathing-amount').value) / 100,
+                    speed: parseInt(document.getElementById('breathing-speed').value) / 10,
+                    randomDelay: false
+                }
+            };
+        }
+        
+        // ==================== 프리셋 적용 ====================
+        function applyPreset(presetName) {
+            currentPreset = presetName;
+            
+            // UI 업데이트
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent.toLowerCase().includes(presetName));
+            });
+            
+            const preset = DDOORenderer.presets[presetName];
+            if (!preset) return;
+            
+            // 설정 적용
+            if (preset.outline) {
+                document.getElementById('outline-enabled').checked = preset.outline.enabled ?? true;
+                if (preset.outline.color !== undefined) {
+                    document.getElementById('outline-color').value = '#' + preset.outline.color.toString(16).padStart(6, '0');
+                }
+                if (preset.outline.thickness) {
+                    document.getElementById('outline-thickness').value = preset.outline.thickness;
+                    document.getElementById('outline-thickness-val').textContent = preset.outline.thickness;
+                }
+            }
+            
+            if (preset.shadow) {
+                document.getElementById('shadow-enabled').checked = preset.shadow.enabled ?? true;
+                if (preset.shadow.alpha) {
+                    document.getElementById('shadow-alpha').value = preset.shadow.alpha * 100;
+                    document.getElementById('shadow-alpha-val').textContent = preset.shadow.alpha.toFixed(2);
+                }
+            }
+            
+            if (preset.breathing) {
+                document.getElementById('breathing-enabled').checked = preset.breathing.enabled ?? true;
+                if (preset.breathing.scaleAmount) {
+                    document.getElementById('breathing-amount').value = preset.breathing.scaleAmount * 100;
+                    document.getElementById('breathing-amount-val').textContent = preset.breathing.scaleAmount.toFixed(2);
+                }
+                if (preset.breathing.speed) {
+                    document.getElementById('breathing-speed').value = preset.breathing.speed * 10;
+                    document.getElementById('breathing-speed-val').textContent = preset.breathing.speed + 's';
+                }
+            }
+            
+            log('info', `🎨 프리셋 적용: ${presetName}`);
+            
+            // 다시 로드
+            loadSprite();
+        }
+        
+        // ==================== 상태 테스트 ====================
+        function testState(state) {
+            if (!currentSprite) {
+                log('warn', '스프라이트가 없습니다');
+                return;
+            }
+            
+            DDOORenderer.setState(currentSprite, state);
+            log('info', `🎬 상태: ${state}`);
+        }
+        
+        function testHit() {
+            if (!currentSprite) {
+                log('warn', '스프라이트가 없습니다');
+                return;
+            }
+            
+            DDOORenderer.rapidFlash(currentSprite);
+            DDOORenderer.damageShake(currentSprite, 10, 300);
+            log('info', '💥 히트 테스트');
+        }
+        
+        // ==================== 설정 내보내기 ====================
+        function exportConfig() {
+            const config = getConfig();
+            const json = JSON.stringify(config, null, 2);
+            
+            navigator.clipboard.writeText(json).then(() => {
+                log('success', '📋 설정이 클립보드에 복사됨');
+            }).catch(() => {
+                log('error', '복사 실패');
+                console.log(json);
+            });
+        }
+        
+        // ==================== 유틸리티 ====================
+        function renderSpriteList() {
+            const container = document.getElementById('spriteList');
+            container.innerHTML = '';
+            
+            spriteList.forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'sprite-item';
+                el.innerHTML = `<span class="icon">${item.icon}</span>${item.name}`;
+                el.onclick = () => {
+                    document.getElementById('sprite-path').value = item.path;
+                    document.querySelectorAll('.sprite-item').forEach(i => i.classList.remove('active'));
+                    el.classList.add('active');
+                    loadSprite();
+                };
+                container.appendChild(el);
+            });
+        }
+        
+        function bindEvents() {
+            // 슬라이더 값 표시
+            const sliders = [
+                { id: 'outline-thickness', valId: 'outline-thickness-val', format: v => v },
+                { id: 'shadow-alpha', valId: 'shadow-alpha-val', format: v => (v / 100).toFixed(2) },
+                { id: 'shadow-scaleY', valId: 'shadow-scaleY-val', format: v => (v / 100).toFixed(2) },
+                { id: 'env-brightness', valId: 'env-brightness-val', format: v => (v / 100).toFixed(2) },
+                { id: 'env-saturation', valId: 'env-saturation-val', format: v => (v / 100).toFixed(2) },
+                { id: 'breathing-amount', valId: 'breathing-amount-val', format: v => (v / 100).toFixed(2) },
+                { id: 'breathing-speed', valId: 'breathing-speed-val', format: v => (v / 10).toFixed(1) + 's' },
+                { id: 'sprite-scale', valId: 'sprite-scale-val', format: v => (v / 100).toFixed(1) + 'x' },
+            ];
+            
+            sliders.forEach(({ id, valId, format }) => {
+                const slider = document.getElementById(id);
+                const val = document.getElementById(valId);
+                if (slider && val) {
+                    slider.oninput = () => {
+                        val.textContent = format(slider.value);
+                    };
+                }
+            });
+        }
+        
+        function handleResize() {
+            if (!app) return;
+            
+            const container = document.getElementById('pixiContainer');
+            app.renderer.resize(container.clientWidth, container.clientHeight);
+            
+            // 바닥 다시 그리기
+            const floor = mainContainer.children.find(c => c.zIndex === -100);
+            if (floor) {
+                mainContainer.removeChild(floor);
+                floor.destroy();
+            }
+            drawFloor();
+            
+            // 스프라이트 위치 조정
+            if (currentSprite) {
+                currentSprite.x = app.screen.width / 2;
+                currentSprite.y = app.screen.height * 0.85;
+            }
+        }
+        
+        function log(type, message) {
+            const container = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        function updateStageInfo(text) {
+            document.getElementById('stageInfo').textContent = text;
+        }
+        
+        // ==================== 시작 ====================
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
