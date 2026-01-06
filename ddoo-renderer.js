@@ -26,14 +26,13 @@ const DDOORenderer = {
             blur: false
         },
         
-        // 환경광 설정 🔥 던전 분위기 강화
+        // 환경광 설정 (비활성화 - 쓸모없음)
         environment: {
-            enabled: true,
-            brightness: 0.8,        // 🔥 더 어둡게
-            saturation: 0.7,        // 🔥 채도 낮게
-            contrast: 1.2,          // 🔥 대비 높게
-            dungeonTone: true       // 🔥 푸른 던전 톤
+            enabled: false
         },
+        
+        // 틴트 (색조) - 직접적인 색상 변경
+        tint: null,  // 0xff6666 형태로 지정
         
         // 숨쉬기 애니메이션
         breathing: {
@@ -125,9 +124,9 @@ const DDOORenderer = {
         
         container.addChild(sprite);
         
-        // 4. 환경광 적용
-        if (config.environment?.enabled) {
-            this.applyEnvironmentBlending(sprite, config.environment);
+        // 4. 틴트 적용 (직접적인 색상 변경)
+        if (config.tint) {
+            sprite.tint = config.tint;
         }
         
         // 데이터 저장
@@ -182,9 +181,9 @@ const DDOORenderer = {
             }
         }
         
-        // 환경광 적용
-        if (config.environment?.enabled) {
-            this.applyEnvironmentBlending(sprite, config.environment);
+        // 틴트 적용
+        if (config.tint) {
+            sprite.tint = config.tint;
         }
         
         container.sortChildren();
@@ -645,33 +644,29 @@ const DDOORenderer = {
     presets: {
         // 플레이어 스타일
         player: {
-            outline: { enabled: true, color: 0xffffff, thickness: 2 },
-            shadow: { enabled: true, alpha: 0.5 },
-            environment: { enabled: true, brightness: 1.0 },
+            outline: { enabled: true, color: 0x222244, thickness: 2 },
+            shadow: { enabled: true, alpha: 0.6, scaleX: 1.2 },
             breathing: { enabled: true, scaleAmount: 0.015 }
         },
         
         // 적 스타일
         enemy: {
             outline: { enabled: true, color: 0x000000, thickness: 3 },
-            shadow: { enabled: true, alpha: 0.4 },
-            environment: { enabled: true, brightness: 0.95 },
+            shadow: { enabled: true, alpha: 0.7, scaleX: 1.3 },
             breathing: { enabled: true, scaleAmount: 0.02 }
         },
         
         // 보스 스타일
         boss: {
-            outline: { enabled: true, color: 0x220000, thickness: 4 },
-            shadow: { enabled: true, alpha: 0.6, scaleY: 0.3 },
-            environment: { enabled: true, brightness: 1.05 },
+            outline: { enabled: true, color: 0x330000, thickness: 4 },
+            shadow: { enabled: true, alpha: 0.8, scaleX: 1.5 },
             breathing: { enabled: true, scaleAmount: 0.025, speed: 3 }
         },
         
         // NPC 스타일
         npc: {
             outline: { enabled: true, color: 0x333333, thickness: 2 },
-            shadow: { enabled: true, alpha: 0.3 },
-            environment: { enabled: true, brightness: 1.0 },
+            shadow: { enabled: true, alpha: 0.4 },
             breathing: { enabled: true, scaleAmount: 0.01, speed: 3.5 }
         },
         
@@ -679,7 +674,6 @@ const DDOORenderer = {
         object: {
             outline: { enabled: false },
             shadow: { enabled: true, alpha: 0.3 },
-            environment: { enabled: false },
             breathing: { enabled: false }
         }
     },
