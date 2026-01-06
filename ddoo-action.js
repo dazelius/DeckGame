@@ -1990,12 +1990,32 @@ const DDOOAction = {
             const baseScale = charBaseScale;
             const startX = container.x;
             
-            // 애니메이션 시작 전 스케일 정규화 (baseScale 적용!)
+            // 🔥 스프라이트의 원래 스케일 저장! 
+            // EnemyRenderer 캐릭터: sprite.scale = 1 (컨테이너가 스케일 담당)
+            // DDOOAction 캐릭터: sprite.scale = baseScale
+            const spriteOriginalScale = sprite.scale.x;
+            sprite._originalScale = spriteOriginalScale;
+            
+            // 🔥 스프라이트 스케일 기준 결정
+            // 스프라이트 스케일이 0.9 이상이면 EnemyRenderer 방식 (컨테이너 스케일링)
+            // 그 외에는 DDOOAction 방식 (스프라이트 스케일링)
+            const spriteBaseScale = spriteOriginalScale > 0.9 ? 1 : baseScale;
+            
+            // 애니메이션 시작 전 스케일 정규화
             if (data.keyframes && data.keyframes[0]) {
                 const firstKf = data.keyframes[0];
-                const sx = (firstKf.scaleX ?? 1) * baseScale;
-                const sy = (firstKf.scaleY ?? 1) * baseScale;
+                const sx = (firstKf.scaleX ?? 1) * spriteBaseScale;
+                const sy = (firstKf.scaleY ?? 1) * spriteBaseScale;
                 sprite.scale.set(sx, sy);
+                
+                // 🔧 아웃라인 스프라이트도 동기화!
+                if (container.children) {
+                    container.children.forEach(child => {
+                        if (child.isOutline) {
+                            child.scale.set(sx, sy);
+                        }
+                    });
+                }
             }
             
             // 🎯 현재 애니메이션 대상 스프라이트 저장 (shatter: "self" 용)
@@ -2012,14 +2032,14 @@ const DDOOAction = {
                     }
                 },
                 onComplete: () => {
-                    // ⚠️ 마지막 키프레임 상태로 확실히 설정 (baseScale 적용!)
+                    // ⚠️ 마지막 키프레임 상태로 확실히 설정
                     const lastKf = data.keyframes[data.keyframes.length - 1];
                     if (lastKf && sprite && sprite.scale) {
                         if (lastKf.alpha !== undefined) sprite.alpha = lastKf.alpha;
                         if (lastKf.scaleX !== undefined && lastKf.scaleY !== undefined) {
-                            // 🔥 baseScale을 곱해서 원래 크기 유지!
-                            const finalScaleX = (lastKf.scaleX ?? 1) * baseScale;
-                            const finalScaleY = (lastKf.scaleY ?? 1) * baseScale;
+                            // 🔥 spriteBaseScale은 함수 상단에서 계산됨
+                            const finalScaleX = (lastKf.scaleX ?? 1) * spriteBaseScale;
+                            const finalScaleY = (lastKf.scaleY ?? 1) * spriteBaseScale;
                             sprite.scale.set(finalScaleX, finalScaleY);
                             
                             // 🔧 아웃라인 스프라이트도 스케일 복원!
@@ -2216,8 +2236,9 @@ const DDOOAction = {
                 
                 // 스케일 - 🔧 아웃라인 스프라이트도 함께 스케일!
                 if (kf.scaleX !== undefined || kf.scaleY !== undefined) {
-                    const scaleX = (kf.scaleX ?? 1) * baseScale;
-                    const scaleY = (kf.scaleY ?? 1) * baseScale;
+                    // 🔥 spriteBaseScale은 함수 상단에서 계산됨
+                    const scaleX = (kf.scaleX ?? 1) * spriteBaseScale;
+                    const scaleY = (kf.scaleY ?? 1) * spriteBaseScale;
                     tl.to(sprite.scale, { x: scaleX, y: scaleY, duration: dur, ease }, '<');
                     
                     // 🔧 컨테이너 내 아웃라인 스프라이트도 스케일 동기화!
