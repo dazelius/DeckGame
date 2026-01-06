@@ -10,27 +10,29 @@ const DDOORenderer = {
         outline: {
             enabled: true,
             color: 0x000000,        // 검은 외곽선
-            thickness: 2,           // 두께 (픽셀)
-            alpha: 0.9,
+            thickness: 3,           // 두께 (픽셀) 🔥 기본값 증가
+            alpha: 1.0,             // 🔥 더 선명하게
             directions: 8           // 4 또는 8방향
         },
         
-        // 그림자 설정
+        // 그림자 설정 🔥 더 눈에 띄게
         shadow: {
             enabled: true,
             color: 0x000000,
-            alpha: 0.4,
-            scaleY: 0.25,           // 납작한 타원
-            offsetY: 5,             // 발 아래 오프셋
-            blur: false             // 블러 효과 (성능 영향)
+            alpha: 0.7,             // 🔥 더 진하게
+            scaleX: 1.3,            // 🔥 더 넓게
+            scaleY: 0.4,            // 🔥 더 두껍게
+            offsetY: 8,             // 발 아래 오프셋
+            blur: false
         },
         
-        // 환경광 설정
+        // 환경광 설정 🔥 던전 분위기 강화
         environment: {
             enabled: true,
-            brightness: 0.95,       // 밝기 (던전 분위기)
-            saturation: 0.9,        // 채도
-            warmth: 0.02            // 따뜻한 색조
+            brightness: 0.8,        // 🔥 더 어둡게
+            saturation: 0.7,        // 🔥 채도 낮게
+            contrast: 1.2,          // 🔥 대비 높게
+            dungeonTone: true       // 🔥 푸른 던전 톤
         },
         
         // 숨쉬기 애니메이션
@@ -264,18 +266,22 @@ const DDOORenderer = {
         try {
             const graphics = new PIXI.Graphics();
             
-            // 스프라이트 크기 기반 그림자 크기
+            // 🔥 더 큰 그림자!
             const spriteWidth = texture.width || 100;
-            const shadowWidth = spriteWidth * 0.8;
-            const shadowHeight = shadowWidth * (config.scaleY || 0.25);
+            const spriteHeight = texture.height || 100;
             
-            // 그라데이션 효과를 위해 여러 겹
-            const layers = 5;
+            // 스프라이트 크기에 비례하는 큰 그림자
+            const shadowWidth = spriteWidth * (config.scaleX || 1.2);
+            const shadowHeight = shadowWidth * (config.scaleY || 0.35);
+            
+            // 🔥 더 선명한 그라데이션 효과
+            const layers = 8;
             for (let i = layers; i >= 0; i--) {
                 const ratio = i / layers;
-                const alpha = (config.alpha || 0.4) * (1 - ratio * 0.7);
-                const w = shadowWidth * (1 + ratio * 0.3);
-                const h = shadowHeight * (1 + ratio * 0.3);
+                // 중심부는 더 진하게, 바깥은 더 부드럽게
+                const alpha = (config.alpha || 0.6) * Math.pow(1 - ratio, 0.5);
+                const w = shadowWidth * (0.5 + ratio * 0.6);
+                const h = shadowHeight * (0.5 + ratio * 0.6);
                 
                 graphics.ellipse(0, 0, w, h);
                 graphics.fill({ 
@@ -284,8 +290,14 @@ const DDOORenderer = {
                 });
             }
             
-            graphics.y = config.offsetY || 5;
-            graphics.alpha = 0.6;
+            // 🔥 중심부 강조 (가장 진한 부분)
+            graphics.ellipse(0, 0, shadowWidth * 0.3, shadowHeight * 0.3);
+            graphics.fill({ 
+                color: config.color || 0x000000, 
+                alpha: (config.alpha || 0.6) * 1.2
+            });
+            
+            graphics.y = config.offsetY || 8;
             graphics.label = 'shadow';
             
             return graphics;
@@ -304,14 +316,32 @@ const DDOORenderer = {
             if (typeof PIXI.ColorMatrixFilter !== 'undefined') {
                 const colorMatrix = new PIXI.ColorMatrixFilter();
                 
-                // 밝기 조절 (던전 분위기)
-                if (config.brightness !== undefined) {
-                    colorMatrix.brightness(config.brightness, false);
-                }
+                // 🔥 던전 분위기 - 밝기 조절
+                const brightness = config.brightness ?? 0.85;
+                colorMatrix.brightness(brightness, false);
                 
-                // 채도 조절
-                if (config.saturation !== undefined) {
-                    colorMatrix.saturate(config.saturation - 1, false);
+                // 🔥 채도 낮추기 (던전은 색이 바래야 함)
+                const saturation = config.saturation ?? 0.75;
+                colorMatrix.saturate(saturation - 1, false);
+                
+                // 🔥 대비 높이기 (더 선명하게)
+                const contrast = config.contrast ?? 1.15;
+                colorMatrix.contrast(contrast, false);
+                
+                // 🔥 던전 색조 (푸른/차가운 톤)
+                if (config.tint) {
+                    // 커스텀 색조
+                    const r = ((config.tint >> 16) & 0xFF) / 255;
+                    const g = ((config.tint >> 8) & 0xFF) / 255;
+                    const b = (config.tint & 0xFF) / 255;
+                    colorMatrix.matrix[0] *= r * 1.2;  // R
+                    colorMatrix.matrix[6] *= g * 1.2;  // G
+                    colorMatrix.matrix[12] *= b * 1.2; // B
+                } else if (config.dungeonTone !== false) {
+                    // 기본 던전 톤 (약간 푸른빛)
+                    colorMatrix.matrix[0] *= 0.95;   // R 살짝 줄임
+                    colorMatrix.matrix[6] *= 0.98;   // G 거의 유지
+                    colorMatrix.matrix[12] *= 1.08;  // B 살짝 올림
                 }
                 
                 // PixiJS 8: filters 배열은 새로 할당해야 함 (push 불가)
