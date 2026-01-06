@@ -552,17 +552,16 @@ const DDOORenderer = {
         }
     },
     
-    // ==================== 타겟 하이라이트 (테두리 글로우) ====================
+    // ==================== 타겟 하이라이트 (진짜 글로우 필터) ====================
     
     /**
-     * 타겟 글로우 ON/OFF - 아웃라인을 밝게 + 두껍게 펄스
+     * 타겟 글로우 ON/OFF - DropShadowFilter를 글로우로 사용
      */
     setTargeted(container, isTargeted) {
         const data = container?._ddooData;
-        if (!data) return;
+        if (!data?.sprite) return;
         
         const sprite = data.sprite;
-        const outlines = data.outlines || [];
         
         // 기존 애니메이션 정리
         if (data.targetTween) {
@@ -570,37 +569,57 @@ const DDOORenderer = {
             data.targetTween = null;
         }
         
+        // 기존 글로우 필터 제거
+        if (data.glowFilter && sprite.filters) {
+            const filters = [...sprite.filters];
+            const idx = filters.indexOf(data.glowFilter);
+            if (idx > -1) filters.splice(idx, 1);
+            sprite.filters = filters.length > 0 ? filters : null;
+            data.glowFilter = null;
+        }
+        
         if (!isTargeted) {
             data.isTargeted = false;
-            // 원래 아웃라인 상태 복원
-            const origColor = data.config?.outline?.color ?? 0x000000;
-            outlines.forEach(outline => {
-                outline.tint = origColor;
-                outline.alpha = data.config?.outline?.alpha ?? 0.9;
-                outline.scale.set(sprite?.scale?.x || 1, sprite?.scale?.y || 1);
-            });
-            // 스프라이트 tint 복원
-            if (sprite) sprite.tint = data.originalTint || 0xffffff;
             return;
         }
         
         // 글로우 활성화
         data.isTargeted = true;
         
-        // 아웃라인 색상을 노란색으로 + 스프라이트 살짝 밝게
-        outlines.forEach(outline => {
-            outline.tint = 0xffdd00;
-            outline.alpha = 1;
-        });
-        
-        // 은은한 펄스: 알파만 변화 (스케일 변화 X)
-        data.targetTween = gsap.timeline({ repeat: -1, yoyo: true });
-        
-        data.targetTween.to(outlines, {
-            alpha: 0.4,
-            duration: 0.5,
-            ease: 'sine.inOut'
-        });
+        try {
+            // DropShadowFilter를 글로우로 사용 (offset 0, 밝은 색상)
+            const glow = new PIXI.DropShadowFilter({
+                offset: { x: 0, y: 0 },
+                color: 0xffee00,    // 노란색
+                alpha: 0.8,
+                blur: 3,
+                quality: 2
+            });
+            
+            const filters = sprite.filters ? [...sprite.filters] : [];
+            filters.push(glow);
+            sprite.filters = filters;
+            data.glowFilter = glow;
+            
+            // 펄스 애니메이션
+            data.targetTween = gsap.timeline({ repeat: -1, yoyo: true })
+                .to(glow, {
+                    alpha: 0.3,
+                    blur: 2,
+                    duration: 0.4,
+                    ease: 'sine.inOut'
+                });
+                
+        } catch (e) {
+            console.warn('[DDOORenderer] 글로우 필터 실패, 알파 펄스로 대체:', e);
+            // 폴백: 스프라이트 알파 펄스
+            data.targetTween = gsap.timeline({ repeat: -1, yoyo: true })
+                .to(sprite, {
+                    alpha: 0.7,
+                    duration: 0.4,
+                    ease: 'sine.inOut'
+                });
+        }
     },
     
     /**
