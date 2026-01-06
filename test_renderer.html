@@ -309,23 +309,38 @@
                     <input type="checkbox" id="shadow-enabled" checked onchange="updatePreview()">
                 </div>
                 <div class="setting-row">
-                    <label>불투명도</label>
-                    <input type="range" id="shadow-alpha" min="0" max="100" value="40" oninput="updateValue(this, 'shadow-alpha-val', v => (v/100).toFixed(2)); updatePreview()">
-                    <span class="value" id="shadow-alpha-val">0.40</span>
+                    <label>진하기</label>
+                    <input type="range" id="shadow-alpha" min="20" max="100" value="70" oninput="updateValue(this, 'shadow-alpha-val', v => (v/100).toFixed(2)); updatePreview()">
+                    <span class="value" id="shadow-alpha-val">0.70</span>
+                </div>
+                <div class="setting-row">
+                    <label>크기</label>
+                    <input type="range" id="shadow-scale" min="80" max="200" value="130" oninput="updateValue(this, 'shadow-scale-val', v => (v/100).toFixed(1) + 'x'); updatePreview()">
+                    <span class="value" id="shadow-scale-val">1.3x</span>
                 </div>
             </div>
             
             <!-- 환경광 -->
             <div class="panel-section">
-                <h3>💡 환경광</h3>
+                <h3>🌙 던전 분위기</h3>
                 <div class="setting-row">
                     <label>사용</label>
                     <input type="checkbox" id="env-enabled" checked onchange="updatePreview()">
                 </div>
                 <div class="setting-row">
                     <label>밝기</label>
-                    <input type="range" id="env-brightness" min="50" max="150" value="95" oninput="updateValue(this, 'env-brightness-val', v => (v/100).toFixed(2)); updatePreview()">
-                    <span class="value" id="env-brightness-val">0.95</span>
+                    <input type="range" id="env-brightness" min="40" max="120" value="80" oninput="updateValue(this, 'env-brightness-val', v => (v/100).toFixed(2)); updatePreview()">
+                    <span class="value" id="env-brightness-val">0.80</span>
+                </div>
+                <div class="setting-row">
+                    <label>채도</label>
+                    <input type="range" id="env-saturation" min="30" max="120" value="70" oninput="updateValue(this, 'env-saturation-val', v => (v/100).toFixed(2)); updatePreview()">
+                    <span class="value" id="env-saturation-val">0.70</span>
+                </div>
+                <div class="setting-row">
+                    <label>대비</label>
+                    <input type="range" id="env-contrast" min="80" max="150" value="120" oninput="updateValue(this, 'env-contrast-val', v => (v/100).toFixed(2)); updatePreview()">
+                    <span class="value" id="env-contrast-val">1.20</span>
                 </div>
             </div>
             
@@ -538,22 +553,28 @@
         
         // ==================== 설정 수집 ====================
         function getConfig() {
+            const shadowScale = parseInt(document.getElementById('shadow-scale').value) / 100;
             return {
                 outline: {
                     enabled: document.getElementById('outline-enabled').checked,
                     color: parseInt(document.getElementById('outline-color').value.replace('#', ''), 16),
                     thickness: parseInt(document.getElementById('outline-thickness').value),
+                    alpha: 1.0,
                     directions: 8
                 },
                 shadow: {
                     enabled: document.getElementById('shadow-enabled').checked,
                     alpha: parseInt(document.getElementById('shadow-alpha').value) / 100,
-                    scaleY: 0.25
+                    scaleX: shadowScale,
+                    scaleY: shadowScale * 0.35,
+                    offsetY: 8
                 },
                 environment: {
                     enabled: document.getElementById('env-enabled').checked,
                     brightness: parseInt(document.getElementById('env-brightness').value) / 100,
-                    saturation: 0.9
+                    saturation: parseInt(document.getElementById('env-saturation').value) / 100,
+                    contrast: parseInt(document.getElementById('env-contrast').value) / 100,
+                    dungeonTone: true
                 },
                 breathing: {
                     enabled: document.getElementById('breathing-enabled').checked,
