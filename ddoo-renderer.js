@@ -552,81 +552,99 @@ const DDOORenderer = {
         }
     },
     
-    // ==================== 타겟 하이라이트 ====================
+    // ==================== 타겟 하이라이트 (테두리 글로우) ====================
     
     /**
-     * 타겟 하이라이트 ON/OFF
+     * 타겟 글로우 ON/OFF - 아웃라인을 밝게 + 두껍게 펄스
      */
     setTargeted(container, isTargeted) {
         const data = container?._ddooData;
         if (!data) return;
         
-        // 기존 하이라이트 애니메이션 정리
+        const sprite = data.sprite;
+        const outlines = data.outlines || [];
+        
+        // 기존 애니메이션 정리
         if (data.targetTween) {
             data.targetTween.kill();
             data.targetTween = null;
         }
         
         if (!isTargeted) {
-            // 하이라이트 해제 - 원래 아웃라인 색상 복원
-            const originalColor = data.config?.outline?.color ?? 0x000000;
-            data.outlines?.forEach(outline => {
-                outline.tint = originalColor;
-                outline.alpha = data.config?.outline?.alpha ?? 0.9;
-            });
             data.isTargeted = false;
+            // 원래 아웃라인 상태 복원
+            const origColor = data.config?.outline?.color ?? 0x000000;
+            outlines.forEach(outline => {
+                outline.tint = origColor;
+                outline.alpha = data.config?.outline?.alpha ?? 0.9;
+                outline.scale.set(sprite?.scale?.x || 1, sprite?.scale?.y || 1);
+            });
+            // 스프라이트 tint 복원
+            if (sprite) sprite.tint = data.originalTint || 0xffffff;
             return;
         }
         
-        // 하이라이트 활성화
+        // 글로우 활성화
         data.isTargeted = true;
         
-        // 아웃라인이 없으면 생성
-        if (!data.outlines || data.outlines.length === 0) {
-            console.warn('[DDOORenderer] 타겟 하이라이트: 아웃라인 없음');
-            return;
-        }
-        
-        // 펄스 애니메이션 (색상 순환 + 알파 펄스)
-        const colors = [0xffff00, 0xffffff, 0xffaa00, 0xffff66]; // 노랑 → 흰색 → 주황 → 밝은노랑
-        let colorIndex = 0;
-        
-        // 초기 하이라이트
-        data.outlines?.forEach(outline => {
-            outline.tint = 0xffff00;
+        // 아웃라인 색상을 노란색으로 + 스프라이트 살짝 밝게
+        outlines.forEach(outline => {
+            outline.tint = 0xffdd00;
             outline.alpha = 1;
         });
         
-        // 펄스 타임라인
+        // 펄스 애니메이션: 스프라이트 밝기 + 아웃라인 스케일
+        const baseScale = sprite?.scale?.x || 1;
+        
         data.targetTween = gsap.timeline({ repeat: -1 });
         
-        // 색상 변경 + 알파 펄스 반복
-        for (let i = 0; i < 4; i++) {
-            const color = colors[i];
-            data.targetTween
-                .call(() => {
-                    if (!data.isTargeted) return;
-                    data.outlines?.forEach(outline => {
-                        outline.tint = color;
-                    });
-                })
-                .to(data.outlines || [], {
-                    alpha: 0.5,
-                    duration: 0.12,
-                    ease: 'power2.in',
-                    stagger: 0.01
-                })
-                .to(data.outlines || [], {
-                    alpha: 1,
-                    duration: 0.12,
-                    ease: 'power2.out',
-                    stagger: 0.01
+        // 밝아지면서 아웃라인 확장
+        data.targetTween.to({}, {
+            duration: 0.35,
+            ease: 'sine.inOut',
+            onUpdate: function() {
+                const progress = this.progress();
+                const pulse = Math.sin(progress * Math.PI);
+                
+                // 스프라이트 밝기 (tint로 표현)
+                if (sprite) {
+                    const brightness = Math.floor(255 - pulse * 40);
+                    sprite.tint = (brightness << 16) | (brightness << 8) | brightness;
+                }
+                
+                // 아웃라인 확장 (글로우 느낌)
+                const glowScale = baseScale * (1 + pulse * 0.15);
+                outlines.forEach(outline => {
+                    outline.scale.set(glowScale, glowScale);
+                    outline.alpha = 0.7 + pulse * 0.3;
                 });
-        }
+            }
+        });
+        
+        // 어두워지면서 아웃라인 수축
+        data.targetTween.to({}, {
+            duration: 0.35,
+            ease: 'sine.inOut',
+            onUpdate: function() {
+                const progress = this.progress();
+                const pulse = Math.sin(progress * Math.PI);
+                
+                if (sprite) {
+                    const brightness = Math.floor(215 + pulse * 40);
+                    sprite.tint = (brightness << 16) | (brightness << 8) | brightness;
+                }
+                
+                const glowScale = baseScale * (1.15 - pulse * 0.15);
+                outlines.forEach(outline => {
+                    outline.scale.set(glowScale, glowScale);
+                    outline.alpha = 1 - pulse * 0.3;
+                });
+            }
+        });
     },
     
     /**
-     * 타겟 하이라이트 토글
+     * 타겟 글로우 토글
      */
     toggleTargeted(container) {
         const data = container?._ddooData;
