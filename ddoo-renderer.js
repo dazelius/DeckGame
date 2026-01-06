@@ -107,6 +107,15 @@ const DDOORenderer = {
         sprite.zIndex = 10;
         sprite.label = 'main';
         
+        // 스케일 설정
+        const scale = options.scale || 1;
+        sprite.scale.set(scale);
+        
+        // 아웃라인 스케일도 동기화
+        outlines.forEach(outline => {
+            outline.scale.set(scale);
+        });
+        
         // 픽셀 아트 설정
         if (config.pixelArt?.scaleMode === 'nearest') {
             texture.source.scaleMode = 'nearest';
@@ -332,30 +341,21 @@ const DDOORenderer = {
         // 딜레이 (동기화 방지)
         const delay = config.randomDelay ? Math.random() * 2 : 0;
         
-        // 숨쉬기 트윈
-        const breathTween = gsap.timeline({ repeat: -1, delay })
+        // 기준 Y 위치 저장
+        const baseY = container.y;
+        
+        // 숨쉬기 트윈 (스케일만, Y 위치는 건드리지 않음)
+        const breathTween = gsap.timeline({ repeat: -1, yoyo: true, delay })
             .to(sprite.scale, {
-                x: baseScale * (1 + config.scaleAmount),
-                y: baseScale * (1 - config.scaleAmount * 0.5),
-                duration: config.speed / 2,
-                ease: 'sine.inOut'
-            })
-            .to(sprite.scale, {
-                x: baseScale,
-                y: baseScale,
-                duration: config.speed / 2,
+                x: baseScale * (1 - config.scaleAmount * 0.3),
+                y: baseScale * (1 + config.scaleAmount),
+                duration: config.speed,
                 ease: 'sine.inOut'
             });
         
-        // Y축 움직임
-        const yTween = gsap.to(container, {
-            y: `+=${config.yAmount}`,
-            duration: config.speed / 2,
-            repeat: -1,
-            yoyo: true,
-            ease: 'sine.inOut',
-            delay
-        });
+        // Y축 움직임 제거 (3D 좌표 시스템과 충돌 방지)
+        // 스케일 변화만으로도 충분한 숨쉬기 효과
+        const yTween = null;
         
         if (container._ddooData) {
             container._ddooData.breathingTween = breathTween;
