@@ -456,7 +456,6 @@
                 <button class="panel-tab active" data-tab="anim" onclick="switchTab('anim')">🎬 Anim</button>
                 <button class="panel-tab" data-tab="vfx" onclick="switchTab('vfx')">✨ VFX</button>
                 <button class="panel-tab" data-tab="draw" onclick="switchTab('draw')">🎨 Draw</button>
-                <button class="panel-tab" data-tab="render" onclick="switchTab('render')">🖼️ Render</button>
             </div>
             
             <!-- 애니메이션 탭 -->
@@ -502,75 +501,6 @@
                             <input type="range" id="drawAngle" min="-180" max="180" value="-30">
                             <span class="value" id="drawAngleValue">-30°</span>
                         </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- 🖼️ Renderer 탭 -->
-            <div class="tab-content" id="tab-render" style="display:none;">
-                <div class="panel-section">
-                    <h3>📁 스프라이트 선택</h3>
-                    <div class="setting-row">
-                        <label>이미지</label>
-                        <input type="text" id="render-sprite-path" value="goblin.png" style="flex:1; padding:5px; background:#1a1a28; border:1px solid #333; color:#fff; border-radius:4px;">
-                    </div>
-                    <div class="setting-row" style="margin-top:8px;">
-                        <label>프리셋</label>
-                        <select id="render-preset" style="flex:1; padding:5px; background:#1a1a28; border:1px solid #333; color:#fff; border-radius:4px;">
-                            <option value="player">🎮 Player</option>
-                            <option value="enemy" selected>👹 Enemy</option>
-                            <option value="boss">💀 Boss</option>
-                            <option value="npc">🧙 NPC</option>
-                            <option value="object">📦 Object</option>
-                        </select>
-                    </div>
-                    <button class="play-btn" style="margin-top:10px; width:100%;" onclick="loadRendererPreview()">🔄 프리뷰 로드</button>
-                </div>
-                
-                <div class="panel-section">
-                    <h3>✏️ 아웃라인</h3>
-                    <div class="setting-row">
-                        <label>활성화</label>
-                        <input type="checkbox" id="render-outline-enabled" checked style="width:18px; height:18px;">
-                    </div>
-                    <div class="setting-row">
-                        <label>색상</label>
-                        <input type="color" id="render-outline-color" value="#000000" style="width:50px; height:28px; border:none; border-radius:4px;">
-                    </div>
-                    <div class="setting-row">
-                        <label>두께</label>
-                        <input type="range" id="render-outline-thickness" min="1" max="6" value="2" style="flex:1;">
-                        <span class="value" id="render-outline-val">2</span>
-                    </div>
-                </div>
-                
-                <div class="panel-section">
-                    <h3>🌑 그림자</h3>
-                    <div class="setting-row">
-                        <label>활성화</label>
-                        <input type="checkbox" id="render-shadow-enabled" checked style="width:18px; height:18px;">
-                    </div>
-                    <div class="setting-row">
-                        <label>불투명도</label>
-                        <input type="range" id="render-shadow-alpha" min="0" max="100" value="40" style="flex:1;">
-                        <span class="value" id="render-shadow-val">0.4</span>
-                    </div>
-                </div>
-                
-                <div class="panel-section">
-                    <h3>🎬 상태 테스트</h3>
-                    <div style="display:flex; flex-wrap:wrap; gap:5px;">
-                        <button class="play-btn" style="flex:1; min-width:80px;" onclick="testRendererState('idle')">😊 Idle</button>
-                        <button class="play-btn" style="flex:1; min-width:80px; background:#ef4444;" onclick="testRendererHit()">💥 Hit</button>
-                        <button class="play-btn" style="flex:1; min-width:80px; background:#6366f1;" onclick="testRendererState('stunned')">😵 Stun</button>
-                        <button class="play-btn" style="flex:1; min-width:80px; background:#f59e0b;" onclick="testRendererState('buffed')">✨ Buff</button>
-                    </div>
-                </div>
-                
-                <div class="panel-section">
-                    <h3>🖼️ 프리뷰</h3>
-                    <div id="renderer-preview-container" style="background:#1a1a28; border-radius:8px; min-height:200px; display:flex; align-items:center; justify-content:center; color:#666;">
-                        프리뷰 로드 대기중...
                     </div>
                 </div>
             </div>
@@ -1372,101 +1302,6 @@
                 renderDrawList();
             }
             
-            // Renderer 탭 초기화 (최초 1회)
-            if (tabName === 'render' && !rendererStudioInitialized) {
-                initRendererStudio();
-            }
-        }
-        
-        // ==================== DDOORenderer 스튜디오 ====================
-        let rendererStudioInitialized = false;
-        
-        async function initRendererStudio() {
-            if (rendererStudioInitialized) return;
-            
-            const container = document.getElementById('renderer-preview-container');
-            if (!container || typeof DDOORenderer === 'undefined') {
-                container.innerHTML = '<span style="color:#f66;">DDOORenderer를 찾을 수 없습니다</span>';
-                return;
-            }
-            
-            try {
-                container.innerHTML = '';
-                await DDOORenderer.initStudio(container, 280, 300);
-                rendererStudioInitialized = true;
-                
-                // 이벤트 바인딩
-                bindRendererEvents();
-                
-                // 기본 스프라이트 로드
-                loadRendererPreview();
-                
-                log('info', '🖼️ DDOORenderer 스튜디오 초기화 완료');
-            } catch (e) {
-                console.error('DDOORenderer 스튜디오 초기화 실패:', e);
-                container.innerHTML = '<span style="color:#f66;">초기화 실패</span>';
-            }
-        }
-        
-        function bindRendererEvents() {
-            // 아웃라인 두께
-            const thicknessSlider = document.getElementById('render-outline-thickness');
-            if (thicknessSlider) {
-                thicknessSlider.oninput = () => {
-                    document.getElementById('render-outline-val').textContent = thicknessSlider.value;
-                };
-            }
-            
-            // 그림자 불투명도
-            const alphaSlider = document.getElementById('render-shadow-alpha');
-            if (alphaSlider) {
-                alphaSlider.oninput = () => {
-                    document.getElementById('render-shadow-val').textContent = (alphaSlider.value / 100).toFixed(2);
-                };
-            }
-        }
-        
-        async function loadRendererPreview() {
-            if (!rendererStudioInitialized || typeof DDOORenderer === 'undefined') {
-                log('error', '스튜디오가 초기화되지 않음');
-                return;
-            }
-            
-            const path = document.getElementById('render-sprite-path')?.value || 'goblin.png';
-            const preset = document.getElementById('render-preset')?.value || 'enemy';
-            
-            const overrides = {
-                outline: {
-                    enabled: document.getElementById('render-outline-enabled')?.checked ?? true,
-                    color: parseInt((document.getElementById('render-outline-color')?.value || '#000000').replace('#', ''), 16),
-                    thickness: parseInt(document.getElementById('render-outline-thickness')?.value || '2')
-                },
-                shadow: {
-                    enabled: document.getElementById('render-shadow-enabled')?.checked ?? true,
-                    alpha: parseInt(document.getElementById('render-shadow-alpha')?.value || '40') / 100
-                }
-            };
-            
-            try {
-                await DDOORenderer.previewSprite(path, preset, overrides);
-                log('info', `🖼️ 프리뷰 로드: ${path} (${preset})`);
-            } catch (e) {
-                log('error', `프리뷰 로드 실패: ${e.message}`);
-            }
-        }
-        
-        function testRendererState(state) {
-            if (typeof DDOORenderer !== 'undefined') {
-                DDOORenderer.testState(state);
-                log('info', `🎬 상태 테스트: ${state}`);
-            }
-        }
-        
-        function testRendererHit() {
-            if (typeof DDOORenderer !== 'undefined') {
-                DDOORenderer.testHit();
-                log('info', '💥 히트 테스트');
-            }
         }
         
         // ==================== VFX 리스트 렌더링 ====================
