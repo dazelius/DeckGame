@@ -907,6 +907,199 @@ const DDOORenderer = {
         await this.playSpawn(container, direction, 0.5);
     },
     
+    // ==================== 데미지 폰트 시스템 ====================
+    
+    damageFont: {
+        // 프리셋 스타일
+        styles: {
+            damage: {
+                color: '#ff4444',
+                stroke: '#220000',
+                fontSize: 28,
+                prefix: '-'
+            },
+            heal: {
+                color: '#44ff44',
+                stroke: '#002200',
+                fontSize: 28,
+                prefix: '+'
+            },
+            crit: {
+                color: '#ffdd00',
+                stroke: '#442200',
+                fontSize: 38,
+                prefix: '',
+                suffix: '!',
+                shake: true
+            },
+            miss: {
+                color: '#888888',
+                stroke: '#222222',
+                fontSize: 22,
+                text: 'MISS'
+            },
+            block: {
+                color: '#6688ff',
+                stroke: '#001144',
+                fontSize: 24,
+                text: 'BLOCK'
+            },
+            poison: {
+                color: '#88ff88',
+                stroke: '#004400',
+                fontSize: 24,
+                prefix: '-'
+            },
+            burn: {
+                color: '#ff8844',
+                stroke: '#441100',
+                fontSize: 24,
+                prefix: '-'
+            },
+            mp: {
+                color: '#4488ff',
+                stroke: '#001144',
+                fontSize: 22,
+                prefix: '-'
+            },
+            exp: {
+                color: '#ffaa00',
+                stroke: '#442200',
+                fontSize: 20,
+                prefix: '+',
+                suffix: ' EXP'
+            },
+            gold: {
+                color: '#ffdd44',
+                stroke: '#443300',
+                fontSize: 20,
+                prefix: '+',
+                suffix: ' G'
+            }
+        }
+    },
+    
+    /**
+     * 데미지 텍스트 표시
+     * @param {PIXI.Container} parent - 부모 컨테이너 (app.stage 또는 캐릭터 컨테이너)
+     * @param {number} x - X 위치
+     * @param {number} y - Y 위치
+     * @param {number|string} value - 값 또는 텍스트
+     * @param {string} type - 타입 ('damage', 'heal', 'crit', 'miss', 'block', 'poison', 'burn', 'mp', 'exp', 'gold')
+     * @param {Object} options - 추가 옵션
+     */
+    showDamage(parent, x, y, value, type = 'damage', options = {}) {
+        if (!parent) return null;
+        
+        const style = { ...this.damageFont.styles[type], ...options };
+        
+        // 텍스트 생성
+        let displayText = style.text || `${style.prefix || ''}${value}${style.suffix || ''}`;
+        
+        const textStyle = new PIXI.TextStyle({
+            fontFamily: 'Arial Black, Arial Bold, sans-serif',
+            fontSize: style.fontSize || 28,
+            fontWeight: 'bold',
+            fill: style.color || '#ffffff',
+            stroke: { color: style.stroke || '#000000', width: 4 },
+            dropShadow: {
+                color: '#000000',
+                blur: 2,
+                angle: Math.PI / 4,
+                distance: 2
+            }
+        });
+        
+        const text = new PIXI.Text({ text: displayText, style: textStyle });
+        text.anchor.set(0.5, 0.5);
+        text.x = x + (Math.random() - 0.5) * 20; // 약간의 랜덤 오프셋
+        text.y = y;
+        text.alpha = 1;
+        text.zIndex = 1000;
+        
+        parent.addChild(text);
+        
+        // 애니메이션
+        const tl = gsap.timeline({
+            onComplete: () => {
+                parent.removeChild(text);
+                text.destroy();
+            }
+        });
+        
+        // 크리티컬이면 흔들림 효과
+        if (style.shake) {
+            tl.to(text, {
+                x: text.x + 3,
+                duration: 0.03,
+                repeat: 6,
+                yoyo: true,
+                ease: 'none'
+            }, 0);
+            
+            // 스케일 펀치
+            tl.fromTo(text.scale, 
+                { x: 1.5, y: 1.5 },
+                { x: 1, y: 1, duration: 0.2, ease: 'back.out(2)' },
+                0
+            );
+        } else {
+            // 일반: 팝업 효과
+            tl.fromTo(text.scale,
+                { x: 0.5, y: 0.5 },
+                { x: 1, y: 1, duration: 0.15, ease: 'back.out(2)' },
+                0
+            );
+        }
+        
+        // 위로 떠오름
+        tl.to(text, {
+            y: y - 60,
+            duration: 0.8,
+            ease: 'power2.out'
+        }, 0);
+        
+        // 페이드아웃
+        tl.to(text, {
+            alpha: 0,
+            duration: 0.3,
+            ease: 'power2.in'
+        }, 0.5);
+        
+        return text;
+    },
+    
+    /**
+     * 캐릭터 위에 데미지 표시 (편의 함수)
+     */
+    showDamageOnCharacter(container, value, type = 'damage', options = {}) {
+        if (!container?.parent) return null;
+        
+        const x = container.x;
+        const y = container.y - 80; // 캐릭터 위
+        
+        return this.showDamage(container.parent, x, y, value, type, options);
+    },
+    
+    /**
+     * 콤보 데미지 (연속 히트)
+     */
+    showComboDamage(parent, x, y, damages, interval = 100) {
+        damages.forEach((dmg, i) => {
+            setTimeout(() => {
+                const offsetY = y - (i * 15);
+                this.showDamage(parent, x, offsetY, dmg.value, dmg.type || 'damage');
+            }, i * interval);
+        });
+    },
+    
+    /**
+     * 커스텀 스타일 추가
+     */
+    addDamageStyle(name, style) {
+        this.damageFont.styles[name] = style;
+    },
+    
     // ==================== 유틸리티 ====================
     
     /**
