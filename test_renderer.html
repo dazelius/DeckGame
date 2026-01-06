@@ -320,27 +320,16 @@
                 </div>
             </div>
             
-            <!-- 환경광 -->
+            <!-- 틴트 (색조) -->
             <div class="panel-section">
-                <h3>🌙 던전 분위기</h3>
+                <h3>🎨 색조 틴트</h3>
                 <div class="setting-row">
                     <label>사용</label>
-                    <input type="checkbox" id="env-enabled" checked onchange="updatePreview()">
+                    <input type="checkbox" id="tint-enabled" onchange="updatePreview()">
                 </div>
                 <div class="setting-row">
-                    <label>밝기</label>
-                    <input type="range" id="env-brightness" min="40" max="120" value="80" oninput="updateValue(this, 'env-brightness-val', v => (v/100).toFixed(2)); updatePreview()">
-                    <span class="value" id="env-brightness-val">0.80</span>
-                </div>
-                <div class="setting-row">
-                    <label>채도</label>
-                    <input type="range" id="env-saturation" min="30" max="120" value="70" oninput="updateValue(this, 'env-saturation-val', v => (v/100).toFixed(2)); updatePreview()">
-                    <span class="value" id="env-saturation-val">0.70</span>
-                </div>
-                <div class="setting-row">
-                    <label>대비</label>
-                    <input type="range" id="env-contrast" min="80" max="150" value="120" oninput="updateValue(this, 'env-contrast-val', v => (v/100).toFixed(2)); updatePreview()">
-                    <span class="value" id="env-contrast-val">1.20</span>
+                    <label>색상</label>
+                    <input type="color" id="tint-color" value="#ff6666" onchange="updatePreview()">
                 </div>
             </div>
             
@@ -554,6 +543,9 @@
         // ==================== 설정 수집 ====================
         function getConfig() {
             const shadowScale = parseInt(document.getElementById('shadow-scale').value) / 100;
+            const tintEnabled = document.getElementById('tint-enabled').checked;
+            const tintColor = parseInt(document.getElementById('tint-color').value.replace('#', ''), 16);
+            
             return {
                 outline: {
                     enabled: document.getElementById('outline-enabled').checked,
@@ -570,12 +562,9 @@
                     offsetY: 8
                 },
                 environment: {
-                    enabled: document.getElementById('env-enabled').checked,
-                    brightness: parseInt(document.getElementById('env-brightness').value) / 100,
-                    saturation: parseInt(document.getElementById('env-saturation').value) / 100,
-                    contrast: parseInt(document.getElementById('env-contrast').value) / 100,
-                    dungeonTone: true
+                    enabled: false  // 비활성화
                 },
+                tint: tintEnabled ? tintColor : null,
                 breathing: {
                     enabled: document.getElementById('breathing-enabled').checked,
                     scaleAmount: parseInt(document.getElementById('breathing-amount').value) / 100,
