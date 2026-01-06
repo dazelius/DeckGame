@@ -1151,7 +1151,10 @@ const DDOOAction = {
             if (sprite) {
                 sprite.alpha = 1;
                 sprite.rotation = 0;
-                if (sprite.scale) sprite.scale.set(callerBaseScale, callerBaseScale);
+                // 🔥 EnemyRenderer 판단: container.scale < 0.95면 sprite는 1.0
+                const containerScale = container?.scale?.x || 1;
+                const spriteTargetScale = (containerScale < 0.95) ? 1 : callerBaseScale;
+                if (sprite.scale) sprite.scale.set(spriteTargetScale, spriteTargetScale);
             }
             if (container) {
                 gsap.killTweensOf(container);  // 진행 중인 트윈 정리!
@@ -1170,8 +1173,10 @@ const DDOOAction = {
                 gsap.killTweensOf(playerChar.sprite);
                 playerChar.sprite.alpha = 1;
                 playerChar.sprite.rotation = 0;
-                const pScale = playerChar.baseScale || 1;
-                if (playerChar.sprite.scale) playerChar.sprite.scale.set(pScale, pScale);
+                // 🔥 EnemyRenderer 판단: container.scale < 0.95면 sprite는 1.0
+                const pContainerScale = playerChar.container?.scale?.x || 1;
+                const pSpriteScale = (pContainerScale < 0.95) ? 1 : (playerChar.baseScale || 1);
+                if (playerChar.sprite.scale) playerChar.sprite.scale.set(pSpriteScale, pSpriteScale);
                 playerChar.container.x = playerChar.baseX;
                 playerChar.container.y = playerChar.baseY;
             }
@@ -1189,8 +1194,10 @@ const DDOOAction = {
                 gsap.killTweensOf(char.sprite);
                 char.sprite.alpha = 1;
                 char.sprite.rotation = 0;
-                const eScale = char.baseScale || 1;
-                if (char.sprite.scale) char.sprite.scale.set(eScale, eScale);
+                // 🔥 EnemyRenderer 판단: container.scale < 0.95면 sprite는 1.0
+                const eContainerScale = char.container?.scale?.x || 1;
+                const eSpriteScale = (eContainerScale < 0.95) ? 1 : (char.baseScale || 1);
+                if (char.sprite.scale) char.sprite.scale.set(eSpriteScale, eSpriteScale);
                 char.container.x = char.baseX;
                 char.container.y = char.baseY;
             });
