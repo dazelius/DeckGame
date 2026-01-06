@@ -710,8 +710,10 @@ const PlayerRenderer = {
                 colorMatrix.brightness(0.95, false);
                 colorMatrix.saturate(-0.08, false);
                 
-                sprite.filters = sprite.filters || [];
-                sprite.filters.push(colorMatrix);
+                // PixiJS 8: filters 배열은 새로 할당해야 함
+                const existingFilters = sprite.filters ? [...sprite.filters] : [];
+                existingFilters.push(colorMatrix);
+                sprite.filters = existingFilters;
                 sprite._envFilter = colorMatrix;
             }
         } catch (e) {

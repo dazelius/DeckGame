@@ -1884,9 +1884,10 @@ const EnemyRenderer = {
                 colorMatrix.brightness(0.95, false);    // 약간 어둡게
                 colorMatrix.saturate(-0.08, false);     // 채도 약간 낮춤
                 
-                // 기존 필터에 추가
-                sprite.filters = sprite.filters || [];
-                sprite.filters.push(colorMatrix);
+                // PixiJS 8: filters 배열은 새로 할당해야 함
+                const existingFilters = sprite.filters ? [...sprite.filters] : [];
+                existingFilters.push(colorMatrix);
+                sprite.filters = existingFilters;
                 
                 // 환경광 색조 저장 (나중에 변경 가능)
                 sprite._envFilter = colorMatrix;
