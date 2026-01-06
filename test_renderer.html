@@ -399,6 +399,18 @@
                 <div class="btn-group" style="margin-top:5px;">
                     <button class="btn" style="background:linear-gradient(135deg,#ffd700,#ff8c00);color:#000;font-weight:bold;" onclick="toggleTarget()">🎯 Target</button>
                 </div>
+                <div class="setting-row" style="margin-top:8px;">
+                    <label>글로우색</label>
+                    <input type="color" id="glow-color" value="#ffee00" onchange="updateGlowColor()">
+                    <span class="value" id="glow-color-name">노랑</span>
+                </div>
+                <div class="btn-group" style="margin-top:5px;">
+                    <button class="btn" style="background:#ff4444;font-size:0.7rem;" onclick="setGlowColor(0xff4444, '빨강')">🔴</button>
+                    <button class="btn" style="background:#44ff44;color:#000;font-size:0.7rem;" onclick="setGlowColor(0x44ff44, '초록')">🟢</button>
+                    <button class="btn" style="background:#4444ff;font-size:0.7rem;" onclick="setGlowColor(0x4444ff, '파랑')">🔵</button>
+                    <button class="btn" style="background:#ffee00;color:#000;font-size:0.7rem;" onclick="setGlowColor(0xffee00, '노랑')">🟡</button>
+                    <button class="btn" style="background:#ff44ff;font-size:0.7rem;" onclick="setGlowColor(0xff44ff, '보라')">🟣</button>
+                </div>
             </div>
             
             <div class="log-panel">
@@ -636,9 +648,33 @@
         
         function toggleTarget() {
             if (enhancedSprite) {
-                DDOORenderer.toggleTargeted(enhancedSprite);
+                const color = parseInt(document.getElementById('glow-color').value.replace('#', ''), 16);
+                DDOORenderer.toggleTargeted(enhancedSprite, color);
                 const isTargeted = enhancedSprite._ddooData?.isTargeted;
                 log('info', isTargeted ? '🎯 타겟 ON' : '타겟 OFF');
+            }
+        }
+        
+        function setGlowColor(color, name) {
+            // 컬러 피커 업데이트
+            const hex = '#' + color.toString(16).padStart(6, '0');
+            document.getElementById('glow-color').value = hex;
+            document.getElementById('glow-color-name').textContent = name;
+            
+            // 이미 타겟팅 중이면 색상 변경
+            if (enhancedSprite?._ddooData?.isTargeted) {
+                DDOORenderer.setGlowColor(enhancedSprite, color);
+                log('info', `글로우: ${name}`);
+            }
+        }
+        
+        function updateGlowColor() {
+            const color = parseInt(document.getElementById('glow-color').value.replace('#', ''), 16);
+            document.getElementById('glow-color-name').textContent = '';
+            
+            if (enhancedSprite?._ddooData?.isTargeted) {
+                DDOORenderer.setGlowColor(enhancedSprite, color);
+                log('info', `글로우 색상 변경`);
             }
         }
         
