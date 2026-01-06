@@ -356,6 +356,24 @@
                     <span class="value" id="sprite-scale-val">1.5x</span>
                 </div>
             </div>
+            
+            <!-- 타겟 글로우 -->
+            <div class="panel-section">
+                <h3>🎯 타겟 글로우</h3>
+                <div class="setting-row">
+                    <label>색상</label>
+                    <input type="color" id="glow-color" value="#ffee00" onchange="applyGlow()">
+                </div>
+                <div class="btn-group">
+                    <button class="btn" style="background:#ff4444;font-size:0.7rem;padding:4px;" onclick="setGlowPreset(0xff4444)">🔴</button>
+                    <button class="btn" style="background:#44ff44;color:#000;font-size:0.7rem;padding:4px;" onclick="setGlowPreset(0x44ff44)">🟢</button>
+                    <button class="btn" style="background:#4444ff;font-size:0.7rem;padding:4px;" onclick="setGlowPreset(0x4444ff)">🔵</button>
+                    <button class="btn" style="background:#ffee00;color:#000;font-size:0.7rem;padding:4px;" onclick="setGlowPreset(0xffee00)">🟡</button>
+                    <button class="btn" style="background:#ff44ff;font-size:0.7rem;padding:4px;" onclick="setGlowPreset(0xff44ff)">🟣</button>
+                    <button class="btn" style="background:#44ffff;color:#000;font-size:0.7rem;padding:4px;" onclick="setGlowPreset(0x44ffff)">🩵</button>
+                </div>
+                <button class="btn btn-full" style="background:linear-gradient(135deg,#ffd700,#ff8c00);color:#000;font-weight:bold;margin-top:8px;" onclick="toggleTarget()">🎯 글로우 ON/OFF</button>
+            </div>
         </div>
         
         <!-- 중앙 - 비교 뷰 -->
@@ -395,21 +413,6 @@
                 <div class="btn-group" style="margin-top:5px;">
                     <button class="btn" style="background:#6366f1;color:#fff;" onclick="testState('stunned')">😵 Stun</button>
                     <button class="btn" style="background:#f59e0b;color:#fff;" onclick="testState('buffed')">✨ Buff</button>
-                </div>
-                <div class="btn-group" style="margin-top:5px;">
-                    <button class="btn" style="background:linear-gradient(135deg,#ffd700,#ff8c00);color:#000;font-weight:bold;" onclick="toggleTarget()">🎯 Target</button>
-                </div>
-                <div class="setting-row" style="margin-top:8px;">
-                    <label>글로우색</label>
-                    <input type="color" id="glow-color" value="#ffee00" onchange="updateGlowColor()">
-                    <span class="value" id="glow-color-name">노랑</span>
-                </div>
-                <div class="btn-group" style="margin-top:5px;">
-                    <button class="btn" style="background:#ff4444;font-size:0.7rem;" onclick="setGlowColor(0xff4444, '빨강')">🔴</button>
-                    <button class="btn" style="background:#44ff44;color:#000;font-size:0.7rem;" onclick="setGlowColor(0x44ff44, '초록')">🟢</button>
-                    <button class="btn" style="background:#4444ff;font-size:0.7rem;" onclick="setGlowColor(0x4444ff, '파랑')">🔵</button>
-                    <button class="btn" style="background:#ffee00;color:#000;font-size:0.7rem;" onclick="setGlowColor(0xffee00, '노랑')">🟡</button>
-                    <button class="btn" style="background:#ff44ff;font-size:0.7rem;" onclick="setGlowColor(0xff44ff, '보라')">🟣</button>
                 </div>
             </div>
             
@@ -651,30 +654,29 @@
                 const color = parseInt(document.getElementById('glow-color').value.replace('#', ''), 16);
                 DDOORenderer.toggleTargeted(enhancedSprite, color);
                 const isTargeted = enhancedSprite._ddooData?.isTargeted;
-                log('info', isTargeted ? '🎯 타겟 ON' : '타겟 OFF');
+                log('info', isTargeted ? '🎯 글로우 ON' : '글로우 OFF');
             }
         }
         
-        function setGlowColor(color, name) {
+        function setGlowPreset(color) {
             // 컬러 피커 업데이트
             const hex = '#' + color.toString(16).padStart(6, '0');
             document.getElementById('glow-color').value = hex;
-            document.getElementById('glow-color-name').textContent = name;
             
-            // 이미 타겟팅 중이면 색상 변경
-            if (enhancedSprite?._ddooData?.isTargeted) {
-                DDOORenderer.setGlowColor(enhancedSprite, color);
-                log('info', `글로우: ${name}`);
+            // 글로우 적용 (켜져있든 꺼져있든 켜기)
+            if (enhancedSprite) {
+                DDOORenderer.setTargeted(enhancedSprite, true, color);
+                log('info', `🎯 글로우 색상: ${hex}`);
             }
         }
         
-        function updateGlowColor() {
+        function applyGlow() {
             const color = parseInt(document.getElementById('glow-color').value.replace('#', ''), 16);
-            document.getElementById('glow-color-name').textContent = '';
             
-            if (enhancedSprite?._ddooData?.isTargeted) {
-                DDOORenderer.setGlowColor(enhancedSprite, color);
-                log('info', `글로우 색상 변경`);
+            if (enhancedSprite) {
+                // 글로우 다시 적용 (색상 변경)
+                DDOORenderer.setTargeted(enhancedSprite, true, color);
+                log('info', `🎯 글로우 적용`);
             }
         }
         
