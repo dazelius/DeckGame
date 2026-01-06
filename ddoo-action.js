@@ -1451,34 +1451,15 @@ const DDOOAction = {
         }
         this._cameraZoomTweens = [];
         
-        // 🎬 isRootStage일 때만 캐릭터 스케일 직접 변경 (player + enemy만!)
-        // isRootStage가 아니면 stageContainer 줌이 모든 캐릭터에 적용됨
+        // 🚫 isRootStage일 때: 캐릭터 컨테이너 스케일 변경 비활성화!
+        // 이유: playKeyframes의 sprite.scale과 충돌하여 크기 버그 발생
+        // 대신 3D 배경 줌만 사용하여 줌 효과 제공
         if (this.cameraState?.isRootStage && this.characters.size > 0) {
-            // 🎯 카메라 줌 = 화면 전체 확대 → 모든 캐릭터 동시 스케일링!
-            this.characters.forEach((char, id) => {
-                if (char?.container?.scale) {
-                    gsap.killTweensOf(char.container.scale);
-                    
-                    // 🔥 원본 baseScale 저장 (복원용) - 최초 1회만!
-                    if (char._originalBaseScale === undefined) {
-                        char._originalBaseScale = char.container.breathingBaseScale || char.baseScale || 1;
-                    }
-                    
-                    const baseScale = char._originalBaseScale;
-                    const zoomScale = baseScale * targetZoom;
-                    
-                    if (this.config.debug) console.log(`[DDOOAction] 📷 ${id}: ${baseScale} → ${zoomScale}`);
-                    
-                    const tw = gsap.to(char.container.scale, {
-                        x: zoomScale,
-                        y: zoomScale,
-                        duration: dur,
-                        ease: 'power2.out',
-                        overwrite: 'auto'
-                    });
-                    this._cameraZoomTweens.push(tw);
-                }
-            });
+            // 🔒 캐릭터 스케일 변경 건너뜀 (버그 방지)
+            // 기존 코드: container.scale 변경 → sprite.scale과 충돌!
+            if (this.config.debug) {
+                console.log(`[DDOOAction] 📷 캐릭터 스케일 줌 건너뜀 (isRootStage, 3D 배경만 줌)`);
+            }
         }
         
         // 🎬 isRootStage가 아닐 때 stageContainer 줌 (전체 화면 줌)
@@ -1608,29 +1589,11 @@ const DDOOAction = {
             this._cameraZoomTweens = [];
         }
         
-        // 🎬 isRootStage일 때: 모든 캐릭터 스케일/알파 복원
+        // 🔒 isRootStage일 때: 캐릭터 스케일 복원 건너뜀 (cameraZoom에서 변경 안 함)
+        // 알파만 복원
         if (this.cameraState?.isRootStage) {
             this.characters.forEach((char, id) => {
-                if (char?.container) {
-                    gsap.killTweensOf(char.container);
-                    if (char.container.scale) {
-                        gsap.killTweensOf(char.container.scale);
-                        
-                        // 🔥 원본 baseScale로 복원!
-                        const targetScale = char._originalBaseScale || char.container.breathingBaseScale || char.baseScale || 1;
-                        if (this.config.debug) console.log(`[DDOOAction] 📷 ${id} 복원: ${targetScale}`);
-                        
-                        gsap.to(char.container.scale, {
-                            x: targetScale,
-                            y: targetScale,
-                            duration: dur,
-                            ease: 'power2.out',
-                            overwrite: 'auto'
-                        });
-                    }
-                }
                 if (char?.sprite) {
-                    gsap.killTweensOf(char.sprite);
                     gsap.to(char.sprite, {
                         alpha: 1.0,
                         duration: dur,
@@ -1705,18 +1668,10 @@ const DDOOAction = {
             this._cameraZoomTweens = [];
         }
         
-        // 🎬 isRootStage일 때: 모든 캐릭터 스케일/알파 즉시 복원
+        // 🔒 isRootStage일 때: 캐릭터 스케일 복원 건너뜀 (cameraZoom에서 변경 안 함)
+        // 알파만 복원
         if (this.cameraState?.isRootStage) {
             this.characters.forEach((char, id) => {
-                if (char?.container) {
-                    gsap.killTweensOf(char.container);
-                    if (char.container.scale) {
-                        gsap.killTweensOf(char.container.scale);
-                        // 🔥 원본 baseScale로 복원!
-                        const scale = char._originalBaseScale || char.container.breathingBaseScale || char.baseScale || 1;
-                        char.container.scale.set(scale, scale);
-                    }
-                }
                 if (char?.sprite) {
                     gsap.killTweensOf(char.sprite);
                     char.sprite.alpha = 1;
