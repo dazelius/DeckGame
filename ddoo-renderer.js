@@ -593,53 +593,13 @@ const DDOORenderer = {
             outline.alpha = 1;
         });
         
-        // 펄스 애니메이션: 스프라이트 밝기 + 아웃라인 스케일
-        const baseScale = sprite?.scale?.x || 1;
+        // 은은한 펄스: 알파만 변화 (스케일 변화 X)
+        data.targetTween = gsap.timeline({ repeat: -1, yoyo: true });
         
-        data.targetTween = gsap.timeline({ repeat: -1 });
-        
-        // 밝아지면서 아웃라인 확장
-        data.targetTween.to({}, {
-            duration: 0.35,
-            ease: 'sine.inOut',
-            onUpdate: function() {
-                const progress = this.progress();
-                const pulse = Math.sin(progress * Math.PI);
-                
-                // 스프라이트 밝기 (tint로 표현)
-                if (sprite) {
-                    const brightness = Math.floor(255 - pulse * 40);
-                    sprite.tint = (brightness << 16) | (brightness << 8) | brightness;
-                }
-                
-                // 아웃라인 확장 (글로우 느낌)
-                const glowScale = baseScale * (1 + pulse * 0.15);
-                outlines.forEach(outline => {
-                    outline.scale.set(glowScale, glowScale);
-                    outline.alpha = 0.7 + pulse * 0.3;
-                });
-            }
-        });
-        
-        // 어두워지면서 아웃라인 수축
-        data.targetTween.to({}, {
-            duration: 0.35,
-            ease: 'sine.inOut',
-            onUpdate: function() {
-                const progress = this.progress();
-                const pulse = Math.sin(progress * Math.PI);
-                
-                if (sprite) {
-                    const brightness = Math.floor(215 + pulse * 40);
-                    sprite.tint = (brightness << 16) | (brightness << 8) | brightness;
-                }
-                
-                const glowScale = baseScale * (1.15 - pulse * 0.15);
-                outlines.forEach(outline => {
-                    outline.scale.set(glowScale, glowScale);
-                    outline.alpha = 1 - pulse * 0.3;
-                });
-            }
+        data.targetTween.to(outlines, {
+            alpha: 0.4,
+            duration: 0.5,
+            ease: 'sine.inOut'
         });
     },
     
