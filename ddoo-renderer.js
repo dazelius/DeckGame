@@ -659,9 +659,8 @@ const DDOORenderer = {
         const preset = this.presets[presetName] || this.presets.enemy;
         const options = { ...preset, ...overrides };
         return this.createSprite(imagePath, options);
-    }
-};
-
+    },
+    
     // ==================== 🎬 스튜디오 프리뷰 시스템 ====================
     
     studio: {
