@@ -1999,21 +1999,24 @@ const DDOOAction = {
             
             console.log(`[DDOOAction] 스케일 판단: container=${containerScale.toFixed(2)}, spriteBase=${spriteBaseScale}`);
             
+            // 🔧 애니메이션 시작 전 아웃라인 스프라이트 숨기기!
+            // (복잡한 동기화 대신 단순히 숨겼다가 복원)
+            const hiddenOutlines = [];
+            if (container.children) {
+                container.children.forEach(child => {
+                    if (child.isOutline && child.visible !== false) {
+                        child.visible = false;
+                        hiddenOutlines.push(child);
+                    }
+                });
+            }
+            
             // 애니메이션 시작 전 스케일 정규화
             if (data.keyframes && data.keyframes[0]) {
                 const firstKf = data.keyframes[0];
                 const sx = (firstKf.scaleX ?? 1) * spriteBaseScale;
                 const sy = (firstKf.scaleY ?? 1) * spriteBaseScale;
                 sprite.scale.set(sx, sy);
-                
-                // 🔧 아웃라인 스프라이트도 동기화!
-                if (container.children) {
-                    container.children.forEach(child => {
-                        if (child.isOutline) {
-                            child.scale.set(sx, sy);
-                        }
-                    });
-                }
             }
             
             // 🎯 현재 애니메이션 대상 스프라이트 저장 (shatter: "self" 용)
@@ -2035,33 +2038,20 @@ const DDOOAction = {
                     if (lastKf && sprite && sprite.scale) {
                         if (lastKf.alpha !== undefined) sprite.alpha = lastKf.alpha;
                         if (lastKf.scaleX !== undefined && lastKf.scaleY !== undefined) {
-                            // 🔥 spriteBaseScale은 함수 상단에서 계산됨
                             const finalScaleX = (lastKf.scaleX ?? 1) * spriteBaseScale;
                             const finalScaleY = (lastKf.scaleY ?? 1) * spriteBaseScale;
                             sprite.scale.set(finalScaleX, finalScaleY);
-                            
-                            // 🔧 아웃라인 스프라이트도 스케일 복원!
-                            if (container.children) {
-                                container.children.forEach(child => {
-                                    if (child.isOutline) {
-                                        child.scale.set(finalScaleX, finalScaleY);
-                                    }
-                                });
-                            }
                         }
                         if (lastKf.rotation !== undefined) {
                             sprite.rotation = lastKf.rotation;
-                            
-                            // 🔧 아웃라인 스프라이트도 회전 복원!
-                            if (container.children) {
-                                container.children.forEach(child => {
-                                    if (child.isOutline) {
-                                        child.rotation = lastKf.rotation;
-                                    }
-                                });
-                            }
                         }
                     }
+                    
+                    // 🔧 숨겼던 아웃라인 스프라이트 복원!
+                    hiddenOutlines.forEach(outline => {
+                        outline.visible = true;
+                    });
+                    
                     resolve();
                 }
             });
@@ -2232,50 +2222,21 @@ const DDOOAction = {
                     tl.to(container, { y: baseY + kf.y, duration: dur, ease }, '<');
                 }
                 
-                // 스케일 - 🔧 아웃라인 스프라이트도 함께 스케일!
+                // 스케일 (아웃라인은 숨겨져 있으므로 스프라이트만)
                 if (kf.scaleX !== undefined || kf.scaleY !== undefined) {
-                    // 🔥 spriteBaseScale은 함수 상단에서 계산됨
                     const scaleX = (kf.scaleX ?? 1) * spriteBaseScale;
                     const scaleY = (kf.scaleY ?? 1) * spriteBaseScale;
                     tl.to(sprite.scale, { x: scaleX, y: scaleY, duration: dur, ease }, '<');
-                    
-                    // 🔧 컨테이너 내 아웃라인 스프라이트도 스케일 동기화!
-                    if (container.children) {
-                        container.children.forEach(child => {
-                            if (child.isOutline) {
-                                tl.to(child.scale, { x: scaleX, y: scaleY, duration: dur, ease }, '<');
-                            }
-                        });
-                    }
                 }
                 
-                // 회전 - 🔧 아웃라인 스프라이트도 함께 회전!
+                // 회전
                 if (kf.rotation !== undefined) {
                     tl.to(sprite, { rotation: kf.rotation * dir, duration: dur, ease }, '<');
-                    
-                    // 🔧 컨테이너 내 아웃라인 스프라이트도 회전 동기화!
-                    if (container.children) {
-                        container.children.forEach(child => {
-                            if (child.isOutline) {
-                                tl.to(child, { rotation: kf.rotation * dir, duration: dur, ease }, '<');
-                            }
-                        });
-                    }
                 }
                 
-                // 알파 - 🔧 아웃라인 스프라이트도 함께!
+                // 알파
                 if (kf.alpha !== undefined) {
                     tl.to(sprite, { alpha: kf.alpha, duration: dur, ease }, '<');
-                    
-                    // 🔧 컨테이너 내 아웃라인 스프라이트도 알파 동기화!
-                    if (container.children) {
-                        container.children.forEach(child => {
-                            if (child.isOutline) {
-                                // 아웃라인은 약간 더 투명하게
-                                tl.to(child, { alpha: kf.alpha * 0.9, duration: dur, ease }, '<');
-                            }
-                        });
-                    }
                 }
                 
                 // VFX
