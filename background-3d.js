@@ -109,14 +109,10 @@ const Background3D = {
     
     // Camera 설정
     setupCamera() {
-        // 🔥 battle-arena 크기 기준 (PixiJS와 동기화)
-        const arena = document.querySelector('.battle-arena');
-        const arenaWidth = arena?.offsetWidth || window.innerWidth;
-        const arenaHeight = arena?.offsetHeight || window.innerHeight;
-        
+        // 🔥 window 크기 기준 (3D 배경이 전체 화면을 덮어야 함)
         this.camera = new THREE.PerspectiveCamera(
             65,
-            arenaWidth / arenaHeight,
+            window.innerWidth / window.innerHeight,
             0.1,
             100
         );
@@ -628,12 +624,11 @@ const Background3D = {
         this.cachedArenaRect = null;
         this.arenaRectCacheTime = 0;
         
-        // 🔥 battle-arena 크기 기준으로 카메라 aspect 설정 (PixiJS와 동기화)
-        const arenaRect = this.getArenaRect();
-        let width = arenaRect.width || window.innerWidth;
-        let height = arenaRect.height || window.innerHeight;
+        // 🔥 window 크기 기준 (3D 배경이 전체 화면 덮음)
+        let width = window.innerWidth;
+        let height = window.innerHeight;
         
-        // 카메라 업데이트 (arena 비율로!)
+        // 카메라 업데이트 (window 비율로!)
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
         
@@ -861,13 +856,16 @@ const Background3D = {
         const screenY = (-vec.y * 0.5 + 0.5) * window.innerHeight;
         
         // 🎯 battle-arena 로컬 좌표 계산 (PixiJS 렌더러용)
-        // 🔥 window와 arena 크기 차이를 비율로 보정!
         const arenaRect = this.getArenaRect();
+        const arenaX = screenX - arenaRect.left;
+        const arenaY = screenY - arenaRect.top;
         
-        // NDC를 arena 크기로 직접 변환 (window 크기 대신)
-        // 이렇게 하면 3D 좌표가 arena 영역에 맞게 투영됨
-        const arenaX = (vec.x * 0.5 + 0.5) * arenaRect.width;
-        const arenaY = (-vec.y * 0.5 + 0.5) * arenaRect.height;
+        // 🔍 디버그 (첫 몇 번만)
+        if (!this._debugCount) this._debugCount = 0;
+        if (this._debugCount < 5) {
+            console.log(`[3D→2D] world(${x.toFixed(1)},${y.toFixed(1)},${z.toFixed(1)}) → screen(${screenX.toFixed(0)},${screenY.toFixed(0)}) → arena(${arenaX.toFixed(0)},${arenaY.toFixed(0)}) | arenaRect: top=${arenaRect.top.toFixed(0)}, left=${arenaRect.left.toFixed(0)}, w=${arenaRect.width.toFixed(0)}, h=${arenaRect.height.toFixed(0)}`);
+            this._debugCount++;
+        }
         
         // 거리 기반 스케일 (카메라와의 거리)
         const cameraPos = this.camera.position;
