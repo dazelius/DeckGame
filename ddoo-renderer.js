@@ -662,7 +662,402 @@ const DDOORenderer = {
     }
 };
 
+    // ==================== 🎬 스튜디오 프리뷰 시스템 ====================
+    
+    studio: {
+        app: null,
+        container: null,
+        currentSprite: null,
+        previewScale: 1.5,
+        backgroundColor: 0x2a2a3a
+    },
+    
+    /**
+     * 스튜디오 초기화 (프리뷰용 PixiJS 앱)
+     * @param {HTMLElement} parentElement - 부모 DOM 요소
+     * @param {number} width - 캔버스 너비
+     * @param {number} height - 캔버스 높이
+     */
+    async initStudio(parentElement, width = 400, height = 500) {
+        if (this.studio.app) {
+            this.studio.app.destroy(true);
+        }
+        
+        // PixiJS 앱 생성
+        this.studio.app = new PIXI.Application();
+        await this.studio.app.init({
+            width,
+            height,
+            backgroundColor: this.studio.backgroundColor,
+            antialias: false,
+            resolution: window.devicePixelRatio || 1,
+            autoDensity: true
+        });
+        
+        parentElement.appendChild(this.studio.app.canvas);
+        this.studio.app.canvas.style.borderRadius = '8px';
+        
+        // 메인 컨테이너
+        this.studio.container = new PIXI.Container();
+        this.studio.app.stage.addChild(this.studio.container);
+        
+        // 바닥선 그리기
+        this.drawStudioFloor(width, height);
+        
+        console.log('[DDOORenderer Studio] ✅ 스튜디오 초기화 완료');
+        return this.studio.app;
+    },
+    
+    /**
+     * 스튜디오 바닥선 그리기
+     */
+    drawStudioFloor(width, height) {
+        const floor = new PIXI.Graphics();
+        const floorY = height * 0.85;
+        
+        // 바닥 그라데이션
+        floor.rect(0, floorY, width, height - floorY);
+        floor.fill({ color: 0x1a1a2a });
+        
+        // 바닥선
+        floor.moveTo(0, floorY);
+        floor.lineTo(width, floorY);
+        floor.stroke({ color: 0x4a4a6a, width: 2 });
+        
+        // 그리드
+        for (let x = 0; x < width; x += 50) {
+            floor.moveTo(x, floorY);
+            floor.lineTo(x, height);
+            floor.stroke({ color: 0x3a3a5a, width: 1, alpha: 0.3 });
+        }
+        
+        floor.zIndex = -100;
+        this.studio.container.addChild(floor);
+    },
+    
+    /**
+     * 스튜디오에서 스프라이트 프리뷰
+     * @param {string} imagePath - 이미지 경로
+     * @param {string} presetName - 프리셋 이름 ('player', 'enemy', 'boss', 'npc', 'object')
+     * @param {Object} overrides - 설정 오버라이드
+     */
+    async previewSprite(imagePath, presetName = 'enemy', overrides = {}) {
+        if (!this.studio.app) {
+            console.error('[DDOORenderer Studio] 스튜디오가 초기화되지 않음');
+            return null;
+        }
+        
+        // 기존 스프라이트 제거
+        if (this.studio.currentSprite) {
+            this.destroy(this.studio.currentSprite);
+            this.studio.currentSprite = null;
+        }
+        
+        // 새 스프라이트 생성
+        const sprite = await this.createWithPreset(imagePath, presetName, {
+            ...overrides,
+            scale: this.studio.previewScale
+        });
+        
+        if (!sprite) return null;
+        
+        // 중앙 하단에 배치
+        const { width, height } = this.studio.app.screen;
+        sprite.x = width / 2;
+        sprite.y = height * 0.85;
+        
+        this.studio.container.addChild(sprite);
+        this.studio.currentSprite = sprite;
+        
+        console.log(`[DDOORenderer Studio] 프리뷰: ${imagePath} (${presetName})`);
+        return sprite;
+    },
+    
+    /**
+     * 현재 스프라이트에 상태 테스트
+     */
+    testState(state) {
+        if (!this.studio.currentSprite) return;
+        this.setState(this.studio.currentSprite, state);
+    },
+    
+    /**
+     * 현재 스프라이트에 히트 테스트
+     */
+    testHit() {
+        if (!this.studio.currentSprite) return;
+        this.rapidFlash(this.studio.currentSprite);
+        this.damageShake(this.studio.currentSprite, 8, 300);
+    },
+    
+    /**
+     * 현재 스프라이트 설정 업데이트
+     */
+    updatePreviewConfig(configPath, value) {
+        if (!this.studio.currentSprite?._ddooData) return;
+        
+        // config 경로 파싱 (예: 'outline.color')
+        const parts = configPath.split('.');
+        let target = this.studio.currentSprite._ddooData.config;
+        
+        for (let i = 0; i < parts.length - 1; i++) {
+            target = target[parts[i]];
+            if (!target) return;
+        }
+        
+        target[parts[parts.length - 1]] = value;
+        
+        // 스프라이트 다시 렌더링
+        const imagePath = this.studio.currentSprite.label;
+        const config = this.studio.currentSprite._ddooData.config;
+        this.previewSprite(imagePath, 'custom', config);
+    },
+    
+    /**
+     * 스튜디오 UI 패널 생성
+     * @param {HTMLElement} parentElement - 부모 DOM 요소
+     */
+    createStudioUI(parentElement) {
+        const panel = document.createElement('div');
+        panel.id = 'ddoo-renderer-studio';
+        panel.innerHTML = `
+            <style>
+                #ddoo-renderer-studio {
+                    background: #1a1a2e;
+                    border-radius: 12px;
+                    padding: 15px;
+                    color: #eee;
+                    font-family: 'Segoe UI', sans-serif;
+                    font-size: 13px;
+                }
+                #ddoo-renderer-studio h3 {
+                    margin: 0 0 15px 0;
+                    color: #ffd700;
+                    font-size: 16px;
+                }
+                #ddoo-renderer-studio .studio-section {
+                    margin-bottom: 15px;
+                    padding: 10px;
+                    background: rgba(255,255,255,0.05);
+                    border-radius: 8px;
+                }
+                #ddoo-renderer-studio .studio-section h4 {
+                    margin: 0 0 10px 0;
+                    font-size: 13px;
+                    color: #aaa;
+                }
+                #ddoo-renderer-studio .studio-row {
+                    display: flex;
+                    align-items: center;
+                    margin-bottom: 8px;
+                    gap: 10px;
+                }
+                #ddoo-renderer-studio label {
+                    width: 80px;
+                    color: #888;
+                }
+                #ddoo-renderer-studio input[type="text"],
+                #ddoo-renderer-studio input[type="number"] {
+                    flex: 1;
+                    padding: 5px 8px;
+                    border: 1px solid #444;
+                    border-radius: 4px;
+                    background: #2a2a3e;
+                    color: #fff;
+                }
+                #ddoo-renderer-studio input[type="color"] {
+                    width: 50px;
+                    height: 30px;
+                    border: none;
+                    border-radius: 4px;
+                    cursor: pointer;
+                }
+                #ddoo-renderer-studio input[type="checkbox"] {
+                    width: 18px;
+                    height: 18px;
+                }
+                #ddoo-renderer-studio input[type="range"] {
+                    flex: 1;
+                }
+                #ddoo-renderer-studio select {
+                    flex: 1;
+                    padding: 5px;
+                    background: #2a2a3e;
+                    color: #fff;
+                    border: 1px solid #444;
+                    border-radius: 4px;
+                }
+                #ddoo-renderer-studio button {
+                    padding: 8px 15px;
+                    margin: 3px;
+                    border: none;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 12px;
+                    transition: all 0.2s;
+                }
+                #ddoo-renderer-studio .btn-primary {
+                    background: linear-gradient(135deg, #667eea, #764ba2);
+                    color: white;
+                }
+                #ddoo-renderer-studio .btn-danger {
+                    background: linear-gradient(135deg, #f5576c, #f093fb);
+                    color: white;
+                }
+                #ddoo-renderer-studio .btn-success {
+                    background: linear-gradient(135deg, #11998e, #38ef7d);
+                    color: white;
+                }
+                #ddoo-renderer-studio .btn-warning {
+                    background: linear-gradient(135deg, #f5af19, #f12711);
+                    color: white;
+                }
+                #ddoo-renderer-studio button:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                }
+                #renderer-preview {
+                    margin-bottom: 15px;
+                    border-radius: 8px;
+                    overflow: hidden;
+                }
+            </style>
+            
+            <h3>🎨 DDOORenderer Studio</h3>
+            
+            <!-- 프리뷰 캔버스 -->
+            <div id="renderer-preview"></div>
+            
+            <!-- 스프라이트 선택 -->
+            <div class="studio-section">
+                <h4>📁 스프라이트 선택</h4>
+                <div class="studio-row">
+                    <label>이미지</label>
+                    <input type="text" id="sprite-path" value="goblin.png" placeholder="이미지 경로">
+                </div>
+                <div class="studio-row">
+                    <label>프리셋</label>
+                    <select id="sprite-preset">
+                        <option value="player">🎮 Player</option>
+                        <option value="enemy" selected>👹 Enemy</option>
+                        <option value="boss">💀 Boss</option>
+                        <option value="npc">🧙 NPC</option>
+                        <option value="object">📦 Object</option>
+                    </select>
+                </div>
+                <button class="btn-primary" onclick="DDOORenderer.loadPreviewSprite()">🔄 로드</button>
+            </div>
+            
+            <!-- 아웃라인 설정 -->
+            <div class="studio-section">
+                <h4>✏️ 아웃라인</h4>
+                <div class="studio-row">
+                    <label>활성화</label>
+                    <input type="checkbox" id="outline-enabled" checked>
+                </div>
+                <div class="studio-row">
+                    <label>색상</label>
+                    <input type="color" id="outline-color" value="#000000">
+                </div>
+                <div class="studio-row">
+                    <label>두께</label>
+                    <input type="range" id="outline-thickness" min="1" max="6" value="2">
+                    <span id="outline-thickness-val">2</span>
+                </div>
+            </div>
+            
+            <!-- 그림자 설정 -->
+            <div class="studio-section">
+                <h4>🌑 그림자</h4>
+                <div class="studio-row">
+                    <label>활성화</label>
+                    <input type="checkbox" id="shadow-enabled" checked>
+                </div>
+                <div class="studio-row">
+                    <label>불투명도</label>
+                    <input type="range" id="shadow-alpha" min="0" max="100" value="40">
+                    <span id="shadow-alpha-val">0.4</span>
+                </div>
+            </div>
+            
+            <!-- 테스트 버튼들 -->
+            <div class="studio-section">
+                <h4>🎬 상태 테스트</h4>
+                <button class="btn-success" onclick="DDOORenderer.testState('idle')">😊 Idle</button>
+                <button class="btn-danger" onclick="DDOORenderer.testHit()">💥 Hit</button>
+                <button class="btn-warning" onclick="DDOORenderer.testState('stunned')">😵 Stunned</button>
+                <button class="btn-primary" onclick="DDOORenderer.testState('buffed')">✨ Buffed</button>
+            </div>
+        `;
+        
+        parentElement.appendChild(panel);
+        
+        // 이벤트 바인딩
+        this.bindStudioEvents();
+        
+        return panel;
+    },
+    
+    /**
+     * 스튜디오 이벤트 바인딩
+     */
+    bindStudioEvents() {
+        // 아웃라인 두께
+        const thicknessSlider = document.getElementById('outline-thickness');
+        if (thicknessSlider) {
+            thicknessSlider.oninput = () => {
+                document.getElementById('outline-thickness-val').textContent = thicknessSlider.value;
+            };
+        }
+        
+        // 그림자 불투명도
+        const alphaSlider = document.getElementById('shadow-alpha');
+        if (alphaSlider) {
+            alphaSlider.oninput = () => {
+                document.getElementById('shadow-alpha-val').textContent = (alphaSlider.value / 100).toFixed(2);
+            };
+        }
+    },
+    
+    /**
+     * UI에서 스프라이트 로드
+     */
+    loadPreviewSprite() {
+        const path = document.getElementById('sprite-path')?.value || 'goblin.png';
+        const preset = document.getElementById('sprite-preset')?.value || 'enemy';
+        
+        const overrides = {
+            outline: {
+                enabled: document.getElementById('outline-enabled')?.checked ?? true,
+                color: parseInt((document.getElementById('outline-color')?.value || '#000000').replace('#', ''), 16),
+                thickness: parseInt(document.getElementById('outline-thickness')?.value || '2')
+            },
+            shadow: {
+                enabled: document.getElementById('shadow-enabled')?.checked ?? true,
+                alpha: parseInt(document.getElementById('shadow-alpha')?.value || '40') / 100
+            }
+        };
+        
+        this.previewSprite(path, preset, overrides);
+    },
+    
+    /**
+     * 스튜디오 정리
+     */
+    destroyStudio() {
+        if (this.studio.currentSprite) {
+            this.destroy(this.studio.currentSprite);
+        }
+        if (this.studio.app) {
+            this.studio.app.destroy(true);
+            this.studio.app = null;
+        }
+        this.studio.container = null;
+        this.studio.currentSprite = null;
+    }
+};
+
 // 전역 노출
 window.DDOORenderer = DDOORenderer;
 
-console.log('[DDOORenderer] ✅ 고품격 스프라이트 렌더러 로드됨');
+console.log('[DDOORenderer] ✅ 고품격 스프라이트 렌더러 + 스튜디오 로드됨');
