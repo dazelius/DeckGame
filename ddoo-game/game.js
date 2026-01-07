@@ -1353,11 +1353,24 @@ const Game = {
         });
     },
     
-    // Highlight valid grid cells for movement (DOM-based)
+    // Highlight valid grid cells for movement (PixiJS visuals + DOM click handlers)
     highlightGridCells(maxDistance) {
         const playerPos = this.worldPositions.player;
         const battleArea = document.getElementById('battle-area');
         const rect = battleArea?.getBoundingClientRect() || { left: 0, top: 0 };
+        
+        // Use PixiJS debug container for visual grid highlighting
+        if (typeof DDOOBackground !== 'undefined' && DDOOBackground.containers?.debug) {
+            const debug = DDOOBackground.containers.debug;
+            debug.visible = true;
+            
+            // Clear previous highlights
+            debug.children.forEach(child => {
+                if (child.isHighlight) {
+                    child.visible = false;
+                }
+            });
+        }
         
         // Highlight valid cells
         for (let x = 0; x < this.arena.width; x++) {
@@ -1377,63 +1390,11 @@ const Game = {
                 const screenPos = DDOOBackground.project3DToScreen(x + 0.5, 0, z + 0.5);
                 if (!screenPos || !screenPos.visible) continue;
                 
-                // Create DOM highlight
-                const highlight = document.createElement('div');
-                highlight.className = 'grid-target-highlight';
-                highlight.dataset.gridX = x;
-                highlight.dataset.gridZ = z;
-                highlight.style.left = (rect.left + screenPos.screenX - 25) + 'px';
-                highlight.style.top = (rect.top + screenPos.screenY - 15) + 'px';
-                highlight.style.width = '50px';
-                highlight.style.height = '30px';
-                
-                // Click handler
-                const gridX = x;
-                const gridZ = z;
-                highlight.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.executeCard(this.cards.selectedIndex, { type: 'grid', x: gridX, z: gridZ });
-                });
-                
-                document.body.appendChild(highlight);
-            }
-        }
-    },
-    
-    // Legacy grid highlighting (PixiJS-based, kept for reference)
-    _highlightGridCellsPixi(maxDistance) {
-        const playerPos = this.worldPositions.player;
-        
-        // Use existing grid highlighting from showDragTargets
-        if (typeof DDOOBackground !== 'undefined' && DDOOBackground.containers?.debug) {
-            const debug = DDOOBackground.containers.debug;
-            debug.visible = true;
-            
-            // Clear previous highlights
-            debug.children.forEach(child => {
-                if (child.isHighlight) {
-                    child.visible = false;
-                }
-            });
-            
-            // Highlight valid cells
-            for (let x = 0; x < this.arena.width; x++) {
-                for (let z = 0; z < this.arena.depth; z++) {
-                    // Check distance
-                    const dist = Math.abs(x - playerPos.x) + Math.abs(z - playerPos.z);
-                    if (maxDistance && dist > maxDistance) continue;
-                    
-                    // Check if occupied by enemy
-                    const isOccupied = this.worldPositions.enemies.some(
-                        ep => Math.floor(ep.x) === x && Math.floor(ep.z) === z
-                    );
-                    if (isOccupied) continue;
-                    
-                    // Highlight this cell
-                    const screenPos = DDOOBackground.project3DToScreen(x + 0.5, 0, z + 0.5);
-                    
-                    // Find or create highlight
+                // PixiJS highlight (visual)
+                if (DDOOBackground.containers?.debug) {
+                    const debug = DDOOBackground.containers.debug;
                     let highlight = debug.children.find(c => c.gridX === x && c.gridZ === z && c.isHighlight);
+                    
                     if (!highlight) {
                         highlight = new PIXI.Graphics();
                         highlight.isHighlight = true;
@@ -1443,14 +1404,39 @@ const Game = {
                     }
                     
                     highlight.clear();
-                    highlight.beginFill(0x00ff00, 0.3);
-                    highlight.drawRect(-30, -20, 60, 40);
+                    highlight.beginFill(0x00ff00, 0.4);
+                    highlight.lineStyle(3, 0x00ff00, 1);
+                    highlight.drawRect(-30, -18, 60, 36);
                     highlight.endFill();
-                    highlight.lineStyle(2, 0x00ff00, 0.8);
-                    highlight.drawRect(-30, -20, 60, 40);
-                    highlight.position.set(screenPos.x, screenPos.y);
+                    highlight.position.set(screenPos.screenX, screenPos.screenY);
                     highlight.visible = true;
                 }
+                
+                // DOM click handler (invisible, for interaction)
+                const clickTarget = document.createElement('div');
+                clickTarget.className = 'grid-target-highlight';
+                clickTarget.dataset.gridX = x;
+                clickTarget.dataset.gridZ = z;
+                clickTarget.style.cssText = `
+                    position: fixed;
+                    left: ${rect.left + screenPos.screenX - 30}px;
+                    top: ${rect.top + screenPos.screenY - 18}px;
+                    width: 60px;
+                    height: 36px;
+                    cursor: pointer;
+                    z-index: 60;
+                    background: transparent;
+                    border: none;
+                `;
+                
+                const gridX = x;
+                const gridZ = z;
+                clickTarget.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.executeCard(this.cards.selectedIndex, { type: 'grid', x: gridX, z: gridZ });
+                });
+                
+                document.body.appendChild(clickTarget);
             }
         }
     },
