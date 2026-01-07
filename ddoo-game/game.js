@@ -391,6 +391,12 @@ const Game = {
         this.containers.debug.visible = this.gridAlwaysShow;  // Grid always visible
         this.app.stage.addChild(this.containers.debug);
         
+        // 하이라이트 레이어 (카드 타겟 표시용 - 캐릭터 위에)
+        this.containers.highlights = new PIXI.Container();
+        this.containers.highlights.zIndex = 15;  // Above characters
+        this.containers.highlights.visible = false;
+        this.app.stage.addChild(this.containers.highlights);
+        
         // 캐릭터 레이어
         this.containers.characters = new PIXI.Container();
         this.containers.characters.zIndex = 10;
@@ -1343,90 +1349,80 @@ const Game = {
     highlightAttackRange(range) {
         const playerPos = this.worldPositions.player;
         
-        // Use Game's debug container (not DDOOBackground's)
-        if (this.containers?.debug) {
-            const debug = this.containers.debug;
-            debug.visible = true;
-            
-            // Clear previous highlights (only highlights, not grid)
-            debug.children.forEach(child => {
-                if (child.isHighlight) {
-                    child.visible = false;
+        // Use dedicated highlights container
+        if (!this.containers?.highlights) return;
+        
+        const hlContainer = this.containers.highlights;
+        hlContainer.visible = true;
+        hlContainer.removeChildren();  // Clear all previous highlights
+        
+        console.log(`[Game] Drawing attack range: ${range} from (${playerPos.x}, ${playerPos.z})`);
+        
+        // Highlight cells within range
+        let count = 0;
+        for (let x = 0; x < this.arena.width; x++) {
+            for (let z = 0; z < this.arena.depth; z++) {
+                // Calculate distance from player
+                const dist = Math.abs(x - Math.floor(playerPos.x)) + Math.abs(z - Math.floor(playerPos.z));
+                if (dist === 0 || dist > range) continue;
+                
+                const screenPos = DDOOBackground.project3DToScreen(x + 0.5, 0, z + 0.5);
+                if (!screenPos || !screenPos.visible) continue;
+                
+                // Check if enemy is in this cell
+                const hasEnemy = this.worldPositions.enemies.some(
+                    ep => Math.floor(ep.x) === x && Math.floor(ep.z) === z
+                );
+                
+                // Create highlight
+                const highlight = new PIXI.Graphics();
+                
+                const w = 50, h = 30;  // Cell size
+                const px = 3;  // Pixel border thickness
+                
+                if (hasEnemy) {
+                    // Bright red for enemy cells - pixel style
+                    highlight.beginFill(0xff0000, 0.6);
+                    highlight.drawRect(-w/2, -h/2, w, h);
+                    highlight.endFill();
+                    
+                    // Pixel border (yellow)
+                    highlight.beginFill(0xffff00, 1);
+                    highlight.drawRect(-w/2, -h/2, w, px);           // Top
+                    highlight.drawRect(-w/2, h/2 - px, w, px);       // Bottom
+                    highlight.drawRect(-w/2, -h/2, px, h);           // Left
+                    highlight.drawRect(w/2 - px, -h/2, px, h);       // Right
+                    highlight.endFill();
+                    
+                    // Corner accents (white)
+                    highlight.beginFill(0xffffff, 1);
+                    highlight.drawRect(-w/2, -h/2, px*2, px);
+                    highlight.drawRect(-w/2, -h/2, px, px*2);
+                    highlight.drawRect(w/2 - px*2, -h/2, px*2, px);
+                    highlight.drawRect(w/2 - px, -h/2, px, px*2);
+                    highlight.endFill();
+                } else {
+                    // Dim red for empty cells in range
+                    highlight.beginFill(0xff4444, 0.3);
+                    highlight.drawRect(-w/2, -h/2, w, h);
+                    highlight.endFill();
+                    
+                    // Pixel border (red)
+                    highlight.beginFill(0xff6666, 0.8);
+                    highlight.drawRect(-w/2, -h/2, w, px);
+                    highlight.drawRect(-w/2, h/2 - px, w, px);
+                    highlight.drawRect(-w/2, -h/2, px, h);
+                    highlight.drawRect(w/2 - px, -h/2, px, h);
+                    highlight.endFill();
                 }
-            });
-            
-            // Highlight cells within range
-            for (let x = 0; x < this.arena.width; x++) {
-                for (let z = 0; z < this.arena.depth; z++) {
-                    // Calculate distance from player
-                    const dist = Math.abs(x - playerPos.x) + Math.abs(z - playerPos.z);
-                    if (dist === 0 || dist > range) continue;
-                    
-                    const screenPos = DDOOBackground.project3DToScreen(x + 0.5, 0, z + 0.5);
-                    if (!screenPos || !screenPos.visible) continue;
-                    
-                    // Check if enemy is in this cell
-                    const hasEnemy = this.worldPositions.enemies.some(
-                        ep => Math.floor(ep.x) === x && Math.floor(ep.z) === z
-                    );
-                    
-                    // Find or create highlight
-                    let highlight = debug.children.find(c => c.gridX === x && c.gridZ === z && c.isHighlight);
-                    if (!highlight) {
-                        highlight = new PIXI.Graphics();
-                        highlight.isHighlight = true;
-                        highlight.gridX = x;
-                        highlight.gridZ = z;
-                        debug.addChild(highlight);
-                    }
-                    
-                    highlight.clear();
-                    
-                    const w = 50, h = 30;  // Cell size
-                    const px = 3;  // Pixel border thickness
-                    
-                    if (hasEnemy) {
-                        // Bright red for enemy cells - pixel style
-                        // Fill
-                        highlight.beginFill(0xff0000, 0.6);
-                        highlight.drawRect(-w/2, -h/2, w, h);
-                        highlight.endFill();
-                        
-                        // Pixel border (outer)
-                        highlight.beginFill(0xffff00, 1);
-                        highlight.drawRect(-w/2, -h/2, w, px);           // Top
-                        highlight.drawRect(-w/2, h/2 - px, w, px);       // Bottom
-                        highlight.drawRect(-w/2, -h/2, px, h);           // Left
-                        highlight.drawRect(w/2 - px, -h/2, px, h);       // Right
-                        highlight.endFill();
-                        
-                        // Corner accents
-                        highlight.beginFill(0xffffff, 1);
-                        highlight.drawRect(-w/2, -h/2, px*2, px);
-                        highlight.drawRect(-w/2, -h/2, px, px*2);
-                        highlight.drawRect(w/2 - px*2, -h/2, px*2, px);
-                        highlight.drawRect(w/2 - px, -h/2, px, px*2);
-                        highlight.endFill();
-                    } else {
-                        // Dim red for empty cells in range
-                        highlight.beginFill(0xff4444, 0.25);
-                        highlight.drawRect(-w/2, -h/2, w, h);
-                        highlight.endFill();
-                        
-                        // Pixel border
-                        highlight.beginFill(0xff6666, 0.7);
-                        highlight.drawRect(-w/2, -h/2, w, px);
-                        highlight.drawRect(-w/2, h/2 - px, w, px);
-                        highlight.drawRect(-w/2, -h/2, px, h);
-                        highlight.drawRect(w/2 - px, -h/2, px, h);
-                        highlight.endFill();
-                    }
-                    
-                    highlight.position.set(screenPos.screenX, screenPos.screenY);
-                    highlight.visible = true;
-                }
+                
+                highlight.position.set(screenPos.screenX, screenPos.screenY);
+                hlContainer.addChild(highlight);
+                count++;
             }
         }
+        
+        console.log(`[Game] Created ${count} attack range highlights`);
     },
     
     // Hide all target indicators
@@ -1442,19 +1438,13 @@ const Game = {
             }
         });
         
-        // Remove grid highlights (PixiJS debug container)
-        if (this.containers?.debug) {
-            this.containers.debug.children.forEach(child => {
-                if (child.isHighlight) {
-                    child.visible = false;
-                }
-            });
+        // Hide highlights container
+        if (this.containers?.highlights) {
+            this.containers.highlights.visible = false;
+            this.containers.highlights.removeChildren();
         }
         
-        // Legacy grid highlights
-        if (this.gridHighlights) {
-            this.gridHighlights.forEach(h => h.visible = false);
-        }
+        console.log('[Game] Hiding card targets');
     },
     
     // Highlight enemies within attack range (DOM-based for better interaction)
@@ -1503,24 +1493,21 @@ const Game = {
         const battleArea = document.getElementById('battle-area');
         const rect = battleArea?.getBoundingClientRect() || { left: 0, top: 0 };
         
-        // Use Game's debug container for visual grid highlighting
-        if (this.containers?.debug) {
-            const debug = this.containers.debug;
-            debug.visible = true;
-            
-            // Clear previous highlights
-            debug.children.forEach(child => {
-                if (child.isHighlight) {
-                    child.visible = false;
-                }
-            });
-        }
+        // Use dedicated highlights container
+        if (!this.containers?.highlights) return;
+        
+        const hlContainer = this.containers.highlights;
+        hlContainer.visible = true;
+        hlContainer.removeChildren();  // Clear all previous highlights
+        
+        console.log(`[Game] Drawing movement grid, maxDistance: ${maxDistance}`);
         
         // Highlight valid cells
+        let count = 0;
         for (let x = 0; x < this.arena.width; x++) {
             for (let z = 0; z < this.arena.depth; z++) {
                 // Check distance
-                const dist = Math.abs(x - playerPos.x) + Math.abs(z - playerPos.z);
+                const dist = Math.abs(x - Math.floor(playerPos.x)) + Math.abs(z - Math.floor(playerPos.z));
                 if (maxDistance && dist > maxDistance) continue;
                 if (dist === 0) continue;  // Skip current position
                 
@@ -1535,47 +1522,35 @@ const Game = {
                 if (!screenPos || !screenPos.visible) continue;
                 
                 // PixiJS highlight (Pixel Style)
-                if (this.containers?.debug) {
-                    const debug = this.containers.debug;
-                    let highlight = debug.children.find(c => c.gridX === x && c.gridZ === z && c.isHighlight);
-                    
-                    if (!highlight) {
-                        highlight = new PIXI.Graphics();
-                        highlight.isHighlight = true;
-                        highlight.gridX = x;
-                        highlight.gridZ = z;
-                        debug.addChild(highlight);
-                    }
-                    
-                    highlight.clear();
-                    
-                    const w = 50, h = 30;  // Cell size
-                    const px = 3;  // Pixel border thickness
-                    
-                    // Green fill for movement
-                    highlight.beginFill(0x00ff00, 0.35);
-                    highlight.drawRect(-w/2, -h/2, w, h);
-                    highlight.endFill();
-                    
-                    // Pixel border (cyan/green)
-                    highlight.beginFill(0x00ffaa, 0.9);
-                    highlight.drawRect(-w/2, -h/2, w, px);           // Top
-                    highlight.drawRect(-w/2, h/2 - px, w, px);       // Bottom
-                    highlight.drawRect(-w/2, -h/2, px, h);           // Left
-                    highlight.drawRect(w/2 - px, -h/2, px, h);       // Right
-                    highlight.endFill();
-                    
-                    // Corner accents (white)
-                    highlight.beginFill(0xffffff, 0.8);
-                    highlight.drawRect(-w/2, -h/2, px*2, px);
-                    highlight.drawRect(-w/2, -h/2, px, px*2);
-                    highlight.drawRect(w/2 - px*2, -h/2, px*2, px);
-                    highlight.drawRect(w/2 - px, -h/2, px, px*2);
-                    highlight.endFill();
-                    
-                    highlight.position.set(screenPos.screenX, screenPos.screenY);
-                    highlight.visible = true;
-                }
+                const highlight = new PIXI.Graphics();
+                
+                const w = 50, h = 30;  // Cell size
+                const px = 3;  // Pixel border thickness
+                
+                // Green fill for movement
+                highlight.beginFill(0x00ff00, 0.4);
+                highlight.drawRect(-w/2, -h/2, w, h);
+                highlight.endFill();
+                
+                // Pixel border (cyan/green)
+                highlight.beginFill(0x00ffaa, 1);
+                highlight.drawRect(-w/2, -h/2, w, px);           // Top
+                highlight.drawRect(-w/2, h/2 - px, w, px);       // Bottom
+                highlight.drawRect(-w/2, -h/2, px, h);           // Left
+                highlight.drawRect(w/2 - px, -h/2, px, h);       // Right
+                highlight.endFill();
+                
+                // Corner accents (white)
+                highlight.beginFill(0xffffff, 1);
+                highlight.drawRect(-w/2, -h/2, px*2, px);
+                highlight.drawRect(-w/2, -h/2, px, px*2);
+                highlight.drawRect(w/2 - px*2, -h/2, px*2, px);
+                highlight.drawRect(w/2 - px, -h/2, px, px*2);
+                highlight.endFill();
+                
+                highlight.position.set(screenPos.screenX, screenPos.screenY);
+                hlContainer.addChild(highlight);
+                count++;
                 
                 // DOM click handler (invisible, for interaction)
                 const clickTarget = document.createElement('div');
@@ -1604,6 +1579,8 @@ const Game = {
                 document.body.appendChild(clickTarget);
             }
         }
+        
+        console.log(`[Game] Created ${count} movement highlights`);
     },
     
     // Create DOM-based drag ghost
