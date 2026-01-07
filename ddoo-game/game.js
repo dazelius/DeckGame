@@ -4,8 +4,11 @@
 // =====================================================
 
 const Game = {
-    // PixiJS 앱
+    // PixiJS 앱 (배틀 영역)
     app: null,
+    
+    // PixiJS 앱 (카드 영역)
+    cardApp: null,
     
     // 게임 상태
     state: {
@@ -46,55 +49,67 @@ const Game = {
     gridVisible: true,
     gridContainer: null,
     
-    // 📱 모바일 설정
+    // 모바일 설정
     mobile: {
         isMobile: false,
         isTouch: false,
         isLandscape: false,
         pixelRatio: 1,
-        maxPixelRatio: 2,  // 성능을 위해 제한
+        maxPixelRatio: 2,
         hapticEnabled: true,
         lastTapTime: 0,
         doubleTapDelay: 300
     },
     
-    // 3D world coordinates (10x10 grid arena, Y=0 floor)
-    // Side battle: Player LEFT (low X) vs Enemies RIGHT (high X)
-    // Z axis = depth (front/back rows)
+    // 3D world coordinates (10x10 grid arena)
     worldPositions: {
-        player: { x: 2, y: 0, z: 5 },   // Left side, center row
+        player: { x: 2, y: 0, z: 5 },
         enemies: [
-            { x: 7, y: 0, z: 4 },   // Right side, front
-            { x: 8, y: 0, z: 6 }    // Right side, back
+            { x: 7, y: 0, z: 4 },
+            { x: 8, y: 0, z: 6 }
         ]
     },
     
     // Arena settings
     arena: {
-        width: 10,   // X: 0 to 10
-        depth: 10,   // Z: 0 to 10
-        gridSize: 1  // 1 unit per cell
+        width: 10,
+        depth: 10,
+        gridSize: 1
     },
     
-    // Battle area size
+    // Battle/Card area sizes
     battleAreaSize: { width: 0, height: 0 },
-    
-    // Selected card
-    selectedCard: null,
-    draggingCard: null,
-    cardGhost: null,
-    dropZone: null,
+    cardAreaSize: { width: 0, height: 0 },
     
     // Position update loop ID
     positionLoopId: null,
     
-    // Card data
+    // ==================== Card System (Canvas-based) ====================
+    
     cardDatabase: {
-        strike: { name: 'Strike', cost: 1, type: 'attack', damage: 6, range: 2 },
-        defend: { name: 'Defend', cost: 1, type: 'skill', block: 5, range: 0 },
-        bash: { name: 'Bash', cost: 2, type: 'attack', damage: 8, vulnerable: 2, range: 3 },
-        dash: { name: 'Dash', cost: 1, type: 'move', range: 0 },
-        heavyStrike: { name: 'Heavy Strike', cost: 2, type: 'attack', damage: 14, range: 3 }
+        strike: { name: 'Strike', cost: 1, type: 'attack', damage: 6, color: 0xef4444 },
+        defend: { name: 'Defend', cost: 1, type: 'skill', block: 5, color: 0x3b82f6 },
+        bash: { name: 'Bash', cost: 2, type: 'attack', damage: 10, color: 0xef4444 },
+        dash: { name: 'Dash', cost: 1, type: 'move', color: 0x22c55e }
+    },
+    
+    // Card visual settings
+    cardConfig: {
+        width: 80,
+        height: 110,
+        spacing: 15,
+        hoverScale: 1.15,
+        hoverY: -25,
+        dragScale: 1.1
+    },
+    
+    // Card state
+    cards: {
+        hand: [],           // Current hand (card data)
+        sprites: [],        // Card sprites in hand
+        dragging: null,     // Currently dragging card sprite
+        dragData: null,     // Drag data (offset, original position)
+        hoveredTarget: null // Enemy/player being hovered
     },
     
     // ==================== 초기화 ====================
@@ -104,29 +119,28 @@ const Game = {
         
         // Mobile detection
         this.detectMobile();
-        
-        // Mobile environment setup
         this.setupMobileEnvironment();
         
-        // Get battle area dimensions
+        // Get area dimensions
         const battleArea = document.getElementById('battle-area');
+        const cardArea = document.getElementById('card-area');
         const battleRect = battleArea.getBoundingClientRect();
-        this.battleAreaSize = {
-            width: battleRect.width,
-            height: battleRect.height
-        };
+        const cardRect = cardArea.getBoundingClientRect();
         
-        // Initialize 3D background (in battle area only)
+        this.battleAreaSize = { width: battleRect.width, height: battleRect.height };
+        this.cardAreaSize = { width: cardRect.width, height: cardRect.height };
+        
+        // Initialize 3D background
         await DDOOBackground.init(battleArea);
         
-        // Resolution calculation (mobile optimization)
+        // Resolution
         const pixelRatio = Math.min(
             window.devicePixelRatio || 1,
             this.mobile.isMobile ? this.mobile.maxPixelRatio : 3
         );
         this.mobile.pixelRatio = pixelRatio;
         
-        // PixiJS app (transparent - 3D background visible)
+        // ==================== Battle App ====================
         this.app = new PIXI.Application();
         await this.app.init({
             width: this.battleAreaSize.width,
@@ -138,72 +152,72 @@ const Game = {
             powerPreference: this.mobile.isMobile ? 'low-power' : 'high-performance'
         });
         
-        // Add canvas to game container (inside battle area)
         const gameContainer = document.getElementById('game-container');
         gameContainer.appendChild(this.app.canvas);
+        this.app.canvas.style.cssText = 'position:absolute;top:0;left:0;z-index:1;touch-action:none;';
         
-        // Canvas styling
-        this.app.canvas.style.position = 'absolute';
-        this.app.canvas.style.top = '0';
-        this.app.canvas.style.left = '0';
-        this.app.canvas.style.zIndex = '1';
-        this.app.canvas.style.touchAction = 'none';
+        // ==================== Card App ====================
+        this.cardApp = new PIXI.Application();
+        await this.cardApp.init({
+            width: this.cardAreaSize.width,
+            height: this.cardAreaSize.height,
+            background: 0x0a0a12,
+            antialias: true,
+            resolution: pixelRatio,
+            autoDensity: true
+        });
+        
+        const cardContainer = document.getElementById('card-canvas-container');
+        cardContainer.appendChild(this.cardApp.canvas);
+        this.cardApp.canvas.style.cssText = 'width:100%;height:100%;touch-action:none;';
         
         // Create containers
         this.createContainers();
         
-        // Create characters (3D coordinate based)
+        // Create characters
         await this.createCharacters3D();
         
-        // Update UI
+        // Create card system
+        this.initCardSystem();
+        
+        // Draw initial hand
+        this.drawHand(['strike', 'strike', 'defend', 'bash']);
+        
+        // UI
+        this.createBattleUI();
         this.updateUI();
         
-        // Bind events
+        // Events
         this.bindEvents();
-        
-        // Mobile events
         this.bindMobileEvents();
-        
-        // Keyboard events (debug)
         this.bindKeyboard();
         
-        // Resize & orientation handlers
         window.addEventListener('resize', () => this.onResize());
         window.addEventListener('orientationchange', () => this.onOrientationChange());
-        
-        // Visibility change (tab switch, background)
         document.addEventListener('visibilitychange', () => this.onVisibilityChange());
         
-        // Debug UI
+        // Debug
         this.createDebugUI();
-        
-        // Fullscreen button
         this.createFullscreenButton();
         
-        // Start position sync loop
+        // Start loops
         this.startPositionLoop();
         
-        // Initialize Combat system
+        // Combat system
         if (typeof Combat !== 'undefined') {
             Combat.init();
         }
         
-        // Setup card drag & drop
-        this.setupCardDragDrop();
-        
         console.log('[Game] Initialized');
-        console.log(`[Game] Battle area: ${this.battleAreaSize.width}x${this.battleAreaSize.height}`);
-        console.log(`[Game] Mobile: ${this.mobile.isMobile ? 'YES' : 'NO'}`);
-        console.log('[Game] Press Ctrl+D for debug menu');
+        console.log(`[Game] Battle: ${this.battleAreaSize.width}x${this.battleAreaSize.height}`);
+        console.log(`[Game] Cards: ${this.cardAreaSize.width}x${this.cardAreaSize.height}`);
         
-        // Start message
         this.showMessage('BATTLE START!', 2000);
         
-        // Start real-time combat after delay
+        // Start combat
         setTimeout(() => {
             if (typeof Combat !== 'undefined') {
                 Combat.start();
-                console.log('[Game] Combat started');
             }
         }, 2500);
     },
@@ -572,13 +586,7 @@ const Game = {
         }
     },
     
-    // ==================== 전투 ====================
-    
-    // Simple attack (used for direct clicks, legacy)
-    async attackEnemy(enemyIndex) {
-        // Use default strike card data
-        await this.attackWithCard(enemyIndex, { damage: 6, name: 'Strike' });
-    },
+    // ==================== Enemy Actions ====================
     
     // Enemy attacks player
     async enemyAttacksPlayer(enemyIndex, damage, options = {}) {
@@ -653,142 +661,314 @@ const Game = {
         });
     },
     
-    // ==================== Card Drag & Drop (Target-Based) ====================
+    // ==================== Card System (Canvas-based) ====================
     
-    hoveredTarget: null,  // Currently hovered enemy/player
-    
-    setupCardDragDrop() {
-        const cards = document.querySelectorAll('.card');
+    initCardSystem() {
+        // Card container
+        this.cards.container = new PIXI.Container();
+        this.cards.container.sortableChildren = true;
+        this.cardApp.stage.addChild(this.cards.container);
         
-        cards.forEach(card => {
-            // Touch events
-            card.addEventListener('touchstart', (e) => this.onCardTouchStart(e, card), { passive: false });
-            card.addEventListener('touchmove', (e) => this.onCardTouchMove(e), { passive: false });
-            card.addEventListener('touchend', (e) => this.onCardTouchEnd(e), { passive: false });
+        // UI container (energy, deck info)
+        this.cards.uiContainer = new PIXI.Container();
+        this.cardApp.stage.addChild(this.cards.uiContainer);
+        
+        // Drag layer (on top)
+        this.cards.dragLayer = new PIXI.Container();
+        this.cards.dragLayer.zIndex = 100;
+        this.cardApp.stage.addChild(this.cards.dragLayer);
+        
+        // Draw card UI
+        this.drawCardUI();
+    },
+    
+    drawCardUI() {
+        const { width, height } = this.cardAreaSize;
+        
+        // Background gradient
+        const bg = new PIXI.Graphics();
+        bg.rect(0, 0, width, height);
+        bg.fill({ color: 0x0a0a12 });
+        
+        // Top border line
+        bg.moveTo(0, 0);
+        bg.lineTo(width, 0);
+        bg.stroke({ color: 0x333355, width: 2 });
+        
+        this.cards.uiContainer.addChild(bg);
+        
+        // Energy display (left side)
+        this.cards.energyText = new PIXI.Text({
+            text: `${this.state.player.energy}/${this.state.player.maxEnergy}`,
+            style: {
+                fontFamily: 'Arial Black',
+                fontSize: 28,
+                fill: 0xfbbf24,
+                stroke: { color: 0x000000, width: 3 }
+            }
+        });
+        this.cards.energyText.x = 20;
+        this.cards.energyText.y = height / 2 - 15;
+        this.cards.uiContainer.addChild(this.cards.energyText);
+        
+        // End turn button (right side)
+        const btnWidth = 100;
+        const btnHeight = 40;
+        const btn = new PIXI.Graphics();
+        btn.roundRect(width - btnWidth - 20, height / 2 - btnHeight / 2, btnWidth, btnHeight, 8);
+        btn.fill({ color: 0x444466 });
+        btn.stroke({ color: 0x666688, width: 2 });
+        btn.eventMode = 'static';
+        btn.cursor = 'pointer';
+        btn.on('pointerdown', () => this.endTurn());
+        
+        const btnText = new PIXI.Text({
+            text: 'END',
+            style: { fontFamily: 'Arial', fontSize: 16, fill: 0xffffff, fontWeight: 'bold' }
+        });
+        btnText.x = width - btnWidth - 20 + (btnWidth - btnText.width) / 2;
+        btnText.y = height / 2 - 8;
+        
+        this.cards.uiContainer.addChild(btn);
+        this.cards.uiContainer.addChild(btnText);
+    },
+    
+    // Draw cards in hand
+    drawHand(cardIds) {
+        // Clear existing
+        this.cards.sprites.forEach(s => s.destroy());
+        this.cards.sprites = [];
+        this.cards.hand = cardIds.map(id => ({ id, ...this.cardDatabase[id] }));
+        
+        const { width, height } = this.cardAreaSize;
+        const { width: cardW, height: cardH, spacing } = this.cardConfig;
+        
+        const totalWidth = cardIds.length * cardW + (cardIds.length - 1) * spacing;
+        const startX = (width - totalWidth) / 2;
+        const baseY = height / 2;
+        
+        cardIds.forEach((cardId, i) => {
+            const cardData = this.cardDatabase[cardId];
+            if (!cardData) return;
             
-            // Mouse events
-            card.addEventListener('mousedown', (e) => this.onCardMouseDown(e, card));
+            const card = this.createCardSprite(cardData, i);
+            card.x = startX + i * (cardW + spacing) + cardW / 2;
+            card.y = baseY;
+            card.baseX = card.x;
+            card.baseY = card.y;
+            card.cardIndex = i;
+            card.cardId = cardId;
+            
+            this.cards.container.addChild(card);
+            this.cards.sprites.push(card);
+        });
+    },
+    
+    // Create a card sprite
+    createCardSprite(cardData, index) {
+        const { width: w, height: h } = this.cardConfig;
+        
+        const container = new PIXI.Container();
+        container.pivot.set(w / 2, h / 2);
+        
+        // Card background
+        const bg = new PIXI.Graphics();
+        bg.roundRect(0, 0, w, h, 8);
+        bg.fill({ color: 0x1a1a2e });
+        bg.stroke({ color: cardData.color || 0x666666, width: 3 });
+        container.addChild(bg);
+        
+        // Cost circle
+        const costCircle = new PIXI.Graphics();
+        costCircle.circle(12, 12, 14);
+        costCircle.fill({ color: 0xfbbf24 });
+        costCircle.stroke({ color: 0x000000, width: 2 });
+        container.addChild(costCircle);
+        
+        const costText = new PIXI.Text({
+            text: `${cardData.cost}`,
+            style: { fontFamily: 'Arial Black', fontSize: 16, fill: 0x000000 }
+        });
+        costText.x = 12 - costText.width / 2;
+        costText.y = 12 - costText.height / 2;
+        container.addChild(costText);
+        
+        // Card name
+        const nameText = new PIXI.Text({
+            text: cardData.name,
+            style: { fontFamily: 'Arial', fontSize: 12, fill: 0xffffff, fontWeight: 'bold' }
+        });
+        nameText.x = (w - nameText.width) / 2;
+        nameText.y = h - 30;
+        container.addChild(nameText);
+        
+        // Damage/block value
+        if (cardData.damage || cardData.block) {
+            const valText = new PIXI.Text({
+                text: cardData.damage ? `${cardData.damage}` : `${cardData.block}`,
+                style: { fontFamily: 'Arial Black', fontSize: 24, fill: cardData.color || 0xffffff }
+            });
+            valText.x = (w - valText.width) / 2;
+            valText.y = h / 2 - 10;
+            container.addChild(valText);
+        }
+        
+        // Make interactive
+        container.eventMode = 'static';
+        container.cursor = 'pointer';
+        
+        // Hover events
+        container.on('pointerover', () => this.onCardHover(container, true));
+        container.on('pointerout', () => this.onCardHover(container, false));
+        
+        // Drag events
+        container.on('pointerdown', (e) => this.onCardDragStart(e, container));
+        
+        return container;
+    },
+    
+    onCardHover(card, isHover) {
+        if (this.cards.dragging) return;
+        
+        const { hoverScale, hoverY } = this.cardConfig;
+        
+        gsap.to(card, {
+            y: isHover ? card.baseY + hoverY : card.baseY,
+            duration: 0.15,
+            ease: 'power2.out'
+        });
+        gsap.to(card.scale, {
+            x: isHover ? hoverScale : 1,
+            y: isHover ? hoverScale : 1,
+            duration: 0.15,
+            ease: 'power2.out'
         });
         
-        // Global mouse events
-        document.addEventListener('mousemove', (e) => this.onCardMouseMove(e));
-        document.addEventListener('mouseup', (e) => this.onCardMouseUp(e));
+        card.zIndex = isHover ? 50 : card.cardIndex;
     },
     
-    onCardTouchStart(e, card) {
-        e.preventDefault();
-        const touch = e.touches[0];
-        this.startCardDrag(card, touch.clientX, touch.clientY);
-    },
-    
-    onCardTouchMove(e) {
-        if (!this.draggingCard) return;
-        e.preventDefault();
-        const touch = e.touches[0];
-        this.updateCardDrag(touch.clientX, touch.clientY);
-    },
-    
-    onCardTouchEnd(e) {
-        if (!this.draggingCard) return;
-        this.endCardDrag();
-    },
-    
-    onCardMouseDown(e, card) {
-        e.preventDefault();
-        this.startCardDrag(card, e.clientX, e.clientY);
-    },
-    
-    onCardMouseMove(e) {
-        if (!this.draggingCard) return;
-        this.updateCardDrag(e.clientX, e.clientY);
-    },
-    
-    onCardMouseUp(e) {
-        if (!this.draggingCard) return;
-        this.endCardDrag();
-    },
-    
-    startCardDrag(card, x, y) {
-        this.draggingCard = card;
+    onCardDragStart(event, card) {
+        if (this.state.phase !== 'player') return;
+        
+        const cardData = this.cardDatabase[card.cardId];
+        if (this.state.player.energy < cardData.cost) {
+            this.showMessage('Energy!', 600);
+            this.hapticFeedback('error');
+            return;
+        }
+        
+        this.cards.dragging = card;
+        this.cards.dragData = {
+            startX: card.x,
+            startY: card.y,
+            offsetX: event.global.x - card.x,
+            offsetY: event.global.y - card.y,
+            cardData: cardData
+        };
+        
+        // Move to drag layer
+        this.cards.dragLayer.addChild(card);
+        card.alpha = 0.9;
+        card.zIndex = 200;
+        
+        gsap.to(card.scale, { x: this.cardConfig.dragScale, y: this.cardConfig.dragScale, duration: 0.1 });
+        
         this.hapticFeedback('light');
         
-        // Create ghost card
-        this.cardGhost = card.cloneNode(true);
-        this.cardGhost.className = 'card card-ghost';
-        this.cardGhost.style.left = `${x}px`;
-        this.cardGhost.style.top = `${y}px`;
-        document.body.appendChild(this.cardGhost);
+        // Show valid targets
+        this.showDragTargets(cardData.type);
         
-        // Original card styling
-        card.classList.add('dragging');
-        
-        // Show all potential targets
-        this.showTargetIndicators();
+        // Global move/up events
+        this.cardApp.stage.eventMode = 'static';
+        this.cardApp.stage.on('pointermove', this.onCardDragMove, this);
+        this.cardApp.stage.on('pointerup', this.onCardDragEnd, this);
+        this.cardApp.stage.on('pointerupoutside', this.onCardDragEnd, this);
     },
     
-    updateCardDrag(x, y) {
-        if (!this.cardGhost) return;
+    onCardDragMove(event) {
+        if (!this.cards.dragging) return;
         
-        // Move ghost
-        this.cardGhost.style.left = `${x}px`;
-        this.cardGhost.style.top = `${y}px`;
+        const card = this.cards.dragging;
+        const data = this.cards.dragData;
         
-        // Get battle area bounds
-        const battleArea = document.getElementById('battle-area');
-        const rect = battleArea.getBoundingClientRect();
-        const localX = x - rect.left;
-        const localY = y - rect.top;
+        // Move card (relative to cardApp stage)
+        card.x = event.global.x - data.offsetX;
+        card.y = event.global.y - data.offsetY;
         
-        // Check hover on targets
-        const cardData = this.cardDatabase[this.draggingCard?.dataset.card];
-        const newTarget = this.findTargetAt(localX, localY, cardData?.type);
+        // Check if over battle area (card dragged above card area)
+        const cardAreaRect = document.getElementById('card-area').getBoundingClientRect();
+        const globalY = event.global.y + cardAreaRect.top;
+        const globalX = event.global.x + cardAreaRect.left;
         
-        if (newTarget !== this.hoveredTarget) {
-            // Clear previous highlight
-            if (this.hoveredTarget) {
-                this.clearTargetHighlight(this.hoveredTarget);
-            }
+        const battleRect = document.getElementById('battle-area').getBoundingClientRect();
+        const isOverBattle = globalY < cardAreaRect.top;
+        
+        if (isOverBattle) {
+            // Convert to battle area local coordinates
+            const battleX = globalX - battleRect.left;
+            const battleY = globalY - battleRect.top;
             
-            // Apply new highlight
-            this.hoveredTarget = newTarget;
-            if (this.hoveredTarget) {
-                this.applyTargetHighlight(this.hoveredTarget, cardData?.type);
+            // Find target
+            const newTarget = this.findTargetAt(battleX, battleY, data.cardData.type);
+            
+            if (newTarget !== this.cards.hoveredTarget) {
+                if (this.cards.hoveredTarget) {
+                    this.clearTargetHighlight(this.cards.hoveredTarget);
+                }
+                this.cards.hoveredTarget = newTarget;
+                if (newTarget) {
+                    this.applyTargetHighlight(newTarget, data.cardData.type);
+                }
+            }
+        } else {
+            if (this.cards.hoveredTarget) {
+                this.clearTargetHighlight(this.cards.hoveredTarget);
+                this.cards.hoveredTarget = null;
             }
         }
     },
     
-    endCardDrag() {
-        const card = this.draggingCard;
-        const ghost = this.cardGhost;
+    onCardDragEnd(event) {
+        if (!this.cards.dragging) return;
         
-        if (!card || !ghost) return;
+        const card = this.cards.dragging;
+        const data = this.cards.dragData;
         
-        const cardData = this.cardDatabase[card.dataset.card];
+        // Remove event listeners
+        this.cardApp.stage.off('pointermove', this.onCardDragMove, this);
+        this.cardApp.stage.off('pointerup', this.onCardDragEnd, this);
+        this.cardApp.stage.off('pointerupoutside', this.onCardDragEnd, this);
         
-        // Execute card on target
-        if (this.hoveredTarget) {
-            this.useCardOnTarget(card.dataset.card, this.hoveredTarget);
+        // Execute card if dropped on valid target
+        if (this.cards.hoveredTarget) {
+            this.executeCardOnTarget(card.cardId, this.cards.hoveredTarget);
+            this.clearTargetHighlight(this.cards.hoveredTarget);
+            this.cards.hoveredTarget = null;
         }
         
-        // Cleanup
-        card.classList.remove('dragging');
-        ghost.remove();
-        this.hideTargetIndicators();
+        // Return card to hand
+        this.cards.container.addChild(card);
+        card.alpha = 1;
         
-        if (this.hoveredTarget) {
-            this.clearTargetHighlight(this.hoveredTarget);
-        }
+        gsap.to(card, {
+            x: data.startX,
+            y: data.startY,
+            duration: 0.2,
+            ease: 'power2.out'
+        });
+        gsap.to(card.scale, { x: 1, y: 1, duration: 0.15 });
         
-        this.draggingCard = null;
-        this.cardGhost = null;
-        this.hoveredTarget = null;
+        // Hide targets
+        this.hideDragTargets();
+        
+        this.cards.dragging = null;
+        this.cards.dragData = null;
     },
     
-    // Find target (enemy or player) at screen position
+    // Find target at battle area position
     findTargetAt(screenX, screenY, cardType) {
-        const hitRadius = 60;  // Pixels
+        const hitRadius = 70;
         
-        // Check enemies for attack cards
         if (cardType === 'attack') {
             for (let i = 0; i < this.enemySprites.length; i++) {
                 const enemy = this.enemySprites[i];
@@ -804,7 +984,6 @@ const Game = {
             }
         }
         
-        // Check player for skill/move cards
         if (cardType === 'skill' || cardType === 'move') {
             if (this.player) {
                 const dx = this.player.x - screenX;
@@ -820,28 +999,18 @@ const Game = {
         return null;
     },
     
-    // Show target indicators on all valid targets
-    showTargetIndicators() {
-        const cardData = this.cardDatabase[this.draggingCard?.dataset.card];
-        
-        if (cardData?.type === 'attack') {
-            // Highlight all enemies as potential targets
-            this.enemySprites.forEach((enemy, i) => {
-                if (enemy) {
-                    DDOORenderer.setTargeted(enemy, true, 0xff4444, 0.3);
-                }
+    showDragTargets(cardType) {
+        if (cardType === 'attack') {
+            this.enemySprites.forEach(enemy => {
+                if (enemy) DDOORenderer.setTargeted(enemy, true, 0xff4444, 0.3);
             });
-        } else if (cardData?.type === 'skill' || cardData?.type === 'move') {
-            // Highlight player
-            if (this.player) {
-                DDOORenderer.setTargeted(this.player, true, 0x44ff44, 0.3);
-            }
+        } else if (cardType === 'skill' || cardType === 'move') {
+            if (this.player) DDOORenderer.setTargeted(this.player, true, 0x44ff44, 0.3);
         }
     },
     
-    hideTargetIndicators() {
-        // Clear all target highlights
-        this.enemySprites.forEach((enemy) => {
+    hideDragTargets() {
+        this.enemySprites.forEach(enemy => {
             if (enemy) DDOORenderer.setTargeted(enemy, false);
         });
         if (this.player) DDOORenderer.setTargeted(this.player, false);
@@ -851,48 +1020,29 @@ const Game = {
         const color = cardType === 'attack' ? 0xff0000 : 0x00ff00;
         DDOORenderer.setTargeted(target.sprite, true, color, 1.0);
         
-        // Scale up slightly
-        gsap.to(target.sprite.scale, {
-            x: target.sprite.scale.x * 1.15,
-            y: target.sprite.scale.y * 1.15,
-            duration: 0.15,
-            ease: 'back.out'
-        });
+        const s = target.sprite.scale.x;
+        gsap.to(target.sprite.scale, { x: s * 1.15, y: s * 1.15, duration: 0.15, ease: 'back.out' });
     },
     
     clearTargetHighlight(target) {
         DDOORenderer.setTargeted(target.sprite, false);
         
-        // Reset scale
-        gsap.to(target.sprite.scale, {
-            x: target.sprite.scale.x / 1.15,
-            y: target.sprite.scale.y / 1.15,
-            duration: 0.15,
-            ease: 'power2.out'
-        });
+        const s = target.sprite.scale.x;
+        gsap.to(target.sprite.scale, { x: s / 1.15, y: s / 1.15, duration: 0.15, ease: 'power2.out' });
     },
     
-    // Use card on specific target
-    useCardOnTarget(cardName, target) {
-        const cardData = this.cardDatabase[cardName];
+    // Execute card effect
+    executeCardOnTarget(cardId, target) {
+        const cardData = this.cardDatabase[cardId];
         if (!cardData) return;
-        
-        // Check energy
-        if (this.state.player.energy < cardData.cost) {
-            this.showMessage('Energy!', 800);
-            this.hapticFeedback('error');
-            return;
-        }
         
         // Spend energy
         this.state.player.energy -= cardData.cost;
-        document.getElementById('energy-text').textContent = 
-            `${this.state.player.energy}/${this.state.player.maxEnergy}`;
+        this.updateUI();
         
-        console.log(`[Game] Card ${cardName} -> ${target.type} ${target.index}`);
         this.hapticFeedback('medium');
+        console.log(`[Game] Card ${cardId} -> ${target.type}`);
         
-        // Execute based on card type
         switch (cardData.type) {
             case 'attack':
                 this.attackWithCard(target.index, cardData);
@@ -901,13 +1051,21 @@ const Game = {
                 this.useSkillCard(cardData);
                 break;
             case 'move':
-                // Move card - could be dodge or reposition
                 this.useMoveCard(cardData);
                 break;
         }
+        
+        // Remove card from hand (simplified - redraw)
+        const idx = this.cards.hand.findIndex(c => c.id === cardId);
+        if (idx >= 0) {
+            this.cards.hand.splice(idx, 1);
+            const remaining = this.cards.hand.map(c => c.id);
+            this.drawHand(remaining);
+        }
     },
     
-    // Attack enemy with card (includes movement)
+    // ==================== Combat Actions ====================
+    
     async attackWithCard(enemyIndex, cardData) {
         if (this.state.phase !== 'player') return;
         this.state.phase = 'animation';
@@ -921,24 +1079,16 @@ const Game = {
             return;
         }
         
-        // Calculate damage
         const baseDamage = cardData.damage || 6;
         const isCrit = Math.random() < 0.15;
         const finalDamage = isCrit ? baseDamage * 2 : baseDamage;
         
-        // --- 1. Player moves toward enemy ---
+        // Dash to enemy
         const originalPos = { ...this.worldPositions.player };
-        const attackPos = {
-            x: enemyWorldPos.x - 1.5,  // Stop 1.5 units before enemy
-            z: enemyWorldPos.z
-        };
+        await this.dashTo(enemyWorldPos.x - 1.5, enemyWorldPos.z, 0.2);
         
-        // Dash toward enemy
-        await this.dashTo(attackPos.x, attackPos.z, 0.2);
-        
-        // --- 2. Attack animation & effects ---
+        // Hit effects
         this.hapticFeedback(isCrit ? 'heavy' : 'hit');
-        
         DDOORenderer.setTargeted(enemy, true, 0xff0000);
         DDOORenderer.rapidFlash(enemy);
         DDOORenderer.damageShake(enemy, isCrit ? 12 : 8, 300);
@@ -949,10 +1099,8 @@ const Game = {
         
         DDOOFloater.showOnCharacter(enemy, finalDamage, isCrit ? 'critical' : 'damage');
         
-        // Apply damage
         enemyData.hp = Math.max(0, enemyData.hp - finalDamage);
         
-        // Interrupt enemy gauge
         if (typeof Combat !== 'undefined') {
             Combat.interruptEnemy(enemyIndex, 400);
         }
@@ -960,10 +1108,10 @@ const Game = {
         await this.delay(200);
         DDOORenderer.setTargeted(enemy, false);
         
-        // --- 3. Return to original position ---
+        // Return
         await this.dashTo(originalPos.x, originalPos.z, 0.25);
         
-        // --- 4. Check death ---
+        // Death check
         if (enemyData.hp <= 0) {
             this.hapticFeedback('success');
             await DDOORenderer.playDeath(enemy, this.app);
@@ -971,13 +1119,12 @@ const Game = {
             this.state.enemies.splice(enemyIndex, 1);
             this.worldPositions.enemies.splice(enemyIndex, 1);
             
-            // Remove intent UI
             if (typeof Combat !== 'undefined') {
                 Combat.removeIntentUI(enemyIndex);
             }
             
             if (this.state.enemies.length === 0) {
-                Combat.stop();
+                if (typeof Combat !== 'undefined') Combat.stop();
                 this.showMessage('VICTORY!', 3000);
             }
         }
@@ -985,43 +1132,31 @@ const Game = {
         this.state.phase = 'player';
     },
     
-    // Dash to position (animated movement)
     dashTo(targetX, targetZ, duration = 0.3) {
         return new Promise(resolve => {
             gsap.to(this.worldPositions.player, {
                 x: targetX,
                 z: targetZ,
-                duration: duration,
+                duration,
                 ease: 'power2.out',
                 onComplete: resolve
             });
         });
     },
     
-    // Use skill card (defend, etc)
     useSkillCard(cardData) {
         if (cardData.block) {
             this.state.player.block += cardData.block;
-            
-            // Visual feedback
             DDOORenderer.rapidFlash(this.player, 0x4488ff);
             DDOOFloater.showOnCharacter(this.player, `+${cardData.block}`, 'block');
-            
             this.showMessage(`Block +${cardData.block}`, 800);
         }
+        this.updateUI();
     },
     
-    // Use move card (dodge/reposition)
     useMoveCard(cardData) {
-        // Dodge back
         const dodgeX = Math.max(0.5, this.worldPositions.player.x - 2);
-        
-        gsap.to(this.worldPositions.player, {
-            x: dodgeX,
-            duration: 0.2,
-            ease: 'power2.out'
-        });
-        
+        gsap.to(this.worldPositions.player, { x: dodgeX, duration: 0.2, ease: 'power2.out' });
         this.showMessage('Dodge!', 600);
     },
     
@@ -1128,13 +1263,68 @@ const Game = {
     
     // ==================== UI ====================
     
+    createBattleUI() {
+        // Battle UI container in PixiJS
+        const uiContainer = new PIXI.Container();
+        uiContainer.zIndex = 50;
+        this.app.stage.addChild(uiContainer);
+        this.containers.battleUI = uiContainer;
+        
+        // HP Bar background
+        const hpBg = new PIXI.Graphics();
+        hpBg.roundRect(15, 15, 200, 24, 4);
+        hpBg.fill({ color: 0x333333 });
+        hpBg.stroke({ color: 0x555555, width: 2 });
+        uiContainer.addChild(hpBg);
+        
+        // HP Bar fill
+        this.ui = this.ui || {};
+        this.ui.hpFill = new PIXI.Graphics();
+        uiContainer.addChild(this.ui.hpFill);
+        
+        // HP Text
+        this.ui.hpText = new PIXI.Text({
+            text: '100/100',
+            style: { fontFamily: 'Arial', fontSize: 14, fill: 0xffffff }
+        });
+        this.ui.hpText.x = 20;
+        this.ui.hpText.y = 18;
+        uiContainer.addChild(this.ui.hpText);
+        
+        // Block display
+        this.ui.blockText = new PIXI.Text({
+            text: '',
+            style: { fontFamily: 'Arial Black', fontSize: 16, fill: 0x3b82f6 }
+        });
+        this.ui.blockText.x = 220;
+        this.ui.blockText.y = 17;
+        uiContainer.addChild(this.ui.blockText);
+    },
+    
     updateUI() {
         const { player } = this.state;
         
-        // HP 바
-        const hpPercent = (player.hp / player.maxHp) * 100;
-        document.getElementById('player-hp').style.width = `${hpPercent}%`;
-        document.getElementById('player-hp-text').textContent = `${player.hp}/${player.maxHp}`;
+        // HP Bar
+        if (this.ui?.hpFill) {
+            const hpPercent = player.hp / player.maxHp;
+            this.ui.hpFill.clear();
+            this.ui.hpFill.roundRect(17, 17, 196 * hpPercent, 20, 3);
+            this.ui.hpFill.fill({ color: hpPercent > 0.3 ? 0xef4444 : 0xff0000 });
+        }
+        
+        if (this.ui?.hpText) {
+            this.ui.hpText.text = `${player.hp}/${player.maxHp}`;
+        }
+        
+        // Block
+        if (this.ui?.blockText) {
+            this.ui.blockText.text = player.block > 0 ? `[${player.block}]` : '';
+        }
+        
+        // Energy (card area)
+        if (this.cards?.energyText) {
+            this.cards.energyText.text = `${player.energy}/${player.maxEnergy}`;
+        }
     },
     
     showMessage(text, duration = 2000) {
@@ -1150,33 +1340,15 @@ const Game = {
     // ==================== 이벤트 ====================
     
     bindEvents() {
-        // 적 클릭/터치
+        // Enemy click (for direct interaction, optional)
         this.enemySprites.forEach((enemy, i) => {
             enemy.eventMode = 'static';
             enemy.cursor = 'pointer';
             
-            // 📱 통합 이벤트 (pointerdown은 터치와 마우스 모두 처리)
-            enemy.on('pointerdown', (e) => {
-                // 📱 햅틱 피드백
-                this.hapticFeedback('light');
-                this.attackEnemy(i);
-            });
-            
-            // 📱 터치 타겟 크기 증가
             if (this.mobile.isMobile) {
                 enemy.hitArea = new PIXI.Circle(0, -enemy.height * 0.5, Math.max(enemy.width, enemy.height) * 0.7);
             }
         });
-        
-        // 턴 종료 버튼
-        const endTurnBtn = document.getElementById('btn-end-turn');
-        endTurnBtn.addEventListener('click', () => {
-            this.hapticFeedback('medium');
-            this.endTurn();
-        });
-        
-        // 📱 버튼 터치 피드백
-        this.addTouchFeedback(endTurnBtn);
     },
     
     // Mobile event binding
@@ -1187,41 +1359,9 @@ const Game = {
         this.app.stage.eventMode = 'static';
         this.app.stage.hitArea = new PIXI.Rectangle(0, 0, this.battleAreaSize.width, this.battleAreaSize.height);
         
-        // Empty space touch (for future expansion)
-        this.app.stage.on('pointertap', (e) => {
-            // Handle touch on empty space
-        });
-        
-        // Card touch events
-        this.bindCardEvents();
-    },
-    
-    // Card event binding
-    bindCardEvents() {
-        const cards = document.querySelectorAll('.card');
-        cards.forEach(card => {
-            card.addEventListener('click', () => {
-                this.hapticFeedback('light');
-                this.selectCard(card);
-            });
-            
-            this.addTouchFeedback(card);
-        });
-    },
-    
-    // Card selection
-    selectCard(cardElement) {
-        const cards = document.querySelectorAll('.card');
-        
-        // Toggle selection
-        if (cardElement.classList.contains('selected')) {
-            cardElement.classList.remove('selected');
-            this.selectedCard = null;
-        } else {
-            cards.forEach(c => c.classList.remove('selected'));
-            cardElement.classList.add('selected');
-            this.selectedCard = cardElement.dataset.card;
-        }
+        // Card app touch events
+        this.cardApp.stage.eventMode = 'static';
+        this.cardApp.stage.hitArea = new PIXI.Rectangle(0, 0, this.cardAreaSize.width, this.cardAreaSize.height);
     },
     
     // 📱 터치 피드백 효과 추가
@@ -1358,26 +1498,45 @@ const Game = {
     },
     
     onResize() {
-        // Get new battle area dimensions
+        // Get new dimensions
         const battleArea = document.getElementById('battle-area');
+        const cardArea = document.getElementById('card-area');
         const battleRect = battleArea.getBoundingClientRect();
-        this.battleAreaSize = {
-            width: battleRect.width,
-            height: battleRect.height
-        };
+        const cardRect = cardArea.getBoundingClientRect();
         
-        // Resize PixiJS renderer
+        this.battleAreaSize = { width: battleRect.width, height: battleRect.height };
+        this.cardAreaSize = { width: cardRect.width, height: cardRect.height };
+        
+        // Resize battle app
         this.app.renderer.resize(this.battleAreaSize.width, this.battleAreaSize.height);
+        
+        // Resize card app
+        this.cardApp.renderer.resize(this.cardAreaSize.width, this.cardAreaSize.height);
         
         // Resize 3D background
         DDOOBackground.handleResize();
         
-        // Update character positions
+        // Update positions
         this.updateAllCharacterPositions();
         
         // Update hit areas
         if (this.app.stage.hitArea) {
             this.app.stage.hitArea = new PIXI.Rectangle(0, 0, this.battleAreaSize.width, this.battleAreaSize.height);
+        }
+        if (this.cardApp.stage.hitArea) {
+            this.cardApp.stage.hitArea = new PIXI.Rectangle(0, 0, this.cardAreaSize.width, this.cardAreaSize.height);
+        }
+        
+        // Redraw cards
+        if (this.cards?.hand?.length > 0) {
+            const cardIds = this.cards.hand.map(c => c.id);
+            this.drawHand(cardIds);
+        }
+        
+        // Redraw card UI
+        if (this.cards?.uiContainer) {
+            this.cards.uiContainer.removeChildren();
+            this.drawCardUI();
         }
     }
 };
