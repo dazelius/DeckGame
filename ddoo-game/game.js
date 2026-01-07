@@ -366,10 +366,10 @@ const Game = {
         this.gridContainer.alpha = 0.4;
         this.app.stage.addChild(this.gridContainer);
         
-        // 디버그 레이어
+        // 디버그 레이어 (그리드 항상 표시)
         this.containers.debug = new PIXI.Container();
         this.containers.debug.zIndex = 5;
-        this.containers.debug.visible = false;
+        this.containers.debug.visible = this.gridAlwaysShow;  // Grid always visible
         this.app.stage.addChild(this.containers.debug);
         
         // 캐릭터 레이어
@@ -444,19 +444,19 @@ const Game = {
         const { width, depth } = this.arena;
         
         // Draw 10x10 arena grid (Y=0 plane)
-        // Vertical lines (Z direction)
+        // Vertical lines (X direction)
         for (let x = 0; x <= width; x++) {
             const start = DDOOBackground.project3DToScreen(x, 0, 0);
             const end = DDOOBackground.project3DToScreen(x, 0, depth);
             
             if (start && end && start.visible && end.visible) {
-                const isCenter = (x === 5);
+                const isCenter = (x === 5);  // Battle line
                 grid.moveTo(start.screenX, start.screenY);
                 grid.lineTo(end.screenX, end.screenY);
                 grid.stroke({ 
-                    color: isCenter ? 0xffff00 : 0x44ff44, 
-                    alpha: isCenter ? 0.5 : 0.3, 
-                    width: isCenter ? 2 : 1 
+                    color: isCenter ? 0xffcc00 : 0x66ff66, 
+                    alpha: isCenter ? 0.8 : 0.5, 
+                    width: isCenter ? 3 : 1 
                 });
             }
         }
@@ -470,10 +470,27 @@ const Game = {
                 grid.moveTo(start.screenX, start.screenY);
                 grid.lineTo(end.screenX, end.screenY);
                 grid.stroke({ 
-                    color: 0x44ff44, 
-                    alpha: 0.3, 
+                    color: 0x66ff66, 
+                    alpha: 0.5, 
                     width: 1 
                 });
+            }
+        }
+        
+        // Grid cell numbers (every 2 cells for readability)
+        for (let x = 0; x <= width; x += 2) {
+            for (let z = 0; z <= depth; z += 2) {
+                const pos = DDOOBackground.project3DToScreen(x + 0.5, 0, z + 0.5);
+                if (pos && pos.visible) {
+                    const label = new PIXI.Text({
+                        text: `${x},${z}`,
+                        style: { fontSize: 9, fill: 0xaaffaa, alpha: 0.6 }
+                    });
+                    label.x = pos.screenX - 10;
+                    label.y = pos.screenY - 5;
+                    label.alpha = 0.5;
+                    this.containers.debug.addChild(label);
+                }
             }
         }
         
@@ -1961,14 +1978,17 @@ const Game = {
     
     toggleDebug() {
         this.debug.enabled = !this.debug.enabled;
-        this.containers.debug.visible = this.debug.enabled;
+        
+        // Grid always visible when gridAlwaysShow is true
+        this.containers.debug.visible = this.gridAlwaysShow || this.debug.enabled;
+        
         document.getElementById('debug-panel').style.display = this.debug.enabled ? 'block' : 'none';
         
         if (this.debug.enabled) {
             this.drawDebugGrid();
-            console.log('🔧 디버그 모드 ON');
+            console.log('[Debug] ON');
         } else {
-            console.log('🔧 디버그 모드 OFF');
+            console.log('[Debug] OFF');
         }
     },
     
