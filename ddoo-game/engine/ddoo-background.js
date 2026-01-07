@@ -22,14 +22,14 @@ const DDOOBackground = {
         smoothing: 0.05
     },
     
-    // Camera defaults (front quarter view - no horizontal rotation)
+    // Camera defaults (10x10 arena view - Clash Royale style)
     cameraDefaults: {
-        posX: 0,       // Centered (no left-right tilt)
-        posY: 6,       // Lower angle (was 9)
-        posZ: 14,      // Slightly closer
-        lookAtX: 0,    // Look at center
-        lookAtY: 1,    // Look slightly above floor
-        lookAtZ: 0     // Look at origin
+        posX: 5,       // Center of arena (X: 0-10)
+        posY: 12,      // High enough to see full arena
+        posZ: 14,      // Behind player zone
+        lookAtX: 5,    // Look at arena center
+        lookAtY: 0,    // Look at floor
+        lookAtZ: 5     // Center of arena (Z: 0-10)
     },
     
     // Auto zoom settings
@@ -552,14 +552,14 @@ const DDOOBackground = {
         const currentZ = this.autoZoom.currentZ;
         const currentX = this.autoZoom.currentX;
         
-        // Camera position (front view - no horizontal rotation)
-        this.camera.position.x = this.mouse.x * this.config.mouseX * 0.2;  // Minimal horizontal parallax
-        this.camera.position.y = this.cameraDefaults.posY + this.mouse.y * this.config.mouseY * 0.15;
+        // Camera position (arena view with subtle parallax)
+        this.camera.position.x = this.cameraDefaults.posX + this.mouse.x * this.config.mouseX * 0.3;
+        this.camera.position.y = this.cameraDefaults.posY + this.mouse.y * this.config.mouseY * 0.2;
         this.camera.position.z = currentZ;
         
-        // Look at center (minimal mouse influence)
+        // Look at arena center
         this.camera.lookAt(
-            this.mouse.x * 0.1,
+            this.cameraDefaults.lookAtX + this.mouse.x * 0.15,
             this.cameraDefaults.lookAtY,
             this.cameraDefaults.lookAtZ
         );

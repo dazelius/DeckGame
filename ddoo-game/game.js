@@ -54,14 +54,22 @@ const Game = {
         doubleTapDelay: 300
     },
     
-    // 3D world coordinates (on the floor plane, Y=0)
-    // Quarter view: X = left/right, Z = front/back (towards camera)
+    // 3D world coordinates (10x10 grid arena, Y=0 floor)
+    // Grid: X = 0~10 (left to right), Z = 0~10 (player side to enemy side)
+    // Player at bottom (Z=1-2), Enemies at top (Z=7-9)
     worldPositions: {
-        player: { x: -3, y: 0, z: 2 },
+        player: { x: 5, y: 0, z: 2 },  // Center bottom
         enemies: [
-            { x: 2, y: 0, z: 1 },
-            { x: 5, y: 0, z: 0 }
+            { x: 4, y: 0, z: 8 },  // Left enemy
+            { x: 6, y: 0, z: 8 }   // Right enemy
         ]
+    },
+    
+    // Arena settings
+    arena: {
+        width: 10,   // X: 0 to 10
+        depth: 10,   // Z: 0 to 10
+        gridSize: 1  // 1 unit per cell
     },
     
     // Battle area size
@@ -249,44 +257,90 @@ const Game = {
         this.app.stage.sortableChildren = true;
     },
     
-    // ==================== 3D Debug Grid ====================
+    // ==================== 10x10 Arena Grid ====================
     
     drawDebugGrid() {
         // Remove existing grid
         this.containers.debug.removeChildren();
         
         const grid = new PIXI.Graphics();
+        const { width, depth } = this.arena;
         
-        // Draw floor grid (Y=0 plane)
-        // Z lines (front to back)
-        for (let x = -10; x <= 15; x += 2) {
-            const start = DDOOBackground.project3DToScreen(x, 0, -5);
-            const end = DDOOBackground.project3DToScreen(x, 0, 10);
+        // Draw 10x10 arena grid (Y=0 plane)
+        // Vertical lines (Z direction)
+        for (let x = 0; x <= width; x++) {
+            const start = DDOOBackground.project3DToScreen(x, 0, 0);
+            const end = DDOOBackground.project3DToScreen(x, 0, depth);
             
             if (start && end && start.visible && end.visible) {
+                const isCenter = (x === 5);
                 grid.moveTo(start.screenX, start.screenY);
                 grid.lineTo(end.screenX, end.screenY);
-                grid.stroke({ color: 0x44ff44, alpha: 0.25, width: 1 });
+                grid.stroke({ 
+                    color: isCenter ? 0xffff00 : 0x44ff44, 
+                    alpha: isCenter ? 0.5 : 0.3, 
+                    width: isCenter ? 2 : 1 
+                });
             }
         }
         
-        // X lines (left to right)
-        for (let z = -5; z <= 10; z += 2) {
-            const start = DDOOBackground.project3DToScreen(-10, 0, z);
-            const end = DDOOBackground.project3DToScreen(15, 0, z);
+        // Horizontal lines (X direction)
+        for (let z = 0; z <= depth; z++) {
+            const start = DDOOBackground.project3DToScreen(0, 0, z);
+            const end = DDOOBackground.project3DToScreen(width, 0, z);
             
             if (start && end && start.visible && end.visible) {
+                const isMidline = (z === 5);  // Battle midline
                 grid.moveTo(start.screenX, start.screenY);
                 grid.lineTo(end.screenX, end.screenY);
-                grid.stroke({ color: 0x44ff44, alpha: 0.25, width: 1 });
+                grid.stroke({ 
+                    color: isMidline ? 0xff4444 : 0x44ff44, 
+                    alpha: isMidline ? 0.6 : 0.3, 
+                    width: isMidline ? 2 : 1 
+                });
             }
         }
         
-        // Origin marker (0,0,0)
-        const origin = DDOOBackground.project3DToScreen(0, 0, 0);
-        if (origin && origin.visible) {
-            grid.circle(origin.screenX, origin.screenY, 6);
-            grid.fill({ color: 0xff0000, alpha: 0.8 });
+        // Corner markers
+        const corners = [
+            { x: 0, z: 0, label: '(0,0)' },
+            { x: width, z: 0, label: `(${width},0)` },
+            { x: 0, z: depth, label: `(0,${depth})` },
+            { x: width, z: depth, label: `(${width},${depth})` }
+        ];
+        
+        corners.forEach(corner => {
+            const pos = DDOOBackground.project3DToScreen(corner.x, 0, corner.z);
+            if (pos && pos.visible) {
+                grid.circle(pos.screenX, pos.screenY, 4);
+                grid.fill({ color: 0xffffff, alpha: 0.6 });
+            }
+        });
+        
+        // Player zone indicator (Z: 0-4)
+        const playerZoneStart = DDOOBackground.project3DToScreen(0, 0, 0);
+        const playerZoneEnd = DDOOBackground.project3DToScreen(width, 0, 4);
+        if (playerZoneStart && playerZoneEnd && playerZoneStart.visible) {
+            const zoneText = new PIXI.Text({
+                text: 'PLAYER ZONE',
+                style: { fontSize: 10, fill: 0x3b82f6, alpha: 0.5 }
+            });
+            zoneText.x = (playerZoneStart.screenX + playerZoneEnd.screenX) / 2 - 35;
+            zoneText.y = (playerZoneStart.screenY + playerZoneEnd.screenY) / 2;
+            this.containers.debug.addChild(zoneText);
+        }
+        
+        // Enemy zone indicator (Z: 6-10)
+        const enemyZoneStart = DDOOBackground.project3DToScreen(0, 0, 6);
+        const enemyZoneEnd = DDOOBackground.project3DToScreen(width, 0, 10);
+        if (enemyZoneStart && enemyZoneEnd && enemyZoneStart.visible) {
+            const zoneText = new PIXI.Text({
+                text: 'ENEMY ZONE',
+                style: { fontSize: 10, fill: 0xef4444, alpha: 0.5 }
+            });
+            zoneText.x = (enemyZoneStart.screenX + enemyZoneEnd.screenX) / 2 - 30;
+            zoneText.y = (enemyZoneStart.screenY + enemyZoneEnd.screenY) / 2;
+            this.containers.debug.addChild(zoneText);
         }
         
         // Character position markers
@@ -298,16 +352,14 @@ const Game = {
                 this.worldPositions.player.z
             );
             if (playerPos && playerPos.visible) {
-                // Position circle
-                grid.circle(playerPos.screenX, playerPos.screenY, 10);
-                grid.stroke({ color: 0x3b82f6, width: 2 });
+                grid.circle(playerPos.screenX, playerPos.screenY, 12);
+                grid.stroke({ color: 0x3b82f6, width: 3 });
                 
-                // Coordinate label
                 const text = new PIXI.Text({
-                    text: `P(${this.worldPositions.player.x}, ${this.worldPositions.player.z})`,
+                    text: `P(${this.worldPositions.player.x},${this.worldPositions.player.z})`,
                     style: { fontSize: 11, fill: 0x3b82f6, fontWeight: 'bold' }
                 });
-                text.x = playerPos.screenX + 12;
+                text.x = playerPos.screenX + 15;
                 text.y = playerPos.screenY - 8;
                 this.containers.debug.addChild(text);
             }
@@ -316,11 +368,11 @@ const Game = {
             this.worldPositions.enemies.forEach((pos, i) => {
                 const enemyPos = DDOOBackground.project3DToScreen(pos.x, pos.y, pos.z);
                 if (enemyPos && enemyPos.visible) {
-                    grid.circle(enemyPos.screenX, enemyPos.screenY, 8);
-                    grid.stroke({ color: 0xef4444, width: 2 });
+                    grid.circle(enemyPos.screenX, enemyPos.screenY, 10);
+                    grid.stroke({ color: 0xef4444, width: 3 });
                     
                     const text = new PIXI.Text({
-                        text: `E${i}(${pos.x}, ${pos.z})`,
+                        text: `E${i}(${pos.x},${pos.z})`,
                         style: { fontSize: 11, fill: 0xef4444, fontWeight: 'bold' }
                     });
                     text.x = enemyPos.screenX + 12;
