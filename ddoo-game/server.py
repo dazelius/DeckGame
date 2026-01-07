@@ -9,7 +9,7 @@ import socketserver
 import webbrowser
 import os
 
-PORT = 8080
+PORT = 3000
 
 # 현재 디렉토리로 이동
 os.chdir(os.path.dirname(os.path.abspath(__file__)))

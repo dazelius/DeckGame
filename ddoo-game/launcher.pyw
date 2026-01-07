@@ -24,7 +24,7 @@ class DDOOLauncher:
         # 서버 상태
         self.server = None
         self.server_thread = None
-        self.port = 8080
+        self.port = 3000
         self.is_running = False
         
         # 작업 디렉토리 설정
@@ -111,7 +111,7 @@ class DDOOLauncher:
             highlightthickness=1,
             highlightbackground="#3a3a5a"
         )
-        self.port_entry.insert(0, "8080")
+        self.port_entry.insert(0, "3000")
         self.port_entry.pack(side="left", padx=(10, 0))
         
         # 버튼들
