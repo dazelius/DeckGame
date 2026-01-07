@@ -760,6 +760,13 @@ const Game = {
         // Draw card UI (background, energy, button)
         this.drawCardUI();
         
+        // Test: draw a simple rectangle to verify canvas works
+        const testRect = new PIXI.Graphics();
+        testRect.rect(100, 30, 50, 30);
+        testRect.fill({ color: 0xff0000 });
+        this.cards.container.addChild(testRect);
+        console.log('[Game] Test rect added at (100, 30)');
+        
         console.log('[Game] Card system initialized');
     },
     
@@ -873,17 +880,22 @@ const Game = {
                 return;
             }
             
-            const card = this.createCardSprite(cardData, i);
-            card.x = startX + i * (cardW + spacing) + cardW / 2;
-            card.y = baseY;
-            card.baseX = card.x;
-            card.baseY = card.y;
-            card.cardIndex = i;
-            card.cardId = cardId;
-            card.zIndex = i;
-            
-            this.cards.container.addChild(card);
-            this.cards.sprites.push(card);
+            try {
+                const card = this.createCardSprite(cardData, i);
+                card.x = startX + i * (cardW + spacing) + cardW / 2;
+                card.y = baseY;
+                card.baseX = card.x;
+                card.baseY = card.y;
+                card.cardIndex = i;
+                card.cardId = cardId;
+                card.zIndex = i;
+                
+                this.cards.container.addChild(card);
+                this.cards.sprites.push(card);
+                console.log(`[Game] Card ${cardId} created at (${card.x.toFixed(0)}, ${card.y.toFixed(0)})`);
+            } catch (e) {
+                console.error(`[Game] Failed to create card ${cardId}:`, e);
+            }
         });
         
         console.log(`[Game] Drew ${this.cards.sprites.length} cards`);
