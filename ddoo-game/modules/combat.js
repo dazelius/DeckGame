@@ -342,7 +342,12 @@ const Combat = {
     // Create intent UI above enemy
     createIntentUI(enemyId, intent) {
         const container = document.getElementById('intent-container');
-        if (!container) return;
+        if (!container) {
+            console.warn('[Combat] Intent container not found!');
+            return;
+        }
+        
+        console.log(`[Combat] Creating intent UI for enemy ${enemyId}: ${intent.type}`);
         
         // Remove existing
         const existing = document.getElementById(`intent-${enemyId}`);
@@ -378,9 +383,12 @@ const Combat = {
             if (worldPos) {
                 // Project 3D to screen (add Y offset for head position)
                 const screenPos = DDOOBackground.project3DToScreen(worldPos.x, worldPos.y + 1.5, worldPos.z);
-                if (screenPos) {
-                    intentDiv.style.left = `${screenPos.x}px`;
-                    intentDiv.style.top = `${screenPos.y - 30}px`;  // Above head
+                if (screenPos && screenPos.visible) {
+                    intentDiv.style.left = `${screenPos.screenX}px`;
+                    intentDiv.style.top = `${screenPos.screenY - 50}px`;  // Above head
+                    intentDiv.style.display = 'flex';
+                } else {
+                    intentDiv.style.display = 'none';
                 }
             }
         }
