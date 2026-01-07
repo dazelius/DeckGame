@@ -25,18 +25,18 @@ const DDOOBackground = {
     // Camera defaults (front quarter view - no horizontal rotation)
     cameraDefaults: {
         posX: 0,       // Centered (no left-right tilt)
-        posY: 9,       // Higher up for isometric angle
-        posZ: 16,      // Distance from scene
+        posY: 6,       // Lower angle (was 9)
+        posZ: 14,      // Slightly closer
         lookAtX: 0,    // Look at center
-        lookAtY: 0,    // Look at floor level
+        lookAtY: 1,    // Look slightly above floor
         lookAtZ: 0     // Look at origin
     },
     
     // Auto zoom settings
     autoZoom: {
         enabled: true,
-        targetZ: 16,
-        currentZ: 16,
+        targetZ: 14,
+        currentZ: 14,
         targetX: 0,
         currentX: 0,
         targetLookAtX: 0,
