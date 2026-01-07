@@ -183,11 +183,6 @@ const Game = {
         // Start position sync loop
         this.startPositionLoop();
         
-        // Initialize Combat system
-        if (typeof Combat !== 'undefined') {
-            Combat.init();
-        }
-        
         // Setup card drag & drop
         this.setupCardDragDrop();
         
@@ -200,12 +195,8 @@ const Game = {
         this.showMessage('BATTLE START!', 2000);
         
         // Start real-time combat after delay
-        setTimeout(() => {
-            if (typeof Combat !== 'undefined') {
-                Combat.start();
-                console.log('[Game] Combat started');
-            }
-        }, 2500);
+        // Game ready
+        console.log('[Game] Ready for battle');
     },
     
     // 📱 모바일 감지
@@ -619,7 +610,6 @@ const Game = {
             if (this.state.player.hp <= 0) {
                 await DDOORenderer.playDeath(this.player, this.app);
                 this.showMessage('GAME OVER', 5000);
-                Combat.stop();
             }
         }
         
@@ -952,11 +942,6 @@ const Game = {
         // Apply damage
         enemyData.hp = Math.max(0, enemyData.hp - finalDamage);
         
-        // Interrupt enemy gauge
-        if (typeof Combat !== 'undefined') {
-            Combat.interruptEnemy(enemyIndex, 400);
-        }
-        
         await this.delay(200);
         DDOORenderer.setTargeted(enemy, false);
         
@@ -971,13 +956,7 @@ const Game = {
             this.state.enemies.splice(enemyIndex, 1);
             this.worldPositions.enemies.splice(enemyIndex, 1);
             
-            // Remove intent UI
-            if (typeof Combat !== 'undefined') {
-                Combat.removeIntentUI(enemyIndex);
-            }
-            
             if (this.state.enemies.length === 0) {
-                Combat.stop();
                 this.showMessage('VICTORY!', 3000);
             }
         }
