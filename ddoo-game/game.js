@@ -200,8 +200,8 @@ const Game = {
         hand: [],           // Current hand (card IDs)
         deck: [],           // Remaining deck (card IDs)
         elements: [],       // Card DOM elements
-        dragging: null,     // Currently dragging card element
-        dragData: null,     // Drag data
+        selectedIndex: -1,  // Currently selected card index (-1 = none)
+        selectedCard: null, // Selected card data
         hoveredTarget: null // Target being hovered
     },
     
@@ -1003,6 +1003,7 @@ const Game = {
         card.dataset.cardId = cardId;
         card.dataset.type = cardData.type;
         card.dataset.index = index;
+        card.dataset.shortcut = index + 1;  // Shortcut key (1-5)
         
         // Get display value
         let valueStr = '';
@@ -1024,59 +1025,177 @@ const Game = {
     },
     
     bindCardEvents(card, cardId, cardData) {
-        // Touch/mouse down - start drag
-        const startDrag = (e) => {
+        // Click to select card
+        const selectCard = (e) => {
             e.preventDefault();
+            e.stopPropagation();
             
             if (this.state.phase !== 'player') return;
-            if (this.cards.dragging) return;
             
-            // Check energy
-            if (this.state.player.energy < cardData.cost) {
-                this.showMessage('Energy!', 600);
-                this.hapticFeedback('error');
-                card.classList.add('shake');
-                setTimeout(() => card.classList.remove('shake'), 300);
-                return;
-            }
-            
-            // Get position
-            const touch = e.touches ? e.touches[0] : e;
-            const startX = touch.clientX;
-            const startY = touch.clientY;
-            
-            // Start dragging
-            this.cards.dragging = card;
-            this.cards.dragData = {
-                cardId,
-                cardData,
-                startX,
-                startY,
-                index: parseInt(card.dataset.index)
-            };
-            
-            // Visual feedback
-            card.classList.add('dragging');
-            
-            // Create ghost
-            this.createDragGhost(cardData, startX, startY);
-            
-            this.hapticFeedback('light');
-            
-            // Show targets (pass cardData for grid highlighting)
-            this.showDragTargets(cardData.type, cardData);
-            
-            // Global events
-            this._onDragMove = (e) => this.onCardDragMove(e);
-            this._onDragEnd = (e) => this.onCardDragEnd(e);
-            window.addEventListener('mousemove', this._onDragMove);
-            window.addEventListener('mouseup', this._onDragEnd);
-            window.addEventListener('touchmove', this._onDragMove, { passive: false });
-            window.addEventListener('touchend', this._onDragEnd);
+            const index = parseInt(card.dataset.index);
+            this.selectCard(index);
         };
         
-        card.addEventListener('mousedown', startDrag);
-        card.addEventListener('touchstart', startDrag, { passive: false });
+        card.addEventListener('click', selectCard);
+        card.addEventListener('touchend', selectCard);
+    },
+    
+    // Select a card by index (0-4)
+    selectCard(index) {
+        if (this.state.phase !== 'player') return;
+        if (index < 0 || index >= this.cards.elements.length) return;
+        
+        const cardEl = this.cards.elements[index];
+        const cardId = cardEl?.dataset.cardId;
+        const cardData = this.cardDatabase[cardId];
+        
+        if (!cardEl || !cardData) return;
+        
+        // Check energy
+        if (this.state.player.energy < cardData.cost) {
+            this.showMessage('Energy!', 600);
+            this.hapticFeedback('error');
+            cardEl.classList.add('shake');
+            setTimeout(() => cardEl.classList.remove('shake'), 300);
+            return;
+        }
+        
+        // Toggle selection if same card
+        if (this.cards.selectedIndex === index) {
+            this.deselectCard();
+            return;
+        }
+        
+        // Deselect previous
+        this.deselectCard();
+        
+        // Select new card
+        this.cards.selectedIndex = index;
+        this.cards.selectedCard = { cardId, cardData, index };
+        cardEl.classList.add('selected');
+        
+        this.hapticFeedback('light');
+        
+        // Show valid targets based on card type
+        this.showCardTargets(cardData);
+        
+        console.log(`[Game] Card selected: ${cardData.name} (${index + 1})`);
+    },
+    
+    // Deselect current card
+    deselectCard() {
+        if (this.cards.selectedIndex >= 0) {
+            const prevCard = this.cards.elements[this.cards.selectedIndex];
+            if (prevCard) prevCard.classList.remove('selected');
+        }
+        
+        this.cards.selectedIndex = -1;
+        this.cards.selectedCard = null;
+        
+        // Hide targets
+        this.hideCardTargets();
+    },
+    
+    // Show valid targets for selected card
+    showCardTargets(cardData) {
+        // Highlight valid targets based on card type
+        if (cardData.type === 'attack') {
+            // Highlight enemies in range
+            this.highlightEnemiesInRange(cardData.range || 2);
+        } else if (cardData.type === 'move' && cardData.targetType === 'grid') {
+            // Highlight grid cells
+            this.highlightGridCells(cardData.maxDistance);
+        }
+        // Skills don't need targets (self-cast)
+    },
+    
+    // Hide all target indicators
+    hideCardTargets() {
+        // Remove enemy highlights
+        this.enemySprites.forEach(enemy => {
+            if (enemy.targetHighlight) {
+                enemy.targetHighlight.visible = false;
+            }
+        });
+        
+        // Remove grid highlights
+        if (this.gridHighlights) {
+            this.gridHighlights.forEach(h => h.visible = false);
+        }
+    },
+    
+    // Highlight enemies within attack range
+    highlightEnemiesInRange(range) {
+        const playerPos = this.worldPositions.player;
+        
+        this.enemySprites.forEach((enemy, index) => {
+            const enemyPos = this.worldPositions.enemies[index];
+            if (!enemyPos) return;
+            
+            // Calculate distance (Manhattan distance for grid)
+            const dist = Math.abs(enemyPos.x - playerPos.x) + Math.abs(enemyPos.z - playerPos.z);
+            const inRange = dist <= range;
+            
+            // Apply highlight
+            if (inRange) {
+                DDOORenderer.setTargeted?.(enemy, true, 0xff4444);
+            }
+        });
+    },
+    
+    // Highlight valid grid cells for movement
+    highlightGridCells(maxDistance) {
+        const playerPos = this.worldPositions.player;
+        
+        // Use existing grid highlighting from showDragTargets
+        if (typeof DDOOBackground !== 'undefined' && DDOOBackground.containers?.debug) {
+            const debug = DDOOBackground.containers.debug;
+            debug.visible = true;
+            
+            // Clear previous highlights
+            debug.children.forEach(child => {
+                if (child.isHighlight) {
+                    child.visible = false;
+                }
+            });
+            
+            // Highlight valid cells
+            for (let x = 0; x < this.arena.width; x++) {
+                for (let z = 0; z < this.arena.depth; z++) {
+                    // Check distance
+                    const dist = Math.abs(x - playerPos.x) + Math.abs(z - playerPos.z);
+                    if (maxDistance && dist > maxDistance) continue;
+                    
+                    // Check if occupied by enemy
+                    const isOccupied = this.worldPositions.enemies.some(
+                        ep => Math.floor(ep.x) === x && Math.floor(ep.z) === z
+                    );
+                    if (isOccupied) continue;
+                    
+                    // Highlight this cell
+                    const screenPos = DDOOBackground.project3DToScreen(x + 0.5, 0, z + 0.5);
+                    
+                    // Find or create highlight
+                    let highlight = debug.children.find(c => c.gridX === x && c.gridZ === z && c.isHighlight);
+                    if (!highlight) {
+                        highlight = new PIXI.Graphics();
+                        highlight.isHighlight = true;
+                        highlight.gridX = x;
+                        highlight.gridZ = z;
+                        debug.addChild(highlight);
+                    }
+                    
+                    highlight.clear();
+                    highlight.beginFill(0x00ff00, 0.3);
+                    highlight.drawRect(-30, -20, 60, 40);
+                    highlight.endFill();
+                    highlight.lineStyle(2, 0x00ff00, 0.8);
+                    highlight.drawRect(-30, -20, 60, 40);
+                    highlight.position.set(screenPos.x, screenPos.y);
+                    highlight.visible = true;
+                }
+            }
+        }
     },
     
     // Create DOM-based drag ghost
@@ -1803,9 +1922,10 @@ const Game = {
                 this.addCardToHand(newCardId);
             }
             
-            // Update indices
+            // Update indices and shortcut keys
             this.cards.elements.forEach((el, i) => {
                 el.dataset.index = i;
+                el.dataset.shortcut = i + 1;
             });
             
             // Update UI
@@ -2384,6 +2504,162 @@ const Game = {
                 enemy.hitArea = new PIXI.Circle(0, -enemy.height * 0.5, Math.max(enemy.width, enemy.height) * 0.7);
             }
         });
+        
+        // Battle area click handler for card targets
+        const battleArea = document.getElementById('battle-area');
+        if (battleArea) {
+            battleArea.addEventListener('click', (e) => this.onBattleAreaClick(e));
+            battleArea.addEventListener('touchend', (e) => {
+                if (e.touches && e.touches.length === 0) {
+                    const touch = e.changedTouches[0];
+                    this.onBattleAreaClick({ clientX: touch.clientX, clientY: touch.clientY });
+                }
+            });
+        }
+    },
+    
+    // Handle click on battle area (target selection for selected card)
+    onBattleAreaClick(event) {
+        // No card selected
+        if (!this.cards.selectedCard) return;
+        if (this.state.phase !== 'player') return;
+        
+        const { cardId, cardData, index } = this.cards.selectedCard;
+        const clientX = event.clientX;
+        const clientY = event.clientY;
+        
+        console.log(`[Game] Battle click at (${clientX}, ${clientY}) with card: ${cardData.name}`);
+        
+        // Find target based on card type
+        if (cardData.type === 'attack') {
+            // Find enemy at click position
+            const target = this.findEnemyAtPosition(clientX, clientY);
+            if (target !== null) {
+                // Check range
+                const playerPos = this.worldPositions.player;
+                const enemyPos = this.worldPositions.enemies[target];
+                const dist = Math.abs(enemyPos.x - playerPos.x) + Math.abs(enemyPos.z - playerPos.z);
+                
+                if (dist <= (cardData.range || 2)) {
+                    this.executeCard(index, { type: 'enemy', index: target });
+                } else {
+                    this.showMessage('Out of Range!', 600);
+                    this.hapticFeedback('error');
+                }
+            }
+        } else if (cardData.type === 'move' && cardData.targetType === 'grid') {
+            // Find grid cell at click position
+            const gridPos = DDOOBackground.screenToGrid?.(clientX, clientY);
+            if (gridPos) {
+                const { x, z } = gridPos;
+                
+                // Check bounds
+                if (x >= 0 && x < this.arena.width && z >= 0 && z < this.arena.depth) {
+                    // Check distance
+                    const playerPos = this.worldPositions.player;
+                    const dist = Math.abs(x - playerPos.x) + Math.abs(z - playerPos.z);
+                    
+                    if (!cardData.maxDistance || dist <= cardData.maxDistance) {
+                        // Check if occupied
+                        const isOccupied = this.worldPositions.enemies.some(
+                            ep => Math.floor(ep.x) === x && Math.floor(ep.z) === z
+                        );
+                        
+                        if (!isOccupied) {
+                            this.executeCard(index, { type: 'grid', x, z });
+                        } else {
+                            this.showMessage('Occupied!', 600);
+                            this.hapticFeedback('error');
+                        }
+                    } else {
+                        this.showMessage('Too Far!', 600);
+                        this.hapticFeedback('error');
+                    }
+                }
+            }
+        } else if (cardData.type === 'skill') {
+            // Skills are self-cast, execute immediately
+            this.executeCard(index, { type: 'self' });
+        }
+    },
+    
+    // Find enemy sprite at screen position
+    findEnemyAtPosition(clientX, clientY) {
+        const hitRadius = 80;
+        
+        for (let i = 0; i < this.enemySprites.length; i++) {
+            const enemy = this.enemySprites[i];
+            if (!enemy || !enemy.visible) continue;
+            
+            // Get enemy screen position
+            const enemyPos = this.worldPositions.enemies[i];
+            if (!enemyPos) continue;
+            
+            const screenPos = DDOOBackground.project3DToScreen(
+                enemyPos.x + 0.5, enemyPos.y, enemyPos.z + 0.5
+            );
+            
+            // Get battle area offset
+            const battleArea = document.getElementById('battle-area');
+            const rect = battleArea?.getBoundingClientRect() || { left: 0, top: 0 };
+            
+            // Convert to screen coordinates
+            const enemyScreenX = rect.left + screenPos.x;
+            const enemyScreenY = rect.top + screenPos.y - (enemy.height * 0.5);
+            
+            // Check hit
+            const dx = clientX - enemyScreenX;
+            const dy = clientY - enemyScreenY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dist < hitRadius) {
+                return i;
+            }
+        }
+        
+        return null;
+    },
+    
+    // Execute the selected card on target
+    executeCard(cardIndex, target) {
+        const cardEl = this.cards.elements[cardIndex];
+        const cardId = cardEl?.dataset.cardId;
+        const cardData = this.cardDatabase[cardId];
+        
+        if (!cardData) return;
+        
+        // Check energy again
+        if (this.state.player.energy < cardData.cost) {
+            this.showMessage('Energy!', 600);
+            return;
+        }
+        
+        // Spend energy
+        this.state.player.energy -= cardData.cost;
+        this.updateUI();
+        
+        // Execute based on card type
+        switch (cardData.type) {
+            case 'attack':
+                if (target.type === 'enemy') {
+                    this.attackWithCard(target.index, cardData);
+                }
+                break;
+            case 'skill':
+                this.useSkillCard(cardData);
+                break;
+            case 'move':
+                if (target.type === 'grid') {
+                    this.useMoveCard(cardData, { gridX: target.x, gridZ: target.z });
+                }
+                break;
+        }
+        
+        // Remove used card and draw new one
+        this.removeCardFromHand(cardIndex);
+        
+        // Deselect
+        this.deselectCard();
     },
     
     // Mobile event binding
@@ -2439,6 +2715,17 @@ const Game = {
             // F: 풀스크린 토글
             if (e.key === 'f' || e.key === 'F') {
                 this.toggleFullscreen();
+            }
+            
+            // 1-5: 카드 선택
+            if (e.key >= '1' && e.key <= '5') {
+                const index = parseInt(e.key) - 1;
+                this.selectCard(index);
+            }
+            
+            // ESC: 카드 선택 해제
+            if (e.key === 'Escape') {
+                this.deselectCard();
             }
         });
         
