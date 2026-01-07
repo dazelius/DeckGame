@@ -258,17 +258,21 @@ const DDOOBackground = {
         this.scene.add(topLight);
     },
     
-    // 바닥 생성
+    // 바닥 생성 (10x10 그리드에 맞춤)
     createFloor() {
         const self = this;
         
+        // Grid center is at (5, 0, 5)
+        const gridCenterX = 5;
+        const gridCenterZ = 5;
+        
         // 기본 바닥 (텍스처 로딩 전 폴백)
         const baseFloor = new THREE.Mesh(
-            new THREE.PlaneGeometry(200, 200),
+            new THREE.PlaneGeometry(50, 50),
             new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 })
         );
         baseFloor.rotation.x = -Math.PI / 2;
-        baseFloor.position.set(0, -0.05, 0);
+        baseFloor.position.set(gridCenterX, -0.05, gridCenterZ);
         this.dungeonGroup.add(baseFloor);
         
         // 🎨 bg-floor.png 텍스처 로드
@@ -281,10 +285,10 @@ const DDOOBackground = {
             tex.minFilter = THREE.NearestFilter;
             tex.wrapS = THREE.RepeatWrapping;
             tex.wrapT = THREE.RepeatWrapping;
-            tex.repeat.set(2, 2);  // 2x2 타일링
+            tex.repeat.set(3, 3);  // 3x3 타일링
             
             const floorMesh = new THREE.Mesh(
-                new THREE.PlaneGeometry(120, 120),
+                new THREE.PlaneGeometry(30, 30),  // 그리드 영역에 맞춤
                 new THREE.MeshBasicMaterial({ 
                     map: tex, 
                     transparent: true,
@@ -292,7 +296,7 @@ const DDOOBackground = {
                 })
             );
             floorMesh.rotation.x = -Math.PI / 2;
-            floorMesh.position.set(0, 0.01, 0);
+            floorMesh.position.set(gridCenterX, 0.01, gridCenterZ);
             self.dungeonGroup.add(floorMesh);
         };
         floorImg.onerror = function() {
@@ -300,9 +304,14 @@ const DDOOBackground = {
         };
     },
     
-    // 벽 생성
+    // 벽 생성 (그리드 끝에서 시작)
     createWalls() {
         const self = this;
+        
+        // Grid boundary: X: 0~10, Z: 0~10
+        // Wall should be at Z=0 (back edge of grid)
+        const gridBackZ = 0;  // Grid back edge
+        const wallZ = gridBackZ - 0.5;  // Slightly behind grid edge
         
         // 폴백 재질
         const fallbackMat = new THREE.MeshStandardMaterial({ 
@@ -321,7 +330,7 @@ const DDOOBackground = {
             tex.minFilter = THREE.NearestFilter;
             
             const aspect = wallImg.width / wallImg.height;
-            const width = 80;
+            const width = 30;  // Narrower to fit grid
             const height = width / aspect;
             
             const wallMat = new THREE.MeshBasicMaterial({ 
@@ -331,20 +340,20 @@ const DDOOBackground = {
                 fog: false
             });
             
-            // 뒷벽
+            // 뒷벽 (그리드 끝선에 맞춤, grid center = 5)
             const backWall = new THREE.Mesh(
                 new THREE.PlaneGeometry(width, height),
                 wallMat
             );
-            backWall.position.set(0, height / 2, -30);
+            backWall.position.set(5, height / 2, wallZ);  // Center at grid X=5
             self.dungeonGroup.add(backWall);
             
-            // 좌벽
+            // 좌벽 (grid X=0 edge)
             const leftTex = new THREE.CanvasTexture(wallImg);
             leftTex.magFilter = THREE.NearestFilter;
             leftTex.minFilter = THREE.NearestFilter;
             const leftWall = new THREE.Mesh(
-                new THREE.PlaneGeometry(60, height),
+                new THREE.PlaneGeometry(15, height),  // Shorter wall
                 new THREE.MeshBasicMaterial({ 
                     map: leftTex, 
                     transparent: true,
@@ -352,16 +361,16 @@ const DDOOBackground = {
                     fog: false
                 })
             );
-            leftWall.position.set(-40, height / 2, 0);
+            leftWall.position.set(-0.5, height / 2, 5);  // At X=-0.5, centered at Z=5
             leftWall.rotation.y = Math.PI / 2;
             self.dungeonGroup.add(leftWall);
             
-            // 우벽
+            // 우벽 (grid X=10 edge)
             const rightTex = new THREE.CanvasTexture(wallImg);
             rightTex.magFilter = THREE.NearestFilter;
             rightTex.minFilter = THREE.NearestFilter;
             const rightWall = new THREE.Mesh(
-                new THREE.PlaneGeometry(60, height),
+                new THREE.PlaneGeometry(15, height),
                 new THREE.MeshBasicMaterial({ 
                     map: rightTex, 
                     transparent: true,
@@ -369,7 +378,7 @@ const DDOOBackground = {
                     fog: false
                 })
             );
-            rightWall.position.set(40, height / 2, 0);
+            rightWall.position.set(10.5, height / 2, 5);  // At X=10.5, centered at Z=5
             rightWall.rotation.y = -Math.PI / 2;
             self.dungeonGroup.add(rightWall);
         };
@@ -377,17 +386,17 @@ const DDOOBackground = {
             console.warn('[DDOOBackground] bg-wall.png 로드 실패, 폴백 사용');
             
             // 폴백 벽
-            const backWall = new THREE.Mesh(new THREE.PlaneGeometry(80, 25), fallbackMat);
-            backWall.position.set(0, 12.5, -30);
+            const backWall = new THREE.Mesh(new THREE.PlaneGeometry(30, 15), fallbackMat);
+            backWall.position.set(5, 7.5, wallZ);
             self.dungeonGroup.add(backWall);
             
-            const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(60, 25), fallbackMat.clone());
-            leftWall.position.set(-40, 12.5, 0);
+            const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(15, 15), fallbackMat.clone());
+            leftWall.position.set(-0.5, 7.5, 5);
             leftWall.rotation.y = Math.PI / 2;
             self.dungeonGroup.add(leftWall);
             
-            const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(60, 25), fallbackMat.clone());
-            rightWall.position.set(40, 12.5, 0);
+            const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(15, 15), fallbackMat.clone());
+            rightWall.position.set(10.5, 7.5, 5);
             rightWall.rotation.y = -Math.PI / 2;
             self.dungeonGroup.add(rightWall);
         };
@@ -402,7 +411,7 @@ const DDOOBackground = {
             tex.minFilter = THREE.NearestFilter;
             
             const aspect = skyImg.width / skyImg.height;
-            const width = 150;
+            const width = 60;
             const height = width / aspect;
             
             const skyMesh = new THREE.Mesh(
@@ -412,33 +421,35 @@ const DDOOBackground = {
                     fog: false
                 })
             );
-            skyMesh.position.set(0, height / 2 - 5, -50);
+            // Position behind wall (Z < wallZ)
+            skyMesh.position.set(5, height / 2 - 3, -5);
             self.dungeonGroup.add(skyMesh);
         };
         
-        // 천장
+        // 천장 (위에서 덮는 느낌)
         const ceiling = new THREE.Mesh(
-            new THREE.PlaneGeometry(80, 60),
+            new THREE.PlaneGeometry(30, 20),
             new THREE.MeshStandardMaterial({ color: 0x050508, side: THREE.DoubleSide, roughness: 1.0 })
         );
         ceiling.rotation.x = Math.PI / 2;
-        ceiling.position.set(0, 25, 0);
+        ceiling.position.set(5, 12, -2);
         this.dungeonGroup.add(ceiling);
     },
     
-    // 기둥
+    // 기둥 (그리드 코너에 배치)
     addPillars() {
         const pillarMat = new THREE.MeshStandardMaterial({ color: 0x151520, roughness: 0.85 });
+        // Grid corners: (0,0), (10,0), (0,10), (10,10)
         const positions = [
-            [-30, 12.5, -20],
-            [30, 12.5, -20],
-            [-30, 12.5, 5],
-            [30, 12.5, 5]
+            [-1, 6, -1],   // Top-left corner
+            [11, 6, -1],   // Top-right corner
+            [-1, 6, 11],   // Bottom-left corner
+            [11, 6, 11]    // Bottom-right corner
         ];
         
         positions.forEach(pos => {
             const pillar = new THREE.Mesh(
-                new THREE.BoxGeometry(3, 25, 3),
+                new THREE.BoxGeometry(1.5, 12, 1.5),
                 pillarMat
             );
             pillar.position.set(pos[0], pos[1], pos[2]);
@@ -446,13 +457,11 @@ const DDOOBackground = {
         });
     },
     
-    // 횃불
+    // 횃불 (기둥 근처에)
     addTorches() {
         const positions = [
-            [-25, 6, -25],
-            [25, 6, -25],
-            [-35, 6, -5],
-            [35, 6, -5]
+            [-1, 5, -1],   // Top-left
+            [11, 5, -1],   // Top-right
         ];
         
         positions.forEach((pos, i) => {
