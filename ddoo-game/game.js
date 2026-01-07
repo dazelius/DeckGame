@@ -601,16 +601,19 @@ const Game = {
     async createCharacters3D() {
         // 플레이어 생성
         this.player = await DDOORenderer.createSprite('hero.png', {
-            scale: 0.8,  // Smaller player
+            scale: 0.6,  // Smaller player
             outline: { enabled: false },
             shadow: { enabled: false },
-            breathing: { enabled: true, scaleAmount: 0.008 }
+            breathing: { enabled: true, scaleAmount: 0.006 }
         });
         
         if (this.player) {
-            this.player.defaultFacing = 'right';  // Player faces enemies (right)
+            this.player.defaultFacing = 'right';  // Player faces right (toward enemies)
             this.placeCharacter3D(this.player, this.worldPositions.player);
             this.containers.characters.addChild(this.player);
+            
+            // Create HP bar for player
+            this.createHPBar(this.player, this.state.player);
             await DDOORenderer.playSpawn(this.player, 'left', 0.5);
             
             // Register with DDOOAction for animations
@@ -636,26 +639,30 @@ const Game = {
         // 적 생성 (고블린 전사만)
         for (let i = 0; i < this.worldPositions.enemies.length; i++) {
             const enemy = await DDOORenderer.createSprite('goblin.png', {
-                scale: 0.5,  // Smaller goblins
+                scale: 0.4,  // Smaller goblins
                 outline: { enabled: false },
                 shadow: { enabled: false },
-                breathing: { enabled: true, scaleAmount: 0.006 }
+                breathing: { enabled: true, scaleAmount: 0.005 }
             });
             
             if (enemy) {
-                enemy.defaultFacing = 'left';  // Enemies face player (left)
+                enemy.defaultFacing = 'left';  // Enemy faces left (toward player)
                 this.placeCharacter3D(enemy, this.worldPositions.enemies[i]);
                 enemy.enemyIndex = i;
                 this.containers.characters.addChild(enemy);
                 this.enemySprites.push(enemy);
                 
                 // 적 데이터
-                this.state.enemies.push({
+                const enemyData = {
                     hp: 30 + i * 10,
                     maxHp: 30 + i * 10,
                     block: 0,
                     intent: 'attack'
-                });
+                };
+                this.state.enemies.push(enemyData);
+                
+                // Create HP bar for enemy
+                this.createHPBar(enemy, enemyData);
                 
                 await DDOORenderer.playSpawn(enemy, 'right', 0.4);
                 
@@ -694,11 +701,16 @@ const Game = {
             const depthScale = screenPos.scale * 0.5;  // Scale factor
             
             // Determine flip based on defaultFacing
-            let flipX = 1;
-            if (sprite.defaultFacing === 'left') {
-                flipX = -1;  // Face left
+            // Sprites are drawn facing LEFT by default
+            // To face RIGHT, we flip (flipX = -1)
+            let flipX = 1;  // Default: face left (no flip)
+            if (sprite.defaultFacing === 'right') {
+                flipX = -1;  // Flip to face right
+            }
+            if (sprite.currentFacing === 'right') {
+                flipX = -1;  // Temporarily facing right
             } else if (sprite.currentFacing === 'left') {
-                flipX = -1;  // Temporarily facing left
+                flipX = 1;   // Temporarily facing left
             }
             
             sprite.scale.set(flipX * baseScale * depthScale, baseScale * depthScale);
@@ -715,11 +727,13 @@ const Game = {
     updateAllCharacterPositions() {
         if (this.player) {
             this.placeCharacter3D(this.player, this.worldPositions.player);
+            this.updateHPBar(this.player, this.state.player);
         }
         
         this.enemySprites.forEach((enemy, i) => {
             if (this.worldPositions.enemies[i]) {
                 this.placeCharacter3D(enemy, this.worldPositions.enemies[i]);
+                this.updateHPBar(enemy, this.state.enemies[i]);
             }
         });
         
@@ -732,6 +746,60 @@ const Game = {
         if (this.gridAlwaysShow || this.debug.enabled) {
             this.drawDebugGrid();
         }
+    },
+    
+    // Create HP bar above character
+    createHPBar(sprite, data) {
+        if (!sprite) return;
+        
+        const hpBar = new PIXI.Container();
+        hpBar.zIndex = 100;
+        
+        // Background
+        const bg = new PIXI.Graphics();
+        bg.roundRect(-25, 0, 50, 6, 2);
+        bg.fill({ color: 0x222222, alpha: 0.8 });
+        bg.stroke({ color: 0x444444, width: 1 });
+        hpBar.addChild(bg);
+        
+        // Fill
+        const fill = new PIXI.Graphics();
+        hpBar.addChild(fill);
+        hpBar.fill = fill;
+        
+        // Store reference
+        sprite.hpBar = hpBar;
+        sprite.hpBarData = data;
+        
+        this.containers.characters.addChild(hpBar);
+    },
+    
+    // Update HP bar position and fill
+    updateHPBar(sprite, data) {
+        if (!sprite || !sprite.hpBar || !data) return;
+        
+        const hpBar = sprite.hpBar;
+        const hpPercent = Math.max(0, data.hp / data.maxHp);
+        
+        // Position above character
+        hpBar.x = sprite.x;
+        hpBar.y = sprite.y - (sprite.height || 50) - 15;
+        hpBar.zIndex = sprite.zIndex + 1;
+        
+        // Update fill
+        const fill = hpBar.fill;
+        fill.clear();
+        
+        // Color based on HP
+        let color = 0x22c55e;  // Green
+        if (hpPercent < 0.6) color = 0xfbbf24;  // Yellow
+        if (hpPercent < 0.3) color = 0xef4444;  // Red
+        
+        fill.roundRect(-24, 1, 48 * hpPercent, 4, 1);
+        fill.fill({ color });
+        
+        // Hide if dead
+        hpBar.visible = data.hp > 0;
     },
     
     // Face target direction (flip sprite)
