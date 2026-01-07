@@ -1,0 +1,35 @@
+{
+    "id": "power_ready",
+    "name": "파워 레디",
+    "duration": 350,
+    "offset": { "x": 0, "y": -50 },
+    "particles": [
+        {
+            "type": "flash",
+            "color": "#ffffff",
+            "size": 150,
+            "alpha": 0.8,
+            "fadeOut": true
+        },
+        {
+            "type": "ring",
+            "count": 1,
+            "color": "#ff2200",
+            "size": 40,
+            "maxSize": 160,
+            "alpha": 0.9,
+            "fadeOut": true
+        },
+        {
+            "type": "spark",
+            "count": 30,
+            "color": "#ffff00",
+            "size": 6,
+            "speed": 120,
+            "gravity": 0,
+            "alpha": 1,
+            "lifetime": 300
+        }
+    ]
+}
+

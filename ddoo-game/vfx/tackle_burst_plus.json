@@ -1,0 +1,47 @@
+{
+    "id": "tackle_burst_plus",
+    "name": "태클 버스트+",
+    "duration": 450,
+    "offset": { "x": 40, "y": -25 },
+    "particles": [
+        {
+            "type": "flash",
+            "color": "#ff4400",
+            "size": 280,
+            "alpha": 1,
+            "fadeOut": true
+        },
+        {
+            "type": "ring",
+            "count": 3,
+            "color": "#ff8800",
+            "size": 60,
+            "maxSize": 280,
+            "alpha": 0.9,
+            "fadeOut": true,
+            "delay": [0, 40, 80]
+        },
+        {
+            "type": "spark",
+            "count": 60,
+            "color": "#ff2200",
+            "size": 10,
+            "speed": 280,
+            "angle": 0,
+            "spread": 70,
+            "gravity": 0.3,
+            "alpha": 1,
+            "lifetime": 400
+        },
+        {
+            "type": "smoke",
+            "count": 12,
+            "color": "#553311",
+            "size": 70,
+            "speed": 50,
+            "alpha": 0.7,
+            "lifetime": 550
+        }
+    ]
+}
+

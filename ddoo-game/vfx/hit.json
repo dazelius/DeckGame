@@ -1,0 +1,129 @@
+{
+    "id": "hit",
+    "name": "극강 타격 이펙트",
+    "shake": 18,
+    "hitstop": 80,
+    "particles": [
+        {
+            "type": "flash",
+            "size": 280,
+            "color": "#ffffff",
+            "life": 25,
+            "comment": "강렬한 백색 플래시"
+        },
+        {
+            "type": "flash",
+            "size": 220,
+            "color": "#ffee00",
+            "life": 45,
+            "comment": "노란색 임팩트"
+        },
+        {
+            "type": "flash",
+            "size": 160,
+            "color": "#ff4444",
+            "life": 70,
+            "comment": "빨간색 지속"
+        },
+        {
+            "type": "flash",
+            "size": 100,
+            "color": "#ff0000",
+            "life": 100,
+            "comment": "코어 빨강"
+        },
+        {
+            "type": "ring",
+            "size": 5,
+            "maxSize": 250,
+            "color": "#ffffff",
+            "life": 60,
+            "comment": "초고속 충격파"
+        },
+        {
+            "type": "ring",
+            "size": 20,
+            "maxSize": 180,
+            "color": "#ffee00",
+            "life": 100,
+            "comment": "노란 충격파"
+        },
+        {
+            "type": "ring",
+            "size": 40,
+            "maxSize": 140,
+            "color": "#ef4444",
+            "life": 140,
+            "comment": "빨간 충격파"
+        },
+        {
+            "type": "ring",
+            "size": 60,
+            "maxSize": 100,
+            "color": "#991b1b",
+            "life": 180,
+            "comment": "암적색 잔여파"
+        },
+        {
+            "type": "slash",
+            "count": 6,
+            "angle": [-90, -60, -30, 30, 60, 90],
+            "length": [80, 160],
+            "width": 16,
+            "color": "#ffffff",
+            "glow": "#ff4444",
+            "life": 70,
+            "comment": "강력한 방사형 베기"
+        },
+        {
+            "type": "spark",
+            "count": 50,
+            "spread": 160,
+            "speed": [20, 55],
+            "size": [6, 18],
+            "colors": ["#ffffff", "#ffee00", "#ff4444", "#fbbf24", "#ff6b6b"],
+            "life": [100, 320],
+            "comment": "폭발적 스파크"
+        },
+        {
+            "type": "debris",
+            "count": 25,
+            "speed": [15, 35],
+            "size": [5, 12],
+            "colors": ["#ff4444", "#991b1b", "#ffffff", "#ffee00", "#ff6b6b"],
+            "gravity": 0.6,
+            "life": [200, 500],
+            "comment": "대량 피격 파편"
+        },
+        {
+            "type": "line",
+            "count": 16,
+            "angleStep": 22.5,
+            "length": [80, 180],
+            "width": 6,
+            "color": "#ffee00",
+            "life": 80,
+            "comment": "촘촘한 방사형 라인"
+        },
+        {
+            "type": "smoke",
+            "count": 10,
+            "size": [40, 80],
+            "speed": [4, 12],
+            "color": "#222222",
+            "life": [250, 500],
+            "comment": "두꺼운 연기"
+        },
+        {
+            "type": "spark",
+            "count": 20,
+            "spread": 360,
+            "speed": [8, 20],
+            "size": [3, 8],
+            "colors": ["#ff0000", "#ff4444", "#ffffff"],
+            "life": [150, 350],
+            "delay": 30,
+            "comment": "2차 스파크 (지연)"
+        }
+    ]
+}

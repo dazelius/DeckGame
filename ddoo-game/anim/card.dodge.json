@@ -1,0 +1,11 @@
+{
+    "id": "card.dodge",
+    "name": "닷지",
+    "type": "sequence",
+    "description": "민첩하게 백스텝하며 공격을 회피한다",
+    "returnToBase": true,
+    "steps": [
+        { "anim": "player.dodge_flip", "wait": true, "buff": { "name": "block", "value": 3 } },
+        { "event": { "type": "draw", "value": 1 } }
+    ]
+}

@@ -1,0 +1,34 @@
+{
+    "id": "catch_impact",
+    "name": "캐치 임팩트",
+    "particles": [
+        {
+            "type": "flash",
+            "count": 1,
+            "color": "#ffd700",
+            "size": 80,
+            "alpha": 0.9,
+            "duration": 100
+        },
+        {
+            "type": "ring",
+            "count": 1,
+            "color": "#ff8c00",
+            "size": 30,
+            "sizeEnd": 80,
+            "alpha": 0.7,
+            "alphaEnd": 0,
+            "duration": 200
+        },
+        {
+            "type": "spark",
+            "count": 8,
+            "color": "#ffd700",
+            "size": 6,
+            "speed": 10,
+            "spread": 360,
+            "gravity": 0.5,
+            "duration": 400
+        }
+    ]
+}

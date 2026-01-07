@@ -1,0 +1,13 @@
+{
+    "id": "card.battleopeningP",
+    "name": "전투 개막+ - 파워태클 강화",
+    "type": "sequence",
+    "description": "더욱 강력한 폭발적 개막 일격",
+    "returnToBase": true,
+    "steps": [
+        { "anim": "player.power_windup", "wait": true },
+        { "delay": 40 },
+        { "anim": "player.power_tackle_plus", "wait": true, "damage": 12 },
+        { "anim": "enemy.power_impact_heavy", "wait": true }
+    ]
+}

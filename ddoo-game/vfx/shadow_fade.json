@@ -1,0 +1,23 @@
+{
+    "id": "shadow_fade",
+    "name": "그림자 소멸",
+    "particles": [
+        {
+            "type": "ring",
+            "count": 1,
+            "size": 20,
+            "maxSize": 80,
+            "color": "#1e1b4b",
+            "life": 120
+        },
+        {
+            "type": "spark",
+            "count": 8,
+            "spread": 30,
+            "speed": [2, 5],
+            "size": [4, 8],
+            "colors": ["#312e81", "#4c1d95", "#1e1b4b"],
+            "life": [100, 140]
+        }
+    ]
+}

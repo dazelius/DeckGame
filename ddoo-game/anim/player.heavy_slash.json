@@ -1,0 +1,27 @@
+{
+    "id": "player.heavy_slash",
+    "name": "대검 베기",
+    "target": "player",
+    "type": "once",
+    "priority": 12,
+    "duration": 480,
+    "keyframes": [
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 0 },
+        
+        { "x": -5, "y": 5, "scaleX": 0.98, "scaleY": 1.02, "rotation": -0.02, "duration": 40, "ease": "power1.out" },
+        { "x": -15, "y": 15, "scaleX": 0.92, "scaleY": 1.08, "rotation": -0.08, "duration": 55, "ease": "power2.in" },
+        { "x": -25, "y": 25, "scaleX": 0.85, "scaleY": 1.15, "rotation": -0.15, "duration": 50, "ease": "power2.in" },
+        { "x": -30, "y": 30, "scaleX": 0.80, "scaleY": 1.20, "rotation": -0.20, "duration": 35, "ease": "power2.in" },
+        
+        { "x": 20, "y": -15, "scaleX": 1.15, "scaleY": 0.85, "rotation": 0.12, "duration": 35, "ease": "power3.out" },
+        { "x": 70, "y": -25, "scaleX": 1.35, "scaleY": 0.70, "rotation": 0.25, "duration": 40, "ease": "power4.out", "vfx": "heavy_slash", "vfxTarget": "target", "shake": 10, "hitstop": 80 },
+        { "x": 80, "y": -20, "scaleX": 1.30, "scaleY": 0.75, "rotation": 0.22, "duration": 35, "ease": "power2.out" },
+        
+        { "x": 70, "y": -12, "scaleX": 1.20, "scaleY": 0.82, "rotation": 0.16, "duration": 40, "ease": "power2.inOut" },
+        { "x": 55, "y": -5, "scaleX": 1.12, "scaleY": 0.88, "rotation": 0.10, "duration": 40, "ease": "power2.inOut" },
+        { "x": 38, "y": 0, "scaleX": 1.06, "scaleY": 0.94, "rotation": 0.05, "duration": 40, "ease": "power2.out" },
+        { "x": 20, "y": 3, "scaleX": 1.02, "scaleY": 0.98, "rotation": 0.02, "duration": 35, "ease": "power2.out" },
+        { "x": 8, "y": 2, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 30, "ease": "power2.out" },
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 25, "ease": "power2.out" }
+    ]
+}

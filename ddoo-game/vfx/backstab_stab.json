@@ -1,0 +1,43 @@
+{
+    "id": "backstab_stab",
+    "name": "등 찌르기",
+    "particles": [
+        {
+            "type": "line",
+            "count": 1,
+            "angle": 180,
+            "length": 70,
+            "width": 6,
+            "color": "#ffffff",
+            "glow": "#94a3b8",
+            "life": 80
+        },
+        {
+            "type": "flash",
+            "size": 40,
+            "color": "#ffffff",
+            "life": 40
+        },
+        {
+            "type": "line",
+            "count": 4,
+            "angleStep": 30,
+            "offsetAngle": 165,
+            "length": [20, 35],
+            "width": 2,
+            "color": "#ef4444",
+            "life": 100
+        },
+        {
+            "type": "spark",
+            "count": 8,
+            "spread": 40,
+            "offsetAngle": 180,
+            "speed": [10, 20],
+            "size": [3, 6],
+            "colors": ["#dc2626", "#ef4444", "#991b1b"],
+            "life": [120, 200]
+        }
+    ]
+}
+

@@ -1,0 +1,25 @@
+{
+    "id": "blood_splat",
+    "name": "피 튀김",
+    "particles": [
+        {
+            "type": "debris",
+            "count": 12,
+            "speed": [6, 18],
+            "size": [4, 8],
+            "colors": ["#dc2626", "#b91c1c", "#991b1b", "#7f1d1d"],
+            "gravity": 0.5,
+            "life": [200, 400],
+            "spread": 120
+        },
+        {
+            "type": "spark",
+            "count": 8,
+            "spread": 80,
+            "speed": [4, 12],
+            "size": [3, 5],
+            "colors": ["#ef4444", "#dc2626"],
+            "life": [100, 200]
+        }
+    ]
+}
