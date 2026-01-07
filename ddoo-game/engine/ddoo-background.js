@@ -22,21 +22,21 @@ const DDOOBackground = {
         smoothing: 0.05
     },
     
-    // Camera defaults (cinematic dungeon view with walls visible)
+    // Camera defaults (side view - left vs right battle)
     cameraDefaults: {
-        posX: 5,       // Center of arena
-        posY: 5,       // Lower for dramatic angle
-        posZ: 16,      // Further back to see walls
+        posX: 5,       // Center of arena (X axis)
+        posY: 4,       // Eye level height
+        posZ: 18,      // Far back to see full width
         lookAtX: 5,    // Look at arena center
-        lookAtY: 2,    // Look slightly up to see walls
-        lookAtZ: 3     // Look towards the back wall
+        lookAtY: 2,    // Look at character height
+        lookAtZ: 5     // Look at arena center (Z axis)
     },
     
     // Auto zoom settings
     autoZoom: {
         enabled: true,
-        targetZ: 16,
-        currentZ: 16,
+        targetZ: 18,
+        currentZ: 18,
         targetX: 0,
         currentX: 0,
         targetLookAtX: 0,

@@ -55,13 +55,13 @@ const Game = {
     },
     
     // 3D world coordinates (10x10 grid arena, Y=0 floor)
-    // Grid: X = 0~10 (left to right), Z = 0~10 (player side to enemy side)
-    // Camera looks from Z=16, so lower Z = closer to camera
+    // Side battle: Player LEFT (low X) vs Enemies RIGHT (high X)
+    // Z axis = depth (front/back rows)
     worldPositions: {
-        player: { x: 5, y: 0, z: 6 },   // Center, closer to camera (player side)
+        player: { x: 2, y: 0, z: 5 },   // Left side, center row
         enemies: [
-            { x: 3, y: 0, z: 2 },   // Left enemy, far back near wall
-            { x: 7, y: 0, z: 2 }    // Right enemy, far back near wall
+            { x: 7, y: 0, z: 4 },   // Right side, front
+            { x: 8, y: 0, z: 6 }    // Right side, back
         ]
     },
     
@@ -284,19 +284,18 @@ const Game = {
             }
         }
         
-        // Horizontal lines (X direction)
+        // Horizontal lines (Z direction - depth)
         for (let z = 0; z <= depth; z++) {
             const start = DDOOBackground.project3DToScreen(0, 0, z);
             const end = DDOOBackground.project3DToScreen(width, 0, z);
             
             if (start && end && start.visible && end.visible) {
-                const isMidline = (z === 5);  // Battle midline
                 grid.moveTo(start.screenX, start.screenY);
                 grid.lineTo(end.screenX, end.screenY);
                 grid.stroke({ 
-                    color: isMidline ? 0xff4444 : 0x44ff44, 
-                    alpha: isMidline ? 0.6 : 0.3, 
-                    width: isMidline ? 2 : 1 
+                    color: 0x44ff44, 
+                    alpha: 0.3, 
+                    width: 1 
                 });
             }
         }
@@ -317,29 +316,27 @@ const Game = {
             }
         });
         
-        // Player zone indicator (Z: 0-4)
-        const playerZoneStart = DDOOBackground.project3DToScreen(0, 0, 0);
-        const playerZoneEnd = DDOOBackground.project3DToScreen(width, 0, 4);
-        if (playerZoneStart && playerZoneEnd && playerZoneStart.visible) {
+        // Player zone indicator (X: 0-4, left side)
+        const playerZonePos = DDOOBackground.project3DToScreen(2, 0, 5);
+        if (playerZonePos && playerZonePos.visible) {
             const zoneText = new PIXI.Text({
-                text: 'PLAYER ZONE',
-                style: { fontSize: 10, fill: 0x3b82f6, alpha: 0.5 }
+                text: 'PLAYER',
+                style: { fontSize: 10, fill: 0x3b82f6, alpha: 0.6 }
             });
-            zoneText.x = (playerZoneStart.screenX + playerZoneEnd.screenX) / 2 - 35;
-            zoneText.y = (playerZoneStart.screenY + playerZoneEnd.screenY) / 2;
+            zoneText.x = playerZonePos.screenX - 20;
+            zoneText.y = playerZonePos.screenY + 50;
             this.containers.debug.addChild(zoneText);
         }
         
-        // Enemy zone indicator (Z: 6-10)
-        const enemyZoneStart = DDOOBackground.project3DToScreen(0, 0, 6);
-        const enemyZoneEnd = DDOOBackground.project3DToScreen(width, 0, 10);
-        if (enemyZoneStart && enemyZoneEnd && enemyZoneStart.visible) {
+        // Enemy zone indicator (X: 6-10, right side)
+        const enemyZonePos = DDOOBackground.project3DToScreen(8, 0, 5);
+        if (enemyZonePos && enemyZonePos.visible) {
             const zoneText = new PIXI.Text({
-                text: 'ENEMY ZONE',
-                style: { fontSize: 10, fill: 0xef4444, alpha: 0.5 }
+                text: 'ENEMY',
+                style: { fontSize: 10, fill: 0xef4444, alpha: 0.6 }
             });
-            zoneText.x = (enemyZoneStart.screenX + enemyZoneEnd.screenX) / 2 - 30;
-            zoneText.y = (enemyZoneStart.screenY + enemyZoneEnd.screenY) / 2;
+            zoneText.x = enemyZonePos.screenX - 18;
+            zoneText.y = enemyZonePos.screenY + 50;
             this.containers.debug.addChild(zoneText);
         }
         
