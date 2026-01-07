@@ -1,0 +1,119 @@
+/* =====================================================
+   battle-ui.css - Battle UI Components
+   ===================================================== */
+
+/* ==================== Top Bar ==================== */
+
+#top-bar {
+    padding: var(--spacing-md) var(--spacing-xl);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 100%);
+}
+
+/* ==================== Player Info ==================== */
+
+.player-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--radius-md);
+    border: 1px solid #333;
+}
+
+/* ==================== HP Bar ==================== */
+
+.hp-bar {
+    width: 150px;
+    height: 18px;
+    background: #222;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    border: 2px solid #444;
+}
+
+.hp-fill {
+    display: block;
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(180deg, var(--color-hp) 0%, var(--color-hp-dark) 100%);
+    transition: width var(--transition-normal);
+}
+
+.hp-text {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: var(--color-hp);
+    text-shadow: 1px 1px 2px #000;
+    min-width: 70px;
+}
+
+/* ==================== Energy ==================== */
+
+.energy-info {
+    background: rgba(0, 0, 0, 0.5);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--radius-md);
+    border: 1px solid #333;
+}
+
+#energy-text {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: var(--color-energy);
+    text-shadow: 1px 1px 2px #000;
+}
+
+/* ==================== Center Message ==================== */
+
+#center-message {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--color-accent);
+    text-shadow: 
+        2px 2px 0 #000,
+        -2px -2px 0 #000,
+        2px -2px 0 #000,
+        -2px 2px 0 #000,
+        0 0 20px rgba(251, 191, 36, 0.5);
+    opacity: 0;
+    transition: opacity var(--transition-normal);
+    pointer-events: none;
+}
+
+/* ==================== Enemy Intents ==================== */
+
+#enemy-intents {
+    position: absolute;
+    top: 60px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.enemy-intent {
+    background: rgba(0, 0, 0, 0.6);
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid #333;
+    font-size: 0.8rem;
+    color: var(--color-text);
+}
+
+.enemy-intent.attack {
+    border-color: var(--color-attack);
+    color: var(--color-attack);
+}
+
+.enemy-intent.defend {
+    border-color: var(--color-block);
+    color: var(--color-block);
+}

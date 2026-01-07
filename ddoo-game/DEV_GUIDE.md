@@ -340,6 +340,142 @@ console.log('[ModuleName] DEBUG:', data);
 
 ---
 
+## CSS 스타일 가이드
+
+### 파일 구조
+```
+css/
+|-- base.css        # Reset, CSS Variables, Typography
+|-- layout.css      # Battle/Card area structure
+|-- battle-ui.css   # HP, Energy, Messages
+|-- card.css        # Card styling and states
+|-- controls.css    # Buttons and deck info
+|-- responsive.css  # Media queries (tablet, mobile, landscape)
++-- utils.css       # Loading, Animations, Utilities
+
+styles.css          # Main file (@import all)
+```
+
+### CSS Variables (base.css)
+```css
+:root {
+    /* Colors - Primary */
+    --color-bg: #0a0a12;
+    --color-bg-dark: #030202;
+    --color-bg-card: #1a1a2e;
+    
+    /* Colors - Accent */
+    --color-accent: #fbbf24;
+    --color-accent-dark: #d97706;
+    
+    /* Colors - Status */
+    --color-hp: #ef4444;
+    --color-energy: #fbbf24;
+    --color-block: #3b82f6;
+    
+    /* Colors - Card Types */
+    --color-attack: #ef4444;
+    --color-skill: #3b82f6;
+    --color-power: #a855f7;
+    
+    /* Spacing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 12px;
+    --spacing-lg: 16px;
+    --spacing-xl: 20px;
+    
+    /* Border Radius */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 10px;
+    
+    /* Transitions */
+    --transition-fast: 0.2s ease;
+    --transition-normal: 0.3s ease;
+    
+    /* Z-Index Layers */
+    --z-bg: 0;
+    --z-game: 1;
+    --z-ui: 10;
+    --z-modal: 100;
+    --z-loading: 1000;
+}
+```
+
+### 네이밍 규칙
+```css
+/* ID: kebab-case, semantic names */
+#battle-area { }
+#card-hand { }
+#btn-end-turn { }
+
+/* Class: kebab-case */
+.card-cost { }
+.hp-fill { }
+.action-btn { }
+
+/* State classes: adjective */
+.selected { }
+.disabled { }
+.hidden { }
+
+/* Modifier: -- prefix */
+.card--attack { }
+.btn--primary { }
+```
+
+### 반응형 브레이크포인트
+```css
+/* Tablet */
+@media (max-width: 1024px) { }
+
+/* Mobile */
+@media (max-width: 768px) { }
+
+/* Small Mobile */
+@media (max-width: 480px) { }
+
+/* Landscape */
+@media (max-height: 500px) and (orientation: landscape) { }
+
+/* Touch Device */
+@media (hover: none) and (pointer: coarse) { }
+```
+
+### 성능 최적화
+```css
+/* GPU Acceleration */
+.animated-element {
+    transform: translateZ(0);
+    will-change: transform;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
+/* Avoid */
+* { box-shadow: ...; }  /* Heavy repaints */
+.element { filter: blur(...); }  /* GPU intensive */
+```
+
+### 주석 스타일
+```css
+/* =====================================================
+   파일명.css - 파일 설명
+   ===================================================== */
+
+/* ==================== Section Name ==================== */
+
+/* Single line comment */
+
+/*
+ * Multi-line comment
+ * for complex explanations
+ */
+```
+
+---
+
 ## 모듈 개발 가이드
 
 ### 새 모듈 생성 템플릿
