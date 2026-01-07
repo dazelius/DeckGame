@@ -54,12 +54,12 @@ const Game = {
         doubleTapDelay: 300
     },
     
-    // 3D world coordinates
+    // 3D world coordinates (on the floor plane, Y=0)
     worldPositions: {
-        player: { x: -6, y: 0, z: 2 },
+        player: { x: -4, y: 0, z: 3 },
         enemies: [
-            { x: 4, y: 0, z: 2 },
-            { x: 10, y: 0, z: 1 }
+            { x: 3, y: 0, z: 3 },
+            { x: 6, y: 0, z: 2 }
         ]
     },
     
@@ -68,6 +68,9 @@ const Game = {
     
     // Selected card
     selectedCard: null,
+    
+    // Position update loop ID
+    positionLoopId: null,
     
     // ==================== 초기화 ====================
     
@@ -151,6 +154,9 @@ const Game = {
         
         // Fullscreen button
         this.createFullscreenButton();
+        
+        // Start position sync loop
+        this.startPositionLoop();
         
         console.log('[Game] Initialized');
         console.log(`[Game] Battle area: ${this.battleAreaSize.width}x${this.battleAreaSize.height}`);
@@ -242,80 +248,82 @@ const Game = {
         this.app.stage.sortableChildren = true;
     },
     
-    // ==================== 3D 그리드 ====================
+    // ==================== 3D Debug Grid ====================
     
     drawDebugGrid() {
-        // 기존 그리드 제거
+        // Remove existing grid
         this.containers.debug.removeChildren();
         
         const grid = new PIXI.Graphics();
         
-        // 3D 그리드 그리기 (Z축 라인)
-        for (let x = -15; x <= 20; x += 5) {
-            const start = DDOOBackground.project3DToScreen(x, 0, -10);
-            const end = DDOOBackground.project3DToScreen(x, 0, 15);
+        // Draw floor grid (Y=0 plane)
+        // Z lines (front to back)
+        for (let x = -10; x <= 15; x += 2) {
+            const start = DDOOBackground.project3DToScreen(x, 0, -5);
+            const end = DDOOBackground.project3DToScreen(x, 0, 10);
             
             if (start && end && start.visible && end.visible) {
                 grid.moveTo(start.screenX, start.screenY);
                 grid.lineTo(end.screenX, end.screenY);
-                grid.stroke({ color: 0x44ff44, alpha: 0.3, width: 1 });
+                grid.stroke({ color: 0x44ff44, alpha: 0.25, width: 1 });
             }
         }
         
-        // X축 라인
-        for (let z = -10; z <= 15; z += 5) {
-            const start = DDOOBackground.project3DToScreen(-15, 0, z);
-            const end = DDOOBackground.project3DToScreen(20, 0, z);
+        // X lines (left to right)
+        for (let z = -5; z <= 10; z += 2) {
+            const start = DDOOBackground.project3DToScreen(-10, 0, z);
+            const end = DDOOBackground.project3DToScreen(15, 0, z);
             
             if (start && end && start.visible && end.visible) {
                 grid.moveTo(start.screenX, start.screenY);
                 grid.lineTo(end.screenX, end.screenY);
-                grid.stroke({ color: 0x44ff44, alpha: 0.3, width: 1 });
+                grid.stroke({ color: 0x44ff44, alpha: 0.25, width: 1 });
             }
         }
         
-        // 원점 표시
+        // Origin marker (0,0,0)
         const origin = DDOOBackground.project3DToScreen(0, 0, 0);
         if (origin && origin.visible) {
-            grid.circle(origin.screenX, origin.screenY, 8);
+            grid.circle(origin.screenX, origin.screenY, 6);
             grid.fill({ color: 0xff0000, alpha: 0.8 });
         }
         
-        // 캐릭터 위치 표시
+        // Character position markers
         if (this.debug.showPositions) {
-            // 플레이어 위치
+            // Player position
             const playerPos = DDOOBackground.project3DToScreen(
                 this.worldPositions.player.x,
                 this.worldPositions.player.y,
                 this.worldPositions.player.z
             );
             if (playerPos && playerPos.visible) {
-                grid.circle(playerPos.screenX, playerPos.screenY, 12);
-                grid.stroke({ color: 0x3b82f6, width: 3 });
+                // Position circle
+                grid.circle(playerPos.screenX, playerPos.screenY, 10);
+                grid.stroke({ color: 0x3b82f6, width: 2 });
                 
-                // 좌표 텍스트
+                // Coordinate label
                 const text = new PIXI.Text({
                     text: `P(${this.worldPositions.player.x}, ${this.worldPositions.player.z})`,
-                    style: { fontSize: 12, fill: 0x3b82f6 }
+                    style: { fontSize: 11, fill: 0x3b82f6, fontWeight: 'bold' }
                 });
-                text.x = playerPos.screenX + 15;
-                text.y = playerPos.screenY - 10;
+                text.x = playerPos.screenX + 12;
+                text.y = playerPos.screenY - 8;
                 this.containers.debug.addChild(text);
             }
             
-            // 적 위치
+            // Enemy positions
             this.worldPositions.enemies.forEach((pos, i) => {
                 const enemyPos = DDOOBackground.project3DToScreen(pos.x, pos.y, pos.z);
                 if (enemyPos && enemyPos.visible) {
-                    grid.circle(enemyPos.screenX, enemyPos.screenY, 10);
-                    grid.stroke({ color: 0xef4444, width: 3 });
+                    grid.circle(enemyPos.screenX, enemyPos.screenY, 8);
+                    grid.stroke({ color: 0xef4444, width: 2 });
                     
                     const text = new PIXI.Text({
                         text: `E${i}(${pos.x}, ${pos.z})`,
-                        style: { fontSize: 12, fill: 0xef4444 }
+                        style: { fontSize: 11, fill: 0xef4444, fontWeight: 'bold' }
                     });
-                    text.x = enemyPos.screenX + 15;
-                    text.y = enemyPos.screenY - 10;
+                    text.x = enemyPos.screenX + 12;
+                    text.y = enemyPos.screenY - 8;
                     this.containers.debug.addChild(text);
                 }
             });
@@ -372,7 +380,7 @@ const Game = {
         }
     },
     
-    // 3D 좌표로 캐릭터 배치
+    // 3D coordinate to screen position
     placeCharacter3D(sprite, worldPos) {
         const screenPos = DDOOBackground.project3DToScreen(worldPos.x, worldPos.y, worldPos.z);
         
@@ -380,16 +388,20 @@ const Game = {
             sprite.x = screenPos.screenX;
             sprite.y = screenPos.screenY;
             
-            // 거리에 따른 스케일 조정
+            // Distance-based scale (adjusted for better visibility)
             const baseScale = sprite.baseScale || 1.0;
-            sprite.scale.set(baseScale * screenPos.scale * 0.6);
+            const depthScale = screenPos.scale * 0.5;  // Scale factor
+            sprite.scale.set(baseScale * depthScale);
             
-            // 깊이 정렬용 zIndex
-            sprite.zIndex = 1000 - screenPos.depth * 10;
+            // Depth sorting
+            sprite.zIndex = Math.floor(1000 - screenPos.depth * 10);
+            
+            // Store current screen position for effects
+            sprite.screenPos = screenPos;
         }
     },
     
-    // 모든 캐릭터 위치 갱신
+    // Update all character positions (called every frame)
     updateAllCharacterPositions() {
         if (this.player) {
             this.placeCharacter3D(this.player, this.worldPositions.player);
@@ -401,9 +413,26 @@ const Game = {
             }
         });
         
-        // 디버그 그리드 갱신
+        // Update debug grid
         if (this.debug.enabled) {
             this.drawDebugGrid();
+        }
+    },
+    
+    // Start position update loop (sync with 3D camera)
+    startPositionLoop() {
+        const update = () => {
+            this.updateAllCharacterPositions();
+            this.positionLoopId = requestAnimationFrame(update);
+        };
+        update();
+    },
+    
+    // Stop position loop
+    stopPositionLoop() {
+        if (this.positionLoopId) {
+            cancelAnimationFrame(this.positionLoopId);
+            this.positionLoopId = null;
         }
     },
     

@@ -579,7 +579,7 @@ const DDOOBackground = {
     },
     
     // ==========================================
-    // 3D → 2D 좌표 변환
+    // 3D -> 2D Coordinate Conversion
     // ==========================================
     project3DToScreen(x, y, z) {
         if (!this.isInitialized || !this.camera) return null;
@@ -592,10 +592,22 @@ const DDOOBackground = {
             return { screenX: 0, screenY: 0, scale: 0, visible: false };
         }
         
-        const screenX = (vec.x * 0.5 + 0.5) * window.innerWidth;
-        const screenY = (-vec.y * 0.5 + 0.5) * window.innerHeight;
+        // Use parent element dimensions (battle area) instead of window
+        let width, height;
+        if (this.parentElement) {
+            const rect = this.parentElement.getBoundingClientRect();
+            width = rect.width;
+            height = rect.height;
+        } else {
+            width = window.innerWidth;
+            height = window.innerHeight;
+        }
         
-        // 거리 기반 스케일
+        // Convert NDC to screen coordinates within the battle area
+        const screenX = (vec.x * 0.5 + 0.5) * width;
+        const screenY = (-vec.y * 0.5 + 0.5) * height;
+        
+        // Distance-based scale
         const cameraPos = this.camera.position;
         const distance = Math.sqrt(
             Math.pow(x - cameraPos.x, 2) +
@@ -611,7 +623,10 @@ const DDOOBackground = {
             screenY,
             scale: Math.min(Math.max(scale, 0.5), 2.0),
             visible: true,
-            depth: distance
+            depth: distance,
+            worldX: x,
+            worldY: y,
+            worldZ: z
         };
     },
     
