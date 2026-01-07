@@ -37,25 +37,33 @@ const Game = {
     async init() {
         console.log('🎮 게임 초기화 중...');
         
-        // PixiJS 앱 생성
+        // 🔥 3D 배경 먼저 초기화
+        await DDOOBackground.init();
+        
+        // PixiJS 앱 생성 (투명 배경 - 3D 배경이 보이도록)
         this.app = new PIXI.Application();
         await this.app.init({
             width: window.innerWidth,
             height: window.innerHeight,
-            backgroundColor: 0x1a1a2e,
+            backgroundAlpha: 0,  // 🔥 투명 배경!
             antialias: false,
             resolution: window.devicePixelRatio || 1,
             autoDensity: true
         });
         
         // 캔버스 추가
-        document.getElementById('game-container').appendChild(this.app.canvas);
+        const gameContainer = document.getElementById('game-container');
+        gameContainer.appendChild(this.app.canvas);
+        
+        // 캔버스 z-index 설정 (3D 배경 위에)
+        this.app.canvas.style.position = 'relative';
+        this.app.canvas.style.zIndex = '1';
         
         // 컨테이너 생성
         this.createContainers();
         
-        // 배경 생성
-        this.createBackground();
+        // 바닥선만 생성 (3D 배경 위에 얇은 가이드)
+        this.createFloorLine();
         
         // 테스트용 캐릭터 생성
         await this.createTestCharacters();
@@ -104,24 +112,19 @@ const Game = {
     
     // ==================== 배경 ====================
     
-    createBackground() {
+    createFloorLine() {
         const { width, height } = this.app.screen;
-        
-        // 바닥
-        const floor = new PIXI.Graphics();
         const floorY = height * 0.75;
         
-        // 바닥 그라데이션 (여러 줄로)
-        for (let i = 0; i < 10; i++) {
-            const alpha = 0.3 - (i * 0.02);
-            floor.rect(0, floorY + i * 20, width, 20);
-            floor.fill({ color: 0x2a2a4a, alpha });
-        }
+        // 얇은 바닥 가이드선 (선택사항)
+        const floor = new PIXI.Graphics();
         
-        // 바닥선
-        floor.moveTo(0, floorY);
-        floor.lineTo(width, floorY);
-        floor.stroke({ color: 0x4a4a6a, width: 2 });
+        // 반투명 바닥 그라데이션
+        for (let i = 0; i < 5; i++) {
+            const alpha = 0.15 - (i * 0.02);
+            floor.rect(0, floorY + i * 15, width, 15);
+            floor.fill({ color: 0x000000, alpha });
+        }
         
         this.containers.background.addChild(floor);
     },
@@ -206,6 +209,13 @@ const Game = {
         DDOORenderer.rapidFlash(enemy);
         DDOORenderer.damageShake(enemy, 8, 300);
         
+        // 🔥 3D 배경 히트 이펙트!
+        DDOOBackground.screenFlash(isCrit ? '#ffaa00' : '#ffffff', isCrit ? 120 : 60);
+        DDOOBackground.hitFlash(5 + enemyIndex * 5, 4, 5, isCrit ? 0xffaa00 : 0xffffff, isCrit ? 12 : 6, 200);
+        if (isCrit) {
+            DDOOBackground.shake(0.8, 200);
+        }
+        
         // 데미지 표시
         DDOOFloater.showOnCharacter(enemy, finalDamage, isCrit ? 'critical' : 'damage');
         
@@ -280,6 +290,12 @@ const Game = {
         this.updateUI();
     },
     
+    // 테마 변경 (dungeon, forest, hell, ice, void)
+    setTheme(name) {
+        DDOOBackground.setTheme(name);
+        this.showMessage(`🌙 ${name.toUpperCase()}`, 1500);
+    },
+    
     // ==================== 유틸리티 ====================
     
     delay(ms) {
@@ -290,9 +306,12 @@ const Game = {
         const { innerWidth, innerHeight } = window;
         this.app.renderer.resize(innerWidth, innerHeight);
         
+        // 3D 배경 리사이즈
+        DDOOBackground.handleResize();
+        
         // 배경 재생성
         this.containers.background.removeChildren();
-        this.createBackground();
+        this.createFloorLine();
     }
 };
 

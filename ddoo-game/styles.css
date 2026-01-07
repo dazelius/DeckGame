@@ -10,10 +10,21 @@
 
 body {
     font-family: 'Noto Sans KR', 'Segoe UI', sans-serif;
-    background: #0a0a12;
+    background: #030202;  /* 3D 배경과 일치 */
     color: #eee;
     overflow: hidden;
     user-select: none;
+}
+
+/* 3D 배경 컨테이너 */
+#ddoo-bg3d {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0 !important;
+    pointer-events: none;
 }
 
 /* ==================== 게임 컨테이너 ==================== */
