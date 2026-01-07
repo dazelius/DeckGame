@@ -65,9 +65,8 @@ const Game = {
     worldPositions: {
         player: { x: 2.5, y: 0, z: 1.5 },   // Cell (2,1) center
         enemies: [
-            { x: 5.5, y: 0, z: 1.5 },   // Cell (5,1) center - front line
-            { x: 6.5, y: 0, z: 1.5 },   // Cell (6,1) center - behind first
-            { x: 7.5, y: 0, z: 1.5 }    // Cell (7,1) center - back line
+            { x: 5.5, y: 0, z: 1.5 },   // Cell (5,1) center - front
+            { x: 7.5, y: 0, z: 1.5 }    // Cell (7,1) center - back
         ]
     },
     
@@ -1963,7 +1962,7 @@ const Game = {
             const gridPos = this.screenToGrid(screenX, screenY);
             if (gridPos) {
                 // Check if cell is empty (not occupied)
-                if (!this.isGridCellOccupied(gridPos.gridX, gridPos.gridZ)) {
+                if (!this.isCellBlocked(gridPos.gridX, gridPos.gridZ, 'player')) {
                     // Check max distance for roll/step
                     const maxDist = cardData?.maxDistance || 999;
                     const playerPos = this.worldPositions.player;
@@ -2157,7 +2156,7 @@ const Game = {
                 const cellZ = z + 0.5;
                 
                 // Skip occupied cells
-                if (this.isGridCellOccupied(cellX, cellZ)) continue;
+                if (this.isCellBlocked(cellX, cellZ, 'player')) continue;
                 
                 // Check distance from player
                 const dist = Math.abs(cellX - playerPos.x) + Math.abs(cellZ - playerPos.z);
@@ -2987,8 +2986,8 @@ const Game = {
             const targetX = Math.floor(gridX) + 0.5;
             const targetZ = Math.floor(gridZ) + 0.5;
             
-            // Validate target is empty (not occupied by enemy)
-            if (this.isGridCellOccupied(Math.floor(gridX), Math.floor(gridZ))) {
+            // Validate target is empty (not occupied by any character)
+            if (this.isCellBlocked(gridX, gridZ, 'player')) {
                 this.showMessage('Blocked!', 500);
                 return false;
             }
@@ -3058,16 +3057,38 @@ const Game = {
         return true;
     },
     
-    // Check if a grid cell is occupied by an enemy
-    isGridCellOccupied(gridX, gridZ, tolerance = 0.8) {
-        for (const enemyPos of this.worldPositions.enemies) {
-            const dx = Math.abs(enemyPos.x - gridX);
-            const dz = Math.abs(enemyPos.z - gridZ);
-            if (dx < tolerance && dz < tolerance) {
-                return true;  // Occupied
+    // Check if a grid cell is occupied by any character
+    isGridCellOccupied(gridX, gridZ, excludeType = null, excludeIndex = -1) {
+        const cellX = Math.floor(gridX);
+        const cellZ = Math.floor(gridZ);
+        
+        // Check player position (unless excluded)
+        if (excludeType !== 'player') {
+            const playerCellX = Math.floor(this.worldPositions.player.x);
+            const playerCellZ = Math.floor(this.worldPositions.player.z);
+            if (playerCellX === cellX && playerCellZ === cellZ) {
+                return { occupied: true, type: 'player', index: -1 };
             }
         }
-        return false;  // Empty
+        
+        // Check enemy positions
+        for (let i = 0; i < this.worldPositions.enemies.length; i++) {
+            if (excludeType === 'enemy' && excludeIndex === i) continue;
+            
+            const enemyPos = this.worldPositions.enemies[i];
+            const enemyCellX = Math.floor(enemyPos.x);
+            const enemyCellZ = Math.floor(enemyPos.z);
+            if (enemyCellX === cellX && enemyCellZ === cellZ) {
+                return { occupied: true, type: 'enemy', index: i };
+            }
+        }
+        
+        return { occupied: false };
+    },
+    
+    // Simple check returning boolean (for backward compatibility)
+    isCellBlocked(gridX, gridZ, excludeType = null, excludeIndex = -1) {
+        return this.isGridCellOccupied(gridX, gridZ, excludeType, excludeIndex).occupied;
     },
     
     // Get valid grid positions for Dash
@@ -3075,7 +3096,7 @@ const Game = {
         const valid = [];
         for (let x = 0; x < this.arena.width; x++) {
             for (let z = 0; z < this.arena.height; z++) {
-                if (!this.isGridCellOccupied(x + 0.5, z + 0.5)) {
+                if (!this.isCellBlocked(x + 0.5, z + 0.5, 'player')) {
                     valid.push({ x: x + 0.5, z: z + 0.5 });
                 }
             }

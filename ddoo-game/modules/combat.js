@@ -371,29 +371,63 @@ const Combat = {
                 const dx = playerCellX - currentCellX;
                 const dz = playerCellZ - currentCellZ;
                 
-                // Move 1 cell towards player
+                // Try to find a valid move cell
                 let newCellX = currentCellX;
                 let newCellZ = currentCellZ;
+                let foundValidCell = false;
                 
-                // Prioritize X movement (horizontal approach)
+                // Priority 1: Move horizontally towards player
                 if (Math.abs(dx) > 1) {
-                    newCellX = currentCellX + Math.sign(dx);  // Move 1 cell towards player
+                    const testX = currentCellX + Math.sign(dx);
+                    if (!Game.isCellBlocked(testX + 0.5, currentCellZ + 0.5, 'enemy', enemyId)) {
+                        newCellX = testX;
+                        foundValidCell = true;
+                    }
                 }
-                // Optional: Z adjustment for flanking
-                else if (Math.abs(dz) > 0) {
-                    newCellZ = currentCellZ + Math.sign(dz);
+                
+                // Priority 2: Move vertically (flanking) if horizontal blocked
+                if (!foundValidCell && Math.abs(dz) > 0) {
+                    const testZ = currentCellZ + Math.sign(dz);
+                    if (!Game.isCellBlocked(currentCellX + 0.5, testZ + 0.5, 'enemy', enemyId)) {
+                        newCellZ = testZ;
+                        foundValidCell = true;
+                    }
                 }
                 
-                // Clamp to arena bounds (enemy zone: x > player cell + 1)
-                newCellX = Math.max(playerCellX + 2, Math.min(Game.arena.width - 1, newCellX));
-                newCellZ = Math.max(0, Math.min(Game.arena.depth - 1, newCellZ));
+                // Priority 3: Try opposite vertical direction
+                if (!foundValidCell && dz === 0) {
+                    // Try moving up or down to get around obstacles
+                    for (const zDir of [1, -1]) {
+                        const testZ = currentCellZ + zDir;
+                        if (testZ >= 0 && testZ < Game.arena.depth) {
+                            if (!Game.isCellBlocked(currentCellX + 0.5, testZ + 0.5, 'enemy', enemyId)) {
+                                newCellZ = testZ;
+                                foundValidCell = true;
+                                break;
+                            }
+                        }
+                    }
+                }
                 
-                // Convert to cell center (x + 0.5, z + 0.5)
-                const newX = newCellX + 0.5;
-                const newZ = newCellZ + 0.5;
-                
-                console.log(`[Combat] Enemy ${enemyId} moves: (${enemy.x.toFixed(1)}, ${enemy.z.toFixed(1)}) -> (${newX.toFixed(1)}, ${newZ.toFixed(1)})`);
-                Game.advanceEnemy(enemyId, newX, newZ);
+                // Only move if we found a valid cell
+                if (newCellX !== currentCellX || newCellZ !== currentCellZ) {
+                    // Clamp to arena bounds (enemy zone: x > player cell + 1)
+                    newCellX = Math.max(playerCellX + 2, Math.min(Game.arena.width - 1, newCellX));
+                    newCellZ = Math.max(0, Math.min(Game.arena.depth - 1, newCellZ));
+                    
+                    // Final collision check after clamping
+                    if (!Game.isCellBlocked(newCellX + 0.5, newCellZ + 0.5, 'enemy', enemyId)) {
+                        const newX = newCellX + 0.5;
+                        const newZ = newCellZ + 0.5;
+                        
+                        console.log(`[Combat] Enemy ${enemyId} moves: (${enemy.x.toFixed(1)}, ${enemy.z.toFixed(1)}) -> (${newX.toFixed(1)}, ${newZ.toFixed(1)})`);
+                        Game.advanceEnemy(enemyId, newX, newZ);
+                    } else {
+                        console.log(`[Combat] Enemy ${enemyId} blocked - cannot move`);
+                    }
+                } else {
+                    console.log(`[Combat] Enemy ${enemyId} has no valid move`);
+                }
             }
         }
     },
