@@ -22,21 +22,21 @@ const DDOOBackground = {
         smoothing: 0.05
     },
     
-    // Camera defaults (side view - left vs right battle)
+    // Camera defaults (Hearthstone style - top-down angled view)
     cameraDefaults: {
         posX: 4,       // Center of arena (X axis)
-        posY: 6,       // Higher for better overview
-        posZ: 10,      // Closer to see grid better
+        posY: 8,       // High for overview
+        posZ: 6,       // Front position
         lookAtX: 4,    // Look at arena center
         lookAtY: 0,    // Look at floor level
-        lookAtZ: 2     // Look at arena center (Z axis)
+        lookAtZ: 1.5   // Look at arena center (Z axis)
     },
     
     // Auto zoom settings
     autoZoom: {
         enabled: true,
-        targetZ: 10,
-        currentZ: 10,
+        targetZ: 6,
+        currentZ: 6,
         targetX: 0,
         currentX: 0,
         targetLookAtX: 0,

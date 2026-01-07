@@ -34,11 +34,12 @@ const Game = {
     },
     
     // ==================== ARENA ====================
+    // Hearthstone style: LEFT = player, RIGHT = enemy
     arena: {
-        width: 8,      // X: 0-7
-        depth: 4,      // Z: 0-3 (smaller depth for wider view)
-        playerZone: 2, // Player can place in Z: 0-1
-        enemyZone: 2   // Enemy spawns in Z: 2-3
+        width: 8,       // X: 0-7 (horizontal - left to right)
+        depth: 3,       // Z: 0-2 (vertical rows)
+        playerZoneX: 4, // Player can place in X: 0-3 (left half)
+        enemyZoneX: 4   // Enemy spawns in X: 4-7 (right half)
     },
     
     battleAreaSize: { width: 0, height: 0 },
@@ -164,10 +165,10 @@ const Game = {
                 const corners = this.getCellCorners(x, z);
                 if (!corners) continue;
                 
-                // Determine cell color
-                const isPlayerZone = z < this.arena.playerZone;
+                // Hearthstone style: LEFT = player (blue), RIGHT = enemy (red)
+                const isPlayerZone = x < this.arena.playerZoneX;
                 const fillColor = isPlayerZone ? 0x2244aa : 0xaa2244;
-                const fillAlpha = 0.15;
+                const fillAlpha = 0.2;
                 
                 // Draw cell
                 graphics.moveTo(corners[0].x, corners[0].y);
@@ -176,16 +177,17 @@ const Game = {
                 graphics.lineTo(corners[3].x, corners[3].y);
                 graphics.closePath();
                 graphics.fill({ color: fillColor, alpha: fillAlpha });
-                graphics.stroke({ color: 0x444466, width: 1, alpha: 0.5 });
+                graphics.stroke({ color: 0x555577, width: 1, alpha: 0.6 });
             }
         }
         
-        // Center line
-        const leftCenter = DDOOBackground.project3DToScreen(0, 0, this.arena.playerZone);
-        const rightCenter = DDOOBackground.project3DToScreen(this.arena.width, 0, this.arena.playerZone);
-        if (leftCenter && rightCenter) {
-            graphics.moveTo(leftCenter.screenX, leftCenter.screenY);
-            graphics.lineTo(rightCenter.screenX, rightCenter.screenY);
+        // Center dividing line (vertical - between player and enemy zones)
+        const centerX = this.arena.playerZoneX;
+        const topCenter = DDOOBackground.project3DToScreen(centerX, 0, 0);
+        const bottomCenter = DDOOBackground.project3DToScreen(centerX, 0, this.arena.depth);
+        if (topCenter && bottomCenter) {
+            graphics.moveTo(topCenter.screenX, topCenter.screenY);
+            graphics.lineTo(bottomCenter.screenX, bottomCenter.screenY);
             graphics.stroke({ color: 0xffcc00, width: 3, alpha: 0.8 });
         }
         
@@ -305,9 +307,9 @@ const Game = {
             e.preventDefault();
             if (this.state.phase !== 'placement') return;
             
-            // Highlight valid cell
+            // Highlight valid cell (LEFT side = player zone)
             const gridPos = this.screenToGrid(e.clientX, e.clientY);
-            if (gridPos && gridPos.z < this.arena.playerZone) {
+            if (gridPos && gridPos.x < this.arena.playerZoneX) {
                 this.highlightCell(gridPos.x, gridPos.z);
             }
         });
@@ -319,7 +321,8 @@ const Game = {
             const unitType = e.dataTransfer.getData('unitType');
             const gridPos = this.screenToGrid(e.clientX, e.clientY);
             
-            if (gridPos && gridPos.z < this.arena.playerZone) {
+            // Only allow placement on LEFT side (player zone)
+            if (gridPos && gridPos.x < this.arena.playerZoneX) {
                 this.placeUnit(unitType, gridPos.x, gridPos.z, 'player');
             }
             
@@ -469,8 +472,9 @@ const Game = {
         
         for (let i = 0; i < enemyCount; i++) {
             const type = types[Math.floor(Math.random() * types.length)];
-            const x = Math.floor(Math.random() * this.arena.width);
-            const z = this.arena.playerZone + Math.floor(Math.random() * this.arena.enemyZone);
+            // Spawn on RIGHT side (enemy zone: X >= playerZoneX)
+            const x = this.arena.playerZoneX + Math.floor(Math.random() * this.arena.enemyZoneX);
+            const z = Math.floor(Math.random() * this.arena.depth);
             
             this.placeUnit(type, x, z, 'enemy');
         }
