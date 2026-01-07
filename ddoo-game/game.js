@@ -1283,7 +1283,8 @@ const Game = {
     showCardTargets(cardData) {
         // Highlight valid targets based on card type
         if (cardData.type === 'attack') {
-            // Highlight enemies in range
+            // Show attack range on grid + highlight enemies
+            this.highlightAttackRange(cardData.range || 2);
             this.highlightEnemiesInRange(cardData.range || 2);
         } else if (cardData.type === 'move' && cardData.targetType === 'grid') {
             // Highlight grid cells
@@ -1291,6 +1292,66 @@ const Game = {
         } else if (cardData.type === 'skill') {
             // Skills are self-cast - execute immediately
             this.executeCard(this.cards.selectedIndex, { type: 'self' });
+        }
+    },
+    
+    // Highlight attack range on grid (PixiJS)
+    highlightAttackRange(range) {
+        const playerPos = this.worldPositions.player;
+        
+        if (typeof DDOOBackground !== 'undefined' && DDOOBackground.containers?.debug) {
+            const debug = DDOOBackground.containers.debug;
+            debug.visible = true;
+            
+            // Clear previous highlights
+            debug.children.forEach(child => {
+                if (child.isHighlight) {
+                    child.visible = false;
+                }
+            });
+            
+            // Highlight cells within range
+            for (let x = 0; x < this.arena.width; x++) {
+                for (let z = 0; z < this.arena.depth; z++) {
+                    // Calculate distance from player
+                    const dist = Math.abs(x - playerPos.x) + Math.abs(z - playerPos.z);
+                    if (dist === 0 || dist > range) continue;
+                    
+                    const screenPos = DDOOBackground.project3DToScreen(x + 0.5, 0, z + 0.5);
+                    if (!screenPos || !screenPos.visible) continue;
+                    
+                    // Check if enemy is in this cell
+                    const hasEnemy = this.worldPositions.enemies.some(
+                        ep => Math.floor(ep.x) === x && Math.floor(ep.z) === z
+                    );
+                    
+                    // Find or create highlight
+                    let highlight = debug.children.find(c => c.gridX === x && c.gridZ === z && c.isHighlight);
+                    if (!highlight) {
+                        highlight = new PIXI.Graphics();
+                        highlight.isHighlight = true;
+                        highlight.gridX = x;
+                        highlight.gridZ = z;
+                        debug.addChild(highlight);
+                    }
+                    
+                    highlight.clear();
+                    
+                    // Red for attack range, brighter if enemy present
+                    if (hasEnemy) {
+                        highlight.beginFill(0xff4444, 0.5);
+                        highlight.lineStyle(3, 0xff0000, 1);
+                    } else {
+                        highlight.beginFill(0xff6666, 0.2);
+                        highlight.lineStyle(2, 0xff4444, 0.6);
+                    }
+                    
+                    highlight.drawRect(-30, -18, 60, 36);
+                    highlight.endFill();
+                    highlight.position.set(screenPos.screenX, screenPos.screenY);
+                    highlight.visible = true;
+                }
+            }
         }
     },
     
@@ -1307,7 +1368,16 @@ const Game = {
             }
         });
         
-        // Remove grid highlights
+        // Remove grid highlights (PixiJS debug container)
+        if (typeof DDOOBackground !== 'undefined' && DDOOBackground.containers?.debug) {
+            DDOOBackground.containers.debug.children.forEach(child => {
+                if (child.isHighlight) {
+                    child.visible = false;
+                }
+            });
+        }
+        
+        // Legacy grid highlights
         if (this.gridHighlights) {
             this.gridHighlights.forEach(h => h.visible = false);
         }
