@@ -629,9 +629,9 @@ const Game = {
         for (let i = 0; i < this.worldPositions.enemies.length; i++) {
             const enemy = await DDOORenderer.createSprite('goblin.png', {
                 scale: 0.7,  // 30% smaller
-                outline: { enabled: true, color: 0x000000, thickness: 4 },
+                outline: { enabled: false },  // 아웃라인 비활성화 (버그 수정 필요)
                 shadow: { enabled: false },
-                breathing: { enabled: true, scaleAmount: 0.01 }
+                breathing: { enabled: true, scaleAmount: 0.008 }
             });
             
             if (enemy) {
