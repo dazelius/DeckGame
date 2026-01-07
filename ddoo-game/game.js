@@ -1173,8 +1173,10 @@ const Game = {
     // Start targeting mode with slow-motion effect
     startTargetingMode() {
         // Slow down combat
-        if (typeof Combat !== 'undefined') {
+        if (typeof Combat !== 'undefined' && typeof Combat.setTimeScale === 'function') {
             Combat.setTimeScale(0.2);  // 20% speed
+        } else if (typeof Combat !== 'undefined' && Combat.state) {
+            Combat.state.timeScale = 0.2;  // Direct state access fallback
         }
         
         // Screen effect - vignette + desaturate
@@ -1185,13 +1187,17 @@ const Game = {
             this._originalSpeed = DDOOAction.config.speed;
             DDOOAction.config.speed = 0.3;
         }
+        
+        console.log('[Game] Targeting mode started');
     },
     
     // End targeting mode
     endTargetingMode() {
         // Restore combat speed
-        if (typeof Combat !== 'undefined') {
+        if (typeof Combat !== 'undefined' && typeof Combat.setTimeScale === 'function') {
             Combat.setTimeScale(1.0);
+        } else if (typeof Combat !== 'undefined' && Combat.state) {
+            Combat.state.timeScale = 1.0;  // Direct state access fallback
         }
         
         // Remove overlay
@@ -1201,6 +1207,8 @@ const Game = {
         if (typeof DDOOAction !== 'undefined' && DDOOAction.config && this._originalSpeed) {
             DDOOAction.config.speed = this._originalSpeed;
         }
+        
+        console.log('[Game] Targeting mode ended');
     },
     
     // Create targeting overlay (vignette + tint)
