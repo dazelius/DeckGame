@@ -1015,7 +1015,7 @@ const Game = {
     
     onCardDragStart(event, card) {
         if (this.state.phase !== 'player') return;
-        if (this.cards.dragging) return;  // Already dragging
+        if (this.cards.dragging) return;
         
         const cardData = this.cardDatabase[card.cardId];
         if (!cardData) return;
@@ -1023,10 +1023,14 @@ const Game = {
         if (this.state.player.energy < cardData.cost) {
             this.showMessage('Energy!', 600);
             this.hapticFeedback('error');
-            // Shake the card
             gsap.to(card, { x: card.x - 5, duration: 0.05, yoyo: true, repeat: 3 });
             return;
         }
+        
+        // Get initial position
+        const cardAreaRect = document.getElementById('card-area').getBoundingClientRect();
+        const startClientX = event.global.x + cardAreaRect.left;
+        const startClientY = event.global.y + cardAreaRect.top;
         
         this.cards.dragging = card;
         this.cards.dragData = {
@@ -1036,16 +1040,18 @@ const Game = {
             cardIndex: card.cardIndex
         };
         
-        // Visual feedback
-        card.zIndex = 200;
-        gsap.to(card.scale, { x: this.cardConfig.dragScale, y: this.cardConfig.dragScale, duration: 0.1 });
+        // Hide original card
+        card.alpha = 0.3;
+        
+        // Create DOM drag ghost
+        this.createDragGhost(cardData, startClientX, startClientY);
         
         this.hapticFeedback('light');
         
         // Show valid targets
         this.showDragTargets(cardData.type);
         
-        // Global events (window level for better tracking)
+        // Global events
         this._onDragMove = (e) => this.onCardDragMove(e);
         this._onDragEnd = (e) => this.onCardDragEnd(e);
         window.addEventListener('mousemove', this._onDragMove);
@@ -1054,37 +1060,83 @@ const Game = {
         window.addEventListener('touchend', this._onDragEnd);
     },
     
+    // Create DOM-based drag ghost
+    createDragGhost(cardData, x, y) {
+        const ghost = document.createElement('div');
+        ghost.className = 'drag-card';
+        ghost.innerHTML = `
+            <div style="
+                width: 80px;
+                height: 100px;
+                background: linear-gradient(180deg, #2a2a4a 0%, #1a1a2e 100%);
+                border: 3px solid ${this.colorToCSS(cardData.color)};
+                border-radius: 8px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 20px ${this.colorToCSS(cardData.color)}40;
+                transform: rotate(5deg);
+            ">
+                <div style="
+                    position: absolute;
+                    top: -8px;
+                    left: -8px;
+                    width: 24px;
+                    height: 24px;
+                    background: #fbbf24;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: bold;
+                    font-size: 14px;
+                    color: #000;
+                ">${cardData.cost}</div>
+                <div style="color: #fff; font-weight: bold; font-size: 12px; margin-bottom: 5px;">${cardData.name}</div>
+                <div style="color: ${this.colorToCSS(cardData.color)}; font-size: 22px; font-weight: bold;">
+                    ${cardData.damage || cardData.block || cardData.heal || ''}
+                </div>
+            </div>
+        `;
+        ghost.style.left = `${x}px`;
+        ghost.style.top = `${y}px`;
+        
+        document.getElementById('drag-overlay').appendChild(ghost);
+        this.cards.dragGhost = ghost;
+    },
+    
+    colorToCSS(color) {
+        if (!color) return '#666666';
+        return '#' + color.toString(16).padStart(6, '0');
+    },
+    
     onCardDragMove(event) {
-        if (!this.cards.dragging) return;
+        if (!this.cards.dragging || !this.cards.dragGhost) return;
         
         event.preventDefault?.();
         
-        const card = this.cards.dragging;
         const data = this.cards.dragData;
+        const ghost = this.cards.dragGhost;
         
         // Get mouse/touch position
         const clientX = event.touches ? event.touches[0].clientX : event.clientX;
         const clientY = event.touches ? event.touches[0].clientY : event.clientY;
         
-        // Get card area bounds
+        // Move ghost
+        ghost.style.left = `${clientX}px`;
+        ghost.style.top = `${clientY}px`;
+        
+        // Get areas
         const cardAreaRect = document.getElementById('card-area').getBoundingClientRect();
         const battleRect = document.getElementById('battle-area').getBoundingClientRect();
-        
-        // Convert to card area local coordinates
-        const localX = clientX - cardAreaRect.left;
-        const localY = clientY - cardAreaRect.top;
-        
-        // Move card
-        card.x = localX;
-        card.y = localY;
         
         // Check if over battle area
         const isOverBattle = clientY < cardAreaRect.top;
         
         if (isOverBattle) {
-            // Scale up when over battle area
-            gsap.to(card.scale, { x: 1.3, y: 1.3, duration: 0.1 });
-            card.alpha = 0.8;
+            // Scale up ghost
+            ghost.style.transform = 'translate(-50%, -50%) scale(1.2)';
             
             // Convert to battle area local coordinates
             const battleX = clientX - battleRect.left;
@@ -1101,12 +1153,16 @@ const Game = {
                 if (newTarget) {
                     this.applyTargetHighlight(newTarget, data.cardData.type);
                     this.hapticFeedback('light');
+                    // Extra glow on ghost
+                    ghost.style.filter = 'brightness(1.3)';
+                } else {
+                    ghost.style.filter = '';
                 }
             }
         } else {
-            // Normal scale in card area
-            gsap.to(card.scale, { x: this.cardConfig.dragScale, y: this.cardConfig.dragScale, duration: 0.1 });
-            card.alpha = 1;
+            // Normal scale
+            ghost.style.transform = 'translate(-50%, -50%) scale(1) rotate(5deg)';
+            ghost.style.filter = '';
             
             if (this.cards.hoveredTarget) {
                 this.clearTargetHighlight(this.cards.hoveredTarget);
@@ -1127,28 +1183,23 @@ const Game = {
         window.removeEventListener('touchmove', this._onDragMove);
         window.removeEventListener('touchend', this._onDragEnd);
         
+        // Remove ghost
+        if (this.cards.dragGhost) {
+            this.cards.dragGhost.remove();
+            this.cards.dragGhost = null;
+        }
+        
         // Execute card if dropped on valid target
         const usedCard = this.cards.hoveredTarget !== null;
         
         if (usedCard) {
-            // Use the card
             this.executeCardOnTarget(card.cardId, data.cardIndex, this.cards.hoveredTarget);
             this.clearTargetHighlight(this.cards.hoveredTarget);
             this.cards.hoveredTarget = null;
         } else {
-            // Return card to hand position
-            gsap.to(card, {
-                x: data.startX,
-                y: data.startY,
-                duration: 0.2,
-                ease: 'back.out(1.5)'
-            });
+            // Show card again
+            card.alpha = 1;
         }
-        
-        // Reset card visual
-        card.alpha = 1;
-        gsap.to(card.scale, { x: 1, y: 1, duration: 0.15 });
-        card.zIndex = data.cardIndex;
         
         // Hide targets
         this.hideDragTargets();

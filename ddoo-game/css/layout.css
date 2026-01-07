@@ -84,3 +84,21 @@
 #battle-ui * {
     pointer-events: auto;
 }
+
+/* ==================== Drag Overlay (Top Layer) ==================== */
+
+#drag-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    pointer-events: none;
+}
+
+#drag-overlay .drag-card {
+    position: absolute;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+}
