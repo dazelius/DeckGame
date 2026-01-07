@@ -85,46 +85,61 @@ const Game = {
     
     // Card Database - Dark Souls Style
     cardDatabase: {
-        // === ATTACKS ===
+        // === ATTACKS (with DDOOAction animations) ===
         slash: { 
             name: 'Slash', cost: 1, type: 'attack', damage: 6, 
-            color: 0xef4444, desc: '6 DMG'
+            color: 0xef4444, desc: '6 DMG',
+            anim: 'card.strike',      // Sequence animation
+            playerAnim: 'player.attack',
+            enemyAnim: 'enemy.hit'
         },
         heavySlash: { 
             name: 'Heavy', cost: 2, type: 'attack', damage: 12, 
-            color: 0xff6b35, desc: '12 DMG'
+            color: 0xff6b35, desc: '12 DMG',
+            anim: 'card.bash',
+            playerAnim: 'player.heavy_slash',
+            enemyAnim: 'enemy.hit'
         },
         thrust: { 
             name: 'Thrust', cost: 1, type: 'attack', damage: 8, 
-            color: 0xef4444, desc: '8 DMG, Pierce'
+            color: 0xef4444, desc: '8 DMG, Pierce',
+            playerAnim: 'player.stab',
+            enemyAnim: 'enemy.hit'
         },
         backstab: { 
             name: 'Backstab', cost: 2, type: 'attack', damage: 20, 
-            color: 0x8b0000, desc: '20 DMG'
+            color: 0x8b0000, desc: '20 DMG',
+            playerAnim: 'player.backstab_strike',
+            enemyAnim: 'enemy.hit'
         },
         
         // === DEFENSE ===
         block: { 
             name: 'Block', cost: 1, type: 'skill', block: 5, 
-            color: 0x3b82f6, desc: '+5 Block'
+            color: 0x3b82f6, desc: '+5 Block',
+            playerAnim: 'player.defend'
         },
         ironFlesh: { 
             name: 'Iron', cost: 2, type: 'skill', block: 12, 
-            color: 0x6b7280, desc: '+12 Block'
+            color: 0x6b7280, desc: '+12 Block',
+            playerAnim: 'player.defend'
         },
         parry: { 
             name: 'Parry', cost: 1, type: 'skill', block: 8, interrupt: 800,
-            color: 0xfbbf24, desc: '+8 Block, Interrupt'
+            color: 0xfbbf24, desc: '+8 Block, Interrupt',
+            playerAnim: 'player.defend'
         },
         
         // === MOVEMENT ===
         roll: { 
             name: 'Roll', cost: 1, type: 'move', dodge: 2, 
-            color: 0x22c55e, desc: 'Dodge Back'
+            color: 0x22c55e, desc: 'Dodge Back',
+            playerAnim: 'player.dodge'
         },
         quickstep: { 
             name: 'Step', cost: 0, type: 'move', dodge: 1, 
-            color: 0x10b981, desc: 'Free Move'
+            color: 0x10b981, desc: 'Free Move',
+            playerAnim: 'player.dodge'
         },
         
         // === SPECIAL ===
@@ -134,7 +149,9 @@ const Game = {
         },
         riposte: { 
             name: 'Riposte', cost: 1, type: 'attack', damage: 15, 
-            color: 0xdc2626, desc: '15 DMG (After Parry)'
+            color: 0xdc2626, desc: '15 DMG (After Parry)',
+            playerAnim: 'player.attack',
+            enemyAnim: 'enemy.hit'
         }
     },
     
@@ -214,6 +231,16 @@ const Game = {
         
         // Create containers
         this.createContainers();
+        
+        // Initialize DDOOAction engine
+        if (typeof DDOOAction !== 'undefined') {
+            try {
+                await DDOOAction.init(this.app, this.app.stage);
+                console.log('[Game] DDOOAction engine initialized');
+            } catch (e) {
+                console.warn('[Game] DDOOAction init failed:', e);
+            }
+        }
         
         // Create characters
         await this.createCharacters3D();
@@ -537,6 +564,25 @@ const Game = {
             this.placeCharacter3D(this.player, this.worldPositions.player);
             this.containers.characters.addChild(this.player);
             await DDOORenderer.playSpawn(this.player, 'left', 0.5);
+            
+            // Register with DDOOAction for animations
+            if (typeof DDOOAction !== 'undefined' && DDOOAction.initialized) {
+                const screenPos = DDOOBackground.project3DToScreen(
+                    this.worldPositions.player.x, 
+                    this.worldPositions.player.y, 
+                    this.worldPositions.player.z
+                );
+                DDOOAction.characters.set('player', {
+                    container: this.player,
+                    sprite: this.player.children?.[0] || this.player,
+                    baseX: screenPos?.screenX || this.player.x,
+                    baseY: screenPos?.screenY || this.player.y,
+                    baseScale: 1.0,
+                    team: 'player',
+                    state: 'idle'
+                });
+                console.log('[Game] Player registered with DDOOAction');
+            }
         }
         
         // 적 생성
@@ -565,6 +611,25 @@ const Game = {
                 });
                 
                 await DDOORenderer.playSpawn(enemy, 'right', 0.4);
+                
+                // Register first enemy with DDOOAction as default target
+                if (i === 0 && typeof DDOOAction !== 'undefined' && DDOOAction.initialized) {
+                    const screenPos = DDOOBackground.project3DToScreen(
+                        this.worldPositions.enemies[i].x, 
+                        this.worldPositions.enemies[i].y, 
+                        this.worldPositions.enemies[i].z
+                    );
+                    DDOOAction.characters.set('enemy', {
+                        container: enemy,
+                        sprite: enemy.children?.[0] || enemy,
+                        baseX: screenPos?.screenX || enemy.x,
+                        baseY: screenPos?.screenY || enemy.y,
+                        baseScale: 1.0,
+                        team: 'enemy',
+                        state: 'idle'
+                    });
+                    console.log('[Game] Enemy registered with DDOOAction');
+                }
             }
         }
     },
@@ -1376,33 +1441,89 @@ const Game = {
         const isCrit = Math.random() < 0.15;
         const finalDamage = isCrit ? baseDamage * 2 : baseDamage;
         
-        // Dash to enemy
-        const originalPos = { ...this.worldPositions.player };
-        await this.dashTo(enemyWorldPos.x - 1.5, enemyWorldPos.z, 0.2);
+        // Try to use DDOOAction for animation
+        const useDDOOAction = typeof DDOOAction !== 'undefined' && DDOOAction.initialized;
         
-        // Hit effects
-        this.hapticFeedback(isCrit ? 'heavy' : 'hit');
-        DDOORenderer.setTargeted(enemy, true, 0xff0000);
-        DDOORenderer.rapidFlash(enemy);
-        DDOORenderer.damageShake(enemy, isCrit ? 12 : 8, 300);
+        if (useDDOOAction && cardData.anim) {
+            // Use sequence animation (dash + attack + enemy hit)
+            console.log(`[Game] Playing sequence: ${cardData.anim}`);
+            
+            try {
+                await DDOOAction.playSequence(cardData.anim, {
+                    targetContainer: enemy,
+                    targetSprite: enemy.children?.[0] || enemy,
+                    damage: finalDamage
+                });
+            } catch (e) {
+                console.warn('[Game] Sequence failed, using fallback:', e);
+            }
+            
+        } else if (useDDOOAction && cardData.playerAnim) {
+            // Use individual animations
+            console.log(`[Game] Playing anim: ${cardData.playerAnim}`);
+            
+            const originalPos = { ...this.worldPositions.player };
+            
+            // Dash to enemy
+            await this.dashTo(enemyWorldPos.x - 1.5, enemyWorldPos.z, 0.2);
+            
+            // Play player attack animation
+            const playerChar = DDOOAction.characters?.get('player');
+            if (playerChar) {
+                await DDOOAction.play(cardData.playerAnim, {
+                    container: playerChar.container,
+                    sprite: playerChar.sprite
+                });
+            }
+            
+            // Hit effects
+            this.hapticFeedback(isCrit ? 'heavy' : 'hit');
+            DDOOBackground.screenFlash(isCrit ? '#ffaa00' : '#ffffff', isCrit ? 100 : 60);
+            
+            // Play enemy hit animation
+            if (cardData.enemyAnim) {
+                const enemyChar = { container: enemy, sprite: enemy.children?.[0] || enemy };
+                await DDOOAction.play(cardData.enemyAnim, enemyChar);
+            }
+            
+            // Damage number
+            DDOOFloater.showOnCharacter(enemy, finalDamage, isCrit ? 'critical' : 'damage');
+            
+            // Return
+            await this.dashTo(originalPos.x, originalPos.z, 0.25);
+            
+        } else {
+            // Fallback: basic effects (no DDOOAction)
+            console.log('[Game] Using fallback attack (no DDOOAction)');
+            
+            const originalPos = { ...this.worldPositions.player };
+            await this.dashTo(enemyWorldPos.x - 1.5, enemyWorldPos.z, 0.2);
+            
+            // Hit effects
+            this.hapticFeedback(isCrit ? 'heavy' : 'hit');
+            DDOORenderer.setTargeted(enemy, true, 0xff0000);
+            DDOORenderer.rapidFlash(enemy);
+            DDOORenderer.damageShake(enemy, isCrit ? 12 : 8, 300);
+            
+            DDOOBackground.screenFlash(isCrit ? '#ffaa00' : '#ffffff', isCrit ? 100 : 60);
+            DDOOBackground.hitFlash(enemyWorldPos.x, 3, enemyWorldPos.z, isCrit ? 0xffaa00 : 0xffffff, isCrit ? 10 : 6, 200);
+            if (isCrit) DDOOBackground.shake(0.6, 150);
+            
+            DDOOFloater.showOnCharacter(enemy, finalDamage, isCrit ? 'critical' : 'damage');
+            
+            await this.delay(200);
+            DDOORenderer.setTargeted(enemy, false);
+            
+            // Return
+            await this.dashTo(originalPos.x, originalPos.z, 0.25);
+        }
         
-        DDOOBackground.screenFlash(isCrit ? '#ffaa00' : '#ffffff', isCrit ? 100 : 60);
-        DDOOBackground.hitFlash(enemyWorldPos.x, 3, enemyWorldPos.z, isCrit ? 0xffaa00 : 0xffffff, isCrit ? 10 : 6, 200);
-        if (isCrit) DDOOBackground.shake(0.6, 150);
-        
-        DDOOFloater.showOnCharacter(enemy, finalDamage, isCrit ? 'critical' : 'damage');
-        
+        // Apply damage
         enemyData.hp = Math.max(0, enemyData.hp - finalDamage);
         
         if (typeof Combat !== 'undefined') {
             Combat.interruptEnemy(enemyIndex, 400);
         }
-        
-        await this.delay(200);
-        DDOORenderer.setTargeted(enemy, false);
-        
-        // Return
-        await this.dashTo(originalPos.x, originalPos.z, 0.25);
         
         // Death check
         if (enemyData.hp <= 0) {
