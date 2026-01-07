@@ -309,26 +309,36 @@ const Combat = {
             const player = Game.worldPositions.player;
             
             if (enemy && player) {
+                // Current cell (integer coordinates)
+                const currentCellX = Math.floor(enemy.x);
+                const currentCellZ = Math.floor(enemy.z);
+                const playerCellX = Math.floor(player.x);
+                const playerCellZ = Math.floor(player.z);
+                
                 // Calculate direction to player
-                const dx = player.x - enemy.x;
-                const dz = player.z - enemy.z;
+                const dx = playerCellX - currentCellX;
+                const dz = playerCellZ - currentCellZ;
                 
                 // Move 1 cell towards player
-                let newX = enemy.x;
-                let newZ = enemy.z;
+                let newCellX = currentCellX;
+                let newCellZ = currentCellZ;
                 
                 // Prioritize X movement (horizontal approach)
-                if (Math.abs(dx) > 0.5) {
-                    newX = enemy.x + Math.sign(dx);  // Move 1 cell towards player
+                if (Math.abs(dx) > 1) {
+                    newCellX = currentCellX + Math.sign(dx);  // Move 1 cell towards player
                 }
-                // Optional: slight Z adjustment for flanking
-                else if (Math.abs(dz) > 0.5) {
-                    newZ = enemy.z + Math.sign(dz) * 0.5;
+                // Optional: Z adjustment for flanking
+                else if (Math.abs(dz) > 0) {
+                    newCellZ = currentCellZ + Math.sign(dz);
                 }
                 
-                // Clamp to arena bounds (enemy zone: x >= player.x + 1)
-                newX = Math.max(player.x + 1, Math.min(Game.arena.width - 1, newX));
-                newZ = Math.max(0.5, Math.min(Game.arena.height - 0.5, newZ));
+                // Clamp to arena bounds (enemy zone: x > player cell + 1)
+                newCellX = Math.max(playerCellX + 2, Math.min(Game.arena.width - 1, newCellX));
+                newCellZ = Math.max(0, Math.min(Game.arena.depth - 1, newCellZ));
+                
+                // Convert to cell center (x + 0.5, z + 0.5)
+                const newX = newCellX + 0.5;
+                const newZ = newCellZ + 0.5;
                 
                 console.log(`[Combat] Enemy ${enemyId} moves: (${enemy.x.toFixed(1)}, ${enemy.z.toFixed(1)}) -> (${newX.toFixed(1)}, ${newZ.toFixed(1)})`);
                 Game.advanceEnemy(enemyId, newX, newZ);

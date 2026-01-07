@@ -60,12 +60,13 @@ const Game = {
         doubleTapDelay: 300
     },
     
-    // 3D world coordinates (10x3 grid arena) - cell centers at x.5, z.5
+    // 3D world coordinates (10x3 grid arena) - cell centers at integer + 0.5
+    // Cell (x, z) center = (x + 0.5, z + 0.5)
     worldPositions: {
         player: { x: 2.5, y: 0, z: 1.5 },   // Cell (2,1) center
         enemies: [
-            { x: 7.5, y: 0, z: 0.5 },   // Cell (7,0) center
-            { x: 7.5, y: 0, z: 2.5 }    // Cell (7,2) center
+            { x: 6.5, y: 0, z: 0.5 },   // Cell (6,0) center
+            { x: 7.5, y: 0, z: 1.5 }    // Cell (7,1) center
         ]
     },
     
@@ -1218,6 +1219,17 @@ const Game = {
         
         // Hide targets
         this.hideCardTargets();
+    },
+    
+    // Refresh target highlights (called during enemy movement)
+    refreshTargetHighlights() {
+        if (this.cards.selectedIndex < 0 || !this.cards.selectedCard) return;
+        
+        const cardData = this.cards.selectedCard.cardData;
+        if (!cardData) return;
+        
+        // Refresh highlights based on current card type
+        this.showCardTargets(cardData);
     },
     
     // Start targeting mode with slow-motion effect
@@ -2403,9 +2415,11 @@ const Game = {
         // Face the enemy before attacking
         this.faceTargetWorld(this.player, this.worldPositions.player, enemyWorldPos);
         
-        // Calculate attack position (1 cell before enemy)
-        const attackPosX = enemyWorldPos.x - 1;
-        const attackPosZ = enemyWorldPos.z;
+        // Calculate attack position (1 cell before enemy, at cell center)
+        const attackCellX = Math.floor(enemyWorldPos.x) - 1;
+        const attackCellZ = Math.floor(enemyWorldPos.z);
+        const attackPosX = attackCellX + 0.5;
+        const attackPosZ = attackCellZ + 0.5;
         
         // Dash to attack position (slower for Dark Souls feel)
         const dashSpeed = cardData.slow ? 0.35 : 0.2;
@@ -2535,12 +2549,25 @@ const Game = {
     
     dashTo(targetX, targetZ, duration = 0.3) {
         return new Promise(resolve => {
+            // Ensure target position is at cell center
+            const finalX = Math.floor(targetX) + 0.5;
+            const finalZ = Math.floor(targetZ) + 0.5;
+            
             gsap.to(this.worldPositions.player, {
-                x: targetX,
-                z: targetZ,
+                x: finalX,
+                z: finalZ,
                 duration,
                 ease: 'power2.out',
-                onComplete: resolve
+                onUpdate: () => {
+                    this.updateAllCharacterPositions();
+                },
+                onComplete: () => {
+                    // Snap to exact cell center
+                    this.worldPositions.player.x = finalX;
+                    this.worldPositions.player.z = finalZ;
+                    this.updateAllCharacterPositions();
+                    resolve();
+                }
             });
         });
     },
@@ -2554,11 +2581,19 @@ const Game = {
                 return;
             }
             
+            // Ensure target position is at cell center
+            const finalX = Math.floor(newX) + 0.5;
+            const finalZ = Math.floor(newZ) + 0.5;
+            
             gsap.to(enemyWorldPos, {
-                x: newX,
-                z: newZ,
+                x: finalX,
+                z: finalZ,
                 duration,
                 ease: 'power2.out',
+                onUpdate: () => {
+                    this.updateAllCharacterPositions();
+                    this.refreshTargetHighlights();
+                },
                 onComplete: resolve
             });
         });
@@ -2573,12 +2608,29 @@ const Game = {
                 return;
             }
             
+            // Ensure target position is at cell center
+            const targetX = Math.floor(newX) + 0.5;
+            const targetZ = Math.floor(newZ) + 0.5;
+            
             gsap.to(enemyWorldPos, {
-                x: newX,
-                z: newZ,
+                x: targetX,
+                z: targetZ,
                 duration,
                 ease: 'power2.inOut',
-                onComplete: resolve
+                onUpdate: () => {
+                    // Update character screen position during animation
+                    this.updateAllCharacterPositions();
+                    // Refresh highlights if in targeting mode
+                    this.refreshTargetHighlights();
+                },
+                onComplete: () => {
+                    // Snap to exact cell center
+                    enemyWorldPos.x = targetX;
+                    enemyWorldPos.z = targetZ;
+                    this.updateAllCharacterPositions();
+                    this.refreshTargetHighlights();
+                    resolve();
+                }
             });
         });
     },
@@ -2622,27 +2674,38 @@ const Game = {
         if (cardData.moveTo && targetGridPos) {
             const { gridX, gridZ } = targetGridPos;
             
+            // Ensure target position is at cell center
+            const targetX = Math.floor(gridX) + 0.5;
+            const targetZ = Math.floor(gridZ) + 0.5;
+            
             // Validate target is empty (not occupied by enemy)
-            if (this.isGridCellOccupied(gridX, gridZ)) {
+            if (this.isGridCellOccupied(Math.floor(gridX), Math.floor(gridZ))) {
                 this.showMessage('Blocked!', 500);
                 return false;
             }
             
             // Face the movement direction
-            const targetWorldPos = { x: gridX, y: 0, z: gridZ };
+            const targetWorldPos = { x: targetX, y: 0, z: targetZ };
             this.faceTargetWorld(this.player, this.worldPositions.player, targetWorldPos);
             
             // Dash animation
             gsap.to(this.worldPositions.player, {
-                x: gridX,
-                z: gridZ,
+                x: targetX,
+                z: targetZ,
                 duration: 0.2,
                 ease: 'power2.out',
+                onUpdate: () => {
+                    this.updateAllCharacterPositions();
+                },
                 onComplete: () => {
+                    // Snap to exact cell center
+                    this.worldPositions.player.x = targetX;
+                    this.worldPositions.player.z = targetZ;
                     // After movement, face enemies again (right side)
                     this.resetFacing(this.player, true);
                     // Restore visibility after movement
                     this.restoreCharacterVisibility();
+                    this.updateAllCharacterPositions();
                 }
             });
             
@@ -2655,7 +2718,7 @@ const Game = {
             });
             
             this.showMessage('Dash!', 400);
-            console.log(`[Game] Player dashed to (${gridX}, ${gridZ})`);
+            console.log(`[Game] Player dashed to (${targetX}, ${targetZ})`);
             return true;
         }
         
