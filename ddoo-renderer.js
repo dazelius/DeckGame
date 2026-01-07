@@ -194,19 +194,24 @@ const DDOORenderer = {
     // ==================== 텍스처 로드 ====================
     
     async loadTexture(path) {
+        // DDOOConfig로 경로 변환
+        const fullPath = (typeof DDOOConfig !== 'undefined') 
+            ? DDOOConfig.getImagePath(path) 
+            : path;
+        
         // 캐시 확인
-        if (this.textureCache.has(path)) {
-            return this.textureCache.get(path);
+        if (this.textureCache.has(fullPath)) {
+            return this.textureCache.get(fullPath);
         }
         
         try {
-            const texture = await PIXI.Assets.load(path);
+            const texture = await PIXI.Assets.load(fullPath);
             if (texture) {
-                this.textureCache.set(path, texture);
+                this.textureCache.set(fullPath, texture);
                 return texture;
             }
         } catch (e) {
-            console.warn(`[DDOORenderer] 텍스처 로드 실패: ${path}`, e);
+            console.warn(`[DDOORenderer] 텍스처 로드 실패: ${fullPath}`, e);
         }
         
         return null;

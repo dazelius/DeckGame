@@ -458,6 +458,7 @@
     
     <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.x/dist/pixi.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/gsap.min.js"></script>
+    <script src="ddoo-config.js"></script>
     <script src="ddoo-renderer.js"></script>
     <script src="ddoo-floater.js"></script>
     
@@ -545,9 +546,10 @@
         // ==================== 스프라이트 로드 ====================
         async function loadSprites() {
             const path = document.getElementById('sprite-path').value || 'goblin.png';
+            const fullPath = DDOOConfig.getImagePath(path);  // 이미지 경로 변환
             const scale = parseInt(document.getElementById('sprite-scale').value) / 100;
             
-            log('info', `로딩: ${path}`);
+            log('info', `로딩: ${fullPath}`);
             
             // 기존 제거
             if (originalSprite) {
@@ -561,8 +563,8 @@
             }
             
             try {
-                // 텍스처 로드
-                const texture = await PIXI.Assets.load(path);
+                // 텍스처 로드 (DDOOConfig 경로 사용)
+                const texture = await PIXI.Assets.load(fullPath);
                 
                 // === 원본 스프라이트 (효과 없음) ===
                 originalSprite = new PIXI.Sprite(texture);
