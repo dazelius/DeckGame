@@ -185,6 +185,58 @@
     z-index: 20;
 }
 
+/* ==================== Target Indicators ==================== */
+
+.target-indicator {
+    position: absolute;
+    pointer-events: none;
+    z-index: 15;
+}
+
+.target-indicator::before {
+    content: '';
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    border: 3px solid var(--color-attack);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    animation: target-pulse 0.8s ease-in-out infinite;
+}
+
+.target-indicator.valid::before {
+    border-color: var(--color-success);
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+}
+
+.target-indicator.player::before {
+    border-color: var(--color-skill);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+}
+
+@keyframes target-pulse {
+    0%, 100% { 
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+    50% { 
+        transform: translate(-50%, -50%) scale(1.2);
+        opacity: 0.6;
+    }
+}
+
+/* ==================== Battle Grid Visible ==================== */
+
+.battle-grid-line {
+    stroke: rgba(68, 136, 255, 0.3);
+    stroke-width: 1;
+}
+
+.battle-line {
+    stroke: rgba(255, 204, 0, 0.5);
+    stroke-width: 2;
+}
+
 /* ==================== Responsive ==================== */
 
 @media (max-width: 768px) {

@@ -564,8 +564,9 @@ const DDOORenderer = {
      * @param {PIXI.Container} container 
      * @param {boolean} isTargeted 
      * @param {number} color - 글로우 색상 (기본: 노란색)
+     * @param {number} intensity - 글로우 강도 (0.0 ~ 1.0, 기본: 0.8)
      */
-    setTargeted(container, isTargeted, color = 0xffee00) {
+    setTargeted(container, isTargeted, color = 0xffee00, intensity = 0.8) {
         const data = container?._ddooData;
         if (!data?.sprite) return;
         
@@ -600,8 +601,8 @@ const DDOORenderer = {
             const glow = new PIXI.DropShadowFilter({
                 offset: { x: 0, y: 0 },
                 color: color,
-                alpha: 0.8,
-                blur: 3,
+                alpha: intensity,
+                blur: intensity > 0.5 ? 3 : 2,
                 quality: 2
             });
             
@@ -610,14 +611,16 @@ const DDOORenderer = {
             sprite.filters = filters;
             data.glowFilter = glow;
             
-            // 펄스 애니메이션
-            data.targetTween = gsap.timeline({ repeat: -1, yoyo: true })
-                .to(glow, {
-                    alpha: 0.3,
-                    blur: 2,
-                    duration: 0.4,
-                    ease: 'sine.inOut'
-                });
+            // 강한 강도일 때만 펄스 애니메이션
+            if (intensity > 0.5) {
+                data.targetTween = gsap.timeline({ repeat: -1, yoyo: true })
+                    .to(glow, {
+                        alpha: intensity * 0.4,
+                        blur: 2,
+                        duration: 0.4,
+                        ease: 'sine.inOut'
+                    });
+            }
                 
         } catch (e) {
             console.warn('[DDOORenderer] 글로우 필터 실패, 알파 펄스로 대체:', e);
