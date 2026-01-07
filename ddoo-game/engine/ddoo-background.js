@@ -660,6 +660,49 @@ const DDOOBackground = {
         return this.project3DToScreen(x, config.y, config.z);
     },
     
+    // Screen to Grid coordinate conversion (raycast to ground plane)
+    screenToGrid(screenX, screenY) {
+        if (!this.isInitialized || !this.camera || !this.scene) return null;
+        
+        // Get dimensions
+        let width, height;
+        if (this.parentElement) {
+            const rect = this.parentElement.getBoundingClientRect();
+            width = rect.width;
+            height = rect.height;
+        } else {
+            width = window.innerWidth;
+            height = window.innerHeight;
+        }
+        
+        // Convert screen to NDC (-1 to 1)
+        const ndcX = (screenX / width) * 2 - 1;
+        const ndcY = -(screenY / height) * 2 + 1;
+        
+        // Create raycaster
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera({ x: ndcX, y: ndcY }, this.camera);
+        
+        // Create ground plane at Y = -1.5 (floor level)
+        const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 1.5);
+        
+        // Find intersection
+        const intersection = new THREE.Vector3();
+        const hit = raycaster.ray.intersectPlane(groundPlane, intersection);
+        
+        if (hit) {
+            return {
+                x: intersection.x,
+                z: intersection.z,
+                worldX: intersection.x,
+                worldY: intersection.y,
+                worldZ: intersection.z
+            };
+        }
+        
+        return null;
+    },
+    
     // ==========================================
     // 카메라 제어
     // ==========================================

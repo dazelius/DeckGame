@@ -640,6 +640,12 @@ const Game = {
     startPositionLoop() {
         const update = () => {
             this.updateAllCharacterPositions();
+            
+            // Update intent positions (above enemy heads)
+            if (typeof Combat !== 'undefined') {
+                Combat.updateAllIntentPositions();
+            }
+            
             this.positionLoopId = requestAnimationFrame(update);
         };
         update();
@@ -1742,6 +1748,43 @@ const Game = {
                 this.toggleFullscreen();
             }
         });
+        
+        // Grid coordinate tracking (mouse move)
+        const battleArea = document.getElementById('battle-area');
+        if (battleArea) {
+            battleArea.addEventListener('mousemove', (e) => {
+                this.updateGridCoords(e.clientX, e.clientY);
+            });
+            battleArea.addEventListener('touchmove', (e) => {
+                if (e.touches.length > 0) {
+                    this.updateGridCoords(e.touches[0].clientX, e.touches[0].clientY);
+                }
+            }, { passive: true });
+        }
+    },
+    
+    // Update grid coordinate display
+    updateGridCoords(clientX, clientY) {
+        const coordsDiv = document.getElementById('grid-coords');
+        if (!coordsDiv) return;
+        
+        const battleRect = document.getElementById('battle-area')?.getBoundingClientRect();
+        if (!battleRect) return;
+        
+        const localX = clientX - battleRect.left;
+        const localY = clientY - battleRect.top;
+        
+        // Convert screen to grid using DDOOBackground
+        if (typeof DDOOBackground !== 'undefined' && DDOOBackground.screenToGrid) {
+            const grid = DDOOBackground.screenToGrid(localX, localY);
+            if (grid) {
+                coordsDiv.textContent = `Grid: (${grid.x.toFixed(1)}, ${grid.z.toFixed(1)}) | Screen: (${Math.round(localX)}, ${Math.round(localY)})`;
+            } else {
+                coordsDiv.textContent = `Screen: (${Math.round(localX)}, ${Math.round(localY)})`;
+            }
+        } else {
+            coordsDiv.textContent = `Screen: (${Math.round(localX)}, ${Math.round(localY)})`;
+        }
     },
     
     // 📱 풀스크린 버튼 생성

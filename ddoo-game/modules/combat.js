@@ -249,30 +249,76 @@ const Combat = {
     },
     
     // ========== UI Functions ==========
+    
+    // Get icon symbol for intent type
+    getIntentSymbol(type) {
+        switch(type) {
+            case 'ATTACK': return '8';       // Damage
+            case 'HEAVY_ATTACK': return '15'; // Heavy damage
+            case 'MOVE': return '>';         // Arrow
+            case 'DEFEND': return 'D';       // Defense
+            case 'BUFF': return '+';         // Plus
+            default: return '?';
+        }
+    },
+    
+    // Get intent class for styling
+    getIntentClass(type) {
+        switch(type) {
+            case 'ATTACK': return 'attack';
+            case 'HEAVY_ATTACK': return 'heavy';
+            case 'MOVE': return 'move';
+            case 'DEFEND': return 'defend';
+            case 'BUFF': return 'buff';
+            default: return '';
+        }
+    },
+    
+    // Create intent UI above enemy
     createIntentUI(enemyId, intent) {
-        const container = document.getElementById('enemy-intents');
+        const container = document.getElementById('intent-container');
         if (!container) return;
         
         // Remove existing
         const existing = document.getElementById(`intent-${enemyId}`);
         if (existing) existing.remove();
         
-        const intentType = this.INTENT_TYPES[intent.type];
+        const intentClass = this.getIntentClass(intent.type);
+        const symbol = intent.damage > 0 ? intent.damage : this.getIntentSymbol(intent.type);
+        
         const div = document.createElement('div');
         div.id = `intent-${enemyId}`;
-        div.className = 'enemy-intent';
+        div.className = 'char-intent';
         div.innerHTML = `
-            <div class="intent-header">
-                <span class="intent-label">E${enemyId}</span>
-                <span class="intent-name">${intentType?.name || intent.type}</span>
-                ${intent.damage > 0 ? `<span class="intent-damage">${intent.damage}</span>` : ''}
-            </div>
-            <div class="intent-gauge-bg">
-                <div class="intent-gauge-fill" id="gauge-${enemyId}"></div>
+            <div class="intent-icon ${intentClass}">${symbol}</div>
+            <div class="intent-bar">
+                <div class="intent-bar-fill" id="gauge-${enemyId}"></div>
             </div>
         `;
         
         container.appendChild(div);
+        
+        // Position above enemy
+        this.positionIntentUI(enemyId);
+    },
+    
+    // Position intent UI above enemy's head
+    positionIntentUI(enemyId) {
+        const intentDiv = document.getElementById(`intent-${enemyId}`);
+        if (!intentDiv) return;
+        
+        // Get enemy screen position from DDOOBackground
+        if (typeof DDOOBackground !== 'undefined' && typeof Game !== 'undefined') {
+            const worldPos = Game.worldPositions.enemies[enemyId];
+            if (worldPos) {
+                // Project 3D to screen (add Y offset for head position)
+                const screenPos = DDOOBackground.project3DToScreen(worldPos.x, worldPos.y + 1.5, worldPos.z);
+                if (screenPos) {
+                    intentDiv.style.left = `${screenPos.x}px`;
+                    intentDiv.style.top = `${screenPos.y - 30}px`;  // Above head
+                }
+            }
+        }
     },
     
     updateIntentUI(enemyId, intent) {
@@ -288,6 +334,16 @@ const Combat = {
                 gauge.classList.remove('danger');
             }
         }
+        
+        // Update position (enemies might have moved)
+        this.positionIntentUI(enemyId);
+    },
+    
+    // Update all intent positions (call this when camera/resize changes)
+    updateAllIntentPositions() {
+        this.intents.forEach((intent, enemyId) => {
+            this.positionIntentUI(enemyId);
+        });
     },
     
     removeIntentUI(enemyId) {
@@ -359,7 +415,7 @@ const Combat = {
         this.intents.clear();
         
         // Remove UI
-        const container = document.getElementById('enemy-intents');
+        const container = document.getElementById('intent-container');
         if (container) container.innerHTML = '';
         
         this.state.initialized = false;
