@@ -60,12 +60,12 @@ const Game = {
         doubleTapDelay: 300
     },
     
-    // 3D world coordinates (10x3 grid arena)
+    // 3D world coordinates (10x3 grid arena) - cell centers at x.5, z.5
     worldPositions: {
-        player: { x: 2, y: 0, z: 1.5 },   // Center row
+        player: { x: 2.5, y: 0, z: 1.5 },   // Cell (2,1) center
         enemies: [
-            { x: 7, y: 0, z: 0.5 },   // Top row
-            { x: 8, y: 0, z: 2.5 }    // Bottom row
+            { x: 7.5, y: 0, z: 0.5 },   // Cell (7,0) center
+            { x: 7.5, y: 0, z: 2.5 }    // Cell (7,2) center
         ]
     },
     
@@ -593,10 +593,10 @@ const Game = {
     async createCharacters3D() {
         // 플레이어 생성
         this.player = await DDOORenderer.createSprite('hero.png', {
-            scale: 1.0,
-            outline: { enabled: true, color: 0x222244, thickness: 6 },
+            scale: 0.8,  // Smaller player
+            outline: { enabled: false },
             shadow: { enabled: false },
-            breathing: { enabled: true, scaleAmount: 0.01 }
+            breathing: { enabled: true, scaleAmount: 0.008 }
         });
         
         if (this.player) {
@@ -628,10 +628,10 @@ const Game = {
         // 적 생성 (고블린 전사만)
         for (let i = 0; i < this.worldPositions.enemies.length; i++) {
             const enemy = await DDOORenderer.createSprite('goblin.png', {
-                scale: 0.7,  // 30% smaller
-                outline: { enabled: false },  // 아웃라인 비활성화 (버그 수정 필요)
+                scale: 0.5,  // Smaller goblins
+                outline: { enabled: false },
                 shadow: { enabled: false },
-                breathing: { enabled: true, scaleAmount: 0.008 }
+                breathing: { enabled: true, scaleAmount: 0.006 }
             });
             
             if (enemy) {
