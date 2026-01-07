@@ -90,31 +90,44 @@ const Game = {
     
     // Card Database - Dark Souls Style
     cardDatabase: {
-        // === ATTACKS (with DDOOAction animations) ===
+        // === ATTACKS (with range info) ===
         slash: { 
             name: 'Slash', cost: 1, type: 'attack', damage: 6, 
-            color: 0xef4444, desc: '6 DMG',
-            anim: 'card.strike',      // Sequence animation
+            range: 2,  // Melee range
+            color: 0xef4444, desc: '6 DMG (2칸)',
+            anim: 'card.strike',
             playerAnim: 'player.attack',
             enemyAnim: 'enemy.hit'
         },
         heavySlash: { 
             name: 'Heavy', cost: 2, type: 'attack', damage: 12, 
-            color: 0xff6b35, desc: '12 DMG',
+            range: 2,  // Melee range
+            knockback: 2,
+            color: 0xff6b35, desc: '12 DMG (2칸)',
             anim: 'card.bash',
             playerAnim: 'player.heavy_slash',
             enemyAnim: 'enemy.hit'
         },
         thrust: { 
             name: 'Thrust', cost: 1, type: 'attack', damage: 8, 
-            color: 0xef4444, desc: '8 DMG, Pierce',
+            range: 3,  // Longer reach
+            knockback: 0,
+            color: 0xef4444, desc: '8 DMG (3칸)',
             playerAnim: 'player.stab',
             enemyAnim: 'enemy.hit'
         },
         backstab: { 
             name: 'Backstab', cost: 2, type: 'attack', damage: 20, 
-            color: 0x8b0000, desc: '20 DMG',
+            range: 1,  // Must be adjacent
+            color: 0x8b0000, desc: '20 DMG (1칸)',
             playerAnim: 'player.backstab_strike',
+            enemyAnim: 'enemy.hit'
+        },
+        riposte: { 
+            name: 'Riposte', cost: 1, type: 'attack', damage: 15, 
+            range: 2,
+            color: 0xdc2626, desc: '15 DMG (2칸)',
+            playerAnim: 'player.attack',
             enemyAnim: 'enemy.hit'
         },
         
@@ -135,34 +148,32 @@ const Game = {
             playerAnim: 'player.defend'
         },
         
-        // === MOVEMENT ===
+        // === MOVEMENT (all target grid) ===
         dash: {
             name: 'Dash', cost: 1, type: 'move', moveTo: true,
             color: 0x8b5cf6, desc: 'Move Anywhere',
             playerAnim: 'player.dodge',
-            targetType: 'grid'  // Target empty grid cell
+            targetType: 'grid'
         },
         roll: { 
-            name: 'Roll', cost: 1, type: 'move', dodge: 2, 
-            color: 0x22c55e, desc: 'Dodge Back',
-            playerAnim: 'player.dodge'
+            name: 'Roll', cost: 1, type: 'move', moveTo: true,
+            color: 0x22c55e, desc: 'Roll (2칸)',
+            maxDistance: 2,  // Max 2 cells
+            playerAnim: 'player.dodge',
+            targetType: 'grid'
         },
         quickstep: { 
-            name: 'Step', cost: 0, type: 'move', dodge: 1, 
-            color: 0x10b981, desc: 'Free Move',
-            playerAnim: 'player.dodge'
+            name: 'Step', cost: 0, type: 'move', moveTo: true,
+            color: 0x10b981, desc: 'Step (1칸)',
+            maxDistance: 1,  // Max 1 cell
+            playerAnim: 'player.dodge',
+            targetType: 'grid'
         },
         
         // === SPECIAL ===
         estus: { 
             name: 'Estus', cost: 2, type: 'skill', heal: 15, 
             color: 0xf59e0b, desc: 'Heal 15 HP'
-        },
-        riposte: { 
-            name: 'Riposte', cost: 1, type: 'attack', damage: 15, 
-            color: 0xdc2626, desc: '15 DMG (After Parry)',
-            playerAnim: 'player.attack',
-            enemyAnim: 'enemy.hit'
         }
     },
     
@@ -1189,19 +1200,27 @@ const Game = {
         const hitRadius = 120;
         const hitRadiusPlayer = 100;
         
-        // Dash card - target grid cell
+        // Move card - target grid cell
         if (cardData?.targetType === 'grid' || cardData?.moveTo) {
             const gridPos = this.screenToGrid(screenX, screenY);
             if (gridPos) {
                 // Check if cell is empty (not occupied)
                 if (!this.isGridCellOccupied(gridPos.gridX, gridPos.gridZ)) {
-                    return { 
-                        type: 'grid', 
-                        gridX: gridPos.gridX, 
-                        gridZ: gridPos.gridZ,
-                        screenX: gridPos.screenX,
-                        screenY: gridPos.screenY
-                    };
+                    // Check max distance for roll/step
+                    const maxDist = cardData?.maxDistance || 999;
+                    const playerPos = this.worldPositions.player;
+                    const dist = Math.abs(gridPos.gridX - playerPos.x) + Math.abs(gridPos.gridZ - playerPos.z);
+                    
+                    if (dist <= maxDist) {
+                        return { 
+                            type: 'grid', 
+                            gridX: gridPos.gridX, 
+                            gridZ: gridPos.gridZ,
+                            screenX: gridPos.screenX,
+                            screenY: gridPos.screenY,
+                            distance: dist
+                        };
+                    }
                 }
             }
             return null;
@@ -1294,7 +1313,12 @@ const Game = {
         
         // For move cards with grid targeting, show all valid grid cells
         if (cardData?.targetType === 'grid' || cardData?.moveTo) {
-            this.showValidGridCells();
+            this.showValidGridCells(cardData);
+        }
+        
+        // For attack cards, show range indicator
+        if (cardType === 'attack' && cardData?.range) {
+            this.showAttackRange(cardData.range);
         }
         
         if (cardType === 'attack') {
@@ -1347,12 +1371,15 @@ const Game = {
         // Hide grid cell highlights
         this.hideValidGridCells();
         
+        // Hide attack range
+        this.hideAttackRange();
+        
         // Make sure targeting mode is off
         this.exitTargetingMode();
     },
     
-    // Show valid grid cells for Dash card (PixiJS overlay)
-    showValidGridCells() {
+    // Show valid grid cells for move cards (PixiJS overlay)
+    showValidGridCells(cardData = null) {
         if (!this.gridHighlight) {
             this.gridHighlight = new PIXI.Graphics();
             this.gridHighlight.zIndex = 8;
@@ -1362,8 +1389,10 @@ const Game = {
         this.gridHighlight.clear();
         
         const { width, height } = this.arena;
+        const playerPos = this.worldPositions.player;
+        const maxDist = cardData?.maxDistance || 999;  // Max movement distance
         
-        // Draw all valid (empty) grid cells
+        // Draw all valid (empty) grid cells within range
         for (let x = 0; x < width; x++) {
             for (let z = 0; z < height; z++) {
                 const cellX = x + 0.5;
@@ -1372,6 +1401,10 @@ const Game = {
                 // Skip occupied cells
                 if (this.isGridCellOccupied(cellX, cellZ)) continue;
                 
+                // Check distance from player
+                const dist = Math.abs(cellX - playerPos.x) + Math.abs(cellZ - playerPos.z);
+                if (dist > maxDist) continue;
+                
                 // Get screen positions for cell corners
                 const tl = DDOOBackground.project3DToScreen(x, 0, z);
                 const tr = DDOOBackground.project3DToScreen(x + 1, 0, z);
@@ -1379,14 +1412,18 @@ const Game = {
                 const br = DDOOBackground.project3DToScreen(x + 1, 0, z + 1);
                 
                 if (tl?.visible && tr?.visible && bl?.visible && br?.visible) {
+                    // Color based on distance
+                    const isClose = dist <= 1;
+                    const color = isClose ? 0x22c55e : 0x8b5cf6;
+                    
                     // Draw cell quad
                     this.gridHighlight.moveTo(tl.screenX, tl.screenY);
                     this.gridHighlight.lineTo(tr.screenX, tr.screenY);
                     this.gridHighlight.lineTo(br.screenX, br.screenY);
                     this.gridHighlight.lineTo(bl.screenX, bl.screenY);
                     this.gridHighlight.closePath();
-                    this.gridHighlight.fill({ color: 0x8b5cf6, alpha: 0.15 });
-                    this.gridHighlight.stroke({ color: 0x8b5cf6, alpha: 0.4, width: 1 });
+                    this.gridHighlight.fill({ color, alpha: 0.15 });
+                    this.gridHighlight.stroke({ color, alpha: 0.4, width: 1 });
                 }
             }
         }
@@ -1399,6 +1436,60 @@ const Game = {
         if (this.gridHighlight) {
             this.gridHighlight.visible = false;
             this.gridHighlight.clear();
+        }
+    },
+    
+    // Show attack range from player position
+    showAttackRange(range) {
+        if (!this.attackRangeGraphic) {
+            this.attackRangeGraphic = new PIXI.Graphics();
+            this.attackRangeGraphic.zIndex = 7;
+            this.app.stage.addChild(this.attackRangeGraphic);
+        }
+        
+        this.attackRangeGraphic.clear();
+        
+        const playerPos = this.worldPositions.player;
+        const { width, height } = this.arena;
+        
+        // Draw cells within attack range (towards enemies - positive X direction)
+        for (let x = 0; x < width; x++) {
+            for (let z = 0; z < height; z++) {
+                const cellX = x + 0.5;
+                const cellZ = z + 0.5;
+                
+                // Calculate distance (Manhattan for simplicity)
+                const dist = Math.abs(cellX - playerPos.x) + Math.abs(cellZ - playerPos.z);
+                
+                // Only show cells in range and towards enemy side
+                if (dist > range || cellX <= playerPos.x) continue;
+                
+                // Get screen positions
+                const tl = DDOOBackground.project3DToScreen(x, 0, z);
+                const tr = DDOOBackground.project3DToScreen(x + 1, 0, z);
+                const bl = DDOOBackground.project3DToScreen(x, 0, z + 1);
+                const br = DDOOBackground.project3DToScreen(x + 1, 0, z + 1);
+                
+                if (tl?.visible && tr?.visible && bl?.visible && br?.visible) {
+                    this.attackRangeGraphic.moveTo(tl.screenX, tl.screenY);
+                    this.attackRangeGraphic.lineTo(tr.screenX, tr.screenY);
+                    this.attackRangeGraphic.lineTo(br.screenX, br.screenY);
+                    this.attackRangeGraphic.lineTo(bl.screenX, bl.screenY);
+                    this.attackRangeGraphic.closePath();
+                    this.attackRangeGraphic.fill({ color: 0xef4444, alpha: 0.1 });
+                    this.attackRangeGraphic.stroke({ color: 0xef4444, alpha: 0.3, width: 1 });
+                }
+            }
+        }
+        
+        this.attackRangeGraphic.visible = true;
+    },
+    
+    // Hide attack range
+    hideAttackRange() {
+        if (this.attackRangeGraphic) {
+            this.attackRangeGraphic.visible = false;
+            this.attackRangeGraphic.clear();
         }
     },
     
