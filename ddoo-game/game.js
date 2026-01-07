@@ -1339,7 +1339,7 @@ const Game = {
         }
     },
     
-    // Highlight attack range on grid (PixiJS)
+    // Highlight attack range on grid (PixiJS - Pixel Style)
     highlightAttackRange(range) {
         const playerPos = this.worldPositions.player;
         
@@ -1381,17 +1381,46 @@ const Game = {
                     
                     highlight.clear();
                     
-                    // Red for attack range, brighter if enemy present
+                    const w = 50, h = 30;  // Cell size
+                    const px = 3;  // Pixel border thickness
+                    
                     if (hasEnemy) {
-                        highlight.beginFill(0xff4444, 0.5);
-                        highlight.lineStyle(3, 0xff0000, 1);
+                        // Bright red for enemy cells - pixel style
+                        // Fill
+                        highlight.beginFill(0xff0000, 0.6);
+                        highlight.drawRect(-w/2, -h/2, w, h);
+                        highlight.endFill();
+                        
+                        // Pixel border (outer)
+                        highlight.beginFill(0xffff00, 1);
+                        highlight.drawRect(-w/2, -h/2, w, px);           // Top
+                        highlight.drawRect(-w/2, h/2 - px, w, px);       // Bottom
+                        highlight.drawRect(-w/2, -h/2, px, h);           // Left
+                        highlight.drawRect(w/2 - px, -h/2, px, h);       // Right
+                        highlight.endFill();
+                        
+                        // Corner accents
+                        highlight.beginFill(0xffffff, 1);
+                        highlight.drawRect(-w/2, -h/2, px*2, px);
+                        highlight.drawRect(-w/2, -h/2, px, px*2);
+                        highlight.drawRect(w/2 - px*2, -h/2, px*2, px);
+                        highlight.drawRect(w/2 - px, -h/2, px, px*2);
+                        highlight.endFill();
                     } else {
-                        highlight.beginFill(0xff6666, 0.2);
-                        highlight.lineStyle(2, 0xff4444, 0.6);
+                        // Dim red for empty cells in range
+                        highlight.beginFill(0xff4444, 0.25);
+                        highlight.drawRect(-w/2, -h/2, w, h);
+                        highlight.endFill();
+                        
+                        // Pixel border
+                        highlight.beginFill(0xff6666, 0.7);
+                        highlight.drawRect(-w/2, -h/2, w, px);
+                        highlight.drawRect(-w/2, h/2 - px, w, px);
+                        highlight.drawRect(-w/2, -h/2, px, h);
+                        highlight.drawRect(w/2 - px, -h/2, px, h);
+                        highlight.endFill();
                     }
                     
-                    highlight.drawRect(-30, -18, 60, 36);
-                    highlight.endFill();
                     highlight.position.set(screenPos.screenX, screenPos.screenY);
                     highlight.visible = true;
                 }
@@ -1467,7 +1496,7 @@ const Game = {
         });
     },
     
-    // Highlight valid grid cells for movement (PixiJS visuals + DOM click handlers)
+    // Highlight valid grid cells for movement (PixiJS Pixel Style + DOM click handlers)
     highlightGridCells(maxDistance) {
         const playerPos = this.worldPositions.player;
         const battleArea = document.getElementById('battle-area');
@@ -1504,7 +1533,7 @@ const Game = {
                 const screenPos = DDOOBackground.project3DToScreen(x + 0.5, 0, z + 0.5);
                 if (!screenPos || !screenPos.visible) continue;
                 
-                // PixiJS highlight (visual)
+                // PixiJS highlight (Pixel Style)
                 if (DDOOBackground.containers?.debug) {
                     const debug = DDOOBackground.containers.debug;
                     let highlight = debug.children.find(c => c.gridX === x && c.gridZ === z && c.isHighlight);
@@ -1518,10 +1547,31 @@ const Game = {
                     }
                     
                     highlight.clear();
-                    highlight.beginFill(0x00ff00, 0.4);
-                    highlight.lineStyle(3, 0x00ff00, 1);
-                    highlight.drawRect(-30, -18, 60, 36);
+                    
+                    const w = 50, h = 30;  // Cell size
+                    const px = 3;  // Pixel border thickness
+                    
+                    // Green fill for movement
+                    highlight.beginFill(0x00ff00, 0.35);
+                    highlight.drawRect(-w/2, -h/2, w, h);
                     highlight.endFill();
+                    
+                    // Pixel border (cyan/green)
+                    highlight.beginFill(0x00ffaa, 0.9);
+                    highlight.drawRect(-w/2, -h/2, w, px);           // Top
+                    highlight.drawRect(-w/2, h/2 - px, w, px);       // Bottom
+                    highlight.drawRect(-w/2, -h/2, px, h);           // Left
+                    highlight.drawRect(w/2 - px, -h/2, px, h);       // Right
+                    highlight.endFill();
+                    
+                    // Corner accents (white)
+                    highlight.beginFill(0xffffff, 0.8);
+                    highlight.drawRect(-w/2, -h/2, px*2, px);
+                    highlight.drawRect(-w/2, -h/2, px, px*2);
+                    highlight.drawRect(w/2 - px*2, -h/2, px*2, px);
+                    highlight.drawRect(w/2 - px, -h/2, px, px*2);
+                    highlight.endFill();
+                    
                     highlight.position.set(screenPos.screenX, screenPos.screenY);
                     highlight.visible = true;
                 }
