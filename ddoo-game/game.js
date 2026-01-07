@@ -1003,8 +1003,8 @@ const Game = {
             
             this.hapticFeedback('light');
             
-            // Show targets
-            this.showDragTargets(cardData.type);
+            // Show targets (pass cardData for grid highlighting)
+            this.showDragTargets(cardData.type, cardData);
             
             // Global events
             this._onDragMove = (e) => this.onCardDragMove(e);
@@ -1287,10 +1287,15 @@ const Game = {
         return null;
     },
     
-    showDragTargets(cardType) {
+    showDragTargets(cardType, cardData = null) {
         // Create DOM markers for valid targets
         const overlay = document.getElementById('drag-overlay');
         const battleRect = document.getElementById('battle-area').getBoundingClientRect();
+        
+        // For move cards with grid targeting, show all valid grid cells
+        if (cardData?.targetType === 'grid' || cardData?.moveTo) {
+            this.showValidGridCells();
+        }
         
         if (cardType === 'attack') {
             this.enemySprites.forEach((enemy, i) => {
@@ -1339,8 +1344,103 @@ const Game = {
         // Hide target indicator
         this.hideTargetIndicator();
         
+        // Hide grid cell highlights
+        this.hideValidGridCells();
+        
         // Make sure targeting mode is off
         this.exitTargetingMode();
+    },
+    
+    // Show valid grid cells for Dash card (PixiJS overlay)
+    showValidGridCells() {
+        if (!this.gridHighlight) {
+            this.gridHighlight = new PIXI.Graphics();
+            this.gridHighlight.zIndex = 8;
+            this.app.stage.addChild(this.gridHighlight);
+        }
+        
+        this.gridHighlight.clear();
+        
+        const { width, height } = this.arena;
+        
+        // Draw all valid (empty) grid cells
+        for (let x = 0; x < width; x++) {
+            for (let z = 0; z < height; z++) {
+                const cellX = x + 0.5;
+                const cellZ = z + 0.5;
+                
+                // Skip occupied cells
+                if (this.isGridCellOccupied(cellX, cellZ)) continue;
+                
+                // Get screen positions for cell corners
+                const tl = DDOOBackground.project3DToScreen(x, 0, z);
+                const tr = DDOOBackground.project3DToScreen(x + 1, 0, z);
+                const bl = DDOOBackground.project3DToScreen(x, 0, z + 1);
+                const br = DDOOBackground.project3DToScreen(x + 1, 0, z + 1);
+                
+                if (tl?.visible && tr?.visible && bl?.visible && br?.visible) {
+                    // Draw cell quad
+                    this.gridHighlight.moveTo(tl.screenX, tl.screenY);
+                    this.gridHighlight.lineTo(tr.screenX, tr.screenY);
+                    this.gridHighlight.lineTo(br.screenX, br.screenY);
+                    this.gridHighlight.lineTo(bl.screenX, bl.screenY);
+                    this.gridHighlight.closePath();
+                    this.gridHighlight.fill({ color: 0x8b5cf6, alpha: 0.15 });
+                    this.gridHighlight.stroke({ color: 0x8b5cf6, alpha: 0.4, width: 1 });
+                }
+            }
+        }
+        
+        this.gridHighlight.visible = true;
+    },
+    
+    // Hide grid cell highlights
+    hideValidGridCells() {
+        if (this.gridHighlight) {
+            this.gridHighlight.visible = false;
+            this.gridHighlight.clear();
+        }
+    },
+    
+    // Highlight a specific grid cell (when hovering)
+    highlightGridCell(gridX, gridZ) {
+        if (!this.gridCellHighlight) {
+            this.gridCellHighlight = new PIXI.Graphics();
+            this.gridCellHighlight.zIndex = 9;
+            this.app.stage.addChild(this.gridCellHighlight);
+        }
+        
+        this.gridCellHighlight.clear();
+        
+        const x = Math.floor(gridX);
+        const z = Math.floor(gridZ);
+        
+        // Get screen positions for cell corners
+        const tl = DDOOBackground.project3DToScreen(x, 0, z);
+        const tr = DDOOBackground.project3DToScreen(x + 1, 0, z);
+        const bl = DDOOBackground.project3DToScreen(x, 0, z + 1);
+        const br = DDOOBackground.project3DToScreen(x + 1, 0, z + 1);
+        
+        if (tl?.visible && tr?.visible && bl?.visible && br?.visible) {
+            // Draw highlighted cell
+            this.gridCellHighlight.moveTo(tl.screenX, tl.screenY);
+            this.gridCellHighlight.lineTo(tr.screenX, tr.screenY);
+            this.gridCellHighlight.lineTo(br.screenX, br.screenY);
+            this.gridCellHighlight.lineTo(bl.screenX, bl.screenY);
+            this.gridCellHighlight.closePath();
+            this.gridCellHighlight.fill({ color: 0x8b5cf6, alpha: 0.5 });
+            this.gridCellHighlight.stroke({ color: 0xffffff, alpha: 0.8, width: 3 });
+        }
+        
+        this.gridCellHighlight.visible = true;
+    },
+    
+    // Clear grid cell highlight
+    clearGridCellHighlight() {
+        if (this.gridCellHighlight) {
+            this.gridCellHighlight.visible = false;
+            this.gridCellHighlight.clear();
+        }
     },
     
     applyTargetHighlight(target, cardType) {
@@ -1354,7 +1454,7 @@ const Game = {
         // Grid target (Dash card)
         if (target.type === 'grid') {
             ring.className = 'target-ring grid-target';
-            const size = 60;  // Grid cell indicator size
+            const size = 80;  // Grid cell indicator size (larger)
             
             ring.innerHTML = `
                 <div class="grid-cell-indicator"></div>
@@ -1371,6 +1471,10 @@ const Game = {
             
             document.getElementById('drag-overlay').appendChild(ring);
             this._targetRingTarget = target;
+            
+            // Also highlight the grid cell in PixiJS
+            this.highlightGridCell(target.gridX, target.gridZ);
+            
             this.enterTargetingMode();
             return;
         }
@@ -1428,6 +1532,9 @@ const Game = {
     clearTargetHighlight(target) {
         // Remove DOM ring
         this.removeTargetRing();
+        
+        // Clear PixiJS grid cell highlight
+        this.clearGridCellHighlight();
         
         // Resume time
         this.exitTargetingMode();

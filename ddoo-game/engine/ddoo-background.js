@@ -25,18 +25,18 @@ const DDOOBackground = {
     // Camera defaults (side view - left vs right battle)
     cameraDefaults: {
         posX: 5,       // Center of arena (X axis)
-        posY: 4,       // Eye level height
-        posZ: 18,      // Far back to see full width
+        posY: 5,       // Eye level height (slightly higher)
+        posZ: 14,      // Closer to see grid better
         lookAtX: 5,    // Look at arena center
-        lookAtY: 2,    // Look at character height
+        lookAtY: 1.5,  // Look at ground level
         lookAtZ: 5     // Look at arena center (Z axis)
     },
     
     // Auto zoom settings
     autoZoom: {
         enabled: true,
-        targetZ: 18,
-        currentZ: 18,
+        targetZ: 14,
+        currentZ: 14,
         targetX: 0,
         currentX: 0,
         targetLookAtX: 0,
