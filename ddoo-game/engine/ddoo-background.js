@@ -115,19 +115,33 @@ const DDOOBackground = {
         
         this.container = document.createElement('div');
         this.container.id = 'ddoo-bg3d';
-        this.container.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 0;
-            pointer-events: none;
-        `;
+        
+        // Store parent for resize handling
+        this.parentElement = parentEl;
         
         if (parentEl) {
+            // If parent element specified, use absolute positioning within it
+            this.container.style.cssText = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 0;
+                pointer-events: none;
+            `;
             parentEl.insertBefore(this.container, parentEl.firstChild);
         } else {
+            // Default: fixed fullscreen
+            this.container.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                z-index: 0;
+                pointer-events: none;
+            `;
             document.body.insertBefore(this.container, document.body.firstChild);
         }
     },
@@ -141,9 +155,20 @@ const DDOOBackground = {
     
     // Camera 설정
     setupCamera() {
+        let width, height;
+        
+        if (this.parentElement) {
+            const rect = this.parentElement.getBoundingClientRect();
+            width = rect.width;
+            height = rect.height;
+        } else {
+            width = window.innerWidth;
+            height = window.innerHeight;
+        }
+        
         this.camera = new THREE.PerspectiveCamera(
             65,
-            window.innerWidth / window.innerHeight,
+            width / height,
             0.1,
             100
         );
@@ -153,11 +178,22 @@ const DDOOBackground = {
     
     // Renderer 설정
     setupRenderer() {
+        let width, height;
+        
+        if (this.parentElement) {
+            const rect = this.parentElement.getBoundingClientRect();
+            width = rect.width;
+            height = rect.height;
+        } else {
+            width = window.innerWidth;
+            height = window.innerHeight;
+        }
+        
         this.renderer = new THREE.WebGLRenderer({ 
             antialias: true,
             alpha: false
         });
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setSize(width, height);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         this.container.appendChild(this.renderer.domElement);
     },
@@ -469,9 +505,22 @@ const DDOOBackground = {
     handleResize() {
         if (!this.camera || !this.renderer) return;
         
-        this.camera.aspect = window.innerWidth / window.innerHeight;
+        let width, height;
+        
+        if (this.parentElement) {
+            // Use parent element dimensions
+            const rect = this.parentElement.getBoundingClientRect();
+            width = rect.width;
+            height = rect.height;
+        } else {
+            // Use window dimensions
+            width = window.innerWidth;
+            height = window.innerHeight;
+        }
+        
+        this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setSize(width, height);
     },
     
     // ==========================================

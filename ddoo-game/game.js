@@ -54,7 +54,7 @@ const Game = {
         doubleTapDelay: 300
     },
     
-    // 3D 월드 좌표
+    // 3D world coordinates
     worldPositions: {
         player: { x: -6, y: 0, z: 2 },
         enemies: [
@@ -63,89 +63,102 @@ const Game = {
         ]
     },
     
+    // Battle area size
+    battleAreaSize: { width: 0, height: 0 },
+    
+    // Selected card
+    selectedCard: null,
+    
     // ==================== 초기화 ====================
     
     async init() {
-        console.log('🎮 게임 초기화 중...');
+        console.log('[Game] Initializing...');
         
-        // 📱 모바일 감지
+        // Mobile detection
         this.detectMobile();
         
-        // 📱 모바일 환경 설정
+        // Mobile environment setup
         this.setupMobileEnvironment();
         
-        // 🔥 3D 배경 먼저 초기화
-        await DDOOBackground.init();
+        // Get battle area dimensions
+        const battleArea = document.getElementById('battle-area');
+        const battleRect = battleArea.getBoundingClientRect();
+        this.battleAreaSize = {
+            width: battleRect.width,
+            height: battleRect.height
+        };
         
-        // 📱 해상도 계산 (모바일 성능 최적화)
+        // Initialize 3D background (in battle area only)
+        await DDOOBackground.init(battleArea);
+        
+        // Resolution calculation (mobile optimization)
         const pixelRatio = Math.min(
             window.devicePixelRatio || 1,
             this.mobile.isMobile ? this.mobile.maxPixelRatio : 3
         );
         this.mobile.pixelRatio = pixelRatio;
         
-        // PixiJS 앱 생성 (투명 배경 - 3D 배경이 보이도록)
+        // PixiJS app (transparent - 3D background visible)
         this.app = new PIXI.Application();
         await this.app.init({
-            width: window.innerWidth,
-            height: window.innerHeight,
+            width: this.battleAreaSize.width,
+            height: this.battleAreaSize.height,
             backgroundAlpha: 0,
-            antialias: !this.mobile.isMobile, // 모바일에서 AA 비활성화
+            antialias: !this.mobile.isMobile,
             resolution: pixelRatio,
             autoDensity: true,
             powerPreference: this.mobile.isMobile ? 'low-power' : 'high-performance'
         });
         
-        // 캔버스 추가
+        // Add canvas to game container (inside battle area)
         const gameContainer = document.getElementById('game-container');
         gameContainer.appendChild(this.app.canvas);
         
-        // 캔버스 z-index 설정
-        this.app.canvas.style.position = 'relative';
+        // Canvas styling
+        this.app.canvas.style.position = 'absolute';
+        this.app.canvas.style.top = '0';
+        this.app.canvas.style.left = '0';
         this.app.canvas.style.zIndex = '1';
-        
-        // 📱 터치 이벤트 최적화
         this.app.canvas.style.touchAction = 'none';
         
-        // 컨테이너 생성
+        // Create containers
         this.createContainers();
         
-        // 테스트용 캐릭터 생성 (3D 좌표 기반)
+        // Create characters (3D coordinate based)
         await this.createCharacters3D();
         
-        // UI 업데이트
+        // Update UI
         this.updateUI();
         
-        // 이벤트 바인딩
+        // Bind events
         this.bindEvents();
         
-        // 📱 모바일 이벤트 바인딩
+        // Mobile events
         this.bindMobileEvents();
         
-        // 키보드 이벤트 (디버그)
+        // Keyboard events (debug)
         this.bindKeyboard();
         
-        // 리사이즈 & 방향 전환 핸들러
+        // Resize & orientation handlers
         window.addEventListener('resize', () => this.onResize());
         window.addEventListener('orientationchange', () => this.onOrientationChange());
         
-        // 📱 가시성 변화 (탭 전환, 앱 백그라운드)
+        // Visibility change (tab switch, background)
         document.addEventListener('visibilitychange', () => this.onVisibilityChange());
         
-        // 디버그 UI 생성
+        // Debug UI
         this.createDebugUI();
         
-        // 📱 풀스크린 버튼 생성
+        // Fullscreen button
         this.createFullscreenButton();
         
-        console.log('✅ 게임 초기화 완료!');
-        console.log(`📱 모바일: ${this.mobile.isMobile ? 'YES' : 'NO'}`);
-        console.log(`📱 터치: ${this.mobile.isTouch ? 'YES' : 'NO'}`);
-        console.log(`📱 해상도: ${pixelRatio}x`);
-        console.log('💡 Ctrl+D: 디버그 메뉴');
+        console.log('[Game] Initialized');
+        console.log(`[Game] Battle area: ${this.battleAreaSize.width}x${this.battleAreaSize.height}`);
+        console.log(`[Game] Mobile: ${this.mobile.isMobile ? 'YES' : 'NO'}`);
+        console.log('[Game] Press Ctrl+D for debug menu');
         
-        // 시작 메시지
-        this.showMessage('⚔️ 전투 시작!', 2000);
+        // Start message
+        this.showMessage('BATTLE START!', 2000);
     },
     
     // 📱 모바일 감지
@@ -615,18 +628,49 @@ const Game = {
         this.addTouchFeedback(endTurnBtn);
     },
     
-    // 📱 모바일 이벤트 바인딩
+    // Mobile event binding
     bindMobileEvents() {
         if (!this.mobile.isTouch) return;
         
-        // 스테이지 터치 이벤트
+        // Stage touch events
         this.app.stage.eventMode = 'static';
-        this.app.stage.hitArea = new PIXI.Rectangle(0, 0, this.app.screen.width, this.app.screen.height);
+        this.app.stage.hitArea = new PIXI.Rectangle(0, 0, this.battleAreaSize.width, this.battleAreaSize.height);
         
-        // 빈 공간 터치 (미래 확장용)
+        // Empty space touch (for future expansion)
         this.app.stage.on('pointertap', (e) => {
-            // 적이 아닌 곳 터치 시 처리
+            // Handle touch on empty space
         });
+        
+        // Card touch events
+        this.bindCardEvents();
+    },
+    
+    // Card event binding
+    bindCardEvents() {
+        const cards = document.querySelectorAll('.card');
+        cards.forEach(card => {
+            card.addEventListener('click', () => {
+                this.hapticFeedback('light');
+                this.selectCard(card);
+            });
+            
+            this.addTouchFeedback(card);
+        });
+    },
+    
+    // Card selection
+    selectCard(cardElement) {
+        const cards = document.querySelectorAll('.card');
+        
+        // Toggle selection
+        if (cardElement.classList.contains('selected')) {
+            cardElement.classList.remove('selected');
+            this.selectedCard = null;
+        } else {
+            cards.forEach(c => c.classList.remove('selected'));
+            cardElement.classList.add('selected');
+            this.selectedCard = cardElement.dataset.card;
+        }
     },
     
     // 📱 터치 피드백 효과 추가
@@ -763,14 +807,27 @@ const Game = {
     },
     
     onResize() {
-        const { innerWidth, innerHeight } = window;
-        this.app.renderer.resize(innerWidth, innerHeight);
+        // Get new battle area dimensions
+        const battleArea = document.getElementById('battle-area');
+        const battleRect = battleArea.getBoundingClientRect();
+        this.battleAreaSize = {
+            width: battleRect.width,
+            height: battleRect.height
+        };
         
-        // 3D 배경 리사이즈
+        // Resize PixiJS renderer
+        this.app.renderer.resize(this.battleAreaSize.width, this.battleAreaSize.height);
+        
+        // Resize 3D background
         DDOOBackground.handleResize();
         
-        // 캐릭터 위치 갱신
+        // Update character positions
         this.updateAllCharacterPositions();
+        
+        // Update hit areas
+        if (this.app.stage.hitArea) {
+            this.app.stage.hitArea = new PIXI.Rectangle(0, 0, this.battleAreaSize.width, this.battleAreaSize.height);
+        }
     }
 };
 
