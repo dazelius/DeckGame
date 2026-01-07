@@ -1451,30 +1451,10 @@ const Game = {
         const ring = document.createElement('div');
         ring.id = 'target-ring';
         
-        // Grid target (Dash card)
+        // Grid target (Dash card) - PixiJS only
         if (target.type === 'grid') {
-            ring.className = 'target-ring grid-target';
-            const size = 80;  // Grid cell indicator size (larger)
-            
-            ring.innerHTML = `
-                <div class="grid-cell-indicator"></div>
-                <div class="grid-cell-label">(${Math.floor(target.gridX)}, ${Math.floor(target.gridZ)})</div>
-            `;
-            
-            ring.style.width = `${size}px`;
-            ring.style.height = `${size}px`;
-            
-            // Position at grid cell
-            const battleRect = document.getElementById('battle-area').getBoundingClientRect();
-            ring.style.left = `${battleRect.left + target.screenX}px`;
-            ring.style.top = `${battleRect.top + target.screenY}px`;
-            
-            document.getElementById('drag-overlay').appendChild(ring);
-            this._targetRingTarget = target;
-            
-            // Also highlight the grid cell in PixiJS
+            // Highlight the grid cell in PixiJS (no DOM element)
             this.highlightGridCell(target.gridX, target.gridZ);
-            
             this.enterTargetingMode();
             return;
         }
