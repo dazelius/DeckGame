@@ -1343,11 +1343,12 @@ const Game = {
     highlightAttackRange(range) {
         const playerPos = this.worldPositions.player;
         
-        if (typeof DDOOBackground !== 'undefined' && DDOOBackground.containers?.debug) {
-            const debug = DDOOBackground.containers.debug;
+        // Use Game's debug container (not DDOOBackground's)
+        if (this.containers?.debug) {
+            const debug = this.containers.debug;
             debug.visible = true;
             
-            // Clear previous highlights
+            // Clear previous highlights (only highlights, not grid)
             debug.children.forEach(child => {
                 if (child.isHighlight) {
                     child.visible = false;
@@ -1442,8 +1443,8 @@ const Game = {
         });
         
         // Remove grid highlights (PixiJS debug container)
-        if (typeof DDOOBackground !== 'undefined' && DDOOBackground.containers?.debug) {
-            DDOOBackground.containers.debug.children.forEach(child => {
+        if (this.containers?.debug) {
+            this.containers.debug.children.forEach(child => {
                 if (child.isHighlight) {
                     child.visible = false;
                 }
@@ -1502,9 +1503,9 @@ const Game = {
         const battleArea = document.getElementById('battle-area');
         const rect = battleArea?.getBoundingClientRect() || { left: 0, top: 0 };
         
-        // Use PixiJS debug container for visual grid highlighting
-        if (typeof DDOOBackground !== 'undefined' && DDOOBackground.containers?.debug) {
-            const debug = DDOOBackground.containers.debug;
+        // Use Game's debug container for visual grid highlighting
+        if (this.containers?.debug) {
+            const debug = this.containers.debug;
             debug.visible = true;
             
             // Clear previous highlights
@@ -1534,8 +1535,8 @@ const Game = {
                 if (!screenPos || !screenPos.visible) continue;
                 
                 // PixiJS highlight (Pixel Style)
-                if (DDOOBackground.containers?.debug) {
-                    const debug = DDOOBackground.containers.debug;
+                if (this.containers?.debug) {
+                    const debug = this.containers.debug;
                     let highlight = debug.children.find(c => c.gridX === x && c.gridZ === z && c.isHighlight);
                     
                     if (!highlight) {
