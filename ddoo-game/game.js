@@ -1182,6 +1182,12 @@ const Game = {
                 this.cards.hoveredTarget = null;
             }
         }
+        
+        // Update positions (targets might be animating)
+        this.updateTargetRingPosition();
+        if (this.cards.hoveredTarget) {
+            this.updateTargetIndicatorPosition(this.cards.hoveredTarget);
+        }
     },
     
     onCardDragEnd(event) {
@@ -1282,122 +1288,120 @@ const Game = {
     },
     
     showDragTargets(cardType) {
+        // Create DOM markers for valid targets
+        const overlay = document.getElementById('drag-overlay');
+        const battleRect = document.getElementById('battle-area').getBoundingClientRect();
+        
         if (cardType === 'attack') {
             this.enemySprites.forEach((enemy, i) => {
                 if (!enemy || !this.state.enemies[i] || this.state.enemies[i].hp <= 0) return;
                 
-                // Subtle glow to indicate valid target
-                DDOORenderer.setTargeted(enemy, true, 0xff6666, 0.4);
+                // Create valid target marker (dashed circle)
+                const marker = document.createElement('div');
+                marker.className = 'valid-target-marker';
+                marker.id = `valid-target-${i}`;
                 
-                // Gentle float animation
-                if (!enemy._targetBounce) {
-                    enemy._targetBounce = gsap.to(enemy, {
-                        y: enemy.y - 5,
-                        duration: 0.5,
-                        yoyo: true,
-                        repeat: -1,
-                        ease: 'sine.inOut'
-                    });
-                }
+                const bounds = enemy.getBounds();
+                const size = Math.max(bounds.width, bounds.height) * 1.2;
+                marker.style.width = `${size}px`;
+                marker.style.height = `${size}px`;
+                marker.style.left = `${battleRect.left + bounds.x + bounds.width / 2}px`;
+                marker.style.top = `${battleRect.top + bounds.y + bounds.height / 2}px`;
+                
+                overlay.appendChild(marker);
             });
         } else if (cardType === 'skill' || cardType === 'move') {
             if (this.player) {
-                DDOORenderer.setTargeted(this.player, true, 0x66ff66, 0.4);
+                const marker = document.createElement('div');
+                marker.className = 'valid-target-marker';
+                marker.id = 'valid-target-player';
+                marker.style.borderColor = 'rgba(34, 197, 94, 0.5)';
                 
-                if (!this.player._targetBounce) {
-                    this.player._targetBounce = gsap.to(this.player, {
-                        y: this.player.y - 5,
-                        duration: 0.5,
-                        yoyo: true,
-                        repeat: -1,
-                        ease: 'sine.inOut'
-                    });
-                }
+                const bounds = this.player.getBounds();
+                const size = Math.max(bounds.width, bounds.height) * 1.2;
+                marker.style.width = `${size}px`;
+                marker.style.height = `${size}px`;
+                marker.style.left = `${battleRect.left + bounds.x + bounds.width / 2}px`;
+                marker.style.top = `${battleRect.top + bounds.y + bounds.height / 2}px`;
+                
+                overlay.appendChild(marker);
             }
         }
     },
     
     hideDragTargets() {
-        // Remove enemy highlights
-        this.enemySprites.forEach(enemy => {
-            if (enemy) {
-                DDOORenderer.setTargeted(enemy, false);
-                if (enemy._targetBounce) {
-                    enemy._targetBounce.kill();
-                    enemy._targetBounce = null;
-                }
-            }
-        });
+        // Remove all valid target markers
+        document.querySelectorAll('.valid-target-marker').forEach(el => el.remove());
         
-        // Remove player highlight
-        if (this.player) {
-            DDOORenderer.setTargeted(this.player, false);
-            if (this.player._targetBounce) {
-                this.player._targetBounce.kill();
-                this.player._targetBounce = null;
-            }
-        }
+        // Remove target ring if any
+        this.removeTargetRing();
+        
+        // Hide target indicator
+        this.hideTargetIndicator();
         
         // Make sure targeting mode is off
         this.exitTargetingMode();
     },
     
     applyTargetHighlight(target, cardType) {
-        const color = cardType === 'attack' ? 0xff4444 : 0x44ff44;
+        // Remove any existing ring
+        this.removeTargetRing();
         
-        // Store original scale
-        if (!target.sprite._highlightBaseScale) {
-            target.sprite._highlightBaseScale = target.sprite.scale.x;
-        }
+        // Create DOM-based targeting ring
+        const ring = document.createElement('div');
+        ring.id = 'target-ring';
+        ring.className = `target-ring ${cardType}`;
         
-        // Glow effect
-        DDOORenderer.setTargeted(target.sprite, true, color, 1.0);
+        // Get sprite bounds for sizing
+        const bounds = target.sprite.getBounds();
+        const size = Math.max(bounds.width, bounds.height) * 1.3;
         
-        // Scale up with bounce
-        const base = target.sprite._highlightBaseScale;
-        gsap.killTweensOf(target.sprite.scale);
-        gsap.to(target.sprite.scale, { 
-            x: base * 1.2, 
-            y: base * 1.2, 
-            duration: 0.2, 
-            ease: 'back.out(2)' 
-        });
+        ring.innerHTML = `
+            <div class="target-ring-inner" style="width: ${size}px; height: ${size}px;"></div>
+            <div class="target-corner tl"></div>
+            <div class="target-corner tr"></div>
+            <div class="target-corner bl"></div>
+            <div class="target-corner br"></div>
+        `;
         
-        // Pulse animation
-        if (!target.sprite._highlightTween) {
-            target.sprite._highlightTween = gsap.to(target.sprite, {
-                alpha: 0.85,
-                duration: 0.3,
-                yoyo: true,
-                repeat: -1,
-                ease: 'sine.inOut'
-            });
-        }
+        // Size the ring container
+        ring.style.width = `${size}px`;
+        ring.style.height = `${size}px`;
+        
+        document.getElementById('drag-overlay').appendChild(ring);
+        
+        // Store target for position updates
+        this._targetRingTarget = target;
+        this.updateTargetRingPosition();
         
         // Slowdown time (Combat pause)
         this.enterTargetingMode();
     },
     
+    updateTargetRingPosition() {
+        const ring = document.getElementById('target-ring');
+        if (!ring || !this._targetRingTarget) return;
+        
+        const target = this._targetRingTarget;
+        const battleRect = document.getElementById('battle-area').getBoundingClientRect();
+        const bounds = target.sprite.getBounds();
+        
+        const centerX = battleRect.left + bounds.x + bounds.width / 2;
+        const centerY = battleRect.top + bounds.y + bounds.height / 2;
+        
+        ring.style.left = `${centerX}px`;
+        ring.style.top = `${centerY}px`;
+    },
+    
+    removeTargetRing() {
+        const ring = document.getElementById('target-ring');
+        if (ring) ring.remove();
+        this._targetRingTarget = null;
+    },
+    
     clearTargetHighlight(target) {
-        DDOORenderer.setTargeted(target.sprite, false);
-        
-        // Restore scale
-        const base = target.sprite._highlightBaseScale || target.sprite.scale.x / 1.2;
-        gsap.killTweensOf(target.sprite.scale);
-        gsap.to(target.sprite.scale, { 
-            x: base, 
-            y: base, 
-            duration: 0.15, 
-            ease: 'power2.out' 
-        });
-        
-        // Stop pulse
-        if (target.sprite._highlightTween) {
-            target.sprite._highlightTween.kill();
-            target.sprite._highlightTween = null;
-        }
-        target.sprite.alpha = 1;
-        delete target.sprite._highlightBaseScale;
+        // Remove DOM ring
+        this.removeTargetRing();
         
         // Resume time
         this.exitTargetingMode();

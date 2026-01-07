@@ -131,6 +131,116 @@
     box-shadow: 0 4px 15px rgba(239, 68, 68, 0.5);
 }
 
+/* ==================== DOM Target Highlight Ring ==================== */
+
+.target-ring {
+    position: absolute;
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%, -50%);
+}
+
+.target-ring-inner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 4px solid transparent;
+    animation: ring-pulse 0.6s ease-in-out infinite;
+}
+
+.target-ring.attack .target-ring-inner {
+    border-color: #ef4444;
+    box-shadow: 
+        0 0 20px #ef4444,
+        0 0 40px #ef444480,
+        0 0 60px #ef444440,
+        inset 0 0 20px #ef444440;
+}
+
+.target-ring.skill .target-ring-inner {
+    border-color: #22c55e;
+    box-shadow: 
+        0 0 20px #22c55e,
+        0 0 40px #22c55e80,
+        0 0 60px #22c55e40,
+        inset 0 0 20px #22c55e40;
+}
+
+@keyframes ring-pulse {
+    0%, 100% { 
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+    50% { 
+        transform: translate(-50%, -50%) scale(1.1);
+        opacity: 0.8;
+    }
+}
+
+/* Crosshair lines */
+.target-ring::before,
+.target-ring::after {
+    content: '';
+    position: absolute;
+    background: currentColor;
+    opacity: 0.8;
+}
+
+.target-ring.attack { color: #ef4444; }
+.target-ring.skill { color: #22c55e; }
+
+.target-ring::before {
+    /* Horizontal line */
+    width: 150%;
+    height: 2px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 10px currentColor;
+}
+
+.target-ring::after {
+    /* Vertical line */
+    width: 2px;
+    height: 150%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 10px currentColor;
+}
+
+/* Corner brackets */
+.target-corner {
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    border: 3px solid currentColor;
+    box-shadow: 0 0 8px currentColor;
+}
+
+.target-corner.tl { top: 0; left: 0; border-right: none; border-bottom: none; }
+.target-corner.tr { top: 0; right: 0; border-left: none; border-bottom: none; }
+.target-corner.bl { bottom: 0; left: 0; border-right: none; border-top: none; }
+.target-corner.br { bottom: 0; right: 0; border-left: none; border-top: none; }
+
+/* Valid target glow (shown during drag) */
+.valid-target-marker {
+    position: absolute;
+    pointer-events: none;
+    z-index: 9997;
+    transform: translate(-50%, -50%);
+    border: 2px dashed rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    animation: valid-pulse 1s ease-in-out infinite;
+}
+
+@keyframes valid-pulse {
+    0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 0.6; transform: translate(-50%, -50%) scale(1.05); }
+}
+
 /* ==================== Card Drag & Drop ==================== */
 
 .card.dragging {
