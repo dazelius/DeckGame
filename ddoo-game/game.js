@@ -44,6 +44,7 @@ const Game = {
     
     // 그리드 설정 (항상 표시)
     gridVisible: true,
+    gridAlwaysShow: true,  // Grid always visible (no debug toggle needed)
     gridContainer: null,
     
     // 모바일 설정
@@ -134,6 +135,12 @@ const Game = {
         },
         
         // === MOVEMENT ===
+        dash: {
+            name: 'Dash', cost: 1, type: 'move', moveTo: true,
+            color: 0x8b5cf6, desc: 'Move Anywhere',
+            playerAnim: 'player.dodge',
+            targetType: 'grid'  // Target empty grid cell
+        },
         roll: { 
             name: 'Roll', cost: 1, type: 'move', dodge: 2, 
             color: 0x22c55e, desc: 'Dodge Back',
@@ -254,7 +261,7 @@ const Game = {
         
         // Draw initial hand (5 cards)
         console.log('[Game] Drawing initial hand...');
-        this.drawHand(['slash', 'slash', 'thrust', 'block', 'roll']);
+        this.drawHand(['slash', 'thrust', 'dash', 'block', 'roll']);
         console.log('[Game] Cards drawn:', this.cards.elements.length);
         
         // UI
@@ -673,8 +680,8 @@ const Game = {
             this.drawBattleGrid();
         }
         
-        // Update debug grid
-        if (this.debug.enabled) {
+        // Update grid (always visible)
+        if (this.gridAlwaysShow || this.debug.enabled) {
             this.drawDebugGrid();
         }
     },
@@ -1031,8 +1038,8 @@ const Game = {
             const battleX = clientX - battleRect.left;
             const battleY = clientY - battleRect.top;
             
-            // Find target
-            const newTarget = this.findTargetAt(battleX, battleY, data.cardData.type);
+            // Find target (pass cardData for grid targeting)
+            const newTarget = this.findTargetAt(battleX, battleY, data.cardData.type, data.cardData);
             
             if (newTarget !== this.cards.hoveredTarget) {
                 if (this.cards.hoveredTarget) {
@@ -1114,10 +1121,28 @@ const Game = {
     },
     
     // Find target at battle area position
-    findTargetAt(screenX, screenY, cardType) {
+    findTargetAt(screenX, screenY, cardType, cardData = null) {
         // Larger hit radius for easier targeting
         const hitRadius = 120;
         const hitRadiusPlayer = 100;
+        
+        // Dash card - target grid cell
+        if (cardData?.targetType === 'grid' || cardData?.moveTo) {
+            const gridPos = this.screenToGrid(screenX, screenY);
+            if (gridPos) {
+                // Check if cell is empty (not occupied)
+                if (!this.isGridCellOccupied(gridPos.gridX, gridPos.gridZ)) {
+                    return { 
+                        type: 'grid', 
+                        gridX: gridPos.gridX, 
+                        gridZ: gridPos.gridZ,
+                        screenX: gridPos.screenX,
+                        screenY: gridPos.screenY
+                    };
+                }
+            }
+            return null;
+        }
         
         if (cardType === 'attack') {
             // Find closest enemy within range
@@ -1167,6 +1192,35 @@ const Game = {
             }
         }
         
+        return null;
+    },
+    
+    // Convert screen position to grid cell
+    screenToGrid(screenX, screenY) {
+        // Use DDOOBackground's raycaster
+        if (typeof DDOOBackground !== 'undefined' && DDOOBackground.screenToGrid) {
+            const worldPos = DDOOBackground.screenToGrid(screenX, screenY);
+            if (worldPos) {
+                // Snap to grid center
+                const gridX = Math.floor(worldPos.x) + 0.5;
+                const gridZ = Math.floor(worldPos.z) + 0.5;
+                
+                // Check bounds (within arena)
+                if (gridX >= 0.5 && gridX < this.arena.width + 0.5 &&
+                    gridZ >= 0.5 && gridZ < this.arena.height + 0.5) {
+                    
+                    // Get screen position for this grid cell center
+                    const screenPos = DDOOBackground.project3DToScreen(gridX, 0, gridZ);
+                    
+                    return {
+                        gridX,
+                        gridZ,
+                        screenX: screenPos?.screenX || screenX,
+                        screenY: screenPos?.screenY || screenY
+                    };
+                }
+            }
+        }
         return null;
     },
     
@@ -1233,6 +1287,32 @@ const Game = {
         // Create DOM-based targeting ring
         const ring = document.createElement('div');
         ring.id = 'target-ring';
+        
+        // Grid target (Dash card)
+        if (target.type === 'grid') {
+            ring.className = 'target-ring grid-target';
+            const size = 60;  // Grid cell indicator size
+            
+            ring.innerHTML = `
+                <div class="grid-cell-indicator"></div>
+                <div class="grid-cell-label">(${Math.floor(target.gridX)}, ${Math.floor(target.gridZ)})</div>
+            `;
+            
+            ring.style.width = `${size}px`;
+            ring.style.height = `${size}px`;
+            
+            // Position at grid cell
+            const battleRect = document.getElementById('battle-area').getBoundingClientRect();
+            ring.style.left = `${battleRect.left + target.screenX}px`;
+            ring.style.top = `${battleRect.top + target.screenY}px`;
+            
+            document.getElementById('drag-overlay').appendChild(ring);
+            this._targetRingTarget = target;
+            this.enterTargetingMode();
+            return;
+        }
+        
+        // Sprite target (enemy/player)
         ring.className = `target-ring ${cardType}`;
         
         // Get sprite bounds for sizing
@@ -1375,19 +1455,24 @@ const Game = {
         this.updateUI();
         
         this.hapticFeedback('medium');
-        console.log(`[Game] Card ${cardId} (index ${cardIndex}) -> ${target.type}`);
+        console.log(`[Game] Card ${cardId} (index ${cardIndex}) -> ${target.type}${target.gridX ? ` (${target.gridX}, ${target.gridZ})` : ''}`);
         
-        // Execute effect
-        switch (cardData.type) {
-            case 'attack':
-                this.attackWithCard(target.index, cardData);
-                break;
-            case 'skill':
-                this.useSkillCard(cardData);
-                break;
-            case 'move':
-                this.useMoveCard(cardData);
-                break;
+        // Execute effect based on target type
+        if (target.type === 'grid') {
+            // Dash card - move to grid position
+            this.useMoveCard(cardData, { gridX: target.gridX, gridZ: target.gridZ });
+        } else {
+            switch (cardData.type) {
+                case 'attack':
+                    this.attackWithCard(target.index, cardData);
+                    break;
+                case 'skill':
+                    this.useSkillCard(cardData);
+                    break;
+                case 'move':
+                    this.useMoveCard(cardData);
+                    break;
+            }
         }
         
         // Remove the used card from hand
@@ -1605,7 +1690,39 @@ const Game = {
         this.updateUI();
     },
     
-    useMoveCard(cardData) {
+    useMoveCard(cardData, targetGridPos = null) {
+        // Dash card - move to specific grid position
+        if (cardData.moveTo && targetGridPos) {
+            const { gridX, gridZ } = targetGridPos;
+            
+            // Validate target is empty (not occupied by enemy)
+            if (this.isGridCellOccupied(gridX, gridZ)) {
+                this.showMessage('Blocked!', 500);
+                return false;
+            }
+            
+            // Dash animation
+            gsap.to(this.worldPositions.player, {
+                x: gridX,
+                z: gridZ,
+                duration: 0.2,
+                ease: 'power2.out'
+            });
+            
+            // Brief invincibility visual
+            gsap.to(this.player, {
+                alpha: 0.3,
+                duration: 0.08,
+                yoyo: true,
+                repeat: 2
+            });
+            
+            this.showMessage('Dash!', 400);
+            console.log(`[Game] Player dashed to (${gridX}, ${gridZ})`);
+            return true;
+        }
+        
+        // Default roll/step - dodge back
         const dodgeAmount = cardData.dodge || 2;
         const dodgeX = Math.max(0.5, this.worldPositions.player.x - dodgeAmount);
         
@@ -1629,6 +1746,32 @@ const Game = {
         } else {
             this.showMessage('Roll!', 500);
         }
+        return true;
+    },
+    
+    // Check if a grid cell is occupied by an enemy
+    isGridCellOccupied(gridX, gridZ, tolerance = 0.8) {
+        for (const enemyPos of this.worldPositions.enemies) {
+            const dx = Math.abs(enemyPos.x - gridX);
+            const dz = Math.abs(enemyPos.z - gridZ);
+            if (dx < tolerance && dz < tolerance) {
+                return true;  // Occupied
+            }
+        }
+        return false;  // Empty
+    },
+    
+    // Get valid grid positions for Dash
+    getValidDashPositions() {
+        const valid = [];
+        for (let x = 0; x < this.arena.width; x++) {
+            for (let z = 0; z < this.arena.height; z++) {
+                if (!this.isGridCellOccupied(x + 0.5, z + 0.5)) {
+                    valid.push({ x: x + 0.5, z: z + 0.5 });
+                }
+            }
+        }
+        return valid;
     },
     
     // ==================== 디버그 UI ====================
@@ -1998,7 +2141,12 @@ const Game = {
     
     // Get random cards for new hand
     getRandomHand(count) {
-        const availableCards = ['slash', 'slash', 'thrust', 'heavySlash', 'block', 'block', 'ironFlesh', 'parry', 'roll', 'quickstep', 'estus'];
+        const availableCards = [
+            'slash', 'slash', 'thrust', 'heavySlash',  // Attacks
+            'block', 'block', 'ironFlesh', 'parry',    // Defense
+            'roll', 'quickstep', 'dash', 'dash',       // Movement (including Dash)
+            'estus'                                     // Special
+        ];
         const hand = [];
         
         for (let i = 0; i < count; i++) {

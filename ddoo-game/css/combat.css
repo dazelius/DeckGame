@@ -241,6 +241,59 @@
     50% { opacity: 0.6; transform: translate(-50%, -50%) scale(1.05); }
 }
 
+/* ==================== Grid Target (Dash Card) ==================== */
+
+.target-ring.grid-target {
+    color: #8b5cf6;
+}
+
+.target-ring.grid-target::before,
+.target-ring.grid-target::after {
+    display: none;  /* No crosshair for grid target */
+}
+
+.grid-cell-indicator {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border: 3px solid #8b5cf6;
+    border-radius: 8px;
+    background: rgba(139, 92, 246, 0.3);
+    box-shadow: 
+        0 0 20px #8b5cf6,
+        0 0 40px rgba(139, 92, 246, 0.5),
+        inset 0 0 15px rgba(139, 92, 246, 0.4);
+    animation: grid-pulse 0.5s ease-in-out infinite;
+}
+
+.grid-cell-label {
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: #8b5cf6;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    text-shadow: 0 0 5px #8b5cf6;
+}
+
+@keyframes grid-pulse {
+    0%, 100% { 
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+    50% { 
+        transform: translate(-50%, -50%) scale(1.1);
+        opacity: 0.8;
+    }
+}
+
 /* ==================== Card Drag & Drop ==================== */
 
 .card.dragging {
