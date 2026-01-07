@@ -600,6 +600,7 @@ const Game = {
         });
         
         if (this.player) {
+            this.player.defaultFacing = 'right';  // Player faces enemies (right)
             this.placeCharacter3D(this.player, this.worldPositions.player);
             this.containers.characters.addChild(this.player);
             await DDOORenderer.playSpawn(this.player, 'left', 0.5);
@@ -634,6 +635,8 @@ const Game = {
             });
             
             if (enemy) {
+                enemy.defaultFacing = 'left';  // Enemies face player (left)
+                enemy.scale.x = -Math.abs(enemy.scale.x);  // Flip to face left
                 this.placeCharacter3D(enemy, this.worldPositions.enemies[i]);
                 enemy.enemyIndex = i;
                 this.containers.characters.addChild(enemy);
@@ -682,7 +685,10 @@ const Game = {
             // Distance-based scale (adjusted for better visibility)
             const baseScale = sprite.baseScale || 1.0;
             const depthScale = screenPos.scale * 0.5;  // Scale factor
-            sprite.scale.set(baseScale * depthScale);
+            
+            // Preserve flip direction
+            const flipX = sprite.scale.x < 0 ? -1 : 1;
+            sprite.scale.set(flipX * baseScale * depthScale, baseScale * depthScale);
             
             // Depth sorting
             sprite.zIndex = Math.floor(1000 - screenPos.depth * 10);
@@ -713,6 +719,44 @@ const Game = {
         if (this.gridAlwaysShow || this.debug.enabled) {
             this.drawDebugGrid();
         }
+    },
+    
+    // Face target direction (flip sprite)
+    faceTarget(sprite, targetX) {
+        if (!sprite) return;
+        
+        const currentX = sprite.x;
+        const shouldFaceRight = targetX > currentX;
+        const currentScale = Math.abs(sprite.scale.x);
+        
+        // Flip by inverting scale.x
+        if (shouldFaceRight && sprite.scale.x < 0) {
+            sprite.scale.x = currentScale;
+        } else if (!shouldFaceRight && sprite.scale.x > 0) {
+            sprite.scale.x = -currentScale;
+        }
+    },
+    
+    // Face target by world position
+    faceTargetWorld(sprite, myWorldPos, targetWorldPos) {
+        if (!sprite || !myWorldPos || !targetWorldPos) return;
+        
+        const shouldFaceRight = targetWorldPos.x > myWorldPos.x;
+        const currentScale = Math.abs(sprite.scale.x);
+        
+        if (shouldFaceRight && sprite.scale.x < 0) {
+            sprite.scale.x = currentScale;
+        } else if (!shouldFaceRight && sprite.scale.x > 0) {
+            sprite.scale.x = -currentScale;
+        }
+    },
+    
+    // Reset character facing to default
+    resetFacing(sprite) {
+        if (!sprite) return;
+        const currentScale = Math.abs(sprite.scale.x);
+        const faceRight = sprite.defaultFacing !== 'left';  // Default is right
+        sprite.scale.x = faceRight ? currentScale : -currentScale;
     },
     
     // Start position update loop (sync with 3D camera)
@@ -791,6 +835,10 @@ const Game = {
         
         this.state.phase = 'animation';
         
+        // Face the player before attacking
+        const enemyWorldPos = this.worldPositions.enemies[enemyIndex];
+        this.faceTargetWorld(enemy, enemyWorldPos, this.worldPositions.player);
+        
         const { heavy = false } = options;
         const finalDamage = damage - this.state.player.block;
         
@@ -826,6 +874,9 @@ const Game = {
                 Combat.stop();
             }
         }
+        
+        // Reset enemy facing to default (face player)
+        this.resetFacing(enemy);
         
         this.state.phase = 'player';
     },
@@ -1820,6 +1871,9 @@ const Game = {
         const finalDamage = isCrit ? baseDamage * 2 : baseDamage;
         const knockback = cardData.knockback ?? 1;  // Default 1 cell knockback
         
+        // Face the enemy before attacking
+        this.faceTargetWorld(this.player, this.worldPositions.player, enemyWorldPos);
+        
         // Calculate attack position (1 cell before enemy)
         const attackPosX = enemyWorldPos.x - 1;
         const attackPosZ = enemyWorldPos.z;
@@ -1897,6 +1951,9 @@ const Game = {
                 this.showMessage('VICTORY!', 3000);
             }
         }
+        
+        // Reset player facing to default (face enemies)
+        this.resetFacing(this.player);
         
         this.state.phase = 'player';
     },
@@ -1993,12 +2050,20 @@ const Game = {
                 return false;
             }
             
+            // Face the movement direction
+            const targetWorldPos = { x: gridX, y: 0, z: gridZ };
+            this.faceTargetWorld(this.player, this.worldPositions.player, targetWorldPos);
+            
             // Dash animation
             gsap.to(this.worldPositions.player, {
                 x: gridX,
                 z: gridZ,
                 duration: 0.2,
-                ease: 'power2.out'
+                ease: 'power2.out',
+                onComplete: () => {
+                    // After movement, face enemies again (right side)
+                    this.resetFacing(this.player, true);
+                }
             });
             
             // Brief invincibility visual
