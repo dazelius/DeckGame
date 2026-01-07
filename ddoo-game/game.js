@@ -732,17 +732,18 @@ const Game = {
     },
     
     updateCardUI() {
-        // Update energy
-        const energyCurrent = document.getElementById('energy-current');
-        const energyMax = document.getElementById('energy-max');
-        const energyOrb = document.querySelector('.energy-orb');
-        
-        if (energyCurrent) energyCurrent.textContent = this.state.player.energy;
-        if (energyMax) energyMax.textContent = this.state.player.maxEnergy;
-        
-        // Low energy warning
-        if (energyOrb) {
-            energyOrb.classList.toggle('low', this.state.player.energy === 0);
+        // Update energy embers (Clash Royale style)
+        const energyDisplay = document.getElementById('energy-display');
+        if (energyDisplay) {
+            energyDisplay.innerHTML = '';
+            const current = this.state.player.energy;
+            const max = this.state.player.maxEnergy;
+            
+            for (let i = 0; i < max; i++) {
+                const ember = document.createElement('div');
+                ember.className = 'energy-ember' + (i >= current ? ' empty' : '');
+                energyDisplay.appendChild(ember);
+            }
         }
         
         // Update deck info
@@ -1905,14 +1906,6 @@ const Game = {
         // Update hit areas
         if (this.app.stage.hitArea) {
             this.app.stage.hitArea = new PIXI.Rectangle(0, 0, this.battleAreaSize.width, this.battleAreaSize.height);
-        }
-            this.drawHand(cardIds);
-        }
-        
-        // Redraw card UI
-        if (this.cards?.uiContainer) {
-            this.cards.uiContainer.removeChildren();
-            this.drawCardUI();
         }
     }
 };
