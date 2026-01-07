@@ -169,14 +169,24 @@ const Game = {
         this.detectMobile();
         this.setupMobileEnvironment();
         
-        // Get area dimensions
+        // Get area dimensions (with fallback)
         const battleArea = document.getElementById('battle-area');
         const cardArea = document.getElementById('card-area');
         const battleRect = battleArea.getBoundingClientRect();
         const cardRect = cardArea.getBoundingClientRect();
         
-        this.battleAreaSize = { width: battleRect.width, height: battleRect.height };
-        this.cardAreaSize = { width: cardRect.width, height: cardRect.height };
+        // Fallback dimensions if DOM not ready
+        this.battleAreaSize = { 
+            width: battleRect.width || window.innerWidth, 
+            height: battleRect.height || window.innerHeight * 0.7 
+        };
+        this.cardAreaSize = { 
+            width: cardRect.width || window.innerWidth, 
+            height: cardRect.height || 140 
+        };
+        
+        console.log('[Game] Battle area:', this.battleAreaSize);
+        console.log('[Game] Card area:', this.cardAreaSize);
         
         // Initialize 3D background
         await DDOOBackground.init(battleArea);
@@ -205,19 +215,25 @@ const Game = {
         this.app.canvas.style.cssText = 'position:absolute;top:0;left:0;z-index:1;touch-action:none;';
         
         // ==================== Card App ====================
+        console.log('[Game] Creating card app...');
         this.cardApp = new PIXI.Application();
         await this.cardApp.init({
-            width: this.cardAreaSize.width,
-            height: this.cardAreaSize.height,
-            background: 0x0a0a12,
+            width: Math.max(this.cardAreaSize.width, 400),
+            height: Math.max(this.cardAreaSize.height, 100),
+            background: 0x0d0d1a,
             antialias: true,
             resolution: pixelRatio,
             autoDensity: true
         });
         
         const cardContainer = document.getElementById('card-canvas-container');
-        cardContainer.appendChild(this.cardApp.canvas);
-        this.cardApp.canvas.style.cssText = 'width:100%;height:100%;touch-action:none;';
+        if (!cardContainer) {
+            console.error('[Game] Card container not found!');
+        } else {
+            cardContainer.appendChild(this.cardApp.canvas);
+            this.cardApp.canvas.style.cssText = 'width:100%;height:100%;touch-action:none;display:block;';
+            console.log('[Game] Card canvas appended');
+        }
         
         // Create containers
         this.createContainers();
@@ -226,10 +242,13 @@ const Game = {
         await this.createCharacters3D();
         
         // Create card system
+        console.log('[Game] Initializing card system...');
         this.initCardSystem();
         
         // Draw initial hand (5 cards)
+        console.log('[Game] Drawing initial hand...');
         this.drawHand(['slash', 'slash', 'thrust', 'block', 'roll']);
+        console.log('[Game] Cards drawn:', this.cards.sprites.length);
         
         // UI
         this.createBattleUI();
@@ -712,28 +731,47 @@ const Game = {
     // ==================== Card System (Canvas-based) ====================
     
     initCardSystem() {
-        // Card container
-        this.cards.container = new PIXI.Container();
-        this.cards.container.sortableChildren = true;
-        this.cardApp.stage.addChild(this.cards.container);
+        if (!this.cardApp || !this.cardApp.stage) {
+            console.error('[Game] Card app not ready!');
+            return;
+        }
         
-        // UI container (energy, deck info)
+        console.log('[Game] Card app stage ready');
+        
+        // UI container (background, energy, button) - bottom layer
         this.cards.uiContainer = new PIXI.Container();
+        this.cards.uiContainer.zIndex = 0;
         this.cardApp.stage.addChild(this.cards.uiContainer);
         
-        // Drag layer (on top)
+        // Card container - middle layer
+        this.cards.container = new PIXI.Container();
+        this.cards.container.sortableChildren = true;
+        this.cards.container.zIndex = 10;
+        this.cardApp.stage.addChild(this.cards.container);
+        
+        // Drag layer - top layer
         this.cards.dragLayer = new PIXI.Container();
         this.cards.dragLayer.zIndex = 100;
         this.cardApp.stage.addChild(this.cards.dragLayer);
         
-        // Draw card UI
+        // Enable sorting
+        this.cardApp.stage.sortableChildren = true;
+        
+        // Draw card UI (background, energy, button)
         this.drawCardUI();
+        
+        console.log('[Game] Card system initialized');
     },
     
     drawCardUI() {
-        const { width, height } = this.cardAreaSize;
+        // Get actual renderer size
+        const width = this.cardApp.renderer.width / this.cardApp.renderer.resolution;
+        const height = this.cardApp.renderer.height / this.cardApp.renderer.resolution;
         
         console.log(`[Game] Drawing card UI: ${width}x${height}`);
+        
+        // Clear existing
+        this.cards.uiContainer.removeChildren();
         
         // Background
         const bg = new PIXI.Graphics();
@@ -741,12 +779,14 @@ const Game = {
         bg.fill({ color: 0x0d0d1a });
         bg.moveTo(0, 2);
         bg.lineTo(width, 2);
-        bg.stroke({ color: 0x4a4a6a, width: 2 });
+        bg.stroke({ color: 0x4a4a6a, width: 3 });
         this.cards.uiContainer.addChild(bg);
+        
+        const centerY = height / 2;
         
         // Energy orb (left)
         const energyBg = new PIXI.Graphics();
-        energyBg.circle(35, height / 2, 25);
+        energyBg.circle(35, centerY, 22);
         energyBg.fill({ color: 0x1a1a2e });
         energyBg.stroke({ color: 0xfbbf24, width: 3 });
         this.cards.uiContainer.addChild(energyBg);
@@ -755,20 +795,20 @@ const Game = {
             text: `${this.state.player.energy}`,
             style: {
                 fontFamily: 'Arial',
-                fontSize: 24,
+                fontSize: 22,
                 fontWeight: 'bold',
                 fill: 0xfbbf24
             }
         });
         this.cards.energyText.anchor.set(0.5);
         this.cards.energyText.x = 35;
-        this.cards.energyText.y = height / 2;
+        this.cards.energyText.y = centerY;
         this.cards.uiContainer.addChild(this.cards.energyText);
         
         // End turn button (right)
-        const btnX = width - 80;
+        const btnX = width - 75;
         const btn = new PIXI.Graphics();
-        btn.roundRect(btnX, height / 2 - 18, 65, 36, 6);
+        btn.roundRect(btnX, centerY - 16, 60, 32, 6);
         btn.fill({ color: 0x3d3d5c });
         btn.stroke({ color: 0x5a5a7a, width: 2 });
         btn.eventMode = 'static';
@@ -783,12 +823,14 @@ const Game = {
         
         const btnText = new PIXI.Text({
             text: 'END',
-            style: { fontFamily: 'Arial', fontSize: 14, fontWeight: 'bold', fill: 0xffffff }
+            style: { fontFamily: 'Arial', fontSize: 13, fontWeight: 'bold', fill: 0xffffff }
         });
         btnText.anchor.set(0.5);
-        btnText.x = btnX + 32;
-        btnText.y = height / 2;
+        btnText.x = btnX + 30;
+        btnText.y = centerY;
         this.cards.uiContainer.addChild(btnText);
+        
+        console.log('[Game] Card UI drawn');
     },
     
     // Draw cards in hand
@@ -803,16 +845,25 @@ const Game = {
         this.cards.sprites = [];
         this.cards.hand = cardIds.map(id => ({ id, ...this.cardDatabase[id] }));
         
-        const { width, height } = this.cardAreaSize;
+        if (!this.cardApp || !this.cardApp.renderer) {
+            console.warn('[Game] Card app not ready');
+            return;
+        }
+        
+        // Get actual renderer size
+        const width = this.cardApp.renderer.width / this.cardApp.renderer.resolution;
+        const height = this.cardApp.renderer.height / this.cardApp.renderer.resolution;
         const { width: cardW, height: cardH, spacing } = this.cardConfig;
         
-        if (width === 0 || height === 0) {
-            console.warn('[Game] Card area size is 0, skipping drawHand');
+        console.log(`[Game] Card area size: ${width}x${height}`);
+        
+        if (width < 100 || height < 50) {
+            console.warn('[Game] Card area too small');
             return;
         }
         
         const totalWidth = cardIds.length * (cardW + spacing) - spacing;
-        const startX = Math.max(80, (width - totalWidth) / 2);  // Leave space for energy
+        const startX = Math.max(75, (width - totalWidth) / 2);  // Leave space for energy orb
         const baseY = height / 2;
         
         cardIds.forEach((cardId, i) => {
@@ -833,9 +884,9 @@ const Game = {
             
             this.cards.container.addChild(card);
             this.cards.sprites.push(card);
-            
-            console.log(`[Game] Card ${cardId} at (${card.x}, ${card.y})`);
         });
+        
+        console.log(`[Game] Drew ${this.cards.sprites.length} cards`);
     },
     
     // Create a card sprite
