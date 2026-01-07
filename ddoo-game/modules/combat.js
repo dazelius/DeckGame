@@ -257,14 +257,38 @@ const Combat = {
     
     // ========== Intent Executions ==========
     executeAttack(enemyId, target, intent) {
-        if (typeof Game !== 'undefined') {
+        if (typeof Game === 'undefined') return;
+        
+        // Check if player is in attack range
+        const distance = this.getDistanceToPlayer(enemyId);
+        const attackRange = this.config.attackRange.melee;
+        
+        if (distance <= attackRange) {
+            // In range - attack hits!
             Game.enemyAttacksPlayer(enemyId, intent.damage);
+            console.log(`[Combat] Enemy ${enemyId} attacks! Distance: ${distance.toFixed(1)}`);
+        } else {
+            // Out of range - attack misses!
+            Game.showMiss(enemyId);
+            console.log(`[Combat] Enemy ${enemyId} attack MISSED! Distance: ${distance.toFixed(1)} > Range: ${attackRange}`);
         }
     },
     
     executeHeavyAttack(enemyId, target, intent) {
-        if (typeof Game !== 'undefined') {
+        if (typeof Game === 'undefined') return;
+        
+        // Check if player is in attack range (heavy has same range)
+        const distance = this.getDistanceToPlayer(enemyId);
+        const attackRange = this.config.attackRange.melee;
+        
+        if (distance <= attackRange) {
+            // In range - heavy attack hits!
             Game.enemyAttacksPlayer(enemyId, intent.damage, { heavy: true });
+            console.log(`[Combat] Enemy ${enemyId} HEAVY attacks! Distance: ${distance.toFixed(1)}`);
+        } else {
+            // Out of range - attack misses!
+            Game.showMiss(enemyId);
+            console.log(`[Combat] Enemy ${enemyId} heavy attack MISSED! Distance: ${distance.toFixed(1)} > Range: ${attackRange}`);
         }
     },
     

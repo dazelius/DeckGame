@@ -2299,6 +2299,29 @@ const Game = {
         }, duration);
     },
     
+    // Show miss message when enemy attack is out of range
+    showMiss(enemyIndex) {
+        const enemy = this.enemySprites[enemyIndex];
+        if (!enemy) return;
+        
+        // Show MISS floating text
+        if (typeof DDOOFloater !== 'undefined') {
+            DDOOFloater.showOnCharacter(enemy, 'MISS', 'miss');
+        }
+        
+        // Visual feedback - enemy stumbles
+        gsap.to(enemy, {
+            x: enemy.x + 15,
+            duration: 0.1,
+            yoyo: true,
+            repeat: 1,
+            ease: 'power1.inOut'
+        });
+        
+        // Brief message
+        this.showMessage('DODGED!', 600);
+    },
+    
     // ==================== 이벤트 ====================
     
     bindEvents() {
