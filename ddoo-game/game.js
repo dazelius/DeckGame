@@ -825,6 +825,50 @@ const Game = {
         sprite.currentFacing = null;  // Use defaultFacing
     },
     
+    // Restore character visibility after DDOOAction animations
+    restoreCharacterVisibility() {
+        // Restore player
+        if (this.player) {
+            this.player.visible = true;
+            this.player.alpha = 1;
+            // Restore scale if needed
+            const baseScale = this.player.baseScale || 1.0;
+            const screenPos = DDOOBackground.project3DToScreen(
+                this.worldPositions.player.x, 
+                this.worldPositions.player.y, 
+                this.worldPositions.player.z
+            );
+            if (screenPos) {
+                const depthScale = screenPos.scale * 0.5;
+                const flipX = this.player.defaultFacing === 'right' ? -1 : 1;
+                this.player.scale.set(flipX * baseScale * depthScale, baseScale * depthScale);
+            }
+        }
+        
+        // Restore enemies
+        this.enemySprites.forEach((enemy, i) => {
+            if (enemy) {
+                enemy.visible = true;
+                enemy.alpha = 1;
+                // Restore scale if needed
+                const baseScale = enemy.baseScale || 1.0;
+                const enemyPos = this.worldPositions.enemies[i];
+                if (enemyPos) {
+                    const screenPos = DDOOBackground.project3DToScreen(
+                        enemyPos.x, enemyPos.y, enemyPos.z
+                    );
+                    if (screenPos) {
+                        const depthScale = screenPos.scale * 0.5;
+                        const flipX = enemy.defaultFacing === 'right' ? -1 : 1;
+                        enemy.scale.set(flipX * baseScale * depthScale, baseScale * depthScale);
+                    }
+                }
+            }
+        });
+        
+        console.log('[Game] Character visibility restored');
+    },
+    
     // Start position update loop (sync with 3D camera)
     startPositionLoop() {
         let lastTime = performance.now();
@@ -2385,6 +2429,9 @@ const Game = {
             DDOOAction.config.speed = originalSpeed;
         }
         
+        // IMPORTANT: Restore character visibility after DDOOAction
+        this.restoreCharacterVisibility();
+        
         // KNOCKBACK: Push enemy back
         if (knockback > 0) {
             const newEnemyX = Math.min(this.arena.width - 1, enemyWorldPos.x + knockback);
@@ -2509,6 +2556,9 @@ const Game = {
             this.showMessage('PARRY!', 600);
         }
         
+        // Restore character visibility after skill effects
+        this.restoreCharacterVisibility();
+        
         this.updateUI();
     },
     
@@ -2536,6 +2586,8 @@ const Game = {
                 onComplete: () => {
                     // After movement, face enemies again (right side)
                     this.resetFacing(this.player, true);
+                    // Restore visibility after movement
+                    this.restoreCharacterVisibility();
                 }
             });
             
