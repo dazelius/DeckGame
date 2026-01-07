@@ -8,6 +8,7 @@ const Combat = {
         intentGaugeSpeed: 0.008,   // Gauge fill speed per frame (slower for deliberate play)
         baseGaugeTime: 5000,       // Base time to fill gauge (5 seconds - think before act)
         tickRate: 16,              // Update every 16ms (~60fps)
+        telegraphDuration: 800,    // Time to show attack zone before hitting (ms)
         
         // Attack range settings (in grid units)
         attackRange: {
@@ -254,10 +255,61 @@ const Combat = {
         
         console.log(`[Combat] Enemy ${enemyId} executes ${intent.type}`);
         
-        // Execute the intent action
-        intentType.execute(enemyId, intent.target, intent);
+        // For attack intents, show telegraph first
+        if (intent.type === 'ATTACK' || intent.type === 'HEAVY_ATTACK') {
+            this.showAttackTelegraph(enemyId, intent);
+        } else {
+            // Non-attack intents execute immediately
+            intentType.execute(enemyId, intent.target, intent);
+            this.scheduleNextIntent(enemyId);
+        }
+    },
+    
+    // Show attack danger zone before executing
+    showAttackTelegraph(enemyId, intent) {
+        if (typeof Game === 'undefined') return;
         
-        // Set new intent after delay (recalculate based on new distance)
+        const enemyPos = Game.worldPositions.enemies[enemyId];
+        const playerPos = Game.worldPositions.player;
+        if (!enemyPos || !playerPos) return;
+        
+        // Calculate attack zone (cells that will be hit)
+        const attackRange = intent.type === 'HEAVY_ATTACK' 
+            ? this.config.attackRange.melee + 1 
+            : this.config.attackRange.melee;
+        
+        // Show danger zone
+        Game.showEnemyAttackZone(enemyId, enemyPos, attackRange, intent.damage);
+        
+        // Flash warning on intent UI
+        this.flashIntentWarning(enemyId);
+        
+        // Execute attack after telegraph duration
+        setTimeout(() => {
+            // Hide danger zone
+            Game.hideEnemyAttackZone(enemyId);
+            
+            // Execute the actual attack
+            const intentType = this.INTENT_TYPES[intent.type];
+            if (intentType) {
+                intentType.execute(enemyId, intent.target, intent);
+            }
+            
+            this.scheduleNextIntent(enemyId);
+        }, this.config.telegraphDuration);
+    },
+    
+    // Flash the intent UI to warn player
+    flashIntentWarning(enemyId) {
+        const intentEl = document.querySelector(`.enemy-intent[data-enemy="${enemyId}"]`);
+        if (intentEl) {
+            intentEl.classList.add('executing');
+            setTimeout(() => intentEl.classList.remove('executing'), this.config.telegraphDuration);
+        }
+    },
+    
+    // Schedule next intent after execution
+    scheduleNextIntent(enemyId) {
         setTimeout(() => {
             if (this.state.running) {
                 this.setEnemyIntent(enemyId, this.generateRandomIntent(enemyId));

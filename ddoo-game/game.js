@@ -1450,6 +1450,148 @@ const Game = {
         console.log('[Game] Hiding card targets');
     },
     
+    // ==================== ENEMY ATTACK TELEGRAPH ====================
+    // Show danger zone when enemy is about to attack
+    
+    showEnemyAttackZone(enemyId, enemyPos, range, damage) {
+        const playerPos = this.worldPositions.player;
+        if (!this.containers?.highlights) return;
+        
+        // Create a dedicated container for this enemy's attack zone
+        if (!this.enemyAttackZones) this.enemyAttackZones = {};
+        
+        // Remove existing zone for this enemy
+        this.hideEnemyAttackZone(enemyId);
+        
+        const zoneContainer = new PIXI.Container();
+        zoneContainer.zIndex = 25;  // Above other highlights
+        
+        const zone = new PIXI.Graphics();
+        
+        // Calculate which cells are in attack range
+        const enemyCellX = Math.floor(enemyPos.x);
+        const enemyCellZ = Math.floor(enemyPos.z);
+        
+        let cellsHighlighted = 0;
+        
+        for (let x = 0; x < this.arena.width; x++) {
+            for (let z = 0; z < this.arena.depth; z++) {
+                // Calculate distance from enemy
+                const dist = Math.abs(x - enemyCellX) + Math.abs(z - enemyCellZ);
+                if (dist === 0 || dist > range) continue;
+                
+                // Only show cells towards player direction
+                const dirToPlayer = Math.sign(playerPos.x - enemyPos.x);
+                if (dirToPlayer > 0 && x < enemyCellX) continue;  // Player is right, skip left cells
+                if (dirToPlayer < 0 && x > enemyCellX) continue;  // Player is left, skip right cells
+                
+                // Get 4 corners of the cell
+                const topLeft = DDOOBackground.project3DToScreen(x, 0, z);
+                const topRight = DDOOBackground.project3DToScreen(x + 1, 0, z);
+                const bottomLeft = DDOOBackground.project3DToScreen(x, 0, z + 1);
+                const bottomRight = DDOOBackground.project3DToScreen(x + 1, 0, z + 1);
+                
+                if (!topLeft || !topRight || !bottomLeft || !bottomRight) continue;
+                if (!topLeft.visible || !bottomRight.visible) continue;
+                
+                // Check if player is in this cell
+                const hasPlayer = Math.floor(playerPos.x) === x && Math.floor(playerPos.z) === z;
+                
+                // Danger zone - flashing red
+                const fillColor = hasPlayer ? 0xff0000 : 0xff3300;
+                const fillAlpha = hasPlayer ? 0.6 : 0.35;
+                
+                // Draw cell polygon
+                zone.moveTo(topLeft.screenX, topLeft.screenY);
+                zone.lineTo(topRight.screenX, topRight.screenY);
+                zone.lineTo(bottomRight.screenX, bottomRight.screenY);
+                zone.lineTo(bottomLeft.screenX, bottomLeft.screenY);
+                zone.closePath();
+                zone.fill({ color: fillColor, alpha: fillAlpha });
+                
+                // Danger border (pulsing)
+                zone.moveTo(topLeft.screenX, topLeft.screenY);
+                zone.lineTo(topRight.screenX, topRight.screenY);
+                zone.lineTo(bottomRight.screenX, bottomRight.screenY);
+                zone.lineTo(bottomLeft.screenX, bottomLeft.screenY);
+                zone.closePath();
+                zone.stroke({ color: 0xff0000, width: hasPlayer ? 4 : 2, alpha: 1 });
+                
+                cellsHighlighted++;
+            }
+        }
+        
+        zoneContainer.addChild(zone);
+        
+        // Add "DANGER!" text above zone
+        const dangerText = new PIXI.Text({
+            text: `${damage} DMG`,
+            style: {
+                fontSize: 20,
+                fill: 0xff0000,
+                fontFamily: 'Cinzel, serif',
+                fontWeight: 'bold',
+                stroke: { color: 0x000000, width: 3 }
+            }
+        });
+        
+        // Position text near enemy
+        const enemyScreenPos = DDOOBackground.project3DToScreen(enemyPos.x, 0, enemyPos.z);
+        if (enemyScreenPos && enemyScreenPos.visible) {
+            dangerText.x = enemyScreenPos.screenX - 30;
+            dangerText.y = enemyScreenPos.screenY - 80;
+        }
+        zoneContainer.addChild(dangerText);
+        
+        // Store and add to stage
+        this.enemyAttackZones[enemyId] = zoneContainer;
+        this.app.stage.addChild(zoneContainer);
+        
+        // Flashing animation
+        gsap.to(zone, {
+            alpha: 0.3,
+            duration: 0.15,
+            repeat: -1,
+            yoyo: true
+        });
+        
+        // Screen shake warning
+        if (typeof DDOOBackground !== 'undefined') {
+            DDOOBackground.shake(0.1, 2);
+        }
+        
+        // Sound warning (if available)
+        this.playSound('warning');
+        
+        console.log(`[Game] Enemy ${enemyId} attack telegraph: ${cellsHighlighted} cells, range ${range}`);
+    },
+    
+    // Hide enemy attack zone
+    hideEnemyAttackZone(enemyId) {
+        if (!this.enemyAttackZones || !this.enemyAttackZones[enemyId]) return;
+        
+        const zone = this.enemyAttackZones[enemyId];
+        
+        // Kill any tweens on the zone
+        gsap.killTweensOf(zone.children[0]);
+        
+        // Remove from stage
+        if (zone.parent) {
+            zone.parent.removeChild(zone);
+        }
+        zone.destroy({ children: true });
+        
+        delete this.enemyAttackZones[enemyId];
+        
+        console.log(`[Game] Enemy ${enemyId} attack zone hidden`);
+    },
+    
+    // Play warning sound (placeholder)
+    playSound(type) {
+        // TODO: Implement sound system
+        console.log(`[Game] Sound: ${type}`);
+    },
+    
     // Highlight enemies within attack range (PixiJS + invisible DOM click)
     highlightEnemiesInRange(range) {
         const playerPos = this.worldPositions.player;
