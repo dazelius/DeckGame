@@ -37,10 +37,36 @@
         <div id="intent-container"></div>
     </div>
     
-    <!-- ==================== 카드 영역 (PixiJS 캔버스) ==================== -->
+    <!-- ==================== 카드 영역 (DOM 기반) ==================== -->
     <div id="card-area">
-        <!-- PixiJS 카드 캔버스가 여기에 삽입됨 -->
-        <div id="card-canvas-container"></div>
+        <div id="card-ui">
+            <!-- 에너지 표시 -->
+            <div id="energy-display">
+                <div class="energy-orb">
+                    <span id="energy-current">3</span>
+                    <span class="energy-separator">/</span>
+                    <span id="energy-max">3</span>
+                </div>
+            </div>
+            
+            <!-- 카드 핸드 -->
+            <div id="card-hand"></div>
+            
+            <!-- 덱/버린패 정보 -->
+            <div id="deck-info">
+                <div class="pile draw-pile">
+                    <span class="pile-count" id="draw-count">5</span>
+                    <span class="pile-label">Draw</span>
+                </div>
+                <div class="pile discard-pile">
+                    <span class="pile-count" id="discard-count">0</span>
+                    <span class="pile-label">Discard</span>
+                </div>
+            </div>
+            
+            <!-- 턴 종료 버튼 -->
+            <button id="btn-end-turn">END</button>
+        </div>
     </div>
     
     <!-- ==================== 드래그 오버레이 (최상위 레이어) ==================== -->

@@ -1,15 +1,82 @@
 /* =====================================================
-   card.css - Card Styling
+   card.css - Card Styling (DOM-based)
    ===================================================== */
+
+/* ==================== Card UI Container ==================== */
+
+#card-ui {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 10px 15px;
+    position: relative;
+    gap: 15px;
+}
+
+/* ==================== Energy Display ==================== */
+
+#energy-display {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.energy-orb {
+    width: 55px;
+    height: 55px;
+    background: radial-gradient(circle at 30% 30%, #fef3c7, #fbbf24, #b45309);
+    border: 3px solid #92400e;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    box-shadow: 
+        0 0 15px rgba(251, 191, 36, 0.5),
+        inset 0 -5px 15px rgba(0,0,0,0.3);
+    font-weight: bold;
+    color: #000;
+    line-height: 1;
+}
+
+#energy-current {
+    font-size: 1.4rem;
+}
+
+.energy-separator {
+    font-size: 0.7rem;
+    opacity: 0.7;
+}
+
+#energy-max {
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+
+/* Low energy warning */
+.energy-orb.low {
+    background: radial-gradient(circle at 30% 30%, #fee2e2, #ef4444, #991b1b);
+    border-color: #7f1d1d;
+    animation: energy-pulse 0.5s ease-in-out infinite;
+}
+
+@keyframes energy-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
 
 /* ==================== Card Hand Container ==================== */
 
 #card-hand {
     display: flex;
     justify-content: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    padding: 10px 0;
+    align-items: flex-end;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+    padding: 5px 0;
 }
 
 /* ==================== Card Base ==================== */
@@ -157,6 +224,18 @@
     transform: translateY(-20px) scale(1.08);
 }
 
+/* Shake animation (not enough energy) */
+.card.shake {
+    animation: card-shake 0.3s ease-in-out;
+}
+
+@keyframes card-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-8px); }
+    50% { transform: translateX(8px); }
+    75% { transform: translateX(-8px); }
+}
+
 /* ==================== Card Drag States ==================== */
 
 /* Dragging source card (becomes semi-transparent) */
@@ -240,5 +319,136 @@
     
     .card-desc {
         font-size: 0.55rem;
+    }
+}
+
+/* ==================== Deck Info ==================== */
+
+#deck-info {
+    position: absolute;
+    right: 80px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.pile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 45px;
+}
+
+.pile-count {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: var(--color-text);
+}
+
+.pile-label {
+    font-size: 0.65rem;
+    color: var(--color-text-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.draw-pile .pile-count {
+    color: var(--color-skill);
+}
+
+.discard-pile .pile-count {
+    color: var(--color-attack);
+}
+
+/* ==================== End Turn Button ==================== */
+
+#btn-end-turn {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 55px;
+    height: 55px;
+    background: linear-gradient(180deg, #374151 0%, #1f2937 100%);
+    border: 2px solid #4b5563;
+    border-radius: 50%;
+    color: #d1d5db;
+    font-size: 0.7rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+#btn-end-turn:hover {
+    background: linear-gradient(180deg, #4b5563 0%, #374151 100%);
+    border-color: var(--color-accent);
+    color: #fff;
+    transform: translateY(-50%) scale(1.1);
+    box-shadow: 0 0 15px rgba(251, 191, 36, 0.3);
+}
+
+#btn-end-turn:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+#btn-end-turn.highlight {
+    animation: end-turn-pulse 1s ease-in-out infinite;
+    border-color: var(--color-success);
+}
+
+@keyframes end-turn-pulse {
+    0%, 100% { box-shadow: 0 0 5px rgba(34, 197, 94, 0.3); }
+    50% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.6); }
+}
+
+/* ==================== Card Value Display ==================== */
+
+.card-value {
+    font-size: 1.4rem;
+    font-weight: bold;
+    margin-top: 8px;
+}
+
+.card[data-type="attack"] .card-value {
+    color: var(--color-attack);
+}
+
+.card[data-type="skill"] .card-value {
+    color: var(--color-skill);
+}
+
+.card[data-type="power"] .card-value {
+    color: var(--color-power);
+}
+
+/* ==================== Responsive Adjustments ==================== */
+
+@media (max-width: 768px) {
+    #energy-display {
+        left: 10px;
+    }
+    
+    .energy-orb {
+        width: 45px;
+        height: 45px;
+    }
+    
+    #energy-current {
+        font-size: 1.1rem;
+    }
+    
+    #deck-info {
+        right: 65px;
+    }
+    
+    #btn-end-turn {
+        right: 10px;
+        width: 45px;
+        height: 45px;
+        font-size: 0.6rem;
     }
 }

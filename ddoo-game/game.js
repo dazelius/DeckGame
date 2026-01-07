@@ -1,14 +1,11 @@
 // =====================================================
-// 🎮 DDOO Game - 메인 게임 코드
-// 📱 모바일 최적화 버전
+// DDOO Game - Main Game Code
+// Mobile Optimized + DOM Card System
 // =====================================================
 
 const Game = {
-    // PixiJS 앱 (배틀 영역)
+    // PixiJS app (battle area only)
     app: null,
-    
-    // PixiJS 앱 (카드 영역)
-    cardApp: null,
     
     // 게임 상태
     state: {
@@ -152,12 +149,13 @@ const Game = {
     },
     
     // Card state
+    // DOM Card System
     cards: {
-        hand: [],           // Current hand (card data)
-        sprites: [],        // Card sprites in hand
-        dragging: null,     // Currently dragging card sprite
-        dragData: null,     // Drag data (offset, original position)
-        hoveredTarget: null // Enemy/player being hovered
+        hand: [],           // Current hand (card IDs)
+        elements: [],       // Card DOM elements
+        dragging: null,     // Currently dragging card element
+        dragData: null,     // Drag data
+        hoveredTarget: null // Target being hovered
     },
     
     // ==================== 초기화 ====================
@@ -214,27 +212,6 @@ const Game = {
         gameContainer.appendChild(this.app.canvas);
         this.app.canvas.style.cssText = 'position:absolute;top:0;left:0;z-index:1;touch-action:none;';
         
-        // ==================== Card App ====================
-        console.log('[Game] Creating card app...');
-        this.cardApp = new PIXI.Application();
-        await this.cardApp.init({
-            width: Math.max(this.cardAreaSize.width, 400),
-            height: Math.max(this.cardAreaSize.height, 100),
-            background: 0x0d0d1a,
-            antialias: true,
-            resolution: pixelRatio,
-            autoDensity: true
-        });
-        
-        const cardContainer = document.getElementById('card-canvas-container');
-        if (!cardContainer) {
-            console.error('[Game] Card container not found!');
-        } else {
-            cardContainer.appendChild(this.cardApp.canvas);
-            this.cardApp.canvas.style.cssText = 'width:100%;height:100%;touch-action:none;display:block;';
-            console.log('[Game] Card canvas appended');
-        }
-        
         // Create containers
         this.createContainers();
         
@@ -248,7 +225,7 @@ const Game = {
         // Draw initial hand (5 cards)
         console.log('[Game] Drawing initial hand...');
         this.drawHand(['slash', 'slash', 'thrust', 'block', 'roll']);
-        console.log('[Game] Cards drawn:', this.cards.sprites.length);
+        console.log('[Game] Cards drawn:', this.cards.elements.length);
         
         // UI
         this.createBattleUI();
@@ -734,336 +711,175 @@ const Game = {
         });
     },
     
-    // ==================== Card System (Canvas-based) ====================
+    // ==================== Card System (DOM-based) ====================
     
     initCardSystem() {
-        if (!this.cardApp || !this.cardApp.stage) {
-            console.error('[Game] Card app not ready!');
-            return;
+        console.log('[Game] Initializing DOM card system...');
+        
+        // Bind end turn button
+        const endTurnBtn = document.getElementById('btn-end-turn');
+        if (endTurnBtn) {
+            endTurnBtn.addEventListener('click', () => {
+                this.hapticFeedback('medium');
+                this.endTurn();
+            });
         }
         
-        console.log('[Game] Card app stage ready');
+        // Update energy display
+        this.updateCardUI();
         
-        // UI container (background, energy, button) - bottom layer
-        this.cards.uiContainer = new PIXI.Container();
-        this.cards.uiContainer.zIndex = 0;
-        this.cardApp.stage.addChild(this.cards.uiContainer);
-        
-        // Card container - middle layer
-        this.cards.container = new PIXI.Container();
-        this.cards.container.sortableChildren = true;
-        this.cards.container.zIndex = 10;
-        this.cardApp.stage.addChild(this.cards.container);
-        
-        // Drag layer - top layer
-        this.cards.dragLayer = new PIXI.Container();
-        this.cards.dragLayer.zIndex = 100;
-        this.cardApp.stage.addChild(this.cards.dragLayer);
-        
-        // Enable sorting
-        this.cardApp.stage.sortableChildren = true;
-        
-        // Draw card UI (background, energy, button)
-        this.drawCardUI();
-        
-        console.log('[Game] Card system initialized');
+        console.log('[Game] DOM card system initialized');
     },
     
-    drawCardUI() {
-        // Get actual renderer size
-        const width = this.cardApp.renderer.width / this.cardApp.renderer.resolution;
-        const height = this.cardApp.renderer.height / this.cardApp.renderer.resolution;
+    updateCardUI() {
+        // Update energy
+        const energyCurrent = document.getElementById('energy-current');
+        const energyMax = document.getElementById('energy-max');
+        const energyOrb = document.querySelector('.energy-orb');
         
-        console.log(`[Game] Drawing card UI: ${width}x${height}`);
+        if (energyCurrent) energyCurrent.textContent = this.state.player.energy;
+        if (energyMax) energyMax.textContent = this.state.player.maxEnergy;
         
-        // Clear existing
-        this.cards.uiContainer.removeChildren();
+        // Low energy warning
+        if (energyOrb) {
+            energyOrb.classList.toggle('low', this.state.player.energy === 0);
+        }
         
-        // Background
-        const bg = new PIXI.Graphics();
-        bg.rect(0, 0, width, height);
-        bg.fill({ color: 0x0d0d1a });
-        bg.moveTo(0, 2);
-        bg.lineTo(width, 2);
-        bg.stroke({ color: 0x4a4a6a, width: 3 });
-        this.cards.uiContainer.addChild(bg);
+        // Update deck info
+        const drawCount = document.getElementById('draw-count');
+        const discardCount = document.getElementById('discard-count');
+        if (drawCount) drawCount.textContent = this.state.deck?.draw || 5;
+        if (discardCount) discardCount.textContent = this.state.deck?.discard || 0;
         
-        const centerY = height / 2;
-        
-        // Energy orb (left)
-        const energyBg = new PIXI.Graphics();
-        energyBg.circle(35, centerY, 22);
-        energyBg.fill({ color: 0x1a1a2e });
-        energyBg.stroke({ color: 0xfbbf24, width: 3 });
-        this.cards.uiContainer.addChild(energyBg);
-        
-        this.cards.energyText = new PIXI.Text({
-            text: `${this.state.player.energy}`,
-            style: {
-                fontFamily: 'Arial',
-                fontSize: 22,
-                fontWeight: 'bold',
-                fill: 0xfbbf24
+        // Update card playability
+        this.updateCardPlayability();
+    },
+    
+    updateCardPlayability() {
+        this.cards.elements.forEach(cardEl => {
+            const cardId = cardEl.dataset.cardId;
+            const cardData = this.cardDatabase[cardId];
+            if (cardData) {
+                const canPlay = this.state.player.energy >= cardData.cost;
+                cardEl.classList.toggle('disabled', !canPlay);
+                cardEl.classList.toggle('playable', canPlay);
             }
         });
-        this.cards.energyText.anchor.set(0.5);
-        this.cards.energyText.x = 35;
-        this.cards.energyText.y = centerY;
-        this.cards.uiContainer.addChild(this.cards.energyText);
-        
-        // End turn button (right)
-        const btnX = width - 75;
-        const btn = new PIXI.Graphics();
-        btn.roundRect(btnX, centerY - 16, 60, 32, 6);
-        btn.fill({ color: 0x3d3d5c });
-        btn.stroke({ color: 0x5a5a7a, width: 2 });
-        btn.eventMode = 'static';
-        btn.cursor = 'pointer';
-        btn.on('pointerdown', () => {
-            this.hapticFeedback('medium');
-            this.endTurn();
-        });
-        btn.on('pointerover', () => btn.tint = 0xcccccc);
-        btn.on('pointerout', () => btn.tint = 0xffffff);
-        this.cards.uiContainer.addChild(btn);
-        
-        const btnText = new PIXI.Text({
-            text: 'END',
-            style: { fontFamily: 'Arial', fontSize: 13, fontWeight: 'bold', fill: 0xffffff }
-        });
-        btnText.anchor.set(0.5);
-        btnText.x = btnX + 30;
-        btnText.y = centerY;
-        this.cards.uiContainer.addChild(btnText);
-        
-        console.log('[Game] Card UI drawn');
     },
     
-    // Draw cards in hand
+    // Draw cards in hand (DOM)
     drawHand(cardIds) {
         console.log(`[Game] Drawing hand: ${cardIds.join(', ')}`);
         
-        // Clear existing
-        this.cards.sprites.forEach(s => {
-            if (s.parent) s.parent.removeChild(s);
-            s.destroy({ children: true });
-        });
-        this.cards.sprites = [];
-        this.cards.hand = cardIds.map(id => ({ id, ...this.cardDatabase[id] }));
-        
-        if (!this.cardApp || !this.cardApp.renderer) {
-            console.warn('[Game] Card app not ready');
+        const handContainer = document.getElementById('card-hand');
+        if (!handContainer) {
+            console.error('[Game] Card hand container not found!');
             return;
         }
         
-        // Get actual renderer size
-        const width = this.cardApp.renderer.width / this.cardApp.renderer.resolution;
-        const height = this.cardApp.renderer.height / this.cardApp.renderer.resolution;
-        const { width: cardW, height: cardH, spacing } = this.cardConfig;
+        // Clear existing cards
+        handContainer.innerHTML = '';
+        this.cards.elements = [];
+        this.cards.hand = [...cardIds];
         
-        console.log(`[Game] Card area size: ${width}x${height}`);
-        
-        if (width < 100 || height < 50) {
-            console.warn('[Game] Card area too small');
-            return;
-        }
-        
-        const totalWidth = cardIds.length * (cardW + spacing) - spacing;
-        const startX = Math.max(75, (width - totalWidth) / 2);  // Leave space for energy orb
-        const baseY = height / 2;
-        
-        cardIds.forEach((cardId, i) => {
+        // Create card elements
+        cardIds.forEach((cardId, index) => {
             const cardData = this.cardDatabase[cardId];
             if (!cardData) {
                 console.warn(`[Game] Card not found: ${cardId}`);
                 return;
             }
             
-            try {
-                const card = this.createCardSprite(cardData, i);
-                card.x = startX + i * (cardW + spacing) + cardW / 2;
-                card.y = baseY;
-                card.baseX = card.x;
-                card.baseY = card.y;
-                card.cardIndex = i;
-                card.cardId = cardId;
-                card.zIndex = i;
-                
-                this.cards.container.addChild(card);
-                this.cards.sprites.push(card);
-                console.log(`[Game] Card ${cardId} created at (${card.x.toFixed(0)}, ${card.y.toFixed(0)})`);
-            } catch (e) {
-                console.error(`[Game] Failed to create card ${cardId}:`, e);
-            }
+            const cardEl = this.createCardElement(cardId, cardData, index);
+            handContainer.appendChild(cardEl);
+            this.cards.elements.push(cardEl);
         });
         
-        console.log(`[Game] Drew ${this.cards.sprites.length} cards`);
+        this.updateCardPlayability();
+        console.log(`[Game] Drew ${this.cards.elements.length} cards`);
     },
     
-    // Create a card sprite
-    createCardSprite(cardData, index) {
-        const { width: w, height: h } = this.cardConfig;
+    // Create a single card DOM element
+    createCardElement(cardId, cardData, index) {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.dataset.cardId = cardId;
+        card.dataset.type = cardData.type;
+        card.dataset.index = index;
         
-        const container = new PIXI.Container();
-        container.pivot.set(w / 2, h / 2);
-        
-        // Card background with gradient effect
-        const bg = new PIXI.Graphics();
-        bg.roundRect(0, 0, w, h, 6);
-        bg.fill({ color: 0x1a1a2e });
-        bg.roundRect(0, 0, w, h, 6);
-        bg.stroke({ color: cardData.color || 0x666666, width: 2 });
-        container.addChild(bg);
-        
-        // Inner highlight
-        const inner = new PIXI.Graphics();
-        inner.roundRect(3, 3, w - 6, h - 6, 4);
-        inner.stroke({ color: 0x2a2a4e, width: 1 });
-        container.addChild(inner);
-        
-        // Cost circle (top-left)
-        const costCircle = new PIXI.Graphics();
-        costCircle.circle(0, 0, 12);
-        costCircle.fill({ color: 0xfbbf24 });
-        costCircle.stroke({ color: 0x000000, width: 2 });
-        costCircle.x = 12;
-        costCircle.y = 12;
-        container.addChild(costCircle);
-        
-        const costText = new PIXI.Text({
-            text: `${cardData.cost}`,
-            style: { fontFamily: 'Arial', fontSize: 14, fontWeight: 'bold', fill: 0x000000 }
-        });
-        costText.anchor.set(0.5);
-        costText.x = 12;
-        costText.y = 12;
-        container.addChild(costText);
-        
-        // Card name (top)
-        const nameText = new PIXI.Text({
-            text: cardData.name,
-            style: { fontFamily: 'Arial', fontSize: 11, fontWeight: 'bold', fill: 0xffffff }
-        });
-        nameText.anchor.set(0.5, 0);
-        nameText.x = w / 2;
-        nameText.y = 6;
-        container.addChild(nameText);
-        
-        // Center value (damage/block/etc)
+        // Get display value
         let valueStr = '';
-        if (cardData.damage) valueStr = `${cardData.damage}`;
-        else if (cardData.block) valueStr = `${cardData.block}`;
+        if (cardData.damage) valueStr = cardData.damage;
+        else if (cardData.block) valueStr = cardData.block;
         else if (cardData.heal) valueStr = `+${cardData.heal}`;
         
-        if (valueStr) {
-            const valText = new PIXI.Text({
-                text: valueStr,
-                style: { fontFamily: 'Arial', fontSize: 22, fontWeight: 'bold', fill: cardData.color || 0xffffff }
-            });
-            valText.anchor.set(0.5);
-            valText.x = w / 2;
-            valText.y = h / 2 - 5;
-            container.addChild(valText);
-        }
+        card.innerHTML = `
+            <div class="card-cost">${cardData.cost}</div>
+            <div class="card-name">${cardData.name}</div>
+            ${valueStr ? `<div class="card-value">${valueStr}</div>` : ''}
+            <div class="card-desc">${cardData.desc || ''}</div>
+        `;
         
-        // Description (bottom)
-        if (cardData.desc) {
-            const descText = new PIXI.Text({
-                text: cardData.desc,
-                style: { fontFamily: 'Arial', fontSize: 8, fill: 0xaaaaaa }
-            });
-            descText.anchor.set(0.5, 1);
-            descText.x = w / 2;
-            descText.y = h - 5;
-            container.addChild(descText);
-        }
+        // Bind events
+        this.bindCardEvents(card, cardId, cardData);
         
-        // Type indicator line at bottom
-        const typeLine = new PIXI.Graphics();
-        typeLine.roundRect(5, h - 3, w - 10, 2, 1);
-        typeLine.fill({ color: cardData.color || 0x666666 });
-        container.addChild(typeLine);
-        
-        // Make interactive
-        container.eventMode = 'static';
-        container.cursor = 'pointer';
-        container.hitArea = new PIXI.Rectangle(0, 0, w, h);
-        
-        // Hover events
-        container.on('pointerover', () => this.onCardHover(container, true));
-        container.on('pointerout', () => this.onCardHover(container, false));
-        
-        // Drag events
-        container.on('pointerdown', (e) => this.onCardDragStart(e, container));
-        
-        return container;
+        return card;
     },
     
-    onCardHover(card, isHover) {
-        if (this.cards.dragging) return;
-        
-        const { hoverScale, hoverY } = this.cardConfig;
-        
-        gsap.to(card, {
-            y: isHover ? card.baseY + hoverY : card.baseY,
-            duration: 0.15,
-            ease: 'power2.out'
-        });
-        gsap.to(card.scale, {
-            x: isHover ? hoverScale : 1,
-            y: isHover ? hoverScale : 1,
-            duration: 0.15,
-            ease: 'power2.out'
-        });
-        
-        card.zIndex = isHover ? 50 : card.cardIndex;
-    },
-    
-    onCardDragStart(event, card) {
-        if (this.state.phase !== 'player') return;
-        if (this.cards.dragging) return;
-        
-        const cardData = this.cardDatabase[card.cardId];
-        if (!cardData) return;
-        
-        if (this.state.player.energy < cardData.cost) {
-            this.showMessage('Energy!', 600);
-            this.hapticFeedback('error');
-            gsap.to(card, { x: card.x - 5, duration: 0.05, yoyo: true, repeat: 3 });
-            return;
-        }
-        
-        // Get initial position
-        const cardAreaRect = document.getElementById('card-area').getBoundingClientRect();
-        const startClientX = event.global.x + cardAreaRect.left;
-        const startClientY = event.global.y + cardAreaRect.top;
-        
-        this.cards.dragging = card;
-        this.cards.dragData = {
-            startX: card.baseX,
-            startY: card.baseY,
-            cardData: cardData,
-            cardIndex: card.cardIndex
+    bindCardEvents(card, cardId, cardData) {
+        // Touch/mouse down - start drag
+        const startDrag = (e) => {
+            e.preventDefault();
+            
+            if (this.state.phase !== 'player') return;
+            if (this.cards.dragging) return;
+            
+            // Check energy
+            if (this.state.player.energy < cardData.cost) {
+                this.showMessage('Energy!', 600);
+                this.hapticFeedback('error');
+                card.classList.add('shake');
+                setTimeout(() => card.classList.remove('shake'), 300);
+                return;
+            }
+            
+            // Get position
+            const touch = e.touches ? e.touches[0] : e;
+            const startX = touch.clientX;
+            const startY = touch.clientY;
+            
+            // Start dragging
+            this.cards.dragging = card;
+            this.cards.dragData = {
+                cardId,
+                cardData,
+                startX,
+                startY,
+                index: parseInt(card.dataset.index)
+            };
+            
+            // Visual feedback
+            card.classList.add('dragging');
+            
+            // Create ghost
+            this.createDragGhost(cardData, startX, startY);
+            
+            this.hapticFeedback('light');
+            
+            // Show targets
+            this.showDragTargets(cardData.type);
+            
+            // Global events
+            this._onDragMove = (e) => this.onCardDragMove(e);
+            this._onDragEnd = (e) => this.onCardDragEnd(e);
+            window.addEventListener('mousemove', this._onDragMove);
+            window.addEventListener('mouseup', this._onDragEnd);
+            window.addEventListener('touchmove', this._onDragMove, { passive: false });
+            window.addEventListener('touchend', this._onDragEnd);
         };
         
-        // Hide original card
-        card.alpha = 0.3;
-        
-        // Create DOM drag ghost
-        this.createDragGhost(cardData, startClientX, startClientY);
-        
-        this.hapticFeedback('light');
-        
-        // Show valid targets
-        this.showDragTargets(cardData.type);
-        
-        // Global events
-        this._onDragMove = (e) => this.onCardDragMove(e);
-        this._onDragEnd = (e) => this.onCardDragEnd(e);
-        window.addEventListener('mousemove', this._onDragMove);
-        window.addEventListener('mouseup', this._onDragEnd);
-        window.addEventListener('touchmove', this._onDragMove, { passive: false });
-        window.addEventListener('touchend', this._onDragEnd);
+        card.addEventListener('mousedown', startDrag);
+        card.addEventListener('touchstart', startDrag, { passive: false });
     },
     
     // Create DOM-based drag ghost
@@ -1215,12 +1031,12 @@ const Game = {
         const usedCard = this.cards.hoveredTarget !== null;
         
         if (usedCard) {
-            this.executeCardOnTarget(card.cardId, data.cardIndex, this.cards.hoveredTarget);
+            this.executeCardOnTarget(data.cardId, data.index, this.cards.hoveredTarget);
             this.clearTargetHighlight(this.cards.hoveredTarget);
             this.cards.hoveredTarget = null;
         } else {
-            // Show card again
-            card.alpha = 1;
+            // Show card again (DOM)
+            card.classList.remove('dragging');
         }
         
         // Hide targets
@@ -1511,57 +1327,33 @@ const Game = {
         this.removeCardFromHand(cardIndex);
     },
     
-    // Remove card and rearrange remaining cards
+    // Remove card and rearrange remaining cards (DOM)
     removeCardFromHand(cardIndex) {
-        if (cardIndex < 0 || cardIndex >= this.cards.sprites.length) return;
+        if (cardIndex < 0 || cardIndex >= this.cards.elements.length) return;
         
-        const card = this.cards.sprites[cardIndex];
+        const card = this.cards.elements[cardIndex];
         
         // Animate card disappearing
-        gsap.to(card, {
-            y: card.y - 50,
-            alpha: 0,
-            duration: 0.2,
-            ease: 'power2.in',
-            onComplete: () => {
-                // Remove from arrays
-                card.destroy({ children: true });
-                this.cards.sprites.splice(cardIndex, 1);
-                this.cards.hand.splice(cardIndex, 1);
-                
-                // Rearrange remaining cards
-                this.rearrangeCards();
-            }
-        });
-    },
-    
-    // Rearrange cards after one is removed
-    rearrangeCards() {
-        const { width: cardW, spacing } = this.cardConfig;
-        const width = this.cardApp.renderer.width / this.cardApp.renderer.resolution;
-        const height = this.cardApp.renderer.height / this.cardApp.renderer.resolution;
+        card.style.transition = 'transform 0.2s, opacity 0.2s';
+        card.style.transform = 'translateY(-50px) scale(0.8)';
+        card.style.opacity = '0';
         
-        const count = this.cards.sprites.length;
-        if (count === 0) return;
-        
-        const totalWidth = count * (cardW + spacing) - spacing;
-        const startX = Math.max(75, (width - totalWidth) / 2);
-        const baseY = height / 2;
-        
-        this.cards.sprites.forEach((card, i) => {
-            const newX = startX + i * (cardW + spacing) + cardW / 2;
-            card.cardIndex = i;
-            card.zIndex = i;
+        setTimeout(() => {
+            // Remove from DOM
+            card.remove();
             
-            gsap.to(card, {
-                x: newX,
-                duration: 0.25,
-                ease: 'power2.out'
+            // Remove from arrays
+            this.cards.elements.splice(cardIndex, 1);
+            this.cards.hand.splice(cardIndex, 1);
+            
+            // Update indices
+            this.cards.elements.forEach((el, i) => {
+                el.dataset.index = i;
             });
             
-            card.baseX = newX;
-            card.baseY = baseY;
-        });
+            // Update UI
+            this.updateCardUI();
+        }, 200);
     },
     
     // ==================== Combat Actions ====================
@@ -1845,7 +1637,7 @@ const Game = {
     updateUI() {
         const { player } = this.state;
         
-        // HP Bar
+        // HP Bar (PixiJS)
         if (this.ui?.hpFill) {
             const hpPercent = player.hp / player.maxHp;
             this.ui.hpFill.clear();
@@ -1862,10 +1654,8 @@ const Game = {
             this.ui.blockText.text = player.block > 0 ? `[${player.block}]` : '';
         }
         
-        // Energy (card area)
-        if (this.cards?.energyText) {
-            this.cards.energyText.text = `${player.energy}/${player.maxEnergy}`;
-        }
+        // Card UI (DOM)
+        this.updateCardUI();
     },
     
     showMessage(text, duration = 2000) {
@@ -1900,9 +1690,6 @@ const Game = {
         this.app.stage.eventMode = 'static';
         this.app.stage.hitArea = new PIXI.Rectangle(0, 0, this.battleAreaSize.width, this.battleAreaSize.height);
         
-        // Card app touch events
-        this.cardApp.stage.eventMode = 'static';
-        this.cardApp.stage.hitArea = new PIXI.Rectangle(0, 0, this.cardAreaSize.width, this.cardAreaSize.height);
     },
     
     // 📱 터치 피드백 효과 추가
@@ -2109,9 +1896,6 @@ const Game = {
         // Resize battle app
         this.app.renderer.resize(this.battleAreaSize.width, this.battleAreaSize.height);
         
-        // Resize card app
-        this.cardApp.renderer.resize(this.cardAreaSize.width, this.cardAreaSize.height);
-        
         // Resize 3D background
         DDOOBackground.handleResize();
         
@@ -2122,13 +1906,6 @@ const Game = {
         if (this.app.stage.hitArea) {
             this.app.stage.hitArea = new PIXI.Rectangle(0, 0, this.battleAreaSize.width, this.battleAreaSize.height);
         }
-        if (this.cardApp.stage.hitArea) {
-            this.cardApp.stage.hitArea = new PIXI.Rectangle(0, 0, this.cardAreaSize.width, this.cardAreaSize.height);
-        }
-        
-        // Redraw cards
-        if (this.cards?.hand?.length > 0) {
-            const cardIds = this.cards.hand.map(c => c.id);
             this.drawHand(cardIds);
         }
         
