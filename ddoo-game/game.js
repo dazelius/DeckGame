@@ -463,37 +463,27 @@ const Game = {
     
     // ==================== 10x10 Arena Grid (Debug) ====================
     
-    // Apply highlight glow to character sprite
+    // Apply highlight to character sprite (simple tint pulse)
     applyCharacterHighlight(sprite, color) {
         if (!sprite) return;
         
-        // Remove existing highlight filter
-        if (sprite._highlightFilter) {
-            const idx = sprite.filters?.indexOf(sprite._highlightFilter);
-            if (idx >= 0) sprite.filters.splice(idx, 1);
-        }
+        // Skip if already highlighted
+        if (sprite._isHighlighted) return;
+        sprite._isHighlighted = true;
         
-        // Create glow filter using DropShadowFilter
-        const glowFilter = new PIXI.DropShadowFilter({
-            color: color,
-            alpha: 0.8,
-            blur: 4,
-            offset: { x: 0, y: 0 },
-            quality: 3
-        });
+        // Store original tint
+        sprite._originalTint = sprite.tint || 0xffffff;
         
-        sprite._highlightFilter = glowFilter;
-        sprite.filters = sprite.filters || [];
-        sprite.filters.push(glowFilter);
+        // Apply colored tint
+        sprite.tint = color;
     },
     
     // Remove all character highlights
     removeCharacterHighlights() {
         const removeHighlight = (sprite) => {
-            if (!sprite || !sprite._highlightFilter) return;
-            const idx = sprite.filters?.indexOf(sprite._highlightFilter);
-            if (idx >= 0) sprite.filters.splice(idx, 1);
-            sprite._highlightFilter = null;
+            if (!sprite || !sprite._isHighlighted) return;
+            sprite.tint = sprite._originalTint || 0xffffff;
+            sprite._isHighlighted = false;
         };
         
         removeHighlight(this.player);
