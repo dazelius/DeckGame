@@ -88,6 +88,49 @@
     50% { opacity: 0.5; }
 }
 
+/* ==================== Target Indicator ==================== */
+
+.target-indicator {
+    position: absolute;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+    animation: target-bounce 0.3s ease-out;
+    z-index: 10000;
+}
+
+@keyframes target-bounce {
+    0% { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+    50% { transform: translateX(-50%) translateY(5px); }
+    100% { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
+.target-action {
+    background: rgba(0, 0, 0, 0.9);
+    color: #fbbf24;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 3px 10px;
+    border-radius: 10px;
+    border: 2px solid #fbbf24;
+    text-shadow: 0 0 5px #fbbf24;
+    letter-spacing: 1px;
+}
+
+.target-damage {
+    background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
+    color: #fff;
+    font-size: 18px;
+    font-weight: bold;
+    padding: 5px 12px;
+    border-radius: 8px;
+    margin-top: 4px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.5);
+}
+
 /* ==================== Card Drag & Drop ==================== */
 
 .card.dragging {

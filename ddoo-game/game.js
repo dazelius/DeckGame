@@ -1158,11 +1158,18 @@ const Game = {
                 this.cards.hoveredTarget = newTarget;
                 if (newTarget) {
                     this.applyTargetHighlight(newTarget, data.cardData.type);
-                    this.hapticFeedback('light');
+                    this.hapticFeedback('medium');
+                    
                     // Extra glow on ghost
-                    ghost.style.filter = 'brightness(1.3)';
+                    ghost.style.filter = 'brightness(1.5) drop-shadow(0 0 15px gold)';
+                    ghost.style.transform = 'translate(-50%, -50%) scale(1.3) rotate(0deg)';
+                    
+                    // Show target indicator
+                    this.showTargetIndicator(newTarget, data.cardData);
                 } else {
                     ghost.style.filter = '';
+                    ghost.style.transform = 'translate(-50%, -50%) scale(1.2)';
+                    this.hideTargetIndicator();
                 }
             }
         } else {
@@ -1195,6 +1202,9 @@ const Game = {
             this.cards.dragGhost = null;
         }
         
+        // Hide target indicator
+        this.hideTargetIndicator();
+        
         // Execute card if dropped on valid target
         const usedCard = this.cards.hoveredTarget !== null;
         
@@ -1216,30 +1226,53 @@ const Game = {
     
     // Find target at battle area position
     findTargetAt(screenX, screenY, cardType) {
-        const hitRadius = 70;
+        // Larger hit radius for easier targeting
+        const hitRadius = 120;
+        const hitRadiusPlayer = 100;
         
         if (cardType === 'attack') {
+            // Find closest enemy within range
+            let closest = null;
+            let closestDist = Infinity;
+            
             for (let i = 0; i < this.enemySprites.length; i++) {
                 const enemy = this.enemySprites[i];
-                if (!enemy) continue;
+                if (!enemy || !this.state.enemies[i] || this.state.enemies[i].hp <= 0) continue;
                 
-                const dx = enemy.x - screenX;
-                const dy = enemy.y - screenY;
+                // Use sprite bounds for better hit detection
+                const bounds = enemy.getBounds();
+                const centerX = bounds.x + bounds.width / 2;
+                const centerY = bounds.y + bounds.height / 2;
+                
+                const dx = centerX - screenX;
+                const dy = centerY - screenY;
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 
-                if (dist < hitRadius) {
-                    return { type: 'enemy', index: i, sprite: enemy };
+                // Expand hitbox based on sprite size
+                const effectiveRadius = Math.max(hitRadius, bounds.width * 0.8, bounds.height * 0.6);
+                
+                if (dist < effectiveRadius && dist < closestDist) {
+                    closest = { type: 'enemy', index: i, sprite: enemy };
+                    closestDist = dist;
                 }
             }
+            
+            return closest;
         }
         
         if (cardType === 'skill' || cardType === 'move') {
             if (this.player) {
-                const dx = this.player.x - screenX;
-                const dy = this.player.y - screenY;
+                const bounds = this.player.getBounds();
+                const centerX = bounds.x + bounds.width / 2;
+                const centerY = bounds.y + bounds.height / 2;
+                
+                const dx = centerX - screenX;
+                const dy = centerY - screenY;
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 
-                if (dist < hitRadius) {
+                const effectiveRadius = Math.max(hitRadiusPlayer, bounds.width * 0.8);
+                
+                if (dist < effectiveRadius) {
                     return { type: 'player', index: 0, sprite: this.player };
                 }
             }
@@ -1250,34 +1283,199 @@ const Game = {
     
     showDragTargets(cardType) {
         if (cardType === 'attack') {
-            this.enemySprites.forEach(enemy => {
-                if (enemy) DDOORenderer.setTargeted(enemy, true, 0xff4444, 0.3);
+            this.enemySprites.forEach((enemy, i) => {
+                if (!enemy || !this.state.enemies[i] || this.state.enemies[i].hp <= 0) return;
+                
+                // Subtle glow to indicate valid target
+                DDOORenderer.setTargeted(enemy, true, 0xff6666, 0.4);
+                
+                // Gentle float animation
+                if (!enemy._targetBounce) {
+                    enemy._targetBounce = gsap.to(enemy, {
+                        y: enemy.y - 5,
+                        duration: 0.5,
+                        yoyo: true,
+                        repeat: -1,
+                        ease: 'sine.inOut'
+                    });
+                }
             });
         } else if (cardType === 'skill' || cardType === 'move') {
-            if (this.player) DDOORenderer.setTargeted(this.player, true, 0x44ff44, 0.3);
+            if (this.player) {
+                DDOORenderer.setTargeted(this.player, true, 0x66ff66, 0.4);
+                
+                if (!this.player._targetBounce) {
+                    this.player._targetBounce = gsap.to(this.player, {
+                        y: this.player.y - 5,
+                        duration: 0.5,
+                        yoyo: true,
+                        repeat: -1,
+                        ease: 'sine.inOut'
+                    });
+                }
+            }
         }
     },
     
     hideDragTargets() {
+        // Remove enemy highlights
         this.enemySprites.forEach(enemy => {
-            if (enemy) DDOORenderer.setTargeted(enemy, false);
+            if (enemy) {
+                DDOORenderer.setTargeted(enemy, false);
+                if (enemy._targetBounce) {
+                    enemy._targetBounce.kill();
+                    enemy._targetBounce = null;
+                }
+            }
         });
-        if (this.player) DDOORenderer.setTargeted(this.player, false);
+        
+        // Remove player highlight
+        if (this.player) {
+            DDOORenderer.setTargeted(this.player, false);
+            if (this.player._targetBounce) {
+                this.player._targetBounce.kill();
+                this.player._targetBounce = null;
+            }
+        }
+        
+        // Make sure targeting mode is off
+        this.exitTargetingMode();
     },
     
     applyTargetHighlight(target, cardType) {
-        const color = cardType === 'attack' ? 0xff0000 : 0x00ff00;
+        const color = cardType === 'attack' ? 0xff4444 : 0x44ff44;
+        
+        // Store original scale
+        if (!target.sprite._highlightBaseScale) {
+            target.sprite._highlightBaseScale = target.sprite.scale.x;
+        }
+        
+        // Glow effect
         DDOORenderer.setTargeted(target.sprite, true, color, 1.0);
         
-        const s = target.sprite.scale.x;
-        gsap.to(target.sprite.scale, { x: s * 1.15, y: s * 1.15, duration: 0.15, ease: 'back.out' });
+        // Scale up with bounce
+        const base = target.sprite._highlightBaseScale;
+        gsap.killTweensOf(target.sprite.scale);
+        gsap.to(target.sprite.scale, { 
+            x: base * 1.2, 
+            y: base * 1.2, 
+            duration: 0.2, 
+            ease: 'back.out(2)' 
+        });
+        
+        // Pulse animation
+        if (!target.sprite._highlightTween) {
+            target.sprite._highlightTween = gsap.to(target.sprite, {
+                alpha: 0.85,
+                duration: 0.3,
+                yoyo: true,
+                repeat: -1,
+                ease: 'sine.inOut'
+            });
+        }
+        
+        // Slowdown time (Combat pause)
+        this.enterTargetingMode();
     },
     
     clearTargetHighlight(target) {
         DDOORenderer.setTargeted(target.sprite, false);
         
-        const s = target.sprite.scale.x;
-        gsap.to(target.sprite.scale, { x: s / 1.15, y: s / 1.15, duration: 0.15, ease: 'power2.out' });
+        // Restore scale
+        const base = target.sprite._highlightBaseScale || target.sprite.scale.x / 1.2;
+        gsap.killTweensOf(target.sprite.scale);
+        gsap.to(target.sprite.scale, { 
+            x: base, 
+            y: base, 
+            duration: 0.15, 
+            ease: 'power2.out' 
+        });
+        
+        // Stop pulse
+        if (target.sprite._highlightTween) {
+            target.sprite._highlightTween.kill();
+            target.sprite._highlightTween = null;
+        }
+        target.sprite.alpha = 1;
+        delete target.sprite._highlightBaseScale;
+        
+        // Resume time
+        this.exitTargetingMode();
+    },
+    
+    // Enter slow-motion targeting mode
+    enterTargetingMode() {
+        if (this._targetingMode) return;
+        this._targetingMode = true;
+        
+        // Pause combat gauge
+        if (typeof Combat !== 'undefined') {
+            Combat.pause();
+        }
+        
+        // Darken non-target elements
+        gsap.to(this.player, { alpha: 0.5, duration: 0.2 });
+        
+        // Add vignette effect (optional)
+        if (DDOOBackground.setDarkOverlay) {
+            DDOOBackground.setDarkOverlay(0.3);
+        }
+    },
+    
+    // Exit targeting mode
+    exitTargetingMode() {
+        if (!this._targetingMode) return;
+        this._targetingMode = false;
+        
+        // Resume combat
+        if (typeof Combat !== 'undefined') {
+            Combat.resume();
+        }
+        
+        // Restore brightness
+        gsap.to(this.player, { alpha: 1, duration: 0.2 });
+        
+        if (DDOOBackground.setDarkOverlay) {
+            DDOOBackground.setDarkOverlay(0);
+        }
+    },
+    
+    // Show targeting indicator above target
+    showTargetIndicator(target, cardData) {
+        this.hideTargetIndicator();
+        
+        const indicator = document.createElement('div');
+        indicator.id = 'target-indicator';
+        indicator.className = 'target-indicator';
+        
+        const damage = cardData.damage || cardData.block || '';
+        const action = cardData.type === 'attack' ? 'ATK' : (cardData.type === 'skill' ? 'BUFF' : 'MOVE');
+        
+        indicator.innerHTML = `
+            <div class="target-action">${action}</div>
+            ${damage ? `<div class="target-damage">${damage}</div>` : ''}
+        `;
+        
+        document.getElementById('drag-overlay').appendChild(indicator);
+        
+        // Position above target
+        this.updateTargetIndicatorPosition(target);
+    },
+    
+    updateTargetIndicatorPosition(target) {
+        const indicator = document.getElementById('target-indicator');
+        if (!indicator || !target) return;
+        
+        const battleRect = document.getElementById('battle-area').getBoundingClientRect();
+        const bounds = target.sprite.getBounds();
+        
+        indicator.style.left = `${battleRect.left + bounds.x + bounds.width / 2}px`;
+        indicator.style.top = `${battleRect.top + bounds.y - 50}px`;
+    },
+    
+    hideTargetIndicator() {
+        const indicator = document.getElementById('target-indicator');
+        if (indicator) indicator.remove();
     },
     
     // Execute card effect
