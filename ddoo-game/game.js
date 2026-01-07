@@ -760,13 +760,6 @@ const Game = {
         // Draw card UI (background, energy, button)
         this.drawCardUI();
         
-        // Test: draw a simple rectangle to verify canvas works
-        const testRect = new PIXI.Graphics();
-        testRect.rect(100, 30, 50, 30);
-        testRect.fill({ color: 0xff0000 });
-        this.cards.container.addChild(testRect);
-        console.log('[Game] Test rect added at (100, 30)');
-        
         console.log('[Game] Card system initialized');
     },
     
@@ -1022,28 +1015,29 @@ const Game = {
     
     onCardDragStart(event, card) {
         if (this.state.phase !== 'player') return;
+        if (this.cards.dragging) return;  // Already dragging
         
         const cardData = this.cardDatabase[card.cardId];
+        if (!cardData) return;
+        
         if (this.state.player.energy < cardData.cost) {
             this.showMessage('Energy!', 600);
             this.hapticFeedback('error');
+            // Shake the card
+            gsap.to(card, { x: card.x - 5, duration: 0.05, yoyo: true, repeat: 3 });
             return;
         }
         
         this.cards.dragging = card;
         this.cards.dragData = {
-            startX: card.x,
-            startY: card.y,
-            offsetX: event.global.x - card.x,
-            offsetY: event.global.y - card.y,
-            cardData: cardData
+            startX: card.baseX,
+            startY: card.baseY,
+            cardData: cardData,
+            cardIndex: card.cardIndex
         };
         
-        // Move to drag layer
-        this.cards.dragLayer.addChild(card);
-        card.alpha = 0.9;
+        // Visual feedback
         card.zIndex = 200;
-        
         gsap.to(card.scale, { x: this.cardConfig.dragScale, y: this.cardConfig.dragScale, duration: 0.1 });
         
         this.hapticFeedback('light');
@@ -1051,35 +1045,50 @@ const Game = {
         // Show valid targets
         this.showDragTargets(cardData.type);
         
-        // Global move/up events
-        this.cardApp.stage.eventMode = 'static';
-        this.cardApp.stage.on('pointermove', this.onCardDragMove, this);
-        this.cardApp.stage.on('pointerup', this.onCardDragEnd, this);
-        this.cardApp.stage.on('pointerupoutside', this.onCardDragEnd, this);
+        // Global events (window level for better tracking)
+        this._onDragMove = (e) => this.onCardDragMove(e);
+        this._onDragEnd = (e) => this.onCardDragEnd(e);
+        window.addEventListener('mousemove', this._onDragMove);
+        window.addEventListener('mouseup', this._onDragEnd);
+        window.addEventListener('touchmove', this._onDragMove, { passive: false });
+        window.addEventListener('touchend', this._onDragEnd);
     },
     
     onCardDragMove(event) {
         if (!this.cards.dragging) return;
         
+        event.preventDefault?.();
+        
         const card = this.cards.dragging;
         const data = this.cards.dragData;
         
-        // Move card (relative to cardApp stage)
-        card.x = event.global.x - data.offsetX;
-        card.y = event.global.y - data.offsetY;
+        // Get mouse/touch position
+        const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+        const clientY = event.touches ? event.touches[0].clientY : event.clientY;
         
-        // Check if over battle area (card dragged above card area)
+        // Get card area bounds
         const cardAreaRect = document.getElementById('card-area').getBoundingClientRect();
-        const globalY = event.global.y + cardAreaRect.top;
-        const globalX = event.global.x + cardAreaRect.left;
-        
         const battleRect = document.getElementById('battle-area').getBoundingClientRect();
-        const isOverBattle = globalY < cardAreaRect.top;
+        
+        // Convert to card area local coordinates
+        const localX = clientX - cardAreaRect.left;
+        const localY = clientY - cardAreaRect.top;
+        
+        // Move card
+        card.x = localX;
+        card.y = localY;
+        
+        // Check if over battle area
+        const isOverBattle = clientY < cardAreaRect.top;
         
         if (isOverBattle) {
+            // Scale up when over battle area
+            gsap.to(card.scale, { x: 1.3, y: 1.3, duration: 0.1 });
+            card.alpha = 0.8;
+            
             // Convert to battle area local coordinates
-            const battleX = globalX - battleRect.left;
-            const battleY = globalY - battleRect.top;
+            const battleX = clientX - battleRect.left;
+            const battleY = clientY - battleRect.top;
             
             // Find target
             const newTarget = this.findTargetAt(battleX, battleY, data.cardData.type);
@@ -1091,9 +1100,14 @@ const Game = {
                 this.cards.hoveredTarget = newTarget;
                 if (newTarget) {
                     this.applyTargetHighlight(newTarget, data.cardData.type);
+                    this.hapticFeedback('light');
                 }
             }
         } else {
+            // Normal scale in card area
+            gsap.to(card.scale, { x: this.cardConfig.dragScale, y: this.cardConfig.dragScale, duration: 0.1 });
+            card.alpha = 1;
+            
             if (this.cards.hoveredTarget) {
                 this.clearTargetHighlight(this.cards.hoveredTarget);
                 this.cards.hoveredTarget = null;
@@ -1108,28 +1122,33 @@ const Game = {
         const data = this.cards.dragData;
         
         // Remove event listeners
-        this.cardApp.stage.off('pointermove', this.onCardDragMove, this);
-        this.cardApp.stage.off('pointerup', this.onCardDragEnd, this);
-        this.cardApp.stage.off('pointerupoutside', this.onCardDragEnd, this);
+        window.removeEventListener('mousemove', this._onDragMove);
+        window.removeEventListener('mouseup', this._onDragEnd);
+        window.removeEventListener('touchmove', this._onDragMove);
+        window.removeEventListener('touchend', this._onDragEnd);
         
         // Execute card if dropped on valid target
-        if (this.cards.hoveredTarget) {
-            this.executeCardOnTarget(card.cardId, this.cards.hoveredTarget);
+        const usedCard = this.cards.hoveredTarget !== null;
+        
+        if (usedCard) {
+            // Use the card
+            this.executeCardOnTarget(card.cardId, data.cardIndex, this.cards.hoveredTarget);
             this.clearTargetHighlight(this.cards.hoveredTarget);
             this.cards.hoveredTarget = null;
+        } else {
+            // Return card to hand position
+            gsap.to(card, {
+                x: data.startX,
+                y: data.startY,
+                duration: 0.2,
+                ease: 'back.out(1.5)'
+            });
         }
         
-        // Return card to hand
-        this.cards.container.addChild(card);
+        // Reset card visual
         card.alpha = 1;
-        
-        gsap.to(card, {
-            x: data.startX,
-            y: data.startY,
-            duration: 0.2,
-            ease: 'power2.out'
-        });
         gsap.to(card.scale, { x: 1, y: 1, duration: 0.15 });
+        card.zIndex = data.cardIndex;
         
         // Hide targets
         this.hideDragTargets();
@@ -1205,7 +1224,7 @@ const Game = {
     },
     
     // Execute card effect
-    executeCardOnTarget(cardId, target) {
+    executeCardOnTarget(cardId, cardIndex, target) {
         const cardData = this.cardDatabase[cardId];
         if (!cardData) return;
         
@@ -1214,8 +1233,9 @@ const Game = {
         this.updateUI();
         
         this.hapticFeedback('medium');
-        console.log(`[Game] Card ${cardId} -> ${target.type}`);
+        console.log(`[Game] Card ${cardId} (index ${cardIndex}) -> ${target.type}`);
         
+        // Execute effect
         switch (cardData.type) {
             case 'attack':
                 this.attackWithCard(target.index, cardData);
@@ -1228,13 +1248,61 @@ const Game = {
                 break;
         }
         
-        // Remove card from hand (simplified - redraw)
-        const idx = this.cards.hand.findIndex(c => c.id === cardId);
-        if (idx >= 0) {
-            this.cards.hand.splice(idx, 1);
-            const remaining = this.cards.hand.map(c => c.id);
-            this.drawHand(remaining);
-        }
+        // Remove the used card from hand
+        this.removeCardFromHand(cardIndex);
+    },
+    
+    // Remove card and rearrange remaining cards
+    removeCardFromHand(cardIndex) {
+        if (cardIndex < 0 || cardIndex >= this.cards.sprites.length) return;
+        
+        const card = this.cards.sprites[cardIndex];
+        
+        // Animate card disappearing
+        gsap.to(card, {
+            y: card.y - 50,
+            alpha: 0,
+            duration: 0.2,
+            ease: 'power2.in',
+            onComplete: () => {
+                // Remove from arrays
+                card.destroy({ children: true });
+                this.cards.sprites.splice(cardIndex, 1);
+                this.cards.hand.splice(cardIndex, 1);
+                
+                // Rearrange remaining cards
+                this.rearrangeCards();
+            }
+        });
+    },
+    
+    // Rearrange cards after one is removed
+    rearrangeCards() {
+        const { width: cardW, spacing } = this.cardConfig;
+        const width = this.cardApp.renderer.width / this.cardApp.renderer.resolution;
+        const height = this.cardApp.renderer.height / this.cardApp.renderer.resolution;
+        
+        const count = this.cards.sprites.length;
+        if (count === 0) return;
+        
+        const totalWidth = count * (cardW + spacing) - spacing;
+        const startX = Math.max(75, (width - totalWidth) / 2);
+        const baseY = height / 2;
+        
+        this.cards.sprites.forEach((card, i) => {
+            const newX = startX + i * (cardW + spacing) + cardW / 2;
+            card.cardIndex = i;
+            card.zIndex = i;
+            
+            gsap.to(card, {
+                x: newX,
+                duration: 0.25,
+                ease: 'power2.out'
+            });
+            
+            card.baseX = newX;
+            card.baseY = baseY;
+        });
     },
     
     // ==================== Combat Actions ====================
