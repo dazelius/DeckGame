@@ -22,21 +22,21 @@ const DDOOBackground = {
         smoothing: 0.05
     },
     
-    // Camera defaults (side view - 10x3 arena, center aligned)
+    // Camera defaults (side view - left vs right battle)
     cameraDefaults: {
         posX: 5,       // Center of arena (X axis)
-        posY: 4,       // Medium height
-        posZ: 7,       // Good distance
+        posY: 4,       // Eye level height
+        posZ: 18,      // Far back to see full width
         lookAtX: 5,    // Look at arena center
-        lookAtY: 0,    // Look at ground level
-        lookAtZ: 1.5   // Look at center of 3 rows
+        lookAtY: 2,    // Look at character height
+        lookAtZ: 5     // Look at arena center (Z axis)
     },
     
     // Auto zoom settings
     autoZoom: {
         enabled: true,
-        targetZ: 7,
-        currentZ: 7,
+        targetZ: 18,
+        currentZ: 18,
         targetX: 0,
         currentX: 0,
         targetLookAtX: 0,
@@ -258,21 +258,17 @@ const DDOOBackground = {
         this.scene.add(topLight);
     },
     
-    // 바닥 생성 (10x3 그리드에 맞춤)
+    // 바닥 생성
     createFloor() {
         const self = this;
         
-        // Grid center is at (5, 0, 1.5)
-        const gridCenterX = 5;
-        const gridCenterZ = 1.5;
-        
         // 기본 바닥 (텍스처 로딩 전 폴백)
         const baseFloor = new THREE.Mesh(
-            new THREE.PlaneGeometry(50, 50),
+            new THREE.PlaneGeometry(200, 200),
             new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 })
         );
         baseFloor.rotation.x = -Math.PI / 2;
-        baseFloor.position.set(gridCenterX, -0.05, gridCenterZ);
+        baseFloor.position.set(0, -0.05, 0);
         this.dungeonGroup.add(baseFloor);
         
         // 🎨 bg-floor.png 텍스처 로드
@@ -285,10 +281,10 @@ const DDOOBackground = {
             tex.minFilter = THREE.NearestFilter;
             tex.wrapS = THREE.RepeatWrapping;
             tex.wrapT = THREE.RepeatWrapping;
-            tex.repeat.set(3, 3);  // 3x3 타일링
+            tex.repeat.set(2, 2);  // 2x2 타일링
             
             const floorMesh = new THREE.Mesh(
-                new THREE.PlaneGeometry(30, 30),  // 그리드 영역에 맞춤
+                new THREE.PlaneGeometry(120, 120),
                 new THREE.MeshBasicMaterial({ 
                     map: tex, 
                     transparent: true,
@@ -296,7 +292,7 @@ const DDOOBackground = {
                 })
             );
             floorMesh.rotation.x = -Math.PI / 2;
-            floorMesh.position.set(gridCenterX, 0.01, gridCenterZ);
+            floorMesh.position.set(0, 0.01, 0);
             self.dungeonGroup.add(floorMesh);
         };
         floorImg.onerror = function() {
@@ -304,14 +300,9 @@ const DDOOBackground = {
         };
     },
     
-    // 벽 생성 (그리드 끝에서 시작)
+    // 벽 생성
     createWalls() {
         const self = this;
-        
-        // Grid boundary: X: 0~10, Z: 0~10
-        // Wall should be at Z=0 (back edge of grid)
-        const gridBackZ = 0;  // Grid back edge
-        const wallZ = gridBackZ - 0.5;  // Slightly behind grid edge
         
         // 폴백 재질
         const fallbackMat = new THREE.MeshStandardMaterial({ 
@@ -330,7 +321,7 @@ const DDOOBackground = {
             tex.minFilter = THREE.NearestFilter;
             
             const aspect = wallImg.width / wallImg.height;
-            const width = 30;  // Narrower to fit grid
+            const width = 80;
             const height = width / aspect;
             
             const wallMat = new THREE.MeshBasicMaterial({ 
@@ -340,20 +331,20 @@ const DDOOBackground = {
                 fog: false
             });
             
-            // 뒷벽 (그리드 끝선에 맞춤, grid center = 5)
+            // 뒷벽
             const backWall = new THREE.Mesh(
                 new THREE.PlaneGeometry(width, height),
                 wallMat
             );
-            backWall.position.set(5, height / 2, wallZ);  // Center at grid X=5
+            backWall.position.set(0, height / 2, -30);
             self.dungeonGroup.add(backWall);
             
-            // 좌벽 (grid X=0 edge)
+            // 좌벽
             const leftTex = new THREE.CanvasTexture(wallImg);
             leftTex.magFilter = THREE.NearestFilter;
             leftTex.minFilter = THREE.NearestFilter;
             const leftWall = new THREE.Mesh(
-                new THREE.PlaneGeometry(15, height),  // Shorter wall
+                new THREE.PlaneGeometry(60, height),
                 new THREE.MeshBasicMaterial({ 
                     map: leftTex, 
                     transparent: true,
@@ -361,16 +352,16 @@ const DDOOBackground = {
                     fog: false
                 })
             );
-            leftWall.position.set(-0.5, height / 2, 1.5);  // At X=-0.5, centered at Z=1.5
+            leftWall.position.set(-40, height / 2, 0);
             leftWall.rotation.y = Math.PI / 2;
             self.dungeonGroup.add(leftWall);
             
-            // 우벽 (grid X=10 edge)
+            // 우벽
             const rightTex = new THREE.CanvasTexture(wallImg);
             rightTex.magFilter = THREE.NearestFilter;
             rightTex.minFilter = THREE.NearestFilter;
             const rightWall = new THREE.Mesh(
-                new THREE.PlaneGeometry(15, height),
+                new THREE.PlaneGeometry(60, height),
                 new THREE.MeshBasicMaterial({ 
                     map: rightTex, 
                     transparent: true,
@@ -378,7 +369,7 @@ const DDOOBackground = {
                     fog: false
                 })
             );
-            rightWall.position.set(10.5, height / 2, 1.5);  // At X=10.5, centered at Z=1.5
+            rightWall.position.set(40, height / 2, 0);
             rightWall.rotation.y = -Math.PI / 2;
             self.dungeonGroup.add(rightWall);
         };
@@ -386,17 +377,17 @@ const DDOOBackground = {
             console.warn('[DDOOBackground] bg-wall.png 로드 실패, 폴백 사용');
             
             // 폴백 벽
-            const backWall = new THREE.Mesh(new THREE.PlaneGeometry(30, 15), fallbackMat);
-            backWall.position.set(5, 7.5, wallZ);
+            const backWall = new THREE.Mesh(new THREE.PlaneGeometry(80, 25), fallbackMat);
+            backWall.position.set(0, 12.5, -30);
             self.dungeonGroup.add(backWall);
             
-            const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(6, 15), fallbackMat.clone());
-            leftWall.position.set(-0.5, 7.5, 1.5);
+            const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(60, 25), fallbackMat.clone());
+            leftWall.position.set(-40, 12.5, 0);
             leftWall.rotation.y = Math.PI / 2;
             self.dungeonGroup.add(leftWall);
             
-            const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(6, 15), fallbackMat.clone());
-            rightWall.position.set(10.5, 7.5, 1.5);
+            const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(60, 25), fallbackMat.clone());
+            rightWall.position.set(40, 12.5, 0);
             rightWall.rotation.y = -Math.PI / 2;
             self.dungeonGroup.add(rightWall);
         };
@@ -411,7 +402,7 @@ const DDOOBackground = {
             tex.minFilter = THREE.NearestFilter;
             
             const aspect = skyImg.width / skyImg.height;
-            const width = 60;
+            const width = 150;
             const height = width / aspect;
             
             const skyMesh = new THREE.Mesh(
@@ -421,35 +412,33 @@ const DDOOBackground = {
                     fog: false
                 })
             );
-            // Position behind wall (Z < wallZ)
-            skyMesh.position.set(5, height / 2 - 3, -5);
+            skyMesh.position.set(0, height / 2 - 5, -50);
             self.dungeonGroup.add(skyMesh);
         };
         
-        // 천장 (위에서 덮는 느낌)
+        // 천장
         const ceiling = new THREE.Mesh(
-            new THREE.PlaneGeometry(30, 20),
+            new THREE.PlaneGeometry(80, 60),
             new THREE.MeshStandardMaterial({ color: 0x050508, side: THREE.DoubleSide, roughness: 1.0 })
         );
         ceiling.rotation.x = Math.PI / 2;
-        ceiling.position.set(5, 12, -2);
+        ceiling.position.set(0, 25, 0);
         this.dungeonGroup.add(ceiling);
     },
     
-    // 기둥 (그리드 코너에 배치 - 10x3 grid)
+    // 기둥
     addPillars() {
         const pillarMat = new THREE.MeshStandardMaterial({ color: 0x151520, roughness: 0.85 });
-        // Grid corners: (0,0), (10,0), (0,3), (10,3)
         const positions = [
-            [-1, 6, -1],   // Top-left corner
-            [11, 6, -1],   // Top-right corner
-            [-1, 6, 4],    // Bottom-left corner
-            [11, 6, 4]     // Bottom-right corner
+            [-30, 12.5, -20],
+            [30, 12.5, -20],
+            [-30, 12.5, 5],
+            [30, 12.5, 5]
         ];
         
         positions.forEach(pos => {
             const pillar = new THREE.Mesh(
-                new THREE.BoxGeometry(1.5, 12, 1.5),
+                new THREE.BoxGeometry(3, 25, 3),
                 pillarMat
             );
             pillar.position.set(pos[0], pos[1], pos[2]);
@@ -457,11 +446,13 @@ const DDOOBackground = {
         });
     },
     
-    // 횃불 (기둥 근처에)
+    // 횃불
     addTorches() {
         const positions = [
-            [-1, 5, -1],   // Top-left
-            [11, 5, -1],   // Top-right
+            [-25, 6, -25],
+            [25, 6, -25],
+            [-35, 6, -5],
+            [35, 6, -5]
         ];
         
         positions.forEach((pos, i) => {
@@ -667,49 +658,6 @@ const DDOOBackground = {
         const config = this.worldPositions.enemies;
         const x = config.baseX + (index * config.spacingX);
         return this.project3DToScreen(x, config.y, config.z);
-    },
-    
-    // Screen to Grid coordinate conversion (raycast to ground plane)
-    screenToGrid(screenX, screenY) {
-        if (!this.isInitialized || !this.camera || !this.scene) return null;
-        
-        // Get dimensions
-        let width, height;
-        if (this.parentElement) {
-            const rect = this.parentElement.getBoundingClientRect();
-            width = rect.width;
-            height = rect.height;
-        } else {
-            width = window.innerWidth;
-            height = window.innerHeight;
-        }
-        
-        // Convert screen to NDC (-1 to 1)
-        const ndcX = (screenX / width) * 2 - 1;
-        const ndcY = -(screenY / height) * 2 + 1;
-        
-        // Create raycaster
-        const raycaster = new THREE.Raycaster();
-        raycaster.setFromCamera({ x: ndcX, y: ndcY }, this.camera);
-        
-        // Create ground plane at Y = -1.5 (floor level)
-        const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 1.5);
-        
-        // Find intersection
-        const intersection = new THREE.Vector3();
-        const hit = raycaster.ray.intersectPlane(groundPlane, intersection);
-        
-        if (hit) {
-            return {
-                x: intersection.x,
-                z: intersection.z,
-                worldX: intersection.x,
-                worldY: intersection.y,
-                worldZ: intersection.z
-            };
-        }
-        
-        return null;
     },
     
     // ==========================================

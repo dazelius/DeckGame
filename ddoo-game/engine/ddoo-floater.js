@@ -97,17 +97,6 @@ const DDOOFloater = {
             prefix: '-',
             animation: 'default'
         },
-        // 충돌 데미지 - 주황색
-        collision: {
-            color: '#ff8800',
-            stroke: '#442200',
-            fontSize: 26,
-            fontFamily: 'Cinzel, Times New Roman, serif',
-            prefix: '-',
-            label: 'CRASH',
-            labelColor: '#ffaa00',
-            animation: 'default'
-        },
         // 화상 - 주황
         burn: {
             color: '#ff8844',

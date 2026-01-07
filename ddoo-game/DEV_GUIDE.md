@@ -12,13 +12,11 @@
 3. [핵심 모듈](#핵심-모듈)
 4. [게임 디자인 철학](#게임-디자인-철학)
 5. [코딩 컨벤션](#코딩-컨벤션)
-6. [렌더링 레이어 가이드](#렌더링-레이어-가이드)
-7. [CSS 스타일 가이드](#css-스타일-가이드)
-8. [모듈 개발 가이드](#모듈-개발-가이드)
-9. [전투 시스템](#전투-시스템)
-10. [이펙트 & 연출](#이펙트--연출)
-11. [사운드 시스템](#사운드-시스템)
-12. [세이브 & 로드](#세이브--로드)
+6. [모듈 개발 가이드](#모듈-개발-가이드)
+7. [전투 시스템](#전투-시스템)
+8. [이펙트 & 연출](#이펙트--연출)
+9. [사운드 시스템](#사운드-시스템)
+10. [세이브 & 로드](#세이브--로드)
 
 ---
 
@@ -163,19 +161,14 @@ DDOOFloater.showOnCharacter(sprite, '+WEAK', 'weak');
 
 ### 5. DDOOAction (애니메이션 시스템)
 ```javascript
-// JSON 애니메이션 재생 (단일)
-await DDOOAction.play('player.attack', {
-    container: playerContainer,
-    sprite: playerSprite
-});
+// JSON 애니메이션 재생
+await DDOOAction.play('player.attack', playerContainer);
+await DDOOAction.play('enemy.hit', enemyContainer);
 
-// 시퀀스 재생 (연속 애니메이션)
-// play()가 자동으로 type:'sequence'를 감지하여 처리
-await DDOOAction.play('card.strike', {
-    container: playerContainer,
-    sprite: playerSprite,
-    targetContainer: enemyContainer,
-    targetSprite: enemySprite
+// 시퀀스 재생
+await DDOOAction.playSequence('card.strike', {
+    player: playerContainer,
+    enemy: enemyContainer
 });
 ```
 
@@ -343,156 +336,6 @@ console.error('[ModuleName] 초기화 실패:', error);
 
 // 디버그 (필요시)
 console.log('[ModuleName] DEBUG:', data);
-```
-
----
-
-## 렌더링 레이어 가이드
-
-### 하이브리드 아키텍처
-
-DDOO Game은 **DOM + Canvas 하이브리드** 구조를 사용합니다.
-
-```
-+---------------------------------------------+
-|  DOM Layer (z-index: 높음)                  |
-|  - 카드 UI                                  |
-|  - HP 바, 에너지 표시                        |
-|  - 타겟팅 하이라이트                         |
-|  - 인텐트 (적 의도 표시)                     |
-|  - 대미지/힐 숫자                            |
-|  - 메시지, 알림                             |
-+---------------------------------------------+
-|  PixiJS Canvas (z-index: 중간)              |
-|  - 캐릭터 스프라이트                         |
-|  - 히트 이펙트, 플래시                       |
-|  - 파티클 시스템                            |
-|  - 발사체                                   |
-+---------------------------------------------+
-|  Three.js Canvas (z-index: 낮음)            |
-|  - 3D 던전 배경                             |
-|  - 조명, 안개                               |
-+---------------------------------------------+
-```
-
-### DOM을 사용해야 하는 경우
-
-| 요소 | 이유 |
-|------|------|
-| **카드 UI** | CSS 스타일링, 호버/드래그 효과, 반응형 |
-| **HP/에너지 바** | 간단한 div + width%, CSS transition |
-| **텍스트 (대미지 등)** | 폰트 렌더링 품질, 그림자 효과 |
-| **인텐트 표시** | 캐릭터 위 고정 위치, HTML 구조화 |
-| **타겟팅 링** | CSS animation, box-shadow glow |
-| **버튼/컨트롤** | 접근성, 키보드 지원, 클릭 영역 |
-| **툴팁/모달** | 복잡한 레이아웃, 스크롤 |
-
-**DOM 장점:**
-- CSS animation은 GPU 가속
-- DevTools로 디버깅 용이
-- 반응형 설계 쉬움
-- 접근성 (스크린리더)
-- 유지보수 편함
-
-### PixiJS를 사용해야 하는 경우
-
-| 요소 | 이유 |
-|------|------|
-| **캐릭터 스프라이트** | 틴트, 필터, 복잡한 변형 |
-| **파티클 이펙트** | 수백 개 동시 렌더링 |
-| **히트 플래시** | 프레임 단위 정밀 제어 |
-| **발사체** | 부드러운 궤적 |
-| **스프라이트시트** | 애니메이션 프레임 관리 |
-
-**PixiJS 장점:**
-- 대량 객체 렌더링 성능
-- 정밀한 좌표/회전/스케일
-- 블렌드 모드, 필터
-- 텍스처 관리
-
-### Three.js (배경 전용)
-
-| 요소 | 이유 |
-|------|------|
-| **3D 던전** | 깊이감, 입체감 |
-| **조명 효과** | 횃불, 그림자 |
-| **카메라 움직임** | 시점 변화, 줌 |
-
-### 레이어 z-index 규칙
-
-```css
-/* base.css 또는 layout.css */
-:root {
-    --z-bg3d: 1;           /* Three.js 배경 */
-    --z-pixi: 10;          /* PixiJS 캔버스 */
-    --z-ui-base: 50;       /* 기본 UI */
-    --z-intent: 100;       /* 인텐트 표시 */
-    --z-card: 200;         /* 카드 영역 */
-    --z-drag: 500;         /* 드래그 중인 카드 */
-    --z-overlay: 9999;     /* 타겟팅 오버레이 */
-}
-```
-
-### 예시: DOM 카드 vs Canvas 카드
-
-**DOM 카드 (권장):**
-```html
-<div class="card" data-id="slash" data-cost="1">
-    <div class="card-cost">1</div>
-    <div class="card-name">Slash</div>
-    <div class="card-damage">6</div>
-</div>
-```
-```css
-.card {
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-.card:hover {
-    transform: translateY(-10px) scale(1.05);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-}
-.card.dragging {
-    opacity: 0.8;
-    z-index: var(--z-drag);
-}
-```
-
-**Canvas 카드 (피해야 함):**
-```javascript
-// 복잡하고 유지보수 어려움
-const card = new PIXI.Graphics();
-card.beginFill(0x2a2a4a);
-card.drawRoundedRect(0, 0, 80, 100, 8);
-// ... 많은 draw 호출
-const text = new PIXI.Text('Slash', style);
-// ... hover 이벤트 수동 구현
-```
-
-### 위치 동기화 (DOM + Canvas)
-
-DOM 요소를 PixiJS 스프라이트 위에 표시할 때:
-
-```javascript
-// 캐릭터 위에 HP 바 위치시키기
-function updateHPBarPosition(hpBarElement, sprite) {
-    const bounds = sprite.getBounds();
-    const battleRect = document.getElementById('battle-area').getBoundingClientRect();
-    
-    hpBarElement.style.left = `${battleRect.left + bounds.x + bounds.width / 2}px`;
-    hpBarElement.style.top = `${battleRect.top + bounds.y - 20}px`;
-}
-
-// 매 프레임 업데이트 (위치 루프에서)
-function startPositionLoop() {
-    const update = () => {
-        updateHPBarPosition(hpBar, playerSprite);
-        enemySprites.forEach((sprite, i) => {
-            updateHPBarPosition(enemyHPBars[i], sprite);
-        });
-        requestAnimationFrame(update);
-    };
-    update();
-}
 ```
 
 ---

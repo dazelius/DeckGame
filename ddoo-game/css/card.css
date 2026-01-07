@@ -1,96 +1,15 @@
 /* =====================================================
-   card.css - Card Styling (DOM-based)
+   card.css - Card Styling
    ===================================================== */
-
-/* ==================== Card UI Container ==================== */
-
-#card-ui {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    padding: 10px 15px;
-    position: relative;
-    gap: 15px;
-}
-
-/* ==================== Energy Display (Clash Royale + Dark Souls Style) ==================== */
-
-#energy-display {
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    display: flex;
-    gap: 4px;
-}
-
-/* Individual energy ember */
-.energy-ember {
-    width: 18px;
-    height: 24px;
-    background: linear-gradient(180deg, #ff6b35 0%, #f7931a 50%, #8b4513 100%);
-    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-    box-shadow: 
-        0 0 8px #ff6b35,
-        0 0 15px rgba(247, 147, 26, 0.5),
-        inset 0 -3px 6px rgba(0,0,0,0.4);
-    position: relative;
-    animation: ember-flicker 1.5s ease-in-out infinite;
-}
-
-.energy-ember::before {
-    content: '';
-    position: absolute;
-    top: 3px;
-    left: 4px;
-    width: 6px;
-    height: 8px;
-    background: rgba(255, 255, 200, 0.6);
-    border-radius: 50%;
-}
-
-.energy-ember.empty {
-    background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 50%, #1a1a1a 100%);
-    box-shadow: inset 0 -3px 6px rgba(0,0,0,0.6);
-    animation: none;
-}
-
-.energy-ember.empty::before {
-    display: none;
-}
-
-@keyframes ember-flicker {
-    0%, 100% { 
-        transform: scale(1);
-        filter: brightness(1);
-    }
-    50% { 
-        transform: scale(1.05);
-        filter: brightness(1.2);
-    }
-}
-
-/* Energy count text (fallback/additional) */
-.energy-count {
-    position: absolute;
-    left: 10px;
-    bottom: 5px;
-    font-size: 0.7rem;
-    color: #f7931a;
-    text-shadow: 0 0 5px #000;
-}
 
 /* ==================== Card Hand Container ==================== */
 
 #card-hand {
     display: flex;
     justify-content: center;
-    align-items: flex-end;
-    gap: 10px;
-    flex: 1;
-    min-width: 0;
-    padding: 5px 0;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 10px 0;
 }
 
 /* ==================== Card Base ==================== */
@@ -124,39 +43,24 @@
     transform: translateY(-10px) scale(1.02);
 }
 
-/* ==================== Card Cost Badge (Dark Souls Ember) ==================== */
+/* ==================== Card Cost Badge ==================== */
 
 .card-cost {
     position: absolute;
-    top: -6px;
-    left: -6px;
-    width: 24px;
-    height: 30px;
-    background: linear-gradient(180deg, #ff6b35 0%, #f7931a 40%, #8b4513 100%);
-    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    top: -8px;
+    left: -8px;
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(180deg, var(--color-accent) 0%, var(--color-accent-dark) 100%);
+    border: 2px solid var(--color-accent-light);
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: bold;
-    color: #fff;
-    font-size: 1rem;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
-    box-shadow: 
-        0 0 8px rgba(255, 107, 53, 0.6),
-        0 2px 4px rgba(0,0,0,0.5),
-        inset 0 -4px 8px rgba(0,0,0,0.3);
-}
-
-.card-cost::before {
-    content: '';
-    position: absolute;
-    top: 4px;
-    left: 5px;
-    width: 6px;
-    height: 8px;
-    background: rgba(255, 255, 200, 0.4);
-    border-radius: 50%;
-    pointer-events: none;
+    color: #000;
+    font-size: 0.9rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
 /* ==================== Card Content ==================== */
@@ -219,45 +123,9 @@
 
 /* Selected Card */
 .card.selected {
-    transform: translateY(-30px) scale(1.15);
-    border-color: #ffd700;
-    box-shadow: 
-        0 0 20px rgba(255, 215, 0, 0.6),
-        0 0 40px rgba(255, 215, 0, 0.3),
-        0 15px 35px rgba(0, 0, 0, 0.5);
-    z-index: 100;
-    animation: card-pulse 1s ease-in-out infinite;
-}
-
-@keyframes card-pulse {
-    0%, 100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.6), 0 0 40px rgba(255, 215, 0, 0.3); }
-    50% { box-shadow: 0 0 30px rgba(255, 215, 0, 0.8), 0 0 60px rgba(255, 215, 0, 0.5); }
-}
-
-/* Shortcut key indicator */
-.card::before {
-    content: attr(data-shortcut);
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    width: 20px;
-    height: 20px;
-    background: #1a1a2e;
-    border: 1px solid #444;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: bold;
-    color: #888;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10;
-}
-
-.card.selected::before {
-    background: #ffd700;
-    color: #000;
-    border-color: #ffd700;
+    transform: translateY(-25px) scale(1.1);
+    border-color: var(--color-success);
+    box-shadow: 0 12px 30px rgba(34, 197, 94, 0.4);
 }
 
 /* Disabled Card (not enough energy) */
@@ -287,18 +155,6 @@
 /* Touch active */
 .card.touch-active {
     transform: translateY(-20px) scale(1.08);
-}
-
-/* Shake animation (not enough energy) */
-.card.shake {
-    animation: card-shake 0.3s ease-in-out;
-}
-
-@keyframes card-shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-8px); }
-    50% { transform: translateX(8px); }
-    75% { transform: translateX(-8px); }
 }
 
 /* ==================== Card Drag States ==================== */
@@ -384,136 +240,5 @@
     
     .card-desc {
         font-size: 0.55rem;
-    }
-}
-
-/* ==================== Deck Info ==================== */
-
-#deck-info {
-    position: absolute;
-    right: 80px;
-    top: 50%;
-    transform: translateY(-50%);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.pile {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-width: 45px;
-}
-
-.pile-count {
-    font-size: 1.1rem;
-    font-weight: bold;
-    color: var(--color-text);
-}
-
-.pile-label {
-    font-size: 0.65rem;
-    color: var(--color-text-dark);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.draw-pile .pile-count {
-    color: var(--color-skill);
-}
-
-.discard-pile .pile-count {
-    color: var(--color-attack);
-}
-
-/* ==================== End Turn Button ==================== */
-
-#btn-end-turn {
-    position: absolute;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 55px;
-    height: 55px;
-    background: linear-gradient(180deg, #374151 0%, #1f2937 100%);
-    border: 2px solid #4b5563;
-    border-radius: 50%;
-    color: #d1d5db;
-    font-size: 0.7rem;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-#btn-end-turn:hover {
-    background: linear-gradient(180deg, #4b5563 0%, #374151 100%);
-    border-color: var(--color-accent);
-    color: #fff;
-    transform: translateY(-50%) scale(1.1);
-    box-shadow: 0 0 15px rgba(251, 191, 36, 0.3);
-}
-
-#btn-end-turn:active {
-    transform: translateY(-50%) scale(0.95);
-}
-
-#btn-end-turn.highlight {
-    animation: end-turn-pulse 1s ease-in-out infinite;
-    border-color: var(--color-success);
-}
-
-@keyframes end-turn-pulse {
-    0%, 100% { box-shadow: 0 0 5px rgba(34, 197, 94, 0.3); }
-    50% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.6); }
-}
-
-/* ==================== Card Value Display ==================== */
-
-.card-value {
-    font-size: 1.4rem;
-    font-weight: bold;
-    margin-top: 8px;
-}
-
-.card[data-type="attack"] .card-value {
-    color: var(--color-attack);
-}
-
-.card[data-type="skill"] .card-value {
-    color: var(--color-skill);
-}
-
-.card[data-type="power"] .card-value {
-    color: var(--color-power);
-}
-
-/* ==================== Responsive Adjustments ==================== */
-
-@media (max-width: 768px) {
-    #energy-display {
-        left: 10px;
-    }
-    
-    .energy-orb {
-        width: 45px;
-        height: 45px;
-    }
-    
-    #energy-current {
-        font-size: 1.1rem;
-    }
-    
-    #deck-info {
-        right: 65px;
-    }
-    
-    #btn-end-turn {
-        right: 10px;
-        width: 45px;
-        height: 45px;
-        font-size: 0.6rem;
     }
 }

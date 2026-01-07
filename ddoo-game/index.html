@@ -26,36 +26,68 @@
         
         <!-- 전투 UI 오버레이 -->
         <div id="battle-ui">
+            <!-- 상단 바 (HP, 에너지 등) -->
+            <div id="top-bar">
+                <div class="player-info">
+                    <span class="hp-bar">
+                        <span class="hp-fill" id="player-hp"></span>
+                    </span>
+                    <span class="hp-text" id="player-hp-text">100/100</span>
+                </div>
+                <div class="energy-info">
+                    <span id="energy-text">3/3</span>
+                </div>
+            </div>
+            
             <!-- 중앙 메시지 -->
             <div id="center-message"></div>
             
-            <!-- 그리드 좌표 표시 -->
-            <div id="grid-coords"></div>
+            <!-- 적 인텐트 표시 영역 -->
+            <div id="enemy-intents"></div>
         </div>
-        
-        <!-- 인텐트 컨테이너 (캐릭터 위에 표시) -->
-        <div id="intent-container"></div>
     </div>
     
-    <!-- ==================== 카드 영역 (DOM 기반) ==================== -->
+    <!-- ==================== 카드 영역 (1/3) ==================== -->
     <div id="card-area">
-        <!-- 에너지 바 (Clash Royale Style - 중앙) -->
-        <div id="energy-bar-container">
-            <div id="energy-bar">
-                <div id="energy-bar-fill"></div>
-                <div id="energy-bar-segments"></div>
+        <!-- 카드 핸드 -->
+        <div id="card-hand">
+            <div class="card" data-card="strike" data-type="attack">
+                <div class="card-cost">1</div>
+                <div class="card-name">Strike</div>
+                <div class="card-desc">Deal 6 damage</div>
             </div>
-            <div id="energy-number">5</div>
+            <div class="card" data-card="defend" data-type="skill">
+                <div class="card-cost">1</div>
+                <div class="card-name">Defend</div>
+                <div class="card-desc">Gain 5 block</div>
+            </div>
+            <div class="card" data-card="bash" data-type="attack">
+                <div class="card-cost">2</div>
+                <div class="card-name">Bash</div>
+                <div class="card-desc">Deal 8 dmg</div>
+            </div>
+            <div class="card" data-card="dash" data-type="skill">
+                <div class="card-cost">1</div>
+                <div class="card-name">Dash</div>
+                <div class="card-desc">Move to position</div>
+            </div>
         </div>
         
-        <div id="card-ui">
-            <!-- 카드 핸드 -->
-            <div id="card-hand"></div>
+        <!-- 하단 컨트롤 -->
+        <div id="card-controls">
+            <div id="deck-info">
+                <span class="deck-count" id="draw-pile">5</span>
+                <span class="deck-label">Draw</span>
+            </div>
+            <div id="action-buttons">
+                <button id="btn-end-turn" class="action-btn">End Turn</button>
+            </div>
+            <div id="deck-info">
+                <span class="deck-count" id="discard-pile">0</span>
+                <span class="deck-label">Discard</span>
+            </div>
         </div>
     </div>
-    
-    <!-- ==================== 드래그 오버레이 (최상위 레이어) ==================== -->
-    <div id="drag-overlay"></div>
     
     <!-- 외부 라이브러리 -->
     <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.x/dist/pixi.min.js"></script>

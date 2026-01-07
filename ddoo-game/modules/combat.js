@@ -5,28 +5,9 @@
 const Combat = {
     // ========== Config ==========
     config: {
-        intentGaugeSpeed: 0.008,   // Gauge fill speed per frame (slower for deliberate play)
-        baseGaugeTime: 5000,       // Base time to fill gauge (5 seconds - think before act)
+        intentGaugeSpeed: 0.02,    // Gauge fill speed per frame (0-1)
+        baseGaugeTime: 3000,       // Base time to fill gauge (ms)
         tickRate: 16,              // Update every 16ms (~60fps)
-        telegraphDuration: 800,    // Time to show attack zone before hitting (ms)
-        
-        // Attack range settings (in grid units)
-        attackRange: {
-            melee: 2,              // Melee attack range
-            ranged: 6,             // Ranged attack range
-        }
-    },
-    
-    // ========== Enemy Types ==========
-    enemyTypes: {
-        goblin: {
-            name: 'Goblin Warrior',
-            attackType: 'melee',
-            attackRange: 2,
-            damage: { min: 5, max: 8 },
-            chargeTime: { min: 2000, max: 3500 },
-            preferredIntents: ['ATTACK', 'ATTACK', 'ATTACK', 'MOVE', 'DEFEND']
-        }
     },
     
     // ========== State ==========
@@ -35,14 +16,7 @@ const Combat = {
         running: false,
         paused: false,
         tickId: null,
-        lastTick: 0,
-        timeScale: 1.0  // Time scale for slow-motion
-    },
-    
-    // Set time scale (for slow-motion targeting)
-    setTimeScale(scale) {
-        this.state.timeScale = Math.max(0, Math.min(2, scale));
-        console.log(`[Combat] Time scale: ${this.state.timeScale}`);
+        lastTick: 0
     },
     
     // ========== Enemy Intents ==========
@@ -147,14 +121,11 @@ const Combat = {
     
     // ========== Update (called every tick) ==========
     update(delta) {
-        // Apply time scale
-        const scaledDelta = delta * this.state.timeScale;
-        
         // Update all enemy intents
         this.intents.forEach((intent, enemyId) => {
             if (intent.gauge < intent.maxGauge) {
-                // Fill gauge (with time scale)
-                intent.gauge += scaledDelta;
+                // Fill gauge
+                intent.gauge += delta;
                 
                 // Update UI
                 this.updateIntentUI(enemyId, intent);
@@ -174,7 +145,7 @@ const Combat = {
         // Get enemies from Game
         if (typeof Game !== 'undefined' && Game.state.enemies) {
             Game.state.enemies.forEach((enemy, index) => {
-                this.setEnemyIntent(index, this.generateRandomIntent(index));
+                this.setEnemyIntent(index, this.generateRandomIntent());
             });
         }
     },
@@ -196,37 +167,13 @@ const Combat = {
         return intent;
     },
     
-    // ========== Get Distance to Player ==========
-    getDistanceToPlayer(enemyId) {
-        if (typeof Game === 'undefined') return 999;
-        
-        const enemyPos = Game.worldPositions.enemies[enemyId];
-        const playerPos = Game.worldPositions.player;
-        
-        if (!enemyPos || !playerPos) return 999;
-        
-        // Simple X-axis distance for side-view combat
-        return Math.abs(enemyPos.x - playerPos.x);
-    },
-    
     // ========== Generate Random Intent ==========
-    generateRandomIntent(enemyId = 0) {
-        // Check distance to player
-        const distance = this.getDistanceToPlayer(enemyId);
-        const attackRange = this.config.attackRange.melee;
+    generateRandomIntent() {
+        const types = ['ATTACK', 'ATTACK', 'HEAVY_ATTACK', 'MOVE', 'DEFEND'];
+        const type = types[Math.floor(Math.random() * types.length)];
         
-        let type, damage = 0, chargeTime = this.config.baseGaugeTime;
-        
-        // If too far, must MOVE first
-        if (distance > attackRange) {
-            type = 'MOVE';
-            chargeTime = 1500 + Math.random() * 500;
-            console.log(`[Combat] Enemy ${enemyId} too far (${distance.toFixed(1)}), must move`);
-        } else {
-            // In range - can attack
-            const types = ['ATTACK', 'ATTACK', 'HEAVY_ATTACK', 'DEFEND'];
-            type = types[Math.floor(Math.random() * types.length)];
-        }
+        let damage = 0;
+        let chargeTime = this.config.baseGaugeTime;
         
         switch (type) {
             case 'ATTACK':
@@ -238,7 +185,7 @@ const Combat = {
                 chargeTime = 4000 + Math.random() * 1500;
                 break;
             case 'MOVE':
-                chargeTime = chargeTime || (2000 + Math.random() * 1000);
+                chargeTime = 2000 + Math.random() * 1000;
                 break;
             case 'DEFEND':
                 chargeTime = 3000 + Math.random() * 1000;
@@ -255,102 +202,27 @@ const Combat = {
         
         console.log(`[Combat] Enemy ${enemyId} executes ${intent.type}`);
         
-        // For attack intents, show telegraph first
-        if (intent.type === 'ATTACK' || intent.type === 'HEAVY_ATTACK') {
-            this.showAttackTelegraph(enemyId, intent);
-        } else {
-            // Non-attack intents execute immediately
-            intentType.execute(enemyId, intent.target, intent);
-            this.scheduleNextIntent(enemyId);
-        }
-    },
-    
-    // Show attack danger zone before executing
-    showAttackTelegraph(enemyId, intent) {
-        if (typeof Game === 'undefined') return;
+        // Execute the intent action
+        intentType.execute(enemyId, intent.target, intent);
         
-        const enemyPos = Game.worldPositions.enemies[enemyId];
-        const playerPos = Game.worldPositions.player;
-        if (!enemyPos || !playerPos) return;
-        
-        // Calculate attack zone (cells that will be hit)
-        const attackRange = intent.type === 'HEAVY_ATTACK' 
-            ? this.config.attackRange.melee + 1 
-            : this.config.attackRange.melee;
-        
-        // Show danger zone
-        Game.showEnemyAttackZone(enemyId, enemyPos, attackRange, intent.damage);
-        
-        // Flash warning on intent UI
-        this.flashIntentWarning(enemyId);
-        
-        // Execute attack after telegraph duration
-        setTimeout(() => {
-            // Hide danger zone
-            Game.hideEnemyAttackZone(enemyId);
-            
-            // Execute the actual attack
-            const intentType = this.INTENT_TYPES[intent.type];
-            if (intentType) {
-                intentType.execute(enemyId, intent.target, intent);
-            }
-            
-            this.scheduleNextIntent(enemyId);
-        }, this.config.telegraphDuration);
-    },
-    
-    // Flash the intent UI to warn player
-    flashIntentWarning(enemyId) {
-        const intentEl = document.querySelector(`.enemy-intent[data-enemy="${enemyId}"]`);
-        if (intentEl) {
-            intentEl.classList.add('executing');
-            setTimeout(() => intentEl.classList.remove('executing'), this.config.telegraphDuration);
-        }
-    },
-    
-    // Schedule next intent after execution
-    scheduleNextIntent(enemyId) {
+        // Set new intent after delay
         setTimeout(() => {
             if (this.state.running) {
-                this.setEnemyIntent(enemyId, this.generateRandomIntent(enemyId));
+                this.setEnemyIntent(enemyId, this.generateRandomIntent());
             }
         }, 500);
     },
     
     // ========== Intent Executions ==========
     executeAttack(enemyId, target, intent) {
-        if (typeof Game === 'undefined') return;
-        
-        // Check if player is in attack range
-        const distance = this.getDistanceToPlayer(enemyId);
-        const attackRange = this.config.attackRange.melee;
-        
-        if (distance <= attackRange) {
-            // In range - attack hits!
+        if (typeof Game !== 'undefined') {
             Game.enemyAttacksPlayer(enemyId, intent.damage);
-            console.log(`[Combat] Enemy ${enemyId} attacks! Distance: ${distance.toFixed(1)}`);
-        } else {
-            // Out of range - attack misses!
-            Game.showMiss(enemyId);
-            console.log(`[Combat] Enemy ${enemyId} attack MISSED! Distance: ${distance.toFixed(1)} > Range: ${attackRange}`);
         }
     },
     
     executeHeavyAttack(enemyId, target, intent) {
-        if (typeof Game === 'undefined') return;
-        
-        // Check if player is in attack range (heavy has same range)
-        const distance = this.getDistanceToPlayer(enemyId);
-        const attackRange = this.config.attackRange.melee;
-        
-        if (distance <= attackRange) {
-            // In range - heavy attack hits!
+        if (typeof Game !== 'undefined') {
             Game.enemyAttacksPlayer(enemyId, intent.damage, { heavy: true });
-            console.log(`[Combat] Enemy ${enemyId} HEAVY attacks! Distance: ${distance.toFixed(1)}`);
-        } else {
-            // Out of range - attack misses!
-            Game.showMiss(enemyId);
-            console.log(`[Combat] Enemy ${enemyId} heavy attack MISSED! Distance: ${distance.toFixed(1)} > Range: ${attackRange}`);
         }
     },
     
@@ -358,76 +230,9 @@ const Combat = {
         if (typeof Game !== 'undefined') {
             // Move enemy closer to player
             const enemy = Game.worldPositions.enemies[enemyId];
-            const player = Game.worldPositions.player;
-            
-            if (enemy && player) {
-                // Current cell (integer coordinates)
-                const currentCellX = Math.floor(enemy.x);
-                const currentCellZ = Math.floor(enemy.z);
-                const playerCellX = Math.floor(player.x);
-                const playerCellZ = Math.floor(player.z);
-                
-                // Calculate direction to player
-                const dx = playerCellX - currentCellX;
-                const dz = playerCellZ - currentCellZ;
-                
-                // Try to find a valid move cell
-                let newCellX = currentCellX;
-                let newCellZ = currentCellZ;
-                let foundValidCell = false;
-                
-                // Priority 1: Move horizontally towards player
-                if (Math.abs(dx) > 1) {
-                    const testX = currentCellX + Math.sign(dx);
-                    if (!Game.isCellBlocked(testX + 0.5, currentCellZ + 0.5, 'enemy', enemyId)) {
-                        newCellX = testX;
-                        foundValidCell = true;
-                    }
-                }
-                
-                // Priority 2: Move vertically (flanking) if horizontal blocked
-                if (!foundValidCell && Math.abs(dz) > 0) {
-                    const testZ = currentCellZ + Math.sign(dz);
-                    if (!Game.isCellBlocked(currentCellX + 0.5, testZ + 0.5, 'enemy', enemyId)) {
-                        newCellZ = testZ;
-                        foundValidCell = true;
-                    }
-                }
-                
-                // Priority 3: Try opposite vertical direction
-                if (!foundValidCell && dz === 0) {
-                    // Try moving up or down to get around obstacles
-                    for (const zDir of [1, -1]) {
-                        const testZ = currentCellZ + zDir;
-                        if (testZ >= 0 && testZ < Game.arena.depth) {
-                            if (!Game.isCellBlocked(currentCellX + 0.5, testZ + 0.5, 'enemy', enemyId)) {
-                                newCellZ = testZ;
-                                foundValidCell = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-                
-                // Only move if we found a valid cell
-                if (newCellX !== currentCellX || newCellZ !== currentCellZ) {
-                    // Clamp to arena bounds (enemy zone: x > player cell + 1)
-                    newCellX = Math.max(playerCellX + 2, Math.min(Game.arena.width - 1, newCellX));
-                    newCellZ = Math.max(0, Math.min(Game.arena.depth - 1, newCellZ));
-                    
-                    // Final collision check after clamping
-                    if (!Game.isCellBlocked(newCellX + 0.5, newCellZ + 0.5, 'enemy', enemyId)) {
-                        const newX = newCellX + 0.5;
-                        const newZ = newCellZ + 0.5;
-                        
-                        console.log(`[Combat] Enemy ${enemyId} moves: (${enemy.x.toFixed(1)}, ${enemy.z.toFixed(1)}) -> (${newX.toFixed(1)}, ${newZ.toFixed(1)})`);
-                        Game.advanceEnemy(enemyId, newX, newZ);
-                    } else {
-                        console.log(`[Combat] Enemy ${enemyId} blocked - cannot move`);
-                    }
-                } else {
-                    console.log(`[Combat] Enemy ${enemyId} has no valid move`);
-                }
+            if (enemy) {
+                const newX = Math.max(5.5, enemy.x - 1);  // Move left but stay in enemy zone
+                Game.moveCharacter('enemy', enemyId, newX, enemy.z);
             }
         }
     },
@@ -444,97 +249,30 @@ const Combat = {
     },
     
     // ========== UI Functions ==========
-    
-    // Get icon symbol for intent type
-    getIntentSymbol(type) {
-        switch(type) {
-            case 'ATTACK': return '8';       // Damage
-            case 'HEAVY_ATTACK': return '15'; // Heavy damage
-            case 'MOVE': return '>';         // Arrow
-            case 'DEFEND': return 'D';       // Defense
-            case 'BUFF': return '+';         // Plus
-            default: return '?';
-        }
-    },
-    
-    // Get intent class for styling
-    getIntentClass(type) {
-        switch(type) {
-            case 'ATTACK': return 'attack';
-            case 'HEAVY_ATTACK': return 'heavy';
-            case 'MOVE': return 'move';
-            case 'DEFEND': return 'defend';
-            case 'BUFF': return 'buff';
-            default: return '';
-        }
-    },
-    
-    // Create intent UI above enemy
     createIntentUI(enemyId, intent) {
-        const container = document.getElementById('intent-container');
-        if (!container) {
-            console.warn('[Combat] Intent container not found!');
-            return;
-        }
-        
-        console.log(`[Combat] Creating intent UI for enemy ${enemyId}: ${intent.type}`);
+        const container = document.getElementById('enemy-intents');
+        if (!container) return;
         
         // Remove existing
         const existing = document.getElementById(`intent-${enemyId}`);
         if (existing) existing.remove();
         
-        const intentClass = this.getIntentClass(intent.type);
-        const symbol = intent.damage > 0 ? intent.damage : this.getIntentSymbol(intent.type);
-        
+        const intentType = this.INTENT_TYPES[intent.type];
         const div = document.createElement('div');
         div.id = `intent-${enemyId}`;
-        div.className = 'char-intent';
+        div.className = 'enemy-intent';
         div.innerHTML = `
-            <div class="intent-icon ${intentClass}">${symbol}</div>
-            <div class="intent-bar">
-                <div class="intent-bar-fill" id="gauge-${enemyId}"></div>
+            <div class="intent-header">
+                <span class="intent-label">E${enemyId}</span>
+                <span class="intent-name">${intentType?.name || intent.type}</span>
+                ${intent.damage > 0 ? `<span class="intent-damage">${intent.damage}</span>` : ''}
+            </div>
+            <div class="intent-gauge-bg">
+                <div class="intent-gauge-fill" id="gauge-${enemyId}"></div>
             </div>
         `;
         
         container.appendChild(div);
-        
-        // Position above enemy
-        this.positionIntentUI(enemyId);
-    },
-    
-    // Position intent UI above enemy's head
-    positionIntentUI(enemyId) {
-        const intentDiv = document.getElementById(`intent-${enemyId}`);
-        if (!intentDiv) return;
-        
-        // Get enemy screen position from DDOOBackground
-        if (typeof DDOOBackground !== 'undefined' && typeof Game !== 'undefined') {
-            const worldPos = Game.worldPositions.enemies[enemyId];
-            const enemySprite = Game.enemySprites[enemyId];
-            
-            if (worldPos && enemySprite) {
-                // Use sprite's screen position directly for better accuracy
-                const spriteHeight = enemySprite.height || 100;
-                const offsetY = spriteHeight * 0.6;  // Above sprite head
-                
-                // Stagger intents horizontally if enemies are close together
-                const staggerX = (enemyId % 2 === 0) ? -20 : 20;
-                
-                intentDiv.style.left = `${enemySprite.x + staggerX}px`;
-                intentDiv.style.top = `${enemySprite.y - offsetY}px`;
-                intentDiv.style.display = 'flex';
-            } else if (worldPos) {
-                // Fallback to 3D projection
-                const screenPos = DDOOBackground.project3DToScreen(worldPos.x, worldPos.y + 1.5, worldPos.z);
-                if (screenPos && screenPos.visible) {
-                    intentDiv.style.left = `${screenPos.screenX}px`;
-                    intentDiv.style.top = `${screenPos.screenY - 50}px`;
-                    intentDiv.style.display = 'flex';
-                } else {
-                    intentDiv.style.display = 'none';
-                }
-            }
-        }
     },
     
     updateIntentUI(enemyId, intent) {
@@ -543,13 +281,6 @@ const Combat = {
             const percent = Math.min(100, (intent.gauge / intent.maxGauge) * 100);
             gauge.style.width = `${percent}%`;
             
-            // Show attack indicator when gauge is high (attack intent only)
-            if ((intent.type === 'ATTACK' || intent.type === 'HEAVY_ATTACK') && percent >= 70) {
-                this.showAttackIndicator(enemyId, intent, percent);
-            } else {
-                this.hideAttackIndicator(enemyId);
-            }
-            
             // Color change when almost full
             if (percent > 80) {
                 gauge.classList.add('danger');
@@ -557,77 +288,11 @@ const Combat = {
                 gauge.classList.remove('danger');
             }
         }
-        
-        // Update position (enemies might have moved)
-        this.positionIntentUI(enemyId);
-    },
-    
-    // Update all intent positions (call this when camera/resize changes)
-    updateAllIntentPositions() {
-        this.intents.forEach((intent, enemyId) => {
-            this.positionIntentUI(enemyId);
-        });
     },
     
     removeIntentUI(enemyId) {
         const div = document.getElementById(`intent-${enemyId}`);
         if (div) div.remove();
-        this.hideAttackIndicator(enemyId);
-    },
-    
-    // Show attack direction indicator
-    showAttackIndicator(enemyId, intent, percent) {
-        if (typeof Game === 'undefined') return;
-        
-        let indicator = document.getElementById(`attack-indicator-${enemyId}`);
-        
-        if (!indicator) {
-            indicator = document.createElement('div');
-            indicator.id = `attack-indicator-${enemyId}`;
-            indicator.className = 'attack-indicator';
-            document.getElementById('intent-container')?.appendChild(indicator);
-        }
-        
-        const enemy = Game.enemySprites[enemyId];
-        const player = Game.player;
-        
-        if (enemy && player) {
-            // Line from enemy to player
-            const ex = enemy.x;
-            const ey = enemy.y;
-            const px = player.x;
-            const py = player.y;
-            
-            const angle = Math.atan2(py - ey, px - ex) * 180 / Math.PI;
-            const length = Math.sqrt((px - ex) ** 2 + (py - ey) ** 2);
-            
-            // Opacity increases as gauge fills
-            const opacity = (percent - 70) / 30;  // 0 at 70%, 1 at 100%
-            const color = intent.type === 'HEAVY_ATTACK' ? '#ff6600' : '#ef4444';
-            
-            indicator.style.cssText = `
-                position: absolute;
-                left: ${ex}px;
-                top: ${ey}px;
-                width: ${length}px;
-                height: 4px;
-                background: linear-gradient(90deg, ${color} 0%, transparent 100%);
-                transform-origin: left center;
-                transform: rotate(${angle}deg);
-                opacity: ${opacity};
-                pointer-events: none;
-                z-index: 50;
-            `;
-            
-            // Add warning pulse
-            indicator.style.animation = `pulse-warning ${1 - opacity * 0.7}s ease-in-out infinite`;
-        }
-    },
-    
-    // Hide attack indicator
-    hideAttackIndicator(enemyId) {
-        const indicator = document.getElementById(`attack-indicator-${enemyId}`);
-        if (indicator) indicator.remove();
     },
     
     // ========== Card Actions ==========
@@ -694,7 +359,7 @@ const Combat = {
         this.intents.clear();
         
         // Remove UI
-        const container = document.getElementById('intent-container');
+        const container = document.getElementById('enemy-intents');
         if (container) container.innerHTML = '';
         
         this.state.initialized = false;

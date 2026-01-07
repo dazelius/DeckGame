@@ -10,7 +10,6 @@
     min-height: 0;
     overflow: hidden;
     background: var(--color-bg-dark);
-    z-index: 1;
 }
 
 /* ==================== Card Area (30%) ==================== */
@@ -18,36 +17,14 @@
 #card-area {
     position: relative;
     flex: 3;
-    min-height: 100px;
-    max-height: 180px;
-    background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 100%);
-    overflow: visible;  /* Allow cards to overflow when dragging */
-    z-index: 100;       /* Above battle area */
+    min-height: 120px;
+    max-height: 220px;
+    background: linear-gradient(180deg, var(--color-bg-card) 0%, var(--color-bg-card-dark) 100%);
+    border-top: 3px solid var(--color-border);
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding-top: 35px;  /* Space for energy bar */
-}
-
-#card-ui {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-}
-
-#card-canvas-container {
-    width: 100%;
-    height: 100%;
-    overflow: visible;
-}
-
-#card-canvas-container canvas {
-    display: block;
-    width: 100% !important;
-    height: 100% !important;
-    overflow: visible;
+    justify-content: space-between;
+    padding: var(--spacing-md) var(--spacing-xl);
 }
 
 /* ==================== 3D Background Container ==================== */
@@ -95,22 +72,4 @@
 
 #battle-ui * {
     pointer-events: auto;
-}
-
-/* ==================== Drag Overlay (Top Layer) ==================== */
-
-#drag-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 9999;
-    pointer-events: none;
-}
-
-#drag-overlay .drag-card {
-    position: absolute;
-    pointer-events: none;
-    transform: translate(-50%, -50%);
 }
