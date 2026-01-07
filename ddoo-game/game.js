@@ -628,10 +628,10 @@ const Game = {
         // 적 생성 (고블린 전사만)
         for (let i = 0; i < this.worldPositions.enemies.length; i++) {
             const enemy = await DDOORenderer.createSprite('goblin.png', {
-                scale: 1.0,
-                outline: { enabled: true, color: 0x000000, thickness: 6 },
+                scale: 0.7,  // 30% smaller
+                outline: { enabled: true, color: 0x000000, thickness: 4 },
                 shadow: { enabled: false },
-                breathing: { enabled: true, scaleAmount: 0.015 }
+                breathing: { enabled: true, scaleAmount: 0.01 }
             });
             
             if (enemy) {
