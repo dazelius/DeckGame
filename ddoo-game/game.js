@@ -463,6 +463,43 @@ const Game = {
     
     // ==================== 10x10 Arena Grid (Debug) ====================
     
+    // Apply highlight glow to character sprite
+    applyCharacterHighlight(sprite, color) {
+        if (!sprite) return;
+        
+        // Remove existing highlight filter
+        if (sprite._highlightFilter) {
+            const idx = sprite.filters?.indexOf(sprite._highlightFilter);
+            if (idx >= 0) sprite.filters.splice(idx, 1);
+        }
+        
+        // Create glow filter using DropShadowFilter
+        const glowFilter = new PIXI.DropShadowFilter({
+            color: color,
+            alpha: 0.8,
+            blur: 4,
+            offset: { x: 0, y: 0 },
+            quality: 3
+        });
+        
+        sprite._highlightFilter = glowFilter;
+        sprite.filters = sprite.filters || [];
+        sprite.filters.push(glowFilter);
+    },
+    
+    // Remove all character highlights
+    removeCharacterHighlights() {
+        const removeHighlight = (sprite) => {
+            if (!sprite || !sprite._highlightFilter) return;
+            const idx = sprite.filters?.indexOf(sprite._highlightFilter);
+            if (idx >= 0) sprite.filters.splice(idx, 1);
+            sprite._highlightFilter = null;
+        };
+        
+        removeHighlight(this.player);
+        this.enemySprites.forEach(enemy => removeHighlight(enemy));
+    },
+    
     // Get the screen position of a cell's center (by averaging 4 corners)
     getCellCenterScreen(cellX, cellZ) {
         const topLeft = DDOOBackground.project3DToScreen(cellX, 0, cellZ);
@@ -578,49 +615,22 @@ const Game = {
             this.containers.debug.addChild(zoneText);
         }
         
-        // Character position markers (at cell centers)
+        // Character highlights (outline glow on sprites)
         if (this.debug.showPositions) {
-            // Player position - get cell center by averaging 4 corners
-            const pCellX = Math.floor(this.worldPositions.player.x);
-            const pCellZ = Math.floor(this.worldPositions.player.z);
-            const playerCellCenter = this.getCellCenterScreen(pCellX, pCellZ);
-            
-            if (playerCellCenter) {
-                grid.circle(playerCellCenter.x, playerCellCenter.y, 12);
-                grid.stroke({ color: 0x3b82f6, width: 3 });
-                grid.circle(playerCellCenter.x, playerCellCenter.y, 6);
-                grid.fill({ color: 0x3b82f6, alpha: 0.5 });
-                
-                const text = new PIXI.Text({
-                    text: `P(${pCellX},${pCellZ})`,
-                    style: { fontSize: 11, fill: 0x3b82f6, fontWeight: 'bold' }
-                });
-                text.x = playerCellCenter.x + 15;
-                text.y = playerCellCenter.y - 8;
-                this.containers.debug.addChild(text);
+            // Highlight player sprite
+            if (this.player) {
+                this.applyCharacterHighlight(this.player, 0x3b82f6);  // Blue
             }
             
-            // Enemy positions
-            this.worldPositions.enemies.forEach((pos, i) => {
-                const eCellX = Math.floor(pos.x);
-                const eCellZ = Math.floor(pos.z);
-                const enemyCellCenter = this.getCellCenterScreen(eCellX, eCellZ);
-                
-                if (enemyCellCenter) {
-                    grid.circle(enemyCellCenter.x, enemyCellCenter.y, 10);
-                    grid.stroke({ color: 0xef4444, width: 3 });
-                    grid.circle(enemyCellCenter.x, enemyCellCenter.y, 5);
-                    grid.fill({ color: 0xef4444, alpha: 0.5 });
-                    
-                    const text = new PIXI.Text({
-                        text: `E${i}(${eCellX},${eCellZ})`,
-                        style: { fontSize: 11, fill: 0xef4444, fontWeight: 'bold' }
-                    });
-                    text.x = enemyCellCenter.x + 12;
-                    text.y = enemyCellCenter.y - 8;
-                    this.containers.debug.addChild(text);
+            // Highlight enemy sprites
+            this.enemySprites.forEach((enemy) => {
+                if (enemy) {
+                    this.applyCharacterHighlight(enemy, 0xef4444);  // Red
                 }
             });
+        } else {
+            // Remove highlights when disabled
+            this.removeCharacterHighlights();
         }
         
         this.containers.debug.addChild(grid);
