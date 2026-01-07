@@ -22,21 +22,21 @@ const DDOOBackground = {
         smoothing: 0.05
     },
     
-    // Camera defaults (quarter/isometric view)
+    // Camera defaults (front quarter view - no horizontal rotation)
     cameraDefaults: {
-        posX: 2,       // Slight offset for quarter view
-        posY: 10,      // Higher up for isometric angle
-        posZ: 18,      // Further back
-        lookAtX: 0,
-        lookAtY: 1,    // Look at floor level
-        lookAtZ: -2    // Look slightly forward
+        posX: 0,       // Centered (no left-right tilt)
+        posY: 9,       // Higher up for isometric angle
+        posZ: 16,      // Distance from scene
+        lookAtX: 0,    // Look at center
+        lookAtY: 0,    // Look at floor level
+        lookAtZ: 0     // Look at origin
     },
     
     // Auto zoom settings
     autoZoom: {
         enabled: true,
-        targetZ: 18,
-        currentZ: 18,
+        targetZ: 16,
+        currentZ: 16,
         targetX: 0,
         currentX: 0,
         targetLookAtX: 0,
@@ -552,14 +552,14 @@ const DDOOBackground = {
         const currentZ = this.autoZoom.currentZ;
         const currentX = this.autoZoom.currentX;
         
-        // Camera position with mouse parallax (reduced for isometric stability)
-        this.camera.position.x = this.cameraDefaults.posX + currentX + this.mouse.x * this.config.mouseX * 0.3;
-        this.camera.position.y = this.cameraDefaults.posY + this.mouse.y * this.config.mouseY * 0.2;
+        // Camera position (front view - no horizontal rotation)
+        this.camera.position.x = this.mouse.x * this.config.mouseX * 0.2;  // Minimal horizontal parallax
+        this.camera.position.y = this.cameraDefaults.posY + this.mouse.y * this.config.mouseY * 0.15;
         this.camera.position.z = currentZ;
         
-        // Look at target (slight mouse influence for subtle parallax)
+        // Look at center (minimal mouse influence)
         this.camera.lookAt(
-            this.cameraDefaults.lookAtX + this.mouse.x * 0.2,
+            this.mouse.x * 0.1,
             this.cameraDefaults.lookAtY,
             this.cameraDefaults.lookAtZ
         );
