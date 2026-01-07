@@ -70,8 +70,11 @@ const Game = {
     // Arena settings
     arena: {
         width: 10,
-        depth: 10,
-        gridSize: 1
+        height: 10,  // Z-axis (depth)
+        depth: 10,   // Alias for height
+        gridSize: 1,
+        playerZone: { minX: 0, maxX: 4 },  // Player can be in X: 0-4
+        enemyZone: { minX: 5, maxX: 9 }    // Enemies can be in X: 5-9
     },
     
     // Battle/Card area sizes
@@ -585,11 +588,9 @@ const Game = {
             }
         }
         
-        // 적 생성
-        const enemyTypes = ['goblin.png', 'slime.png'];
-        
+        // 적 생성 (고블린 전사만)
         for (let i = 0; i < this.worldPositions.enemies.length; i++) {
-            const enemy = await DDOORenderer.createSprite(enemyTypes[i % enemyTypes.length], {
+            const enemy = await DDOORenderer.createSprite('goblin.png', {
                 scale: 1.0,
                 outline: { enabled: true, color: 0x000000, thickness: 6 },
                 shadow: { enabled: false },
@@ -1440,38 +1441,20 @@ const Game = {
         const baseDamage = cardData.damage || 6;
         const isCrit = Math.random() < 0.15;
         const finalDamage = isCrit ? baseDamage * 2 : baseDamage;
+        const knockback = cardData.knockback ?? 1;  // Default 1 cell knockback
+        
+        // Calculate attack position (1 cell before enemy)
+        const attackPosX = enemyWorldPos.x - 1;
+        const attackPosZ = enemyWorldPos.z;
+        
+        // Dash to attack position
+        await this.dashTo(attackPosX, attackPosZ, 0.2);
         
         // Try to use DDOOAction for animation
         const useDDOOAction = typeof DDOOAction !== 'undefined' && DDOOAction.initialized;
         
-        if (useDDOOAction && cardData.anim) {
-            // Use sequence animation (dash + attack + enemy hit)
-            console.log(`[Game] Playing sequence: ${cardData.anim}`);
-            
-            try {
-                // Use play() which handles anim lookup from cache
-                const playerChar = DDOOAction.characters?.get('player');
-                if (playerChar) {
-                    await DDOOAction.play(cardData.anim, {
-                        container: playerChar.container,
-                        sprite: playerChar.sprite,
-                        targetContainer: enemy,
-                        targetSprite: enemy.children?.[0] || enemy,
-                        damage: finalDamage
-                    });
-                }
-            } catch (e) {
-                console.warn('[Game] Sequence failed, using fallback:', e);
-            }
-            
-        } else if (useDDOOAction && cardData.playerAnim) {
-            // Use individual animations
+        if (useDDOOAction && cardData.playerAnim) {
             console.log(`[Game] Playing anim: ${cardData.playerAnim}`);
-            
-            const originalPos = { ...this.worldPositions.player };
-            
-            // Dash to enemy
-            await this.dashTo(enemyWorldPos.x - 1.5, enemyWorldPos.z, 0.2);
             
             // Play player attack animation
             const playerChar = DDOOAction.characters?.get('player');
@@ -1482,47 +1465,36 @@ const Game = {
                 });
             }
             
-            // Hit effects
-            this.hapticFeedback(isCrit ? 'heavy' : 'hit');
-            DDOOBackground.screenFlash(isCrit ? '#ffaa00' : '#ffffff', isCrit ? 100 : 60);
-            
             // Play enemy hit animation
             if (cardData.enemyAnim) {
                 const enemyChar = { container: enemy, sprite: enemy.children?.[0] || enemy };
                 await DDOOAction.play(cardData.enemyAnim, enemyChar);
             }
-            
-            // Damage number
-            DDOOFloater.showOnCharacter(enemy, finalDamage, isCrit ? 'critical' : 'damage');
-            
-            // Return
-            await this.dashTo(originalPos.x, originalPos.z, 0.25);
-            
-        } else {
-            // Fallback: basic effects (no DDOOAction)
-            console.log('[Game] Using fallback attack (no DDOOAction)');
-            
-            const originalPos = { ...this.worldPositions.player };
-            await this.dashTo(enemyWorldPos.x - 1.5, enemyWorldPos.z, 0.2);
-            
-            // Hit effects
-            this.hapticFeedback(isCrit ? 'heavy' : 'hit');
-            DDOORenderer.setTargeted(enemy, true, 0xff0000);
-            DDOORenderer.rapidFlash(enemy);
-            DDOORenderer.damageShake(enemy, isCrit ? 12 : 8, 300);
-            
-            DDOOBackground.screenFlash(isCrit ? '#ffaa00' : '#ffffff', isCrit ? 100 : 60);
-            DDOOBackground.hitFlash(enemyWorldPos.x, 3, enemyWorldPos.z, isCrit ? 0xffaa00 : 0xffffff, isCrit ? 10 : 6, 200);
-            if (isCrit) DDOOBackground.shake(0.6, 150);
-            
-            DDOOFloater.showOnCharacter(enemy, finalDamage, isCrit ? 'critical' : 'damage');
-            
-            await this.delay(200);
-            DDOORenderer.setTargeted(enemy, false);
-            
-            // Return
-            await this.dashTo(originalPos.x, originalPos.z, 0.25);
         }
+        
+        // Hit effects
+        this.hapticFeedback(isCrit ? 'heavy' : 'hit');
+        DDOORenderer.rapidFlash?.(enemy);
+        DDOORenderer.damageShake?.(enemy, isCrit ? 12 : 8, 300);
+        DDOOBackground.screenFlash(isCrit ? '#ffaa00' : '#ffffff', isCrit ? 100 : 60);
+        if (isCrit) DDOOBackground.shake?.(0.6, 150);
+        
+        // Damage number
+        DDOOFloater.showOnCharacter(enemy, finalDamage, isCrit ? 'critical' : 'damage');
+        
+        // KNOCKBACK: Push enemy back 1 cell
+        if (knockback > 0) {
+            const newEnemyX = Math.min(this.arena.width - 1, enemyWorldPos.x + knockback);
+            await this.knockbackEnemy(enemyIndex, newEnemyX, enemyWorldPos.z);
+            console.log(`[Game] Enemy ${enemyIndex} knocked back: ${enemyWorldPos.x} -> ${newEnemyX}`);
+        }
+        
+        // Player stays at attack position (formation push)
+        this.worldPositions.player.x = attackPosX;
+        this.worldPositions.player.z = attackPosZ;
+        console.log(`[Game] Player advanced to: (${attackPosX}, ${attackPosZ})`);
+        
+        await this.delay(100);
         
         // Apply damage
         enemyData.hp = Math.max(0, enemyData.hp - finalDamage);
@@ -1559,6 +1531,44 @@ const Game = {
                 z: targetZ,
                 duration,
                 ease: 'power2.out',
+                onComplete: resolve
+            });
+        });
+    },
+    
+    // Enemy knockback animation
+    knockbackEnemy(enemyIndex, newX, newZ, duration = 0.15) {
+        return new Promise(resolve => {
+            const enemyWorldPos = this.worldPositions.enemies[enemyIndex];
+            if (!enemyWorldPos) {
+                resolve();
+                return;
+            }
+            
+            gsap.to(enemyWorldPos, {
+                x: newX,
+                z: newZ,
+                duration,
+                ease: 'power2.out',
+                onComplete: resolve
+            });
+        });
+    },
+    
+    // Enemy advance (for attack)
+    advanceEnemy(enemyIndex, newX, newZ, duration = 0.3) {
+        return new Promise(resolve => {
+            const enemyWorldPos = this.worldPositions.enemies[enemyIndex];
+            if (!enemyWorldPos) {
+                resolve();
+                return;
+            }
+            
+            gsap.to(enemyWorldPos, {
+                x: newX,
+                z: newZ,
+                duration,
+                ease: 'power2.inOut',
                 onComplete: resolve
             });
         });

@@ -8,6 +8,24 @@ const Combat = {
         intentGaugeSpeed: 0.02,    // Gauge fill speed per frame (0-1)
         baseGaugeTime: 3000,       // Base time to fill gauge (ms)
         tickRate: 16,              // Update every 16ms (~60fps)
+        
+        // Attack range settings (in grid units)
+        attackRange: {
+            melee: 2,              // Melee attack range
+            ranged: 6,             // Ranged attack range
+        }
+    },
+    
+    // ========== Enemy Types ==========
+    enemyTypes: {
+        goblin: {
+            name: 'Goblin Warrior',
+            attackType: 'melee',
+            attackRange: 2,
+            damage: { min: 5, max: 8 },
+            chargeTime: { min: 2000, max: 3500 },
+            preferredIntents: ['ATTACK', 'ATTACK', 'ATTACK', 'MOVE', 'DEFEND']
+        }
     },
     
     // ========== State ==========
@@ -145,7 +163,7 @@ const Combat = {
         // Get enemies from Game
         if (typeof Game !== 'undefined' && Game.state.enemies) {
             Game.state.enemies.forEach((enemy, index) => {
-                this.setEnemyIntent(index, this.generateRandomIntent());
+                this.setEnemyIntent(index, this.generateRandomIntent(index));
             });
         }
     },
@@ -167,13 +185,37 @@ const Combat = {
         return intent;
     },
     
-    // ========== Generate Random Intent ==========
-    generateRandomIntent() {
-        const types = ['ATTACK', 'ATTACK', 'HEAVY_ATTACK', 'MOVE', 'DEFEND'];
-        const type = types[Math.floor(Math.random() * types.length)];
+    // ========== Get Distance to Player ==========
+    getDistanceToPlayer(enemyId) {
+        if (typeof Game === 'undefined') return 999;
         
-        let damage = 0;
-        let chargeTime = this.config.baseGaugeTime;
+        const enemyPos = Game.worldPositions.enemies[enemyId];
+        const playerPos = Game.worldPositions.player;
+        
+        if (!enemyPos || !playerPos) return 999;
+        
+        // Simple X-axis distance for side-view combat
+        return Math.abs(enemyPos.x - playerPos.x);
+    },
+    
+    // ========== Generate Random Intent ==========
+    generateRandomIntent(enemyId = 0) {
+        // Check distance to player
+        const distance = this.getDistanceToPlayer(enemyId);
+        const attackRange = this.config.attackRange.melee;
+        
+        let type, damage = 0, chargeTime = this.config.baseGaugeTime;
+        
+        // If too far, must MOVE first
+        if (distance > attackRange) {
+            type = 'MOVE';
+            chargeTime = 1500 + Math.random() * 500;
+            console.log(`[Combat] Enemy ${enemyId} too far (${distance.toFixed(1)}), must move`);
+        } else {
+            // In range - can attack
+            const types = ['ATTACK', 'ATTACK', 'HEAVY_ATTACK', 'DEFEND'];
+            type = types[Math.floor(Math.random() * types.length)];
+        }
         
         switch (type) {
             case 'ATTACK':
@@ -185,7 +227,7 @@ const Combat = {
                 chargeTime = 4000 + Math.random() * 1500;
                 break;
             case 'MOVE':
-                chargeTime = 2000 + Math.random() * 1000;
+                chargeTime = chargeTime || (2000 + Math.random() * 1000);
                 break;
             case 'DEFEND':
                 chargeTime = 3000 + Math.random() * 1000;
@@ -205,10 +247,10 @@ const Combat = {
         // Execute the intent action
         intentType.execute(enemyId, intent.target, intent);
         
-        // Set new intent after delay
+        // Set new intent after delay (recalculate based on new distance)
         setTimeout(() => {
             if (this.state.running) {
-                this.setEnemyIntent(enemyId, this.generateRandomIntent());
+                this.setEnemyIntent(enemyId, this.generateRandomIntent(enemyId));
             }
         }, 500);
     },
@@ -230,9 +272,32 @@ const Combat = {
         if (typeof Game !== 'undefined') {
             // Move enemy closer to player
             const enemy = Game.worldPositions.enemies[enemyId];
-            if (enemy) {
-                const newX = Math.max(5.5, enemy.x - 1);  // Move left but stay in enemy zone
-                Game.moveCharacter('enemy', enemyId, newX, enemy.z);
+            const player = Game.worldPositions.player;
+            
+            if (enemy && player) {
+                // Calculate direction to player
+                const dx = player.x - enemy.x;
+                const dz = player.z - enemy.z;
+                
+                // Move 1 cell towards player
+                let newX = enemy.x;
+                let newZ = enemy.z;
+                
+                // Prioritize X movement (horizontal approach)
+                if (Math.abs(dx) > 0.5) {
+                    newX = enemy.x + Math.sign(dx);  // Move 1 cell towards player
+                }
+                // Optional: slight Z adjustment for flanking
+                else if (Math.abs(dz) > 0.5) {
+                    newZ = enemy.z + Math.sign(dz) * 0.5;
+                }
+                
+                // Clamp to arena bounds (enemy zone: x >= player.x + 1)
+                newX = Math.max(player.x + 1, Math.min(Game.arena.width - 1, newX));
+                newZ = Math.max(0.5, Math.min(Game.arena.height - 0.5, newZ));
+                
+                console.log(`[Combat] Enemy ${enemyId} moves: (${enemy.x.toFixed(1)}, ${enemy.z.toFixed(1)}) -> (${newX.toFixed(1)}, ${newZ.toFixed(1)})`);
+                Game.advanceEnemy(enemyId, newX, newZ);
             }
         }
     },
