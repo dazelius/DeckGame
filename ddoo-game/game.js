@@ -1292,30 +1292,20 @@ const Game = {
                     50% { opacity: 1; }
                 }
                 .enemy-target-highlight {
-                    position: absolute;
-                    border: 3px solid #ff4444;
-                    border-radius: 50%;
-                    background: rgba(255, 68, 68, 0.2);
+                    position: fixed;
                     pointer-events: auto;
                     cursor: crosshair;
-                    animation: target-pulse 0.5s ease-in-out infinite;
                     z-index: 60;
-                }
-                @keyframes target-pulse {
-                    0%, 100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 20px rgba(255,68,68,0.5); }
-                    50% { transform: translate(-50%, -50%) scale(1.1); box-shadow: 0 0 40px rgba(255,68,68,0.8); }
+                    background: transparent !important;
+                    border: none !important;
                 }
                 .grid-target-highlight {
-                    position: absolute;
-                    border: 2px solid #22c55e;
-                    background: rgba(34, 197, 94, 0.3);
+                    position: fixed;
                     pointer-events: auto;
                     cursor: pointer;
                     z-index: 60;
-                }
-                .grid-target-highlight:hover {
-                    background: rgba(34, 197, 94, 0.5);
-                    border-color: #4ade80;
+                    background: transparent !important;
+                    border: none !important;
                 }
             `;
             document.head.appendChild(style);
@@ -1447,18 +1437,20 @@ const Game = {
         console.log('[Game] Hiding card targets');
     },
     
-    // Highlight enemies within attack range (DOM-based for better interaction)
+    // Highlight enemies within attack range (PixiJS + invisible DOM click)
     highlightEnemiesInRange(range) {
         const playerPos = this.worldPositions.player;
         const battleArea = document.getElementById('battle-area');
         const rect = battleArea?.getBoundingClientRect() || { left: 0, top: 0 };
+        const hlContainer = this.containers.highlights;
         
         this.enemySprites.forEach((enemy, index) => {
             const enemyPos = this.worldPositions.enemies[index];
             if (!enemyPos) return;
             
             // Calculate distance (Manhattan distance for grid)
-            const dist = Math.abs(enemyPos.x - playerPos.x) + Math.abs(enemyPos.z - playerPos.z);
+            const dist = Math.abs(Math.floor(enemyPos.x) - Math.floor(playerPos.x)) + 
+                         Math.abs(Math.floor(enemyPos.z) - Math.floor(playerPos.z));
             const inRange = dist <= range;
             
             if (inRange) {
@@ -1467,22 +1459,58 @@ const Game = {
                     enemyPos.x + 0.5, enemyPos.y, enemyPos.z + 0.5
                 );
                 
-                // Create DOM highlight
-                const highlight = document.createElement('div');
-                highlight.className = 'enemy-target-highlight';
-                highlight.dataset.enemyIndex = index;
-                highlight.style.left = (rect.left + screenPos.screenX) + 'px';
-                highlight.style.top = (rect.top + screenPos.screenY - 40) + 'px';
-                highlight.style.width = '80px';
-                highlight.style.height = '80px';
+                // PixiJS highlight on enemy (pulsing target reticle)
+                const targetMark = new PIXI.Graphics();
+                const size = 45;
+                const px = 4;
                 
-                // Click handler
-                highlight.addEventListener('click', (e) => {
+                // Outer frame (yellow)
+                targetMark.beginFill(0xffff00, 0.9);
+                // Top-left corner
+                targetMark.drawRect(-size, -size, size/2, px);
+                targetMark.drawRect(-size, -size, px, size/2);
+                // Top-right corner
+                targetMark.drawRect(size/2, -size, size/2, px);
+                targetMark.drawRect(size - px, -size, px, size/2);
+                // Bottom-left corner
+                targetMark.drawRect(-size, size - px, size/2, px);
+                targetMark.drawRect(-size, size/2, px, size/2);
+                // Bottom-right corner
+                targetMark.drawRect(size/2, size - px, size/2, px);
+                targetMark.drawRect(size - px, size/2, px, size/2);
+                targetMark.endFill();
+                
+                // Center crosshair
+                targetMark.beginFill(0xff0000, 0.8);
+                targetMark.drawRect(-15, -2, 30, 4);
+                targetMark.drawRect(-2, -15, 4, 30);
+                targetMark.endFill();
+                
+                targetMark.position.set(screenPos.screenX, screenPos.screenY - 30);
+                hlContainer.addChild(targetMark);
+                
+                // Invisible DOM click handler only
+                const clickTarget = document.createElement('div');
+                clickTarget.className = 'enemy-target-highlight';
+                clickTarget.dataset.enemyIndex = index;
+                clickTarget.style.cssText = `
+                    position: fixed;
+                    left: ${rect.left + screenPos.screenX - 50}px;
+                    top: ${rect.top + screenPos.screenY - 80}px;
+                    width: 100px;
+                    height: 100px;
+                    cursor: crosshair;
+                    z-index: 60;
+                    background: transparent;
+                    border: none;
+                `;
+                
+                clickTarget.addEventListener('click', (e) => {
                     e.stopPropagation();
                     this.executeCard(this.cards.selectedIndex, { type: 'enemy', index });
                 });
                 
-                document.body.appendChild(highlight);
+                document.body.appendChild(clickTarget);
             }
         });
     },
