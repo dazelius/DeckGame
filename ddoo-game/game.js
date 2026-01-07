@@ -2607,8 +2607,39 @@ const Game = {
         this.faceTargetWorld(this.player, this.worldPositions.player, enemyWorldPos);
         
         // Calculate attack position (1 cell before enemy, at cell center)
-        const attackCellX = Math.floor(enemyWorldPos.x) - 1;
-        const attackCellZ = Math.floor(enemyWorldPos.z);
+        let attackCellX = Math.floor(enemyWorldPos.x) - 1;
+        let attackCellZ = Math.floor(enemyWorldPos.z);
+        
+        // Check if attack position is blocked, find alternative if needed
+        if (this.isCellBlocked(attackCellX + 0.5, attackCellZ + 0.5, 'player')) {
+            // Try adjacent cells (same X, different Z)
+            const alternatives = [
+                { x: attackCellX, z: attackCellZ - 1 },
+                { x: attackCellX, z: attackCellZ + 1 },
+                { x: attackCellX - 1, z: attackCellZ },
+            ];
+            
+            let foundAlt = false;
+            for (const alt of alternatives) {
+                if (alt.x >= 0 && alt.z >= 0 && alt.z < this.arena.depth) {
+                    if (!this.isCellBlocked(alt.x + 0.5, alt.z + 0.5, 'player')) {
+                        attackCellX = alt.x;
+                        attackCellZ = alt.z;
+                        foundAlt = true;
+                        console.log(`[Game] Attack position adjusted to (${attackCellX}, ${attackCellZ})`);
+                        break;
+                    }
+                }
+            }
+            
+            if (!foundAlt) {
+                // Attack from current position (ranged attack style)
+                attackCellX = Math.floor(this.worldPositions.player.x);
+                attackCellZ = Math.floor(this.worldPositions.player.z);
+                console.log(`[Game] Attack from current position - no valid attack cell`);
+            }
+        }
+        
         const attackPosX = attackCellX + 0.5;
         const attackPosZ = attackCellZ + 0.5;
         
@@ -2743,8 +2774,26 @@ const Game = {
     dashTo(targetX, targetZ, duration = 0.3) {
         return new Promise(resolve => {
             // Ensure target position is at cell center
-            const finalX = Math.floor(targetX) + 0.5;
-            const finalZ = Math.floor(targetZ) + 0.5;
+            const targetCellX = Math.floor(targetX);
+            const targetCellZ = Math.floor(targetZ);
+            let finalX = targetCellX + 0.5;
+            let finalZ = targetCellZ + 0.5;
+            
+            // Check if target cell is blocked by enemy
+            if (this.isCellBlocked(finalX, finalZ, 'player')) {
+                // Find nearest unoccupied cell
+                const altCell = this.findNearestEmptyCell(targetCellX, targetCellZ, 'player');
+                if (altCell) {
+                    finalX = altCell.x + 0.5;
+                    finalZ = altCell.z + 0.5;
+                    console.log(`[Game] Dash redirected: (${targetCellX},${targetCellZ}) -> (${altCell.x},${altCell.z})`);
+                } else {
+                    // No valid cell, stay in place
+                    console.log(`[Game] Dash blocked - no valid cell`);
+                    resolve();
+                    return;
+                }
+            }
             
             gsap.to(this.worldPositions.player, {
                 x: finalX,
@@ -2943,8 +2992,26 @@ const Game = {
             }
             
             // Ensure target position is at cell center
-            const targetX = Math.floor(newX) + 0.5;
-            const targetZ = Math.floor(newZ) + 0.5;
+            const targetCellX = Math.floor(newX);
+            const targetCellZ = Math.floor(newZ);
+            let targetX = targetCellX + 0.5;
+            let targetZ = targetCellZ + 0.5;
+            
+            // Check if target cell is blocked
+            if (this.isCellBlocked(targetX, targetZ, 'enemy', enemyIndex)) {
+                // Find nearest unoccupied cell
+                const altCell = this.findNearestEmptyCell(targetCellX, targetCellZ, 'enemy', enemyIndex);
+                if (altCell) {
+                    targetX = altCell.x + 0.5;
+                    targetZ = altCell.z + 0.5;
+                    console.log(`[Game] Enemy ${enemyIndex} advance redirected to (${altCell.x},${altCell.z})`);
+                } else {
+                    // No valid cell, stay in place
+                    console.log(`[Game] Enemy ${enemyIndex} advance blocked`);
+                    resolve();
+                    return;
+                }
+            }
             
             gsap.to(enemyWorldPos, {
                 x: targetX,
@@ -3115,6 +3182,32 @@ const Game = {
     // Simple check returning boolean (for backward compatibility)
     isCellBlocked(gridX, gridZ, excludeType = null, excludeIndex = -1) {
         return this.isGridCellOccupied(gridX, gridZ, excludeType, excludeIndex).occupied;
+    },
+    
+    // Find nearest empty cell from target position
+    findNearestEmptyCell(targetCellX, targetCellZ, excludeType = null, excludeIndex = -1) {
+        // Search in expanding rings around target
+        for (let radius = 1; radius <= 3; radius++) {
+            for (let dx = -radius; dx <= radius; dx++) {
+                for (let dz = -radius; dz <= radius; dz++) {
+                    // Only check cells at current radius (ring, not filled circle)
+                    if (Math.abs(dx) !== radius && Math.abs(dz) !== radius) continue;
+                    
+                    const checkX = targetCellX + dx;
+                    const checkZ = targetCellZ + dz;
+                    
+                    // Check bounds
+                    if (checkX < 0 || checkX >= this.arena.width) continue;
+                    if (checkZ < 0 || checkZ >= this.arena.depth) continue;
+                    
+                    // Check if empty
+                    if (!this.isCellBlocked(checkX + 0.5, checkZ + 0.5, excludeType, excludeIndex)) {
+                        return { x: checkX, z: checkZ };
+                    }
+                }
+            }
+        }
+        return null;  // No empty cell found
     },
     
     // Get valid grid positions for Dash
