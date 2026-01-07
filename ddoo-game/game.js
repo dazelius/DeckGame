@@ -155,19 +155,27 @@ const Game = {
             playerAnim: 'player.dodge',
             targetType: 'grid'
         },
-        roll: { 
-            name: 'Roll', cost: 1, type: 'move', moveTo: true,
-            color: 0x22c55e, desc: 'Roll (2칸)',
-            maxDistance: 2,  // Max 2 cells
-            playerAnim: 'player.dodge',
-            targetType: 'grid'
+        
+        // === COMBO ATTACKS ===
+        battleOpening: {
+            name: 'Tackle', cost: 3, type: 'attack', damage: 8,
+            range: 5,  // Can charge from far away
+            knockback: 2,
+            color: 0xff4500, desc: '8 DMG Charge (5칸)',
+            anim: 'card.battleopening',
+            playerAnim: 'player.power_windup',
+            enemyAnim: 'enemy.power_impact',
+            slow: true  // Dark Souls slow feel
         },
-        quickstep: { 
-            name: 'Step', cost: 0, type: 'move', moveTo: true,
-            color: 0x10b981, desc: 'Step (1칸)',
-            maxDistance: 1,  // Max 1 cell
-            playerAnim: 'player.dodge',
-            targetType: 'grid'
+        flurry: {
+            name: 'Flurry', cost: 2, type: 'attack', damage: 3,
+            range: 2,  // Melee range
+            hits: 3,   // Multi-hit
+            color: 0xdc143c, desc: '3x3 DMG (2칸)',
+            anim: 'card.flurry',
+            playerAnim: 'player.stab',
+            enemyAnim: 'enemy.hit',
+            slow: true  // Dark Souls slow feel
         },
         
         // === SPECIAL ===
@@ -273,7 +281,7 @@ const Game = {
         
         // Draw initial hand (5 cards)
         console.log('[Game] Drawing initial hand...');
-        this.drawHand(['slash', 'thrust', 'dash', 'block', 'roll']);
+        this.drawHand(['slash', 'thrust', 'dash', 'block', 'flurry']);
         console.log('[Game] Cards drawn:', this.cards.elements.length);
         
         // UI
@@ -963,7 +971,7 @@ const Game = {
         const allCards = [
             'slash', 'slash', 'thrust', 'heavySlash',
             'block', 'block', 'ironFlesh', 'parry',
-            'roll', 'quickstep', 'dash', 'dash',
+            'dash', 'dash', 'battleOpening', 'flurry',
             'estus', 'backstab', 'riposte'
         ];
         
@@ -1857,9 +1865,8 @@ const Game = {
         }
         
         const baseDamage = cardData.damage || 6;
-        const isCrit = Math.random() < 0.15;
-        const finalDamage = isCrit ? baseDamage * 2 : baseDamage;
         const knockback = cardData.knockback ?? 1;  // Default 1 cell knockback
+        const hitCount = cardData.hits || 1;  // Multi-hit support
         
         // Face the enemy before attacking
         this.faceTargetWorld(this.player, this.worldPositions.player, enemyWorldPos);
@@ -1868,42 +1875,84 @@ const Game = {
         const attackPosX = enemyWorldPos.x - 1;
         const attackPosZ = enemyWorldPos.z;
         
-        // Dash to attack position
-        await this.dashTo(attackPosX, attackPosZ, 0.2);
+        // Dash to attack position (slower for Dark Souls feel)
+        const dashSpeed = cardData.slow ? 0.35 : 0.2;
+        await this.dashTo(attackPosX, attackPosZ, dashSpeed);
         
         // Try to use DDOOAction for animation
         const useDDOOAction = typeof DDOOAction !== 'undefined' && DDOOAction.initialized;
         
-        if (useDDOOAction && cardData.playerAnim) {
-            console.log(`[Game] Playing anim: ${cardData.playerAnim}`);
-            
-            // Play player attack animation
+        // Dark Souls slow animation speed
+        const originalSpeed = DDOOAction?.config?.speed || 1.0;
+        if (cardData.slow && DDOOAction?.config) {
+            DDOOAction.config.speed = 0.7;  // 30% slower for weight
+        }
+        
+        // Use sequence animation if available (card.battleopening, card.flurry etc)
+        if (useDDOOAction && cardData.anim) {
+            console.log(`[Game] Playing sequence: ${cardData.anim}`);
             const playerChar = DDOOAction.characters?.get('player');
-            if (playerChar) {
-                await DDOOAction.play(cardData.playerAnim, {
-                    container: playerChar.container,
-                    sprite: playerChar.sprite
-                });
-            }
+            const enemyChar = { container: enemy, sprite: enemy.children?.[0] || enemy };
             
-            // Play enemy hit animation
-            if (cardData.enemyAnim) {
-                const enemyChar = { container: enemy, sprite: enemy.children?.[0] || enemy };
-                await DDOOAction.play(cardData.enemyAnim, enemyChar);
+            if (playerChar) {
+                await DDOOAction.play(cardData.anim, {
+                    container: playerChar.container,
+                    sprite: playerChar.sprite,
+                    targetContainer: enemyChar.container,
+                    targetSprite: enemyChar.sprite
+                });
             }
         }
         
-        // Hit effects
-        this.hapticFeedback(isCrit ? 'heavy' : 'hit');
-        DDOORenderer.rapidFlash?.(enemy);
-        DDOORenderer.damageShake?.(enemy, isCrit ? 12 : 8, 300);
-        DDOOBackground.screenFlash(isCrit ? '#ffaa00' : '#ffffff', isCrit ? 100 : 60);
-        if (isCrit) DDOOBackground.shake?.(0.6, 150);
+        // Multi-hit attack loop for damage and effects
+        let totalDamage = 0;
+        for (let hit = 0; hit < hitCount; hit++) {
+            const isCrit = Math.random() < 0.15;
+            const hitDamage = isCrit ? baseDamage * 2 : baseDamage;
+            totalDamage += hitDamage;
+            
+            // If no sequence anim, use individual anims
+            if (useDDOOAction && !cardData.anim && cardData.playerAnim) {
+                console.log(`[Game] Playing anim: ${cardData.playerAnim} (hit ${hit + 1}/${hitCount})`);
+                
+                // Play player attack animation
+                const playerChar = DDOOAction.characters?.get('player');
+                if (playerChar) {
+                    await DDOOAction.play(cardData.playerAnim, {
+                        container: playerChar.container,
+                        sprite: playerChar.sprite
+                    });
+                }
+                
+                // Play enemy hit animation
+                if (cardData.enemyAnim) {
+                    const enemyChar = { container: enemy, sprite: enemy.children?.[0] || enemy };
+                    await DDOOAction.play(cardData.enemyAnim, enemyChar);
+                }
+            }
+            
+            // Hit effects per hit
+            this.hapticFeedback(isCrit ? 'heavy' : 'hit');
+            DDOORenderer.rapidFlash?.(enemy);
+            DDOORenderer.damageShake?.(enemy, isCrit ? 12 : 8, 300);
+            DDOOBackground.screenFlash(isCrit ? '#ffaa00' : '#ffffff', isCrit ? 100 : 60);
+            if (isCrit) DDOOBackground.shake?.(0.6, 150);
+            
+            // Damage number per hit
+            DDOOFloater.showOnCharacter(enemy, hitDamage, isCrit ? 'critical' : 'damage');
+            
+            // Small delay between multi-hits (only for individual anims)
+            if (!cardData.anim && hit < hitCount - 1) {
+                await this.delay(cardData.slow ? 200 : 120);
+            }
+        }
         
-        // Damage number
-        DDOOFloater.showOnCharacter(enemy, finalDamage, isCrit ? 'critical' : 'damage');
+        // Restore original speed
+        if (cardData.slow && DDOOAction?.config) {
+            DDOOAction.config.speed = originalSpeed;
+        }
         
-        // KNOCKBACK: Push enemy back 1 cell
+        // KNOCKBACK: Push enemy back
         if (knockback > 0) {
             const newEnemyX = Math.min(this.arena.width - 1, enemyWorldPos.x + knockback);
             await this.knockbackEnemy(enemyIndex, newEnemyX, enemyWorldPos.z);
@@ -1915,10 +1964,11 @@ const Game = {
         this.worldPositions.player.z = attackPosZ;
         console.log(`[Game] Player advanced to: (${attackPosX}, ${attackPosZ})`);
         
-        await this.delay(100);
+        // Longer recovery for Dark Souls feel
+        await this.delay(cardData.slow ? 200 : 100);
         
-        // Apply damage
-        enemyData.hp = Math.max(0, enemyData.hp - finalDamage);
+        // Apply damage (total from all hits)
+        enemyData.hp = Math.max(0, enemyData.hp - totalDamage);
         
         if (typeof Combat !== 'undefined') {
             Combat.interruptEnemy(enemyIndex, 400);
