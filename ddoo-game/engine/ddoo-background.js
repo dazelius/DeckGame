@@ -22,18 +22,21 @@ const DDOOBackground = {
         smoothing: 0.05
     },
     
-    // 카메라 기본값
+    // Camera defaults (quarter/isometric view)
     cameraDefaults: {
-        posY: 4,
-        posZ: 15,
-        lookAtY: 3
+        posX: 2,       // Slight offset for quarter view
+        posY: 10,      // Higher up for isometric angle
+        posZ: 18,      // Further back
+        lookAtX: 0,
+        lookAtY: 1,    // Look at floor level
+        lookAtZ: -2    // Look slightly forward
     },
     
-    // 자동 줌 설정
+    // Auto zoom settings
     autoZoom: {
         enabled: true,
-        targetZ: 15,
-        currentZ: 15,
+        targetZ: 18,
+        currentZ: 18,
         targetX: 0,
         currentX: 0,
         targetLookAtX: 0,
@@ -167,13 +170,21 @@ const DDOOBackground = {
         }
         
         this.camera = new THREE.PerspectiveCamera(
-            65,
+            50,  // Narrower FOV for more isometric feel
             width / height,
             0.1,
             100
         );
-        this.camera.position.set(0, this.cameraDefaults.posY, this.cameraDefaults.posZ);
-        this.camera.lookAt(0, this.cameraDefaults.lookAtY, 0);
+        this.camera.position.set(
+            this.cameraDefaults.posX,
+            this.cameraDefaults.posY,
+            this.cameraDefaults.posZ
+        );
+        this.camera.lookAt(
+            this.cameraDefaults.lookAtX,
+            this.cameraDefaults.lookAtY,
+            this.cameraDefaults.lookAtZ
+        );
     },
     
     // Renderer 설정
@@ -541,11 +552,17 @@ const DDOOBackground = {
         const currentZ = this.autoZoom.currentZ;
         const currentX = this.autoZoom.currentX;
         
-        this.camera.position.x = currentX + this.mouse.x * this.config.mouseX * 0.5;
-        this.camera.position.y = this.cameraDefaults.posY + this.mouse.y * this.config.mouseY * 0.5;
+        // Camera position with mouse parallax (reduced for isometric stability)
+        this.camera.position.x = this.cameraDefaults.posX + currentX + this.mouse.x * this.config.mouseX * 0.3;
+        this.camera.position.y = this.cameraDefaults.posY + this.mouse.y * this.config.mouseY * 0.2;
         this.camera.position.z = currentZ;
         
-        this.camera.lookAt(this.mouse.x * 0.3, 3, -5);
+        // Look at target (slight mouse influence for subtle parallax)
+        this.camera.lookAt(
+            this.cameraDefaults.lookAtX + this.mouse.x * 0.2,
+            this.cameraDefaults.lookAtY,
+            this.cameraDefaults.lookAtZ
+        );
         
         // 횃불 깜빡임
         this.torches.forEach(torch => {

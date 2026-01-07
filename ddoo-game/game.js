@@ -55,11 +55,12 @@ const Game = {
     },
     
     // 3D world coordinates (on the floor plane, Y=0)
+    // Quarter view: X = left/right, Z = front/back (towards camera)
     worldPositions: {
-        player: { x: -4, y: 0, z: 3 },
+        player: { x: -3, y: 0, z: 2 },
         enemies: [
-            { x: 3, y: 0, z: 3 },
-            { x: 6, y: 0, z: 2 }
+            { x: 2, y: 0, z: 1 },
+            { x: 5, y: 0, z: 0 }
         ]
     },
     
