@@ -1335,7 +1335,7 @@ const Game = {
         }
     },
     
-    // Highlight attack range on grid (PixiJS - Pixel Style)
+    // Highlight attack range on grid (PixiJS - Grid Cell Fill)
     highlightAttackRange(range) {
         const playerPos = this.worldPositions.player;
         
@@ -1348,6 +1348,8 @@ const Game = {
         
         console.log(`[Game] Drawing attack range: ${range} from (${playerPos.x}, ${playerPos.z})`);
         
+        const highlight = new PIXI.Graphics();
+        
         // Highlight cells within range
         let count = 0;
         for (let x = 0; x < this.arena.width; x++) {
@@ -1356,62 +1358,60 @@ const Game = {
                 const dist = Math.abs(x - Math.floor(playerPos.x)) + Math.abs(z - Math.floor(playerPos.z));
                 if (dist === 0 || dist > range) continue;
                 
-                const screenPos = DDOOBackground.project3DToScreen(x + 0.5, 0, z + 0.5);
-                if (!screenPos || !screenPos.visible) continue;
+                // Get 4 corners of the cell in screen space
+                const topLeft = DDOOBackground.project3DToScreen(x, 0, z);
+                const topRight = DDOOBackground.project3DToScreen(x + 1, 0, z);
+                const bottomLeft = DDOOBackground.project3DToScreen(x, 0, z + 1);
+                const bottomRight = DDOOBackground.project3DToScreen(x + 1, 0, z + 1);
+                
+                if (!topLeft || !topRight || !bottomLeft || !bottomRight) continue;
+                if (!topLeft.visible || !bottomRight.visible) continue;
                 
                 // Check if enemy is in this cell
                 const hasEnemy = this.worldPositions.enemies.some(
                     ep => Math.floor(ep.x) === x && Math.floor(ep.z) === z
                 );
                 
-                // Create highlight
-                const highlight = new PIXI.Graphics();
-                
-                const w = 50, h = 30;  // Cell size
-                const px = 3;  // Pixel border thickness
-                
+                // Draw filled polygon for cell
                 if (hasEnemy) {
-                    // Bright red for enemy cells - pixel style
-                    highlight.beginFill(0xff0000, 0.6);
-                    highlight.drawRect(-w/2, -h/2, w, h);
-                    highlight.endFill();
+                    // Bright red for enemy cells
+                    highlight.moveTo(topLeft.screenX, topLeft.screenY);
+                    highlight.lineTo(topRight.screenX, topRight.screenY);
+                    highlight.lineTo(bottomRight.screenX, bottomRight.screenY);
+                    highlight.lineTo(bottomLeft.screenX, bottomLeft.screenY);
+                    highlight.closePath();
+                    highlight.fill({ color: 0xff0000, alpha: 0.5 });
                     
-                    // Pixel border (yellow)
-                    highlight.beginFill(0xffff00, 1);
-                    highlight.drawRect(-w/2, -h/2, w, px);           // Top
-                    highlight.drawRect(-w/2, h/2 - px, w, px);       // Bottom
-                    highlight.drawRect(-w/2, -h/2, px, h);           // Left
-                    highlight.drawRect(w/2 - px, -h/2, px, h);       // Right
-                    highlight.endFill();
-                    
-                    // Corner accents (white)
-                    highlight.beginFill(0xffffff, 1);
-                    highlight.drawRect(-w/2, -h/2, px*2, px);
-                    highlight.drawRect(-w/2, -h/2, px, px*2);
-                    highlight.drawRect(w/2 - px*2, -h/2, px*2, px);
-                    highlight.drawRect(w/2 - px, -h/2, px, px*2);
-                    highlight.endFill();
+                    // Yellow border
+                    highlight.moveTo(topLeft.screenX, topLeft.screenY);
+                    highlight.lineTo(topRight.screenX, topRight.screenY);
+                    highlight.lineTo(bottomRight.screenX, bottomRight.screenY);
+                    highlight.lineTo(bottomLeft.screenX, bottomLeft.screenY);
+                    highlight.closePath();
+                    highlight.stroke({ color: 0xffff00, width: 3, alpha: 1 });
                 } else {
                     // Dim red for empty cells in range
-                    highlight.beginFill(0xff4444, 0.3);
-                    highlight.drawRect(-w/2, -h/2, w, h);
-                    highlight.endFill();
+                    highlight.moveTo(topLeft.screenX, topLeft.screenY);
+                    highlight.lineTo(topRight.screenX, topRight.screenY);
+                    highlight.lineTo(bottomRight.screenX, bottomRight.screenY);
+                    highlight.lineTo(bottomLeft.screenX, bottomLeft.screenY);
+                    highlight.closePath();
+                    highlight.fill({ color: 0xff4444, alpha: 0.25 });
                     
-                    // Pixel border (red)
-                    highlight.beginFill(0xff6666, 0.8);
-                    highlight.drawRect(-w/2, -h/2, w, px);
-                    highlight.drawRect(-w/2, h/2 - px, w, px);
-                    highlight.drawRect(-w/2, -h/2, px, h);
-                    highlight.drawRect(w/2 - px, -h/2, px, h);
-                    highlight.endFill();
+                    // Red border
+                    highlight.moveTo(topLeft.screenX, topLeft.screenY);
+                    highlight.lineTo(topRight.screenX, topRight.screenY);
+                    highlight.lineTo(bottomRight.screenX, bottomRight.screenY);
+                    highlight.lineTo(bottomLeft.screenX, bottomLeft.screenY);
+                    highlight.closePath();
+                    highlight.stroke({ color: 0xff6666, width: 2, alpha: 0.7 });
                 }
                 
-                highlight.position.set(screenPos.screenX, screenPos.screenY);
-                hlContainer.addChild(highlight);
                 count++;
             }
         }
         
+        hlContainer.addChild(highlight);
         console.log(`[Game] Created ${count} attack range highlights`);
     },
     
@@ -1515,7 +1515,7 @@ const Game = {
         });
     },
     
-    // Highlight valid grid cells for movement (PixiJS Pixel Style + DOM click handlers)
+    // Highlight valid grid cells for movement (PixiJS Grid Cell Fill + DOM click handlers)
     highlightGridCells(maxDistance) {
         const playerPos = this.worldPositions.player;
         const battleArea = document.getElementById('battle-area');
@@ -1529,6 +1529,8 @@ const Game = {
         hlContainer.removeChildren();  // Clear all previous highlights
         
         console.log(`[Game] Drawing movement grid, maxDistance: ${maxDistance}`);
+        
+        const highlight = new PIXI.Graphics();
         
         // Highlight valid cells
         let count = 0;
@@ -1545,40 +1547,36 @@ const Game = {
                 );
                 if (isOccupied) continue;
                 
-                // Get screen position
-                const screenPos = DDOOBackground.project3DToScreen(x + 0.5, 0, z + 0.5);
-                if (!screenPos || !screenPos.visible) continue;
+                // Get 4 corners of the cell in screen space
+                const topLeft = DDOOBackground.project3DToScreen(x, 0, z);
+                const topRight = DDOOBackground.project3DToScreen(x + 1, 0, z);
+                const bottomLeft = DDOOBackground.project3DToScreen(x, 0, z + 1);
+                const bottomRight = DDOOBackground.project3DToScreen(x + 1, 0, z + 1);
                 
-                // PixiJS highlight (Pixel Style)
-                const highlight = new PIXI.Graphics();
+                if (!topLeft || !topRight || !bottomLeft || !bottomRight) continue;
+                if (!topLeft.visible || !bottomRight.visible) continue;
                 
-                const w = 50, h = 30;  // Cell size
-                const px = 3;  // Pixel border thickness
+                // Draw filled polygon for cell (green)
+                highlight.moveTo(topLeft.screenX, topLeft.screenY);
+                highlight.lineTo(topRight.screenX, topRight.screenY);
+                highlight.lineTo(bottomRight.screenX, bottomRight.screenY);
+                highlight.lineTo(bottomLeft.screenX, bottomLeft.screenY);
+                highlight.closePath();
+                highlight.fill({ color: 0x00ff00, alpha: 0.35 });
                 
-                // Green fill for movement
-                highlight.beginFill(0x00ff00, 0.4);
-                highlight.drawRect(-w/2, -h/2, w, h);
-                highlight.endFill();
+                // Cyan border
+                highlight.moveTo(topLeft.screenX, topLeft.screenY);
+                highlight.lineTo(topRight.screenX, topRight.screenY);
+                highlight.lineTo(bottomRight.screenX, bottomRight.screenY);
+                highlight.lineTo(bottomLeft.screenX, bottomLeft.screenY);
+                highlight.closePath();
+                highlight.stroke({ color: 0x00ffaa, width: 2, alpha: 0.9 });
                 
-                // Pixel border (cyan/green)
-                highlight.beginFill(0x00ffaa, 1);
-                highlight.drawRect(-w/2, -h/2, w, px);           // Top
-                highlight.drawRect(-w/2, h/2 - px, w, px);       // Bottom
-                highlight.drawRect(-w/2, -h/2, px, h);           // Left
-                highlight.drawRect(w/2 - px, -h/2, px, h);       // Right
-                highlight.endFill();
-                
-                // Corner accents (white)
-                highlight.beginFill(0xffffff, 1);
-                highlight.drawRect(-w/2, -h/2, px*2, px);
-                highlight.drawRect(-w/2, -h/2, px, px*2);
-                highlight.drawRect(w/2 - px*2, -h/2, px*2, px);
-                highlight.drawRect(w/2 - px, -h/2, px, px*2);
-                highlight.endFill();
-                
-                highlight.position.set(screenPos.screenX, screenPos.screenY);
-                hlContainer.addChild(highlight);
                 count++;
+                
+                // Get center for click target
+                const centerX = (topLeft.screenX + bottomRight.screenX) / 2;
+                const centerY = (topLeft.screenY + bottomRight.screenY) / 2;
                 
                 // DOM click handler (invisible, for interaction)
                 const clickTarget = document.createElement('div');
@@ -1587,10 +1585,10 @@ const Game = {
                 clickTarget.dataset.gridZ = z;
                 clickTarget.style.cssText = `
                     position: fixed;
-                    left: ${rect.left + screenPos.screenX - 30}px;
-                    top: ${rect.top + screenPos.screenY - 18}px;
-                    width: 60px;
-                    height: 36px;
+                    left: ${rect.left + centerX - 40}px;
+                    top: ${rect.top + centerY - 25}px;
+                    width: 80px;
+                    height: 50px;
                     cursor: pointer;
                     z-index: 60;
                     background: transparent;
@@ -1608,6 +1606,7 @@ const Game = {
             }
         }
         
+        hlContainer.addChild(highlight);
         console.log(`[Game] Created ${count} movement highlights`);
     },
     
