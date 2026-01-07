@@ -60,20 +60,20 @@ const Game = {
         doubleTapDelay: 300
     },
     
-    // 3D world coordinates (10x10 grid arena)
+    // 3D world coordinates (10x3 grid arena)
     worldPositions: {
-        player: { x: 2, y: 0, z: 5 },
+        player: { x: 2, y: 0, z: 1.5 },   // Center row
         enemies: [
-            { x: 7, y: 0, z: 3 },   // Top enemy
-            { x: 8, y: 0, z: 7 }    // Bottom enemy (more spread out)
+            { x: 7, y: 0, z: 0.5 },   // Top row
+            { x: 8, y: 0, z: 2.5 }    // Bottom row
         ]
     },
     
-    // Arena settings
+    // Arena settings (10x3 grid)
     arena: {
         width: 10,
-        height: 10,  // Z-axis (depth)
-        depth: 10,   // Alias for height
+        height: 3,   // Z-axis (depth) - 3 rows only
+        depth: 3,    // Alias for height
         gridSize: 1,
         playerZone: { minX: 0, maxX: 4 },  // Player can be in X: 0-4
         enemyZone: { minX: 5, maxX: 9 }    // Enemies can be in X: 5-9

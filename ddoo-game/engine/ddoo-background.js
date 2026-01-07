@@ -22,21 +22,21 @@ const DDOOBackground = {
         smoothing: 0.05
     },
     
-    // Camera defaults (side view - left vs right battle)
+    // Camera defaults (side view - 10x3 arena)
     cameraDefaults: {
         posX: 5,       // Center of arena (X axis)
-        posY: 5,       // Eye level height
-        posZ: 12,      // Balance between size and visibility
+        posY: 4,       // Eye level height
+        posZ: 8,       // Closer for 3-row grid
         lookAtX: 5,    // Look at arena center
-        lookAtY: 0.5,  // Look at ground level
-        lookAtZ: 5     // Look at arena center
+        lookAtY: 0,    // Look at ground level
+        lookAtZ: 1.5   // Look at center of 3 rows
     },
     
     // Auto zoom settings
     autoZoom: {
         enabled: true,
-        targetZ: 12,
-        currentZ: 12,
+        targetZ: 8,
+        currentZ: 8,
         targetX: 0,
         currentX: 0,
         targetLookAtX: 0,
@@ -258,13 +258,13 @@ const DDOOBackground = {
         this.scene.add(topLight);
     },
     
-    // 바닥 생성 (10x10 그리드에 맞춤)
+    // 바닥 생성 (10x3 그리드에 맞춤)
     createFloor() {
         const self = this;
         
-        // Grid center is at (5, 0, 5)
+        // Grid center is at (5, 0, 1.5)
         const gridCenterX = 5;
-        const gridCenterZ = 5;
+        const gridCenterZ = 1.5;
         
         // 기본 바닥 (텍스처 로딩 전 폴백)
         const baseFloor = new THREE.Mesh(
@@ -361,7 +361,7 @@ const DDOOBackground = {
                     fog: false
                 })
             );
-            leftWall.position.set(-0.5, height / 2, 5);  // At X=-0.5, centered at Z=5
+            leftWall.position.set(-0.5, height / 2, 1.5);  // At X=-0.5, centered at Z=1.5
             leftWall.rotation.y = Math.PI / 2;
             self.dungeonGroup.add(leftWall);
             
@@ -378,7 +378,7 @@ const DDOOBackground = {
                     fog: false
                 })
             );
-            rightWall.position.set(10.5, height / 2, 5);  // At X=10.5, centered at Z=5
+            rightWall.position.set(10.5, height / 2, 1.5);  // At X=10.5, centered at Z=1.5
             rightWall.rotation.y = -Math.PI / 2;
             self.dungeonGroup.add(rightWall);
         };
@@ -390,13 +390,13 @@ const DDOOBackground = {
             backWall.position.set(5, 7.5, wallZ);
             self.dungeonGroup.add(backWall);
             
-            const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(15, 15), fallbackMat.clone());
-            leftWall.position.set(-0.5, 7.5, 5);
+            const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(6, 15), fallbackMat.clone());
+            leftWall.position.set(-0.5, 7.5, 1.5);
             leftWall.rotation.y = Math.PI / 2;
             self.dungeonGroup.add(leftWall);
             
-            const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(15, 15), fallbackMat.clone());
-            rightWall.position.set(10.5, 7.5, 5);
+            const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(6, 15), fallbackMat.clone());
+            rightWall.position.set(10.5, 7.5, 1.5);
             rightWall.rotation.y = -Math.PI / 2;
             self.dungeonGroup.add(rightWall);
         };
@@ -436,15 +436,15 @@ const DDOOBackground = {
         this.dungeonGroup.add(ceiling);
     },
     
-    // 기둥 (그리드 코너에 배치)
+    // 기둥 (그리드 코너에 배치 - 10x3 grid)
     addPillars() {
         const pillarMat = new THREE.MeshStandardMaterial({ color: 0x151520, roughness: 0.85 });
-        // Grid corners: (0,0), (10,0), (0,10), (10,10)
+        // Grid corners: (0,0), (10,0), (0,3), (10,3)
         const positions = [
             [-1, 6, -1],   // Top-left corner
             [11, 6, -1],   // Top-right corner
-            [-1, 6, 11],   // Bottom-left corner
-            [11, 6, 11]    // Bottom-right corner
+            [-1, 6, 4],    // Bottom-left corner
+            [11, 6, 4]     // Bottom-right corner
         ];
         
         positions.forEach(pos => {
