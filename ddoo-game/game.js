@@ -1449,11 +1449,17 @@ const Game = {
             console.log(`[Game] Playing sequence: ${cardData.anim}`);
             
             try {
-                await DDOOAction.playSequence(cardData.anim, {
-                    targetContainer: enemy,
-                    targetSprite: enemy.children?.[0] || enemy,
-                    damage: finalDamage
-                });
+                // Use play() which handles anim lookup from cache
+                const playerChar = DDOOAction.characters?.get('player');
+                if (playerChar) {
+                    await DDOOAction.play(cardData.anim, {
+                        container: playerChar.container,
+                        sprite: playerChar.sprite,
+                        targetContainer: enemy,
+                        targetSprite: enemy.children?.[0] || enemy,
+                        damage: finalDamage
+                    });
+                }
             } catch (e) {
                 console.warn('[Game] Sequence failed, using fallback:', e);
             }

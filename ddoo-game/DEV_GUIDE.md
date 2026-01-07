@@ -163,14 +163,19 @@ DDOOFloater.showOnCharacter(sprite, '+WEAK', 'weak');
 
 ### 5. DDOOAction (애니메이션 시스템)
 ```javascript
-// JSON 애니메이션 재생
-await DDOOAction.play('player.attack', playerContainer);
-await DDOOAction.play('enemy.hit', enemyContainer);
+// JSON 애니메이션 재생 (단일)
+await DDOOAction.play('player.attack', {
+    container: playerContainer,
+    sprite: playerSprite
+});
 
-// 시퀀스 재생
-await DDOOAction.playSequence('card.strike', {
-    player: playerContainer,
-    enemy: enemyContainer
+// 시퀀스 재생 (연속 애니메이션)
+// play()가 자동으로 type:'sequence'를 감지하여 처리
+await DDOOAction.play('card.strike', {
+    container: playerContainer,
+    sprite: playerSprite,
+    targetContainer: enemyContainer,
+    targetSprite: enemySprite
 });
 ```
 
