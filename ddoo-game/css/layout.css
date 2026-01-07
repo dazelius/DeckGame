@@ -20,9 +20,21 @@
     flex: 3;
     min-height: 100px;
     max-height: 180px;
-    background: var(--color-bg);
+    background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 100%);
     overflow: visible;  /* Allow cards to overflow when dragging */
     z-index: 100;       /* Above battle area */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-top: 35px;  /* Space for energy bar */
+}
+
+#card-ui {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
 }
 
 #card-canvas-container {

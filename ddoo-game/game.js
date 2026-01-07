@@ -12,8 +12,9 @@ const Game = {
         player: {
             hp: 100,
             maxHp: 100,
-            energy: 3,
-            maxEnergy: 3,
+            energy: 5,           // Current energy (float for smooth regen)
+            maxEnergy: 10,       // Max energy (Clash Royale style)
+            energyRegen: 0.5,    // Energy per second (2 seconds per 1 energy)
             block: 0
         },
         enemies: [],
@@ -175,10 +176,10 @@ const Game = {
         dragScale: 1.15
     },
     
-    // Card state
-    // DOM Card System
+    // Card state (Clash Royale style - infinite cycle)
     cards: {
         hand: [],           // Current hand (card IDs)
+        deck: [],           // Remaining deck (card IDs)
         elements: [],       // Card DOM elements
         dragging: null,     // Currently dragging card element
         dragData: null,     // Drag data
@@ -688,7 +689,14 @@ const Game = {
     
     // Start position update loop (sync with 3D camera)
     startPositionLoop() {
+        let lastTime = performance.now();
+        
         const update = () => {
+            const now = performance.now();
+            const delta = (now - lastTime) / 1000;  // Convert to seconds
+            lastTime = now;
+            
+            // Update character positions
             this.updateAllCharacterPositions();
             
             // Update intent positions (above enemy heads)
@@ -696,9 +704,46 @@ const Game = {
                 Combat.updateAllIntentPositions();
             }
             
+            // Energy regeneration (Clash Royale style)
+            this.updateEnergyRegen(delta);
+            
             this.positionLoopId = requestAnimationFrame(update);
         };
         update();
+    },
+    
+    // Energy regeneration over time
+    updateEnergyRegen(delta) {
+        const player = this.state.player;
+        if (player.energy < player.maxEnergy) {
+            player.energy = Math.min(player.maxEnergy, player.energy + player.energyRegen * delta);
+            this.updateEnergyBar();
+            this.updateCardPlayability();
+        }
+    },
+    
+    // Update energy bar UI (Clash Royale style)
+    updateEnergyBar() {
+        const player = this.state.player;
+        const percent = (player.energy / player.maxEnergy) * 100;
+        
+        // Update fill
+        const fill = document.getElementById('energy-bar-fill');
+        if (fill) {
+            fill.style.width = `${percent}%`;
+        }
+        
+        // Update number (floor to show whole energy)
+        const number = document.getElementById('energy-number');
+        if (number) {
+            number.textContent = Math.floor(player.energy);
+        }
+        
+        // Full bar glow effect
+        const bar = document.getElementById('energy-bar');
+        if (bar) {
+            bar.classList.toggle('full', player.energy >= player.maxEnergy);
+        }
     },
     
     // Stop position loop
@@ -805,19 +850,8 @@ const Game = {
     },
     
     updateCardUI() {
-        // Update energy embers (Clash Royale style)
-        const energyDisplay = document.getElementById('energy-display');
-        if (energyDisplay) {
-            energyDisplay.innerHTML = '';
-            const current = this.state.player.energy;
-            const max = this.state.player.maxEnergy;
-            
-            for (let i = 0; i < max; i++) {
-                const ember = document.createElement('div');
-                ember.className = 'energy-ember' + (i >= current ? ' empty' : '');
-                energyDisplay.appendChild(ember);
-            }
-        }
+        // Update card playability based on current energy
+        this.updateCardPlayability();
         
         // Update deck info
         const drawCount = document.getElementById('draw-count');
@@ -841,7 +875,7 @@ const Game = {
         });
     },
     
-    // Draw cards in hand (DOM)
+    // Draw cards in hand (DOM) - Clash Royale style with deck
     drawHand(cardIds) {
         console.log(`[Game] Drawing hand: ${cardIds.join(', ')}`);
         
@@ -855,6 +889,18 @@ const Game = {
         handContainer.innerHTML = '';
         this.cards.elements = [];
         this.cards.hand = [...cardIds];
+        
+        // Initialize deck with remaining cards (infinite cycle pool)
+        const allCards = [
+            'slash', 'slash', 'thrust', 'heavySlash',
+            'block', 'block', 'ironFlesh', 'parry',
+            'roll', 'quickstep', 'dash', 'dash',
+            'estus', 'backstab', 'riposte'
+        ];
+        
+        // Filter out cards in hand, rest goes to deck
+        this.cards.deck = allCards.filter(c => !cardIds.includes(c));
+        this.shuffleDeck();
         
         // Create card elements
         cardIds.forEach((cardId, index) => {
@@ -870,7 +916,7 @@ const Game = {
         });
         
         this.updateCardPlayability();
-        console.log(`[Game] Drew ${this.cards.elements.length} cards`);
+        console.log(`[Game] Drew ${this.cards.elements.length} cards, Deck: ${this.cards.deck.length}`);
     },
     
     // Create a single card DOM element
@@ -1479,11 +1525,12 @@ const Game = {
         this.removeCardFromHand(cardIndex);
     },
     
-    // Remove card and rearrange remaining cards (DOM)
+    // Remove card and draw new one (Clash Royale style - infinite cycle)
     removeCardFromHand(cardIndex) {
         if (cardIndex < 0 || cardIndex >= this.cards.elements.length) return;
         
         const card = this.cards.elements[cardIndex];
+        const usedCardId = this.cards.hand[cardIndex];
         
         // Animate card disappearing
         card.style.transition = 'transform 0.2s, opacity 0.2s';
@@ -1498,6 +1545,20 @@ const Game = {
             this.cards.elements.splice(cardIndex, 1);
             this.cards.hand.splice(cardIndex, 1);
             
+            // Add used card back to deck (shuffle it in)
+            this.cards.deck.push(usedCardId);
+            
+            // Draw a new card from deck
+            if (this.cards.deck.length > 0) {
+                // Shuffle deck occasionally
+                if (Math.random() < 0.3) {
+                    this.shuffleDeck();
+                }
+                
+                const newCardId = this.cards.deck.shift();
+                this.addCardToHand(newCardId);
+            }
+            
             // Update indices
             this.cards.elements.forEach((el, i) => {
                 el.dataset.index = i;
@@ -1506,6 +1567,42 @@ const Game = {
             // Update UI
             this.updateCardUI();
         }, 200);
+    },
+    
+    // Shuffle the deck
+    shuffleDeck() {
+        for (let i = this.cards.deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [this.cards.deck[i], this.cards.deck[j]] = [this.cards.deck[j], this.cards.deck[i]];
+        }
+    },
+    
+    // Add a single card to hand
+    addCardToHand(cardId) {
+        const cardData = this.cardDatabase[cardId];
+        if (!cardData) return;
+        
+        this.cards.hand.push(cardId);
+        const index = this.cards.hand.length - 1;
+        
+        const cardEl = this.createCardElement(cardId, cardData, index);
+        cardEl.style.opacity = '0';
+        cardEl.style.transform = 'translateY(30px) scale(0.8)';
+        
+        const handContainer = document.getElementById('card-hand');
+        if (handContainer) {
+            handContainer.appendChild(cardEl);
+            this.cards.elements.push(cardEl);
+            
+            // Animate card appearing
+            requestAnimationFrame(() => {
+                cardEl.style.transition = 'transform 0.2s, opacity 0.2s';
+                cardEl.style.opacity = '1';
+                cardEl.style.transform = 'translateY(0) scale(1)';
+            });
+        }
+        
+        this.updateCardPlayability();
     },
     
     // ==================== Combat Actions ====================
@@ -2120,23 +2217,12 @@ const Game = {
         }
     },
     
+    // End turn is no longer needed in Clash Royale style (real-time)
+    // But we keep the button for potential "pass" functionality
     endTurn() {
-        if (this.state.phase !== 'player') return;
-        
-        this.state.turn++;
-        
-        // Energy restore
-        this.state.player.energy = this.state.player.maxEnergy;
-        
-        // Block decay (Dark Souls style - block resets each turn)
-        this.state.player.block = 0;
-        
-        // Draw new hand
-        const newHand = this.getRandomHand(5);
-        this.drawHand(newHand);
-        
-        this.updateUI();
-        this.showMessage(`Turn ${this.state.turn + 1}`, 800);
+        // In Clash Royale style, end turn just shows a message
+        // Energy regens continuously, cards cycle infinitely
+        this.showMessage('WAIT...', 500);
     },
     
     // Get random cards for new hand
