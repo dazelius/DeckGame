@@ -22,21 +22,21 @@ const DDOOBackground = {
         smoothing: 0.05
     },
     
-    // Camera defaults (side view - 10x3 arena, bottom aligned)
+    // Camera defaults (side view - 10x3 arena, center aligned)
     cameraDefaults: {
         posX: 5,       // Center of arena (X axis)
-        posY: 6,       // Higher up
-        posZ: 6,       // Closer
+        posY: 4,       // Medium height
+        posZ: 7,       // Good distance
         lookAtX: 5,    // Look at arena center
-        lookAtY: -1,   // Look down more
+        lookAtY: 0,    // Look at ground level
         lookAtZ: 1.5   // Look at center of 3 rows
     },
     
     // Auto zoom settings
     autoZoom: {
         enabled: true,
-        targetZ: 6,
-        currentZ: 6,
+        targetZ: 7,
+        currentZ: 7,
         targetX: 0,
         currentX: 0,
         targetLookAtX: 0,
