@@ -56,12 +56,12 @@ const Game = {
     
     // 3D world coordinates (10x10 grid arena, Y=0 floor)
     // Grid: X = 0~10 (left to right), Z = 0~10 (player side to enemy side)
-    // Player at bottom (Z=1-2), Enemies at top (Z=7-9)
+    // Camera looks from Z=16, so lower Z = closer to camera
     worldPositions: {
-        player: { x: 5, y: 0, z: 2 },  // Center bottom
+        player: { x: 5, y: 0, z: 6 },   // Center, closer to camera (player side)
         enemies: [
-            { x: 4, y: 0, z: 8 },  // Left enemy
-            { x: 6, y: 0, z: 8 }   // Right enemy
+            { x: 3, y: 0, z: 2 },   // Left enemy, far back near wall
+            { x: 7, y: 0, z: 2 }    // Right enemy, far back near wall
         ]
     },
     

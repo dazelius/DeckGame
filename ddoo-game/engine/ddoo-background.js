@@ -22,21 +22,21 @@ const DDOOBackground = {
         smoothing: 0.05
     },
     
-    // Camera defaults (10x10 arena view - Clash Royale style)
+    // Camera defaults (cinematic dungeon view with walls visible)
     cameraDefaults: {
-        posX: 5,       // Center of arena (X: 0-10)
-        posY: 12,      // High enough to see full arena
-        posZ: 14,      // Behind player zone
+        posX: 5,       // Center of arena
+        posY: 5,       // Lower for dramatic angle
+        posZ: 16,      // Further back to see walls
         lookAtX: 5,    // Look at arena center
-        lookAtY: 0,    // Look at floor
-        lookAtZ: 5     // Center of arena (Z: 0-10)
+        lookAtY: 2,    // Look slightly up to see walls
+        lookAtZ: 3     // Look towards the back wall
     },
     
     // Auto zoom settings
     autoZoom: {
         enabled: true,
-        targetZ: 14,
-        currentZ: 14,
+        targetZ: 16,
+        currentZ: 16,
         targetX: 0,
         currentX: 0,
         targetLookAtX: 0,
