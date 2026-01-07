@@ -36,9 +36,9 @@ const Game = {
     // ==================== ARENA ====================
     arena: {
         width: 8,      // X: 0-7
-        depth: 6,      // Z: 0-5
-        playerZone: 3, // Player can place in Z: 0-2
-        enemyZone: 3   // Enemy spawns in Z: 3-5
+        depth: 4,      // Z: 0-3 (smaller depth for wider view)
+        playerZone: 2, // Player can place in Z: 0-1
+        enemyZone: 2   // Enemy spawns in Z: 2-3
     },
     
     battleAreaSize: { width: 0, height: 0 },

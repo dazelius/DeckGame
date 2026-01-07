@@ -24,19 +24,19 @@ const DDOOBackground = {
     
     // Camera defaults (side view - left vs right battle)
     cameraDefaults: {
-        posX: 5,       // Center of arena (X axis)
-        posY: 4,       // Eye level height
-        posZ: 18,      // Far back to see full width
-        lookAtX: 5,    // Look at arena center
-        lookAtY: 2,    // Look at character height
-        lookAtZ: 5     // Look at arena center (Z axis)
+        posX: 4,       // Center of arena (X axis)
+        posY: 6,       // Higher for better overview
+        posZ: 10,      // Closer to see grid better
+        lookAtX: 4,    // Look at arena center
+        lookAtY: 0,    // Look at floor level
+        lookAtZ: 2     // Look at arena center (Z axis)
     },
     
     // Auto zoom settings
     autoZoom: {
         enabled: true,
-        targetZ: 18,
-        currentZ: 18,
+        targetZ: 10,
+        currentZ: 10,
         targetX: 0,
         currentX: 0,
         targetLookAtX: 0,
@@ -170,7 +170,7 @@ const DDOOBackground = {
         }
         
         this.camera = new THREE.PerspectiveCamera(
-            50,  // Narrower FOV for more isometric feel
+            60,  // Wider FOV to fill screen
             width / height,
             0.1,
             100
