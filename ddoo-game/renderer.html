@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🖼️ DDOORenderer Studio</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #eee;
+            font-family: 'Segoe UI', 'Noto Sans KR', sans-serif;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: linear-gradient(90deg, #1a1a2e, #16213e);
+            padding: 12px 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #fbbf24;
+        }
+        
+        .header h1 { font-size: 1.3rem; color: #fbbf24; }
+        .header-links { display: flex; gap: 15px; }
+        .header-links a {
+            color: #888; text-decoration: none;
+            padding: 6px 12px; border-radius: 6px;
+        }
+        .header-links a:hover { color: #fff; background: rgba(255,255,255,0.1); }
+        
+        .main-container {
+            display: flex;
+            gap: 15px;
+            padding: 15px;
+            height: calc(100vh - 60px);
+        }
+        
+        /* 왼쪽 설정 패널 */
+        .control-panel {
+            width: 280px;
+            background: #12121a;
+            border-radius: 10px;
+            padding: 12px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        
+        .panel-section {
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .panel-section h3 {
+            font-size: 0.85rem;
+            color: #fbbf24;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .setting-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            gap: 8px;
+        }
+        
+        .setting-row label {
+            width: 70px;
+            color: #888;
+            font-size: 0.8rem;
+        }
+        
+        .setting-row input[type="text"],
+        .setting-row select {
+            flex: 1;
+            padding: 6px 8px;
+            background: #1a1a28;
+            border: 1px solid #333;
+            color: #fff;
+            border-radius: 5px;
+            font-size: 0.8rem;
+        }
+        
+        .setting-row input[type="color"] {
+            width: 40px; height: 28px;
+            border: none; border-radius: 4px; cursor: pointer;
+        }
+        
+        .setting-row input[type="checkbox"] {
+            width: 18px; height: 18px; cursor: pointer;
+        }
+        
+        .setting-row input[type="range"] { flex: 1; cursor: pointer; }
+        .setting-row .value {
+            width: 35px; text-align: right;
+            color: #60a5fa; font-size: 0.75rem;
+        }
+        
+        /* 버튼 */
+        .btn {
+            padding: 8px 12px;
+            border: none; border-radius: 6px;
+            cursor: pointer; font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+        .btn:hover { transform: translateY(-1px); }
+        .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+        .btn-success { background: linear-gradient(135deg, #11998e, #38ef7d); color: white; }
+        .btn-danger { background: linear-gradient(135deg, #f5576c, #f093fb); color: white; }
+        .btn-full { width: 100%; margin-top: 8px; }
+        
+        .btn-group {
+            display: flex; gap: 5px; flex-wrap: wrap;
+        }
+        .btn-group .btn { flex: 1; min-width: 60px; font-size: 0.75rem; padding: 6px; }
+        
+        /* 스프라이트 빠른 선택 */
+        .sprite-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            margin-top: 8px;
+        }
+        .sprite-btn {
+            padding: 8px 4px;
+            background: #1a1a28;
+            border: 1px solid #333;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 0.7rem;
+            color: #aaa;
+            transition: all 0.2s;
+        }
+        .sprite-btn:hover { background: #2a2a3e; border-color: #667eea; }
+        .sprite-btn.active { background: #667eea33; border-color: #667eea; color: #fff; }
+        .sprite-btn .icon { font-size: 1.2rem; display: block; margin-bottom: 2px; }
+        
+        /* 중앙 - 비교 뷰 */
+        .compare-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .compare-header {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 8px;
+            background: #12121a;
+            border-radius: 8px;
+        }
+        
+        .compare-header label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: #888;
+        }
+        
+        .compare-header input:checked + span { color: #fbbf24; }
+        
+        .preview-wrapper {
+            flex: 1;
+            display: flex;
+            gap: 15px;
+        }
+        
+        .preview-box {
+            flex: 1;
+            background: #1a1a2e;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid #333;
+            min-height: 400px;
+        }
+        
+        .preview-box.original { border-color: #666; }
+        .preview-box.enhanced { border-color: #fbbf24; }
+        
+        .preview-label {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 5px 12px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            z-index: 10;
+        }
+        
+        .preview-label.original { color: #888; }
+        .preview-label.enhanced { color: #fbbf24; }
+        
+        .preview-canvas {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* 오른쪽 - 상태 테스트 & 로그 */
+        .side-panel {
+            width: 200px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        
+        .log-panel {
+            background: #12121a;
+            border-radius: 10px;
+            padding: 10px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .log-panel h3 {
+            font-size: 0.85rem;
+            color: #fbbf24;
+            margin-bottom: 8px;
+        }
+        
+        .log-container {
+            flex: 1;
+            overflow-y: auto;
+            font-size: 0.7rem;
+            font-family: monospace;
+            background: #0a0a12;
+            padding: 8px;
+            border-radius: 5px;
+        }
+        
+        .log-entry { padding: 3px 0; border-bottom: 1px solid #1a1a28; color: #888; }
+        .log-entry.info { color: #60a5fa; }
+        .log-entry.success { color: #34d399; }
+        .log-entry.error { color: #f87171; }
+        
+        /* 실시간 표시 */
+        .live-indicator {
+            display: inline-block;
+            width: 8px; height: 8px;
+            background: #34d399;
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🖼️ DDOORenderer Studio</h1>
+        <div class="header-links">
+            <a href="test_animation.html">🎬 Action Studio</a>
+            <a href="index.html">🎮 Game</a>
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <!-- 왼쪽 - 설정 패널 -->
+        <div class="control-panel">
+            <!-- 스프라이트 선택 -->
+            <div class="panel-section">
+                <h3>📁 스프라이트</h3>
+                <div class="setting-row">
+                    <label>경로</label>
+                    <input type="text" id="sprite-path" value="goblin.png">
+                </div>
+                <div class="sprite-grid" id="spriteGrid"></div>
+            </div>
+            
+            <!-- 아웃라인 -->
+            <div class="panel-section">
+                <h3>✏️ 아웃라인</h3>
+                <div class="setting-row">
+                    <label>사용</label>
+                    <input type="checkbox" id="outline-enabled" checked onchange="updatePreview()">
+                </div>
+                <div class="setting-row">
+                    <label>색상</label>
+                    <input type="color" id="outline-color" value="#000000" onchange="updatePreview()">
+                </div>
+                <div class="setting-row">
+                    <label>두께</label>
+                    <input type="range" id="outline-thickness" min="1" max="6" value="2" oninput="updateValue(this, 'outline-thickness-val'); updatePreview()">
+                    <span class="value" id="outline-thickness-val">2</span>
+                </div>
+            </div>
+            
+            <!-- 그림자 -->
+            <div class="panel-section">
+                <h3>🌑 그림자</h3>
+                <div class="setting-row">
+                    <label>사용</label>
+                    <input type="checkbox" id="shadow-enabled" checked onchange="updatePreview()">
+                </div>
+                <div class="setting-row">
+                    <label>진하기</label>
+                    <input type="range" id="shadow-alpha" min="20" max="100" value="70" oninput="updateValue(this, 'shadow-alpha-val', v => (v/100).toFixed(2)); updatePreview()">
+                    <span class="value" id="shadow-alpha-val">0.70</span>
+                </div>
+                <div class="setting-row">
+                    <label>크기</label>
+                    <input type="range" id="shadow-scale" min="80" max="200" value="130" oninput="updateValue(this, 'shadow-scale-val', v => (v/100).toFixed(1) + 'x'); updatePreview()">
+                    <span class="value" id="shadow-scale-val">1.3x</span>
+                </div>
+            </div>
+            
+            <!-- 틴트 (색조) -->
+            <div class="panel-section">
+                <h3>🎨 색조 틴트</h3>
+                <div class="setting-row">
+                    <label>사용</label>
+                    <input type="checkbox" id="tint-enabled" onchange="updatePreview()">
+                </div>
+                <div class="setting-row">
+                    <label>색상</label>
+                    <input type="color" id="tint-color" value="#ff6666" onchange="updatePreview()">
+                </div>
+            </div>
+            
+            <!-- 숨쉬기 -->
+            <div class="panel-section">
+                <h3>🫁 숨쉬기</h3>
+                <div class="setting-row">
+                    <label>사용</label>
+                    <input type="checkbox" id="breathing-enabled" checked onchange="updatePreview()">
+                </div>
+                <div class="setting-row">
+                    <label>강도</label>
+                    <input type="range" id="breathing-amount" min="1" max="10" value="2" oninput="updateValue(this, 'breathing-amount-val', v => (v/100).toFixed(2)); updatePreview()">
+                    <span class="value" id="breathing-amount-val">0.02</span>
+                </div>
+            </div>
+            
+            <!-- 스케일 -->
+            <div class="panel-section">
+                <h3>📐 크기</h3>
+                <div class="setting-row">
+                    <label>스케일</label>
+                    <input type="range" id="sprite-scale" min="50" max="300" value="150" oninput="updateValue(this, 'sprite-scale-val', v => (v/100).toFixed(1) + 'x'); updatePreview()">
+                    <span class="value" id="sprite-scale-val">1.5x</span>
+                </div>
+            </div>
+            
+            <!-- 타겟 글로우 -->
+            <div class="panel-section">
+                <h3>🎯 타겟 글로우</h3>
+                <div class="setting-row">
+                    <label>색상</label>
+                    <input type="color" id="glow-color" value="#ffee00" onchange="applyGlow()">
+                </div>
+                <div class="btn-group">
+                    <button class="btn" style="background:#ff4444;font-size:0.7rem;padding:4px;" onclick="setGlowPreset(0xff4444)">🔴</button>
+                    <button class="btn" style="background:#44ff44;color:#000;font-size:0.7rem;padding:4px;" onclick="setGlowPreset(0x44ff44)">🟢</button>
+                    <button class="btn" style="background:#4444ff;font-size:0.7rem;padding:4px;" onclick="setGlowPreset(0x4444ff)">🔵</button>
+                    <button class="btn" style="background:#ffee00;color:#000;font-size:0.7rem;padding:4px;" onclick="setGlowPreset(0xffee00)">🟡</button>
+                    <button class="btn" style="background:#ff44ff;font-size:0.7rem;padding:4px;" onclick="setGlowPreset(0xff44ff)">🟣</button>
+                    <button class="btn" style="background:#44ffff;color:#000;font-size:0.7rem;padding:4px;" onclick="setGlowPreset(0x44ffff)">🩵</button>
+                </div>
+                <button class="btn btn-full" style="background:linear-gradient(135deg,#ffd700,#ff8c00);color:#000;font-weight:bold;margin-top:8px;" onclick="toggleTarget()">🎯 글로우 ON/OFF</button>
+            </div>
+        </div>
+        
+        <!-- 중앙 - 비교 뷰 -->
+        <div class="compare-container">
+            <div class="compare-header">
+                <label>
+                    <input type="checkbox" id="show-original" checked onchange="toggleCompare()">
+                    <span>📷 원본 표시</span>
+                </label>
+                <span style="color:#666;">|</span>
+                <span><span class="live-indicator"></span>실시간 반영</span>
+            </div>
+            
+            <div class="preview-wrapper">
+                <!-- 원본 (효과 없음) -->
+                <div class="preview-box original" id="originalBox">
+                    <div class="preview-label original">📷 원본 (효과 없음)</div>
+                    <div class="preview-canvas" id="originalCanvas"></div>
+                </div>
+                
+                <!-- 적용 후 -->
+                <div class="preview-box enhanced">
+                    <div class="preview-label enhanced">✨ 효과 적용</div>
+                    <div class="preview-canvas" id="enhancedCanvas"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 오른쪽 - 상태 테스트 -->
+        <div class="side-panel">
+            <div class="panel-section">
+                <h3>🎬 상태 테스트</h3>
+                <div class="btn-group">
+                    <button class="btn btn-success" onclick="testState('idle')">😊 Idle</button>
+                    <button class="btn btn-danger" onclick="testHit()">💥 Hit</button>
+                </div>
+                <div class="btn-group" style="margin-top:5px;">
+                    <button class="btn" style="background:#6366f1;color:#fff;" onclick="testState('stunned')">😵 Stun</button>
+                    <button class="btn" style="background:#f59e0b;color:#fff;" onclick="testState('buffed')">✨ Buff</button>
+                </div>
+                <div class="btn-group" style="margin-top:5px;">
+                    <button class="btn" style="background:linear-gradient(135deg,#00c9ff,#92fe9d);color:#000;" onclick="testSpawn()">⚡ 등장</button>
+                    <button class="btn" style="background:linear-gradient(135deg,#ff00ff,#8b00ff);color:#fff;" onclick="testDeath()">💀 사망</button>
+                </div>
+                <div class="btn-group" style="margin-top:5px;">
+                    <button class="btn" style="background:#444;color:#fff;font-size:0.7rem;" onclick="testRespawn()">🔄 리스폰</button>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <h3>💢 데미지 폰트</h3>
+                <div class="btn-group">
+                    <button class="btn" style="background:#cc2222;font-size:0.7rem;" onclick="testDamageFont('damage')">데미지</button>
+                    <button class="btn" style="background:#44ff88;color:#000;font-size:0.7rem;" onclick="testDamageFont('heal')">회복</button>
+                    <button class="btn" style="background:#d4a857;color:#000;font-size:0.7rem;" onclick="testDamageFont('critical')">크리티컬</button>
+                </div>
+                <div class="btn-group" style="margin-top:5px;">
+                    <button class="btn" style="background:#5a9fd4;font-size:0.7rem;" onclick="testDamageFont('block')">🛡️방어</button>
+                    <button class="btn" style="background:#8b1a1a;font-size:0.7rem;" onclick="testDamageFont('bleed')">🩸출혈</button>
+                    <button class="btn" style="background:#2d8a4e;font-size:0.7rem;" onclick="testDamageFont('thorn')">🌵가시</button>
+                </div>
+                <div class="btn-group" style="margin-top:5px;">
+                    <button class="btn" style="background:#a855f7;font-size:0.7rem;" onclick="testDamageFont('magic')">✨마법</button>
+                    <button class="btn" style="background:#888;font-size:0.7rem;" onclick="testDamageFont('miss')">MISS</button>
+                    <button class="btn" style="background:#ff6666;font-size:0.7rem;" onclick="testDamageFont('self')">자해</button>
+                </div>
+                <div class="btn-group" style="margin-top:5px;">
+                    <button class="btn" style="background:#88ff88;color:#000;font-size:0.65rem;" onclick="testDamageFont('poison')">☠️독</button>
+                    <button class="btn" style="background:#ff8844;font-size:0.65rem;" onclick="testDamageFont('burn')">🔥화상</button>
+                    <button class="btn" style="background:#ffaa00;color:#000;font-size:0.65rem;" onclick="testDamageFont('exp')">EXP</button>
+                    <button class="btn" style="background:#ffdd44;color:#000;font-size:0.65rem;" onclick="testDamageFont('gold')">💰</button>
+                </div>
+                <button class="btn btn-full" style="background:linear-gradient(135deg,#f5576c,#f093fb);" onclick="testCombo()">💥 콤보!</button>
+            </div>
+            
+            <div class="log-panel">
+                <h3>📜 로그</h3>
+                <div class="log-container" id="logContainer"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.x/dist/pixi.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/gsap.min.js"></script>
+    <!-- DDOO Engine -->
+    <script src="engine/ddoo-config.js"></script>
+    <script src="engine/vfx.js"></script>
+    <script src="engine/ddoo-renderer.js"></script>
+    <script src="engine/ddoo-floater.js"></script>
+    
+    <script>
+        // ==================== 전역 변수 ====================
+        let originalApp = null;
+        let enhancedApp = null;
+        let originalSprite = null;
+        let enhancedSprite = null;
+        let updateTimeout = null;
+        
+        const spriteList = [
+            { name: 'Goblin', path: 'goblin.png', icon: '👹' },
+            { name: 'Archer', path: 'goblinarcher.png', icon: '🏹' },
+            { name: 'Slime', path: 'slime.png', icon: '🟢' },
+            { name: 'Skeleton', path: 'skeleton.png', icon: '💀' },
+            { name: 'Spider', path: 'spider.png', icon: '🕷️' },
+            { name: 'Hero', path: 'hero.png', icon: '⚔️' },
+        ];
+        
+        // ==================== 초기화 ====================
+        async function init() {
+            log('info', '초기화 중...');
+            
+            try {
+                // 원본 캔버스
+                const origContainer = document.getElementById('originalCanvas');
+                originalApp = new PIXI.Application();
+                await originalApp.init({
+                    width: origContainer.clientWidth || 350,
+                    height: origContainer.clientHeight || 400,
+                    backgroundColor: 0x1a1a2e,
+                    antialias: false,
+                    resolution: 1
+                });
+                origContainer.appendChild(originalApp.canvas);
+                
+                // 효과 적용 캔버스
+                const enhContainer = document.getElementById('enhancedCanvas');
+                enhancedApp = new PIXI.Application();
+                await enhancedApp.init({
+                    width: enhContainer.clientWidth || 350,
+                    height: enhContainer.clientHeight || 400,
+                    backgroundColor: 0x1a1a2e,
+                    antialias: false,
+                    resolution: 1
+                });
+                enhContainer.appendChild(enhancedApp.canvas);
+                
+                // 바닥선 그리기
+                drawFloor(originalApp);
+                drawFloor(enhancedApp);
+                
+                // 스프라이트 그리드 생성
+                renderSpriteGrid();
+                
+                // 초기 로드
+                await loadSprites();
+                
+                log('success', '✅ 초기화 완료');
+                
+            } catch (e) {
+                log('error', `초기화 실패: ${e.message}`);
+                console.error(e);
+            }
+        }
+        
+        // ==================== 바닥선 ====================
+        function drawFloor(app) {
+            const floor = new PIXI.Graphics();
+            const w = app.screen.width;
+            const h = app.screen.height;
+            const floorY = h * 0.85;
+            
+            floor.rect(0, floorY, w, h - floorY);
+            floor.fill({ color: 0x0f0f1a });
+            
+            floor.moveTo(0, floorY);
+            floor.lineTo(w, floorY);
+            floor.stroke({ color: 0x4a4a6a, width: 2 });
+            
+            app.stage.addChild(floor);
+        }
+        
+        // ==================== 스프라이트 로드 ====================
+        async function loadSprites() {
+            const path = document.getElementById('sprite-path').value || 'goblin.png';
+            const fullPath = DDOOConfig.getImagePath(path);  // 이미지 경로 변환
+            const scale = parseInt(document.getElementById('sprite-scale').value) / 100;
+            
+            log('info', `로딩: ${fullPath}`);
+            
+            // 기존 제거
+            if (originalSprite) {
+                originalApp.stage.removeChild(originalSprite);
+                originalSprite.destroy();
+                originalSprite = null;
+            }
+            if (enhancedSprite) {
+                DDOORenderer.destroy(enhancedSprite);
+                enhancedSprite = null;
+            }
+            
+            try {
+                // 텍스처 로드 (DDOOConfig 경로 사용)
+                const texture = await PIXI.Assets.load(fullPath);
+                
+                // === 원본 스프라이트 (효과 없음) ===
+                originalSprite = new PIXI.Sprite(texture);
+                originalSprite.anchor.set(0.5, 1);
+                originalSprite.scale.set(scale);
+                originalSprite.x = originalApp.screen.width / 2;
+                originalSprite.y = originalApp.screen.height * 0.85;
+                originalApp.stage.addChild(originalSprite);
+                
+                // === 효과 적용 스프라이트 ===
+                const config = getConfig();
+                enhancedSprite = await DDOORenderer.createSprite(path, {
+                    ...config,
+                    scale: scale
+                });
+                
+                if (enhancedSprite) {
+                    enhancedSprite.x = enhancedApp.screen.width / 2;
+                    enhancedSprite.y = enhancedApp.screen.height * 0.85;
+                    enhancedApp.stage.addChild(enhancedSprite);
+                }
+                
+                log('success', `✅ ${path} 로드 완료`);
+                
+            } catch (e) {
+                log('error', `로드 실패: ${e.message}`);
+            }
+        }
+        
+        // ==================== 설정 수집 ====================
+        function getConfig() {
+            const shadowScale = parseInt(document.getElementById('shadow-scale').value) / 100;
+            const tintEnabled = document.getElementById('tint-enabled').checked;
+            const tintColor = parseInt(document.getElementById('tint-color').value.replace('#', ''), 16);
+            
+            return {
+                outline: {
+                    enabled: document.getElementById('outline-enabled').checked,
+                    color: parseInt(document.getElementById('outline-color').value.replace('#', ''), 16),
+                    thickness: parseInt(document.getElementById('outline-thickness').value),
+                    alpha: 1.0,
+                    directions: 8
+                },
+                shadow: {
+                    enabled: document.getElementById('shadow-enabled').checked,
+                    alpha: parseInt(document.getElementById('shadow-alpha').value) / 100,
+                    scaleX: shadowScale,
+                    scaleY: shadowScale * 0.35,
+                    offsetY: 8
+                },
+                environment: {
+                    enabled: false  // 비활성화
+                },
+                tint: tintEnabled ? tintColor : null,
+                breathing: {
+                    enabled: document.getElementById('breathing-enabled').checked,
+                    scaleAmount: parseInt(document.getElementById('breathing-amount').value) / 100,
+                    speed: 2.5,
+                    randomDelay: false
+                }
+            };
+        }
+        
+        // ==================== 실시간 업데이트 ====================
+        function updatePreview() {
+            // 디바운스
+            if (updateTimeout) clearTimeout(updateTimeout);
+            updateTimeout = setTimeout(() => {
+                loadSprites();
+            }, 150);
+        }
+        
+        function updateValue(input, valId, formatter) {
+            const val = document.getElementById(valId);
+            if (val) {
+                val.textContent = formatter ? formatter(input.value) : input.value;
+            }
+        }
+        
+        // ==================== 비교 토글 ====================
+        function toggleCompare() {
+            const show = document.getElementById('show-original').checked;
+            document.getElementById('originalBox').style.display = show ? 'block' : 'none';
+        }
+        
+        // ==================== 스프라이트 그리드 ====================
+        function renderSpriteGrid() {
+            const grid = document.getElementById('spriteGrid');
+            grid.innerHTML = '';
+            
+            spriteList.forEach(item => {
+                const btn = document.createElement('div');
+                btn.className = 'sprite-btn';
+                btn.innerHTML = `<span class="icon">${item.icon}</span>${item.name}`;
+                btn.onclick = () => {
+                    document.getElementById('sprite-path').value = item.path;
+                    document.querySelectorAll('.sprite-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    loadSprites();
+                };
+                grid.appendChild(btn);
+            });
+        }
+        
+        // ==================== 상태 테스트 ====================
+        function testState(state) {
+            if (enhancedSprite) {
+                DDOORenderer.setState(enhancedSprite, state);
+                log('info', `상태: ${state}`);
+            }
+        }
+        
+        function testHit() {
+            if (enhancedSprite) {
+                DDOORenderer.rapidFlash(enhancedSprite);
+                DDOORenderer.damageShake(enhancedSprite, 8, 250);
+                log('info', '💥 히트!');
+            }
+        }
+        
+        function toggleTarget() {
+            if (enhancedSprite) {
+                const color = parseInt(document.getElementById('glow-color').value.replace('#', ''), 16);
+                DDOORenderer.toggleTargeted(enhancedSprite, color);
+                const isTargeted = enhancedSprite._ddooData?.isTargeted;
+                log('info', isTargeted ? '🎯 글로우 ON' : '글로우 OFF');
+            }
+        }
+        
+        function setGlowPreset(color) {
+            // 컬러 피커 업데이트
+            const hex = '#' + color.toString(16).padStart(6, '0');
+            document.getElementById('glow-color').value = hex;
+            
+            // 글로우 적용 (켜져있든 꺼져있든 켜기)
+            if (enhancedSprite) {
+                DDOORenderer.setTargeted(enhancedSprite, true, color);
+                log('info', `🎯 글로우 색상: ${hex}`);
+            }
+        }
+        
+        function applyGlow() {
+            const color = parseInt(document.getElementById('glow-color').value.replace('#', ''), 16);
+            
+            if (enhancedSprite) {
+                // 글로우 다시 적용 (색상 변경)
+                DDOORenderer.setTargeted(enhancedSprite, true, color);
+                log('info', `🎯 글로우 적용`);
+            }
+        }
+        
+        async function testSpawn() {
+            if (enhancedSprite) {
+                // 방향 랜덤
+                const directions = ['left', 'right'];
+                const dir = directions[Math.floor(Math.random() * directions.length)];
+                log('info', `⚡ 등장 (${dir})`);
+                await DDOORenderer.playSpawn(enhancedSprite, dir, 0.4);
+                log('success', '✅ 등장 완료');
+            }
+        }
+        
+        async function testDeath() {
+            if (enhancedSprite) {
+                log('info', '💀 사망 연출...');
+                await DDOORenderer.playDeath(enhancedSprite, enhancedApp);
+                log('success', '✅ 사망 완료');
+            }
+        }
+        
+        async function testRespawn() {
+            if (enhancedSprite) {
+                log('info', '🔄 리스폰...');
+                await DDOORenderer.respawn(enhancedSprite, 'left');
+                log('success', '✅ 리스폰 완료');
+            }
+        }
+        
+        function testDamageFont(type) {
+            if (!enhancedSprite || !enhancedApp) return;
+            
+            const values = {
+                damage: Math.floor(Math.random() * 50) + 10,
+                heal: Math.floor(Math.random() * 30) + 5,
+                critical: Math.floor(Math.random() * 100) + 50,
+                block: Math.floor(Math.random() * 20) + 5,
+                bleed: Math.floor(Math.random() * 15) + 3,
+                thorn: Math.floor(Math.random() * 12) + 2,
+                magic: Math.floor(Math.random() * 40) + 15,
+                self: Math.floor(Math.random() * 10) + 2,
+                miss: 0,
+                poison: Math.floor(Math.random() * 10) + 3,
+                burn: Math.floor(Math.random() * 15) + 5,
+                exp: Math.floor(Math.random() * 100) + 20,
+                gold: Math.floor(Math.random() * 50) + 10
+            };
+            
+            // DDOOFloater 사용
+            DDOOFloater.showOnCharacter(enhancedSprite, values[type], type);
+            log('info', `💢 ${type}: ${values[type] || type.toUpperCase()}`);
+        }
+        
+        function testCombo() {
+            if (!enhancedSprite || !enhancedApp) return;
+            
+            const x = enhancedSprite.x;
+            const y = enhancedSprite.y - 80;
+            
+            // 랜덤 콤보 생성
+            const hitCount = 3 + Math.floor(Math.random() * 3);
+            const combo = [];
+            
+            for (let i = 0; i < hitCount; i++) {
+                combo.push({
+                    value: Math.floor(Math.random() * 20) + 8,
+                    type: 'damage'
+                });
+            }
+            // 마지막은 크리티컬
+            combo.push({
+                value: Math.floor(Math.random() * 50) + 40,
+                type: 'critical'
+            });
+            
+            // DDOOFloater 사용
+            DDOOFloater.showCombo(enhancedApp.stage, x, y, combo, 120);
+            log('info', `💥 ${combo.length}히트 콤보!`);
+        }
+        
+        // ==================== 로그 ====================
+        function log(type, msg) {
+            const container = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = msg;
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+            
+            // 최대 50개 유지
+            while (container.children.length > 50) {
+                container.removeChild(container.firstChild);
+            }
+        }
+        
+        // ==================== 시작 ====================
+        document.addEventListener('DOMContentLoaded', init);
+        
+        // 리사이즈
+        window.addEventListener('resize', () => {
+            if (updateTimeout) clearTimeout(updateTimeout);
+            updateTimeout = setTimeout(() => {
+                location.reload();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

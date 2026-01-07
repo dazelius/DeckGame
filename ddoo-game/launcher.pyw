@@ -150,10 +150,10 @@ class DDOOLauncher:
         )
         self.game_btn.pack(pady=8)
         
-        # 스튜디오 열기 버튼
+        # 액션 스튜디오 열기 버튼
         self.studio_btn = tk.Button(
             main,
-            text="🛠️ 스튜디오 열기",
+            text="🎬 액션 스튜디오",
             bg="#a855f7",
             fg="#fff",
             activebackground="#9333ea",
@@ -163,6 +163,20 @@ class DDOOLauncher:
             **btn_style
         )
         self.studio_btn.pack(pady=8)
+        
+        # 렌더러 스튜디오 열기 버튼
+        self.renderer_btn = tk.Button(
+            main,
+            text="🖼️ 렌더러 스튜디오",
+            bg="#f472b6",
+            fg="#fff",
+            activebackground="#ec4899",
+            activeforeground="#fff",
+            command=self.open_renderer,
+            state="disabled",
+            **btn_style
+        )
+        self.renderer_btn.pack(pady=8)
         
         # 폴더 열기 버튼
         folder_btn = tk.Button(
@@ -237,6 +251,7 @@ class DDOOLauncher:
         self.server_btn.config(text="⏹ 서버 중지", bg="#ef4444", activebackground="#dc2626")
         self.game_btn.config(state="normal")
         self.studio_btn.config(state="normal")
+        self.renderer_btn.config(state="normal")
         self.port_entry.config(state="disabled")
         
     def update_ui_stopped(self):
@@ -245,6 +260,7 @@ class DDOOLauncher:
         self.server_btn.config(text="▶ 서버 시작", bg="#22c55e", activebackground="#16a34a")
         self.game_btn.config(state="disabled")
         self.studio_btn.config(state="disabled")
+        self.renderer_btn.config(state="disabled")
         self.port_entry.config(state="normal")
         
     def open_game(self):
@@ -254,6 +270,10 @@ class DDOOLauncher:
     def open_studio(self):
         if self.is_running:
             webbrowser.open(f"http://localhost:{self.port}/studio.html")
+            
+    def open_renderer(self):
+        if self.is_running:
+            webbrowser.open(f"http://localhost:{self.port}/renderer.html")
             
     def open_folder(self):
         os.startfile(os.getcwd())
