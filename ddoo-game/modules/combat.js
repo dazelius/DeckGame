@@ -5,8 +5,8 @@
 const Combat = {
     // ========== Config ==========
     config: {
-        intentGaugeSpeed: 0.02,    // Gauge fill speed per frame (0-1)
-        baseGaugeTime: 3000,       // Base time to fill gauge (ms)
+        intentGaugeSpeed: 0.008,   // Gauge fill speed per frame (slower for deliberate play)
+        baseGaugeTime: 5000,       // Base time to fill gauge (5 seconds - think before act)
         tickRate: 16,              // Update every 16ms (~60fps)
         
         // Attack range settings (in grid units)

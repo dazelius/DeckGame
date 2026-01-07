@@ -14,7 +14,7 @@ const Game = {
             maxHp: 100,
             energy: 5,           // Current energy (float for smooth regen)
             maxEnergy: 10,       // Max energy (Clash Royale style)
-            energyRegen: 0.5,    // Energy per second (2 seconds per 1 energy)
+            energyRegen: 0.25,   // Energy per second (4 seconds per 1 energy - deliberate pace)
             block: 0
         },
         enemies: [],
