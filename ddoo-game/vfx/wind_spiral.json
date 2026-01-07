@@ -1,0 +1,36 @@
+{
+    "id": "wind_spiral",
+    "name": "나선 바람",
+    "particles": [
+        {
+            "type": "ring",
+            "count": 4,
+            "color": "#0ea5e9",
+            "size": 10,
+            "maxSize": 120,
+            "life": 250,
+            "delay": 25
+        },
+        {
+            "type": "slash",
+            "count": 12,
+            "color": "#e0f2fe",
+            "glow": "#0284c7",
+            "angle": [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330],
+            "length": { "min": 40, "max": 70 },
+            "width": 5,
+            "life": 150
+        },
+        {
+            "type": "spark",
+            "count": 30,
+            "colors": ["#ffffff", "#bae6fd", "#7dd3fc", "#0ea5e9"],
+            "size": { "min": 3, "max": 8 },
+            "speed": { "min": 8, "max": 18 },
+            "angle": { "min": -180, "max": 180 },
+            "life": { "min": 120, "max": 250 },
+            "fadeOut": true
+        }
+    ],
+    "offset": { "x": 0, "y": 0 }
+}

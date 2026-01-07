@@ -1,0 +1,119 @@
+{
+    "id": "bash_impact",
+    "name": "강타 임팩트 - 뚜까패기",
+    "duration": 400,
+    "offset": { "x": 0, "y": 0 },
+    "particles": [
+        {
+            "type": "flash",
+            "color": "#ffffff",
+            "size": 350,
+            "alpha": 1,
+            "fadeOut": true
+        },
+        {
+            "type": "flash",
+            "color": "#fbbf24",
+            "size": 250,
+            "alpha": 0.95,
+            "fadeOut": true,
+            "delay": 15
+        },
+        {
+            "type": "flash",
+            "color": "#f97316",
+            "size": 180,
+            "alpha": 0.9,
+            "fadeOut": true,
+            "delay": 30
+        },
+        {
+            "type": "shockwave",
+            "color": "#fbbf24",
+            "size": 20,
+            "maxSize": 300,
+            "alpha": 0.9,
+            "thickness": 15,
+            "fadeOut": true
+        },
+        {
+            "type": "ring",
+            "count": 2,
+            "color": "#f97316",
+            "size": 30,
+            "maxSize": 180,
+            "alpha": 0.85,
+            "fadeOut": true,
+            "delay": [0, 50]
+        },
+        {
+            "type": "line",
+            "count": 16,
+            "color": "#fbbf24",
+            "length": 100,
+            "width": 14,
+            "angle": "radial",
+            "alpha": 1,
+            "lifetime": 150
+        },
+        {
+            "type": "spark",
+            "count": 50,
+            "color": "#fef08a",
+            "size": 18,
+            "speed": 400,
+            "angle": "radial",
+            "alpha": 1,
+            "lifetime": 250
+        },
+        {
+            "type": "spark",
+            "count": 30,
+            "color": "#f97316",
+            "size": 14,
+            "speed": 300,
+            "angle": "radial",
+            "alpha": 0.9,
+            "lifetime": 300
+        },
+        {
+            "type": "debris",
+            "count": 25,
+            "color": "#78350f",
+            "size": 16,
+            "speed": 280,
+            "gravity": 6,
+            "alpha": 1,
+            "lifetime": 450
+        },
+        {
+            "type": "debris",
+            "count": 15,
+            "color": "#92400e",
+            "size": 12,
+            "speed": 200,
+            "gravity": 5,
+            "alpha": 0.9,
+            "lifetime": 400
+        },
+        {
+            "type": "dust",
+            "count": 6,
+            "color": "#d97706",
+            "size": 80,
+            "speed": 60,
+            "alpha": 0.5,
+            "lifetime": 400
+        },
+        {
+            "type": "star",
+            "count": 5,
+            "color": "#fef08a",
+            "size": 30,
+            "speed": 150,
+            "alpha": 1,
+            "lifetime": 200,
+            "delay": 30
+        }
+    ]
+}

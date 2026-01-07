@@ -1,0 +1,33 @@
+{
+    "id": "speed_lines",
+    "name": "스피드 라인",
+    "duration": 300,
+    "offset": { "x": -50, "y": 0 },
+    "particles": [
+        {
+            "type": "line",
+            "count": 20,
+            "color": "#ffffff",
+            "length": 120,
+            "width": 4,
+            "speed": 400,
+            "angle": 0,
+            "spread": 15,
+            "alpha": 0.8,
+            "lifetime": 250
+        },
+        {
+            "type": "line",
+            "count": 15,
+            "color": "#ffcc00",
+            "length": 80,
+            "width": 3,
+            "speed": 350,
+            "angle": 0,
+            "spread": 20,
+            "alpha": 0.6,
+            "lifetime": 200
+        }
+    ]
+}
+

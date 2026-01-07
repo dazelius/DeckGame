@@ -1,0 +1,42 @@
+{
+    "id": "energy_drain",
+    "name": "에너지 흡수 - 생명력 착취",
+    "particles": [
+        {
+            "type": "ring",
+            "size": 40,
+            "maxSize": 100,
+            "color": "#7f1d1d",
+            "life": 220
+        },
+        {
+            "type": "spark",
+            "count": 25,
+            "spread": 60,
+            "speed": [5, 14],
+            "size": [3, 8],
+            "colors": ["#dc2626", "#b91c1c", "#991b1b", "#450a0a"],
+            "life": [200, 400]
+        },
+        {
+            "type": "smoke",
+            "count": 12,
+            "spread": 50,
+            "size": [20, 40],
+            "speed": [3, 8],
+            "angle": { "min": -60, "max": -120 },
+            "color": "#7f1d1d",
+            "gravity": -0.15,
+            "life": [250, 500]
+        },
+        {
+            "type": "debris",
+            "count": 15,
+            "speed": [4, 12],
+            "size": [2, 5],
+            "colors": ["#991b1b", "#450a0a", "#1f2937"],
+            "gravity": 0.3,
+            "life": [200, 380]
+        }
+    ]
+}

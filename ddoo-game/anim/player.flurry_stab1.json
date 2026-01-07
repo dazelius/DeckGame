@@ -1,0 +1,21 @@
+{
+    "id": "player.flurry_stab1",
+    "name": "세검 1타 - 상단 찌르기 (강화)",
+    "target": "player",
+    "type": "once",
+    "priority": 14,
+    "duration": 95,
+    "keyframes": [
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 0 },
+        
+        { "x": -10, "y": -18, "scaleX": 0.85, "scaleY": 1.15, "rotation": -0.1, "duration": 8, "ease": "power3.in", "afterimage": true, "color": "power" },
+        
+        { "x": 80, "y": -30, "scaleX": 1.3, "scaleY": 0.75, "rotation": 0.15, "duration": 10, "ease": "power4.out", "vfx": "flurry_stab", "vfxTarget": "target", "shake": 5, "hitstop": 30, "afterimage": true, "camera": { "zoom": 1.05, "duration": 80 } },
+        
+        { "x": 88, "y": -25, "scaleX": 1.25, "scaleY": 0.8, "rotation": 0.12, "duration": 10, "ease": "power2.out", "afterimage": true },
+        { "x": 65, "y": -15, "scaleX": 1.12, "scaleY": 0.9, "rotation": 0.06, "duration": 14, "ease": "power2.out" },
+        { "x": 35, "y": -6, "scaleX": 1.04, "scaleY": 0.97, "rotation": 0.02, "duration": 18, "ease": "power2.out" },
+        { "x": 12, "y": -2, "scaleX": 1.01, "scaleY": 0.99, "rotation": 0.01, "duration": 17, "ease": "power2.out" },
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 18, "ease": "elastic.out(1, 0.6)" }
+    ]
+}

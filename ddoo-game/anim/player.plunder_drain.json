@@ -1,0 +1,33 @@
+{
+    "id": "player.plunder_drain",
+    "name": "강탈 - 생명력 착취 (취약)",
+    "target": "player",
+    "type": "once",
+    "priority": 17,
+    "duration": 900,
+    "returnToBase": true,
+    "keyframes": [
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "alpha": 1, "duration": 0 },
+        
+        { "x": 10, "y": 0, "scaleX": 1.05, "scaleY": 0.95, "rotation": 0.05, "alpha": 1, "duration": 25, "ease": "power2.out", "color": "shadow" },
+        { "x": -30, "y": 0, "scaleX": 0.85, "scaleY": 1.15, "rotation": -0.15, "alpha": 0.6, "duration": 35, "ease": "power2.in", "afterimage": true },
+        { "x": -70, "y": 0, "scaleX": 0.6, "scaleY": 1.4, "rotation": -0.25, "alpha": 0.2, "duration": 30, "ease": "power3.in", "afterimage": true, "vfx": "shadow_fade", "vfxTarget": "self" },
+        
+        { "x": 280, "y": 0, "scaleX": 0.5, "scaleY": 1.5, "rotation": 0, "alpha": 0.1, "duration": 35, "ease": "power4.out", "afterimage": true },
+        
+        { "x": 240, "y": 0, "scaleX": 1.3, "scaleY": 0.75, "rotation": 0.2, "alpha": 1, "duration": 20, "ease": "power3.out", "vfx": "shadow_appear", "vfxTarget": "self", "camera": { "zoom": 1.15 } },
+        
+        { "x": 190, "y": 0, "scaleX": 0.75, "scaleY": 1.25, "rotation": -0.25, "alpha": 1, "duration": 30, "ease": "power4.out", "vfx": "backstab_stab", "shake": 15, "hitstop": 120, "slowmo": { "scale": 0.2, "duration": 200 }, "color": "critical" },
+        
+        { "x": 190, "y": 0, "scaleX": 0.7, "scaleY": 1.3, "rotation": -0.3, "alpha": 1, "duration": 80, "ease": "none", "vfx": "drain_stream" },
+        { "x": 190, "y": 0, "scaleX": 0.65, "scaleY": 1.35, "rotation": -0.32, "alpha": 1, "duration": 80, "ease": "none" },
+        { "x": 190, "y": 0, "scaleX": 0.7, "scaleY": 1.3, "rotation": -0.3, "alpha": 1, "duration": 60, "ease": "none", "vfx": "drain_burst" },
+        
+        { "x": 150, "y": 0, "scaleX": 1.2, "scaleY": 0.85, "rotation": 0.15, "alpha": 1, "duration": 35, "ease": "power3.out", "vfx": "plunder_rip", "shake": 8, "slowmo": "reset" },
+        { "x": 100, "y": 0, "scaleX": 1.15, "scaleY": 0.88, "rotation": 0.08, "alpha": 1, "duration": 50, "ease": "power2.inOut", "afterimage": true, "vfx": "energy_absorb", "vfxTarget": "self" },
+        
+        { "x": 50, "y": 0, "scaleX": 1.08, "scaleY": 0.94, "rotation": 0.03, "alpha": 1, "duration": 60, "ease": "power2.out" },
+        { "x": 20, "y": 0, "scaleX": 1.03, "scaleY": 0.97, "rotation": 0.01, "alpha": 1, "duration": 55, "ease": "power2.out" },
+        { "x": 0, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "alpha": 1, "duration": 45, "ease": "power2.out" }
+    ]
+}

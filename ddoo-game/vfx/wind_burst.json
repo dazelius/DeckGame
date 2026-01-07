@@ -1,0 +1,23 @@
+{
+    "id": "wind_burst",
+    "name": "바람 폭발",
+    "particles": [
+        {
+            "type": "ring",
+            "count": 1,
+            "size": 30,
+            "maxSize": 120,
+            "color": "#94a3b8",
+            "life": 150
+        },
+        {
+            "type": "spark",
+            "count": 12,
+            "spread": 40,
+            "speed": [4, 8],
+            "size": [3, 6],
+            "color": "#60a5fa",
+            "life": [100, 150]
+        }
+    ]
+}

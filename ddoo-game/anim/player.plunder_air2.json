@@ -1,0 +1,15 @@
+{
+    "id": "player.plunder_air2",
+    "name": "강탈 - 공중 회전 베기",
+    "target": "player",
+    "type": "once",
+    "priority": 17,
+    "duration": 150,
+    "keyframes": [
+        { "x": 148, "y": -40, "scaleX": 1, "scaleY": 1, "rotation": 0.3, "alpha": 1, "duration": 0 },
+        { "x": 160, "y": -60, "scaleX": 0.9, "scaleY": 1.1, "rotation": -1.5, "alpha": 1, "duration": 35, "ease": "power2.in", "afterimage": true },
+        { "x": 135, "y": -45, "scaleX": 1.2, "scaleY": 0.85, "rotation": 1.5, "alpha": 1, "duration": 50, "ease": "power3.out", "vfx": "spin_slash", "shake": 8, "afterimage": true },
+        { "x": 145, "y": -50, "scaleX": 1.05, "scaleY": 0.97, "rotation": 0.8, "alpha": 1, "duration": 65, "ease": "power2.out" }
+    ]
+}
+

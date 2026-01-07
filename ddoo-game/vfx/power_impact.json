@@ -1,0 +1,90 @@
+{
+    "id": "power_impact",
+    "name": "파워 임팩트 이펙트",
+    "shake": 15,
+    "particles": [
+        {
+            "type": "flash",
+            "size": 100,
+            "color": "#ffffff",
+            "life": 40
+        },
+        {
+            "type": "flash",
+            "size": 70,
+            "color": "#ef4444",
+            "life": 80
+        },
+        {
+            "type": "ring",
+            "size": 30,
+            "maxSize": 150,
+            "color": "#ffffff",
+            "life": 120
+        },
+        {
+            "type": "wave",
+            "count": 3,
+            "startSize": 30,
+            "maxSize": 120,
+            "thickness": 10,
+            "startAngle": [-120, -90, -60],
+            "endAngle": [60, 90, 120],
+            "colors": ["#ef4444", "#fbbf24", "#ffffff"],
+            "life": 150
+        },
+        {
+            "type": "energy_orb",
+            "size": 40,
+            "color": "#ef4444",
+            "life": 100
+        },
+        {
+            "type": "star",
+            "count": 5,
+            "size": [15, 25],
+            "points": 4,
+            "colors": ["#fbbf24", "#ef4444", "#ffffff"],
+            "rotationSpeed": [0.05, 0.1],
+            "spread": 50,
+            "life": [150, 250]
+        },
+        {
+            "type": "spark",
+            "count": 40,
+            "spread": 100,
+            "speed": [15, 35],
+            "size": [4, 10],
+            "colors": ["#ef4444", "#fbbf24", "#ffffff"],
+            "life": [200, 400]
+        },
+        {
+            "type": "electric",
+            "count": 8,
+            "length": [30, 60],
+            "width": 3,
+            "segments": 6,
+            "angleStep": 45,
+            "colors": ["#fbbf24", "#ffffff"],
+            "life": [100, 180]
+        },
+        {
+            "type": "comet",
+            "count": 8,
+            "size": [6, 12],
+            "tailLength": [30, 50],
+            "speed": [12, 25],
+            "colors": ["#ef4444", "#fbbf24"],
+            "life": [200, 350]
+        },
+        {
+            "type": "debris",
+            "count": 25,
+            "speed": [12, 30],
+            "size": [4, 8],
+            "colors": ["#ef4444", "#991b1b", "#ffffff"],
+            "gravity": 0.4,
+            "life": [300, 550]
+        }
+    ]
+}

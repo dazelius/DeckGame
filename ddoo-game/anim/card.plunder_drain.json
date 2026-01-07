@@ -1,0 +1,28 @@
+{
+    "id": "card.plunder_drain",
+    "name": "강탈 - 공중 콤보 (취약 보너스)",
+    "type": "sequence",
+    "description": "취약한 적을 공중 콤보로 털어 에너지를 획득한다",
+    "returnToBase": true,
+    "steps": [
+        { "anim": "player.plunder_dash", "wait": true },
+        
+        { "anim": "player.plunder_uppercut", "wait": false },
+        { "anim": "enemy.plunder_launch", "wait": true, "delay": 30, "damage": 2 },
+        { "delay": 20 },
+        
+        { "anim": "player.plunder_air1", "wait": false },
+        { "anim": "enemy.plunder_air_hit", "wait": true, "delay": 20, "damage": 1 },
+        { "delay": 15 },
+        
+        { "anim": "player.plunder_air2", "wait": false },
+        { "anim": "enemy.plunder_air_hit", "wait": true, "delay": 25, "damage": 1 },
+        { "delay": 20 },
+        
+        { "anim": "player.plunder_slam", "wait": false },
+        { "anim": "enemy.plunder_slam_hit", "wait": true, "delay": 40, "damage": 4 },
+        
+        { "delay": 100 },
+        { "event": { "type": "energy", "value": 2 } }
+    ]
+}

@@ -1,0 +1,27 @@
+{
+    "id": "player.return",
+    "name": "플레이어 복귀 (백대쉬)",
+    "target": "player",
+    "type": "once",
+    "priority": 5,
+    "duration": 350,
+    "returnToBase": true,
+    "keyframes": [
+        { "x": 0, "y": 0, "scaleX": 1.1, "scaleY": 0.92, "rotation": 0.03, "duration": 0 },
+        
+        { "x": -20, "y": -5, "scaleX": 0.85, "scaleY": 1.15, "rotation": -0.08, "duration": 25, "ease": "power3.in", 
+          "afterimage": true, "afterimageColor": "#666666", "afterimageAlpha": 0.5 },
+        
+        { "x": -50, "y": -8, "scaleX": 0.78, "scaleY": 1.22, "rotation": -0.12, "duration": 35, "ease": "power2.out", 
+          "afterimage": true, "afterimageColor": "#555555", "afterimageAlpha": 0.4 },
+        
+        { "x": -85, "y": -5, "scaleX": 0.82, "scaleY": 1.18, "rotation": -0.08, "duration": 40, "ease": "power2.inOut", 
+          "afterimage": true, "afterimageColor": "#444444", "afterimageAlpha": 0.3 },
+        
+        { "x": -110, "y": -2, "scaleX": 0.9, "scaleY": 1.1, "rotation": -0.04, "duration": 45, "ease": "power2.out" },
+        
+        { "x": -125, "y": 0, "scaleX": 0.96, "scaleY": 1.04, "rotation": -0.02, "duration": 40, "ease": "power2.out" },
+        { "x": -130, "y": 0, "scaleX": 0.98, "scaleY": 1.02, "rotation": -0.01, "duration": 35, "ease": "power2.out" },
+        { "x": -130, "y": 0, "scaleX": 1, "scaleY": 1, "rotation": 0, "duration": 30, "ease": "power1.out" }
+    ]
+}
