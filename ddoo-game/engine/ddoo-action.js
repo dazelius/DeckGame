@@ -165,9 +165,11 @@ const DDOOAction = {
         // 잔상 컨테이너 생성
         this.createAfterimageContainer();
         
-        // JSON 데이터 로드
-        await this.loadAllAnimations();
-        await this.loadAllVFX();
+        // JSON 데이터 로드 (병렬!)
+        await Promise.all([
+            this.loadAllAnimations(),
+            this.loadAllVFX()
+        ]);
         
         // VFX 렌더 루프 시작
         this.startVFXLoop();
@@ -919,16 +921,26 @@ const DDOOAction = {
             if (!indexRes.ok) throw new Error('index.json not found');
             
             const files = await indexRes.json();
-            for (const id of files) {
+            
+            // Parallel loading for speed!
+            const loadPromises = files.map(async (id) => {
                 try {
                     const res = await fetch(`anim/${id}.json`);
                     if (res.ok) {
-                        this.animCache.set(id, await res.json());
+                        const data = await res.json();
+                        return { id, data };
                     }
                 } catch (e) {
                     if (this.config.debug) console.warn(`[DDOOAction] anim/${id} failed`);
                 }
-            }
+                return null;
+            });
+            
+            const results = await Promise.all(loadPromises);
+            results.forEach(r => {
+                if (r) this.animCache.set(r.id, r.data);
+            });
+            
         } catch (e) {
             console.warn('[DDOOAction] anim/index.json 없음, 기본 목록 사용');
         }
@@ -940,16 +952,26 @@ const DDOOAction = {
             if (!indexRes.ok) throw new Error('index.json not found');
             
             const files = await indexRes.json();
-            for (const id of files) {
+            
+            // Parallel loading for speed!
+            const loadPromises = files.map(async (id) => {
                 try {
                     const res = await fetch(`vfx/${id}.json`);
                     if (res.ok) {
-                        this.vfxCache.set(id, await res.json());
+                        const data = await res.json();
+                        return { id, data };
                     }
                 } catch (e) {
                     if (this.config.debug) console.warn(`[DDOOAction] vfx/${id} failed`);
                 }
-            }
+                return null;
+            });
+            
+            const results = await Promise.all(loadPromises);
+            results.forEach(r => {
+                if (r) this.vfxCache.set(r.id, r.data);
+            });
+            
         } catch (e) {
             console.warn('[DDOOAction] vfx/index.json 없음, 기본 목록 사용');
         }
