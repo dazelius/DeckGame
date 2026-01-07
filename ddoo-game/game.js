@@ -318,8 +318,8 @@ const Game = {
         // 플레이어 생성
         this.player = await DDOORenderer.createSprite('hero.png', {
             scale: 1.0,
-            outline: { enabled: true, color: 0x222244, thickness: 2 },
-            shadow: { enabled: true, alpha: 0.5 },
+            outline: { enabled: true, color: 0x222244, thickness: 6 },
+            shadow: { enabled: false },
             breathing: { enabled: true, scaleAmount: 0.01 }
         });
         
@@ -335,8 +335,8 @@ const Game = {
         for (let i = 0; i < this.worldPositions.enemies.length; i++) {
             const enemy = await DDOORenderer.createSprite(enemyTypes[i % enemyTypes.length], {
                 scale: 1.0,
-                outline: { enabled: true, color: 0x000000, thickness: 2 },
-                shadow: { enabled: true, alpha: 0.5 },
+                outline: { enabled: true, color: 0x000000, thickness: 6 },
+                shadow: { enabled: false },
                 breathing: { enabled: true, scaleAmount: 0.015 }
             });
             
