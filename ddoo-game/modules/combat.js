@@ -380,12 +380,25 @@ const Combat = {
         // Get enemy screen position from DDOOBackground
         if (typeof DDOOBackground !== 'undefined' && typeof Game !== 'undefined') {
             const worldPos = Game.worldPositions.enemies[enemyId];
-            if (worldPos) {
-                // Project 3D to screen (add Y offset for head position)
+            const enemySprite = Game.enemySprites[enemyId];
+            
+            if (worldPos && enemySprite) {
+                // Use sprite's screen position directly for better accuracy
+                const spriteHeight = enemySprite.height || 100;
+                const offsetY = spriteHeight * 0.6;  // Above sprite head
+                
+                // Stagger intents horizontally if enemies are close together
+                const staggerX = (enemyId % 2 === 0) ? -20 : 20;
+                
+                intentDiv.style.left = `${enemySprite.x + staggerX}px`;
+                intentDiv.style.top = `${enemySprite.y - offsetY}px`;
+                intentDiv.style.display = 'flex';
+            } else if (worldPos) {
+                // Fallback to 3D projection
                 const screenPos = DDOOBackground.project3DToScreen(worldPos.x, worldPos.y + 1.5, worldPos.z);
                 if (screenPos && screenPos.visible) {
                     intentDiv.style.left = `${screenPos.screenX}px`;
-                    intentDiv.style.top = `${screenPos.screenY - 50}px`;  // Above head
+                    intentDiv.style.top = `${screenPos.screenY - 50}px`;
                     intentDiv.style.display = 'flex';
                 } else {
                     intentDiv.style.display = 'none';
@@ -399,6 +412,13 @@ const Combat = {
         if (gauge) {
             const percent = Math.min(100, (intent.gauge / intent.maxGauge) * 100);
             gauge.style.width = `${percent}%`;
+            
+            // Show attack indicator when gauge is high (attack intent only)
+            if ((intent.type === 'ATTACK' || intent.type === 'HEAVY_ATTACK') && percent >= 70) {
+                this.showAttackIndicator(enemyId, intent, percent);
+            } else {
+                this.hideAttackIndicator(enemyId);
+            }
             
             // Color change when almost full
             if (percent > 80) {
@@ -422,6 +442,62 @@ const Combat = {
     removeIntentUI(enemyId) {
         const div = document.getElementById(`intent-${enemyId}`);
         if (div) div.remove();
+        this.hideAttackIndicator(enemyId);
+    },
+    
+    // Show attack direction indicator
+    showAttackIndicator(enemyId, intent, percent) {
+        if (typeof Game === 'undefined') return;
+        
+        let indicator = document.getElementById(`attack-indicator-${enemyId}`);
+        
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.id = `attack-indicator-${enemyId}`;
+            indicator.className = 'attack-indicator';
+            document.getElementById('intent-container')?.appendChild(indicator);
+        }
+        
+        const enemy = Game.enemySprites[enemyId];
+        const player = Game.player;
+        
+        if (enemy && player) {
+            // Line from enemy to player
+            const ex = enemy.x;
+            const ey = enemy.y;
+            const px = player.x;
+            const py = player.y;
+            
+            const angle = Math.atan2(py - ey, px - ex) * 180 / Math.PI;
+            const length = Math.sqrt((px - ex) ** 2 + (py - ey) ** 2);
+            
+            // Opacity increases as gauge fills
+            const opacity = (percent - 70) / 30;  // 0 at 70%, 1 at 100%
+            const color = intent.type === 'HEAVY_ATTACK' ? '#ff6600' : '#ef4444';
+            
+            indicator.style.cssText = `
+                position: absolute;
+                left: ${ex}px;
+                top: ${ey}px;
+                width: ${length}px;
+                height: 4px;
+                background: linear-gradient(90deg, ${color} 0%, transparent 100%);
+                transform-origin: left center;
+                transform: rotate(${angle}deg);
+                opacity: ${opacity};
+                pointer-events: none;
+                z-index: 50;
+            `;
+            
+            // Add warning pulse
+            indicator.style.animation = `pulse-warning ${1 - opacity * 0.7}s ease-in-out infinite`;
+        }
+    },
+    
+    // Hide attack indicator
+    hideAttackIndicator(enemyId) {
+        const indicator = document.getElementById(`attack-indicator-${enemyId}`);
+        if (indicator) indicator.remove();
     },
     
     // ========== Card Actions ==========

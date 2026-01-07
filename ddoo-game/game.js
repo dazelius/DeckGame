@@ -64,8 +64,8 @@ const Game = {
     worldPositions: {
         player: { x: 2, y: 0, z: 5 },
         enemies: [
-            { x: 7, y: 0, z: 4 },
-            { x: 8, y: 0, z: 6 }
+            { x: 7, y: 0, z: 3 },   // Top enemy
+            { x: 8, y: 0, z: 7 }    // Bottom enemy (more spread out)
         ]
     },
     
@@ -636,7 +636,6 @@ const Game = {
             
             if (enemy) {
                 enemy.defaultFacing = 'left';  // Enemies face player (left)
-                enemy.scale.x = -Math.abs(enemy.scale.x);  // Flip to face left
                 this.placeCharacter3D(enemy, this.worldPositions.enemies[i]);
                 enemy.enemyIndex = i;
                 this.containers.characters.addChild(enemy);
@@ -686,8 +685,14 @@ const Game = {
             const baseScale = sprite.baseScale || 1.0;
             const depthScale = screenPos.scale * 0.5;  // Scale factor
             
-            // Preserve flip direction
-            const flipX = sprite.scale.x < 0 ? -1 : 1;
+            // Determine flip based on defaultFacing
+            let flipX = 1;
+            if (sprite.defaultFacing === 'left') {
+                flipX = -1;  // Face left
+            } else if (sprite.currentFacing === 'left') {
+                flipX = -1;  // Temporarily facing left
+            }
+            
             sprite.scale.set(flipX * baseScale * depthScale, baseScale * depthScale);
             
             // Depth sorting
@@ -727,14 +732,7 @@ const Game = {
         
         const currentX = sprite.x;
         const shouldFaceRight = targetX > currentX;
-        const currentScale = Math.abs(sprite.scale.x);
-        
-        // Flip by inverting scale.x
-        if (shouldFaceRight && sprite.scale.x < 0) {
-            sprite.scale.x = currentScale;
-        } else if (!shouldFaceRight && sprite.scale.x > 0) {
-            sprite.scale.x = -currentScale;
-        }
+        sprite.currentFacing = shouldFaceRight ? 'right' : 'left';
     },
     
     // Face target by world position
@@ -742,21 +740,13 @@ const Game = {
         if (!sprite || !myWorldPos || !targetWorldPos) return;
         
         const shouldFaceRight = targetWorldPos.x > myWorldPos.x;
-        const currentScale = Math.abs(sprite.scale.x);
-        
-        if (shouldFaceRight && sprite.scale.x < 0) {
-            sprite.scale.x = currentScale;
-        } else if (!shouldFaceRight && sprite.scale.x > 0) {
-            sprite.scale.x = -currentScale;
-        }
+        sprite.currentFacing = shouldFaceRight ? 'right' : 'left';
     },
     
     // Reset character facing to default
     resetFacing(sprite) {
         if (!sprite) return;
-        const currentScale = Math.abs(sprite.scale.x);
-        const faceRight = sprite.defaultFacing !== 'left';  // Default is right
-        sprite.scale.x = faceRight ? currentScale : -currentScale;
+        sprite.currentFacing = null;  // Use defaultFacing
     },
     
     // Start position update loop (sync with 3D camera)

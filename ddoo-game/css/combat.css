@@ -244,6 +244,25 @@
 
 /* Grid Target CSS removed - using PixiJS highlight only */
 
+/* ==================== Attack Direction Indicator ==================== */
+
+.attack-indicator {
+    position: absolute;
+    pointer-events: none;
+    z-index: 50;
+}
+
+@keyframes pulse-warning {
+    0%, 100% { 
+        opacity: 0.4;
+        filter: blur(0px);
+    }
+    50% { 
+        opacity: 1;
+        filter: blur(2px);
+    }
+}
+
 /* ==================== Card Drag & Drop ==================== */
 
 .card.dragging {
