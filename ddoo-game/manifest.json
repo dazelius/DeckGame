@@ -1,0 +1,27 @@
+{
+  "name": "DDOO Game",
+  "short_name": "DDOO",
+  "description": "Dark Souls 스타일 덱빌딩 게임",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#0a0a12",
+  "theme_color": "#fbbf24",
+  "icons": [
+    {
+      "src": "image/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "image/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "entertainment"],
+  "lang": "ko",
+  "dir": "ltr"
+}

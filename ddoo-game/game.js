@@ -1,5 +1,6 @@
 // =====================================================
 // 🎮 DDOO Game - 메인 게임 코드
+// 📱 모바일 최적화 버전
 // =====================================================
 
 const Game = {
@@ -41,6 +42,18 @@ const Game = {
         gridGraphics: null
     },
     
+    // 📱 모바일 설정
+    mobile: {
+        isMobile: false,
+        isTouch: false,
+        isLandscape: false,
+        pixelRatio: 1,
+        maxPixelRatio: 2,  // 성능을 위해 제한
+        hapticEnabled: true,
+        lastTapTime: 0,
+        doubleTapDelay: 300
+    },
+    
     // 3D 월드 좌표
     worldPositions: {
         player: { x: -6, y: 0, z: 2 },
@@ -55,8 +68,21 @@ const Game = {
     async init() {
         console.log('🎮 게임 초기화 중...');
         
+        // 📱 모바일 감지
+        this.detectMobile();
+        
+        // 📱 모바일 환경 설정
+        this.setupMobileEnvironment();
+        
         // 🔥 3D 배경 먼저 초기화
         await DDOOBackground.init();
+        
+        // 📱 해상도 계산 (모바일 성능 최적화)
+        const pixelRatio = Math.min(
+            window.devicePixelRatio || 1,
+            this.mobile.isMobile ? this.mobile.maxPixelRatio : 3
+        );
+        this.mobile.pixelRatio = pixelRatio;
         
         // PixiJS 앱 생성 (투명 배경 - 3D 배경이 보이도록)
         this.app = new PIXI.Application();
@@ -64,9 +90,10 @@ const Game = {
             width: window.innerWidth,
             height: window.innerHeight,
             backgroundAlpha: 0,
-            antialias: false,
-            resolution: window.devicePixelRatio || 1,
-            autoDensity: true
+            antialias: !this.mobile.isMobile, // 모바일에서 AA 비활성화
+            resolution: pixelRatio,
+            autoDensity: true,
+            powerPreference: this.mobile.isMobile ? 'low-power' : 'high-performance'
         });
         
         // 캔버스 추가
@@ -76,6 +103,9 @@ const Game = {
         // 캔버스 z-index 설정
         this.app.canvas.style.position = 'relative';
         this.app.canvas.style.zIndex = '1';
+        
+        // 📱 터치 이벤트 최적화
+        this.app.canvas.style.touchAction = 'none';
         
         // 컨테이너 생성
         this.createContainers();
@@ -89,20 +119,81 @@ const Game = {
         // 이벤트 바인딩
         this.bindEvents();
         
+        // 📱 모바일 이벤트 바인딩
+        this.bindMobileEvents();
+        
         // 키보드 이벤트 (디버그)
         this.bindKeyboard();
         
-        // 리사이즈 핸들러
+        // 리사이즈 & 방향 전환 핸들러
         window.addEventListener('resize', () => this.onResize());
+        window.addEventListener('orientationchange', () => this.onOrientationChange());
+        
+        // 📱 가시성 변화 (탭 전환, 앱 백그라운드)
+        document.addEventListener('visibilitychange', () => this.onVisibilityChange());
         
         // 디버그 UI 생성
         this.createDebugUI();
         
+        // 📱 풀스크린 버튼 생성
+        this.createFullscreenButton();
+        
         console.log('✅ 게임 초기화 완료!');
+        console.log(`📱 모바일: ${this.mobile.isMobile ? 'YES' : 'NO'}`);
+        console.log(`📱 터치: ${this.mobile.isTouch ? 'YES' : 'NO'}`);
+        console.log(`📱 해상도: ${pixelRatio}x`);
         console.log('💡 Ctrl+D: 디버그 메뉴');
         
         // 시작 메시지
         this.showMessage('⚔️ 전투 시작!', 2000);
+    },
+    
+    // 📱 모바일 감지
+    detectMobile() {
+        const ua = navigator.userAgent || navigator.vendor || window.opera;
+        
+        // 터치 지원 확인
+        this.mobile.isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        
+        // 모바일 디바이스 확인
+        this.mobile.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua)
+            || (this.mobile.isTouch && window.innerWidth < 1024);
+        
+        // 화면 방향 확인
+        this.mobile.isLandscape = window.innerWidth > window.innerHeight;
+        
+        // iOS 감지
+        this.mobile.isIOS = /iPad|iPhone|iPod/.test(ua);
+        
+        // Android 감지
+        this.mobile.isAndroid = /Android/.test(ua);
+    },
+    
+    // 📱 모바일 환경 설정
+    setupMobileEnvironment() {
+        if (!this.mobile.isMobile) return;
+        
+        // iOS 스크롤 방지
+        document.body.addEventListener('touchmove', (e) => {
+            if (e.target.tagName !== 'INPUT') {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        // iOS 더블탭 줌 방지
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', (e) => {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, { passive: false });
+        
+        // 컨텍스트 메뉴 방지 (롱프레스)
+        document.addEventListener('contextmenu', (e) => e.preventDefault());
+        
+        console.log('📱 모바일 환경 설정 완료');
     },
     
     // ==================== 컨테이너 ====================
@@ -324,6 +415,9 @@ const Game = {
         
         await this.delay(200);
         
+        // 📱 히트 햅틱 피드백
+        this.hapticFeedback(isCrit ? 'heavy' : 'hit');
+        
         // 히트 이펙트
         DDOORenderer.rapidFlash(enemy);
         DDOORenderer.damageShake(enemy, 8, 300);
@@ -349,6 +443,9 @@ const Game = {
         
         // 사망 체크
         if (enemyData.hp <= 0) {
+            // 📱 사망 햅틱 피드백
+            this.hapticFeedback('success');
+            
             await DDOORenderer.playDeath(enemy, this.app);
             this.enemySprites.splice(enemyIndex, 1);
             this.state.enemies.splice(enemyIndex, 1);
@@ -356,6 +453,7 @@ const Game = {
             
             // 승리 체크
             if (this.state.enemies.length === 0) {
+                this.hapticFeedback('success');
                 this.showMessage('🎉 승리!', 3000);
             }
         }
@@ -488,17 +586,79 @@ const Game = {
     // ==================== 이벤트 ====================
     
     bindEvents() {
-        // 적 클릭
+        // 적 클릭/터치
         this.enemySprites.forEach((enemy, i) => {
             enemy.eventMode = 'static';
             enemy.cursor = 'pointer';
-            enemy.on('pointerdown', () => this.attackEnemy(i));
+            
+            // 📱 통합 이벤트 (pointerdown은 터치와 마우스 모두 처리)
+            enemy.on('pointerdown', (e) => {
+                // 📱 햅틱 피드백
+                this.hapticFeedback('light');
+                this.attackEnemy(i);
+            });
+            
+            // 📱 터치 타겟 크기 증가
+            if (this.mobile.isMobile) {
+                enemy.hitArea = new PIXI.Circle(0, -enemy.height * 0.5, Math.max(enemy.width, enemy.height) * 0.7);
+            }
         });
         
         // 턴 종료 버튼
-        document.getElementById('btn-end-turn').addEventListener('click', () => {
+        const endTurnBtn = document.getElementById('btn-end-turn');
+        endTurnBtn.addEventListener('click', () => {
+            this.hapticFeedback('medium');
             this.endTurn();
         });
+        
+        // 📱 버튼 터치 피드백
+        this.addTouchFeedback(endTurnBtn);
+    },
+    
+    // 📱 모바일 이벤트 바인딩
+    bindMobileEvents() {
+        if (!this.mobile.isTouch) return;
+        
+        // 스테이지 터치 이벤트
+        this.app.stage.eventMode = 'static';
+        this.app.stage.hitArea = new PIXI.Rectangle(0, 0, this.app.screen.width, this.app.screen.height);
+        
+        // 빈 공간 터치 (미래 확장용)
+        this.app.stage.on('pointertap', (e) => {
+            // 적이 아닌 곳 터치 시 처리
+        });
+    },
+    
+    // 📱 터치 피드백 효과 추가
+    addTouchFeedback(element) {
+        element.addEventListener('touchstart', () => {
+            element.classList.add('touch-active');
+        }, { passive: true });
+        
+        element.addEventListener('touchend', () => {
+            element.classList.remove('touch-active');
+        }, { passive: true });
+        
+        element.addEventListener('touchcancel', () => {
+            element.classList.remove('touch-active');
+        }, { passive: true });
+    },
+    
+    // 📱 햅틱 피드백 (진동)
+    hapticFeedback(intensity = 'light') {
+        if (!this.mobile.hapticEnabled) return;
+        if (!navigator.vibrate) return;
+        
+        const patterns = {
+            light: [10],
+            medium: [20],
+            heavy: [30],
+            success: [10, 50, 10],
+            error: [30, 50, 30, 50, 30],
+            hit: [15, 30, 50]
+        };
+        
+        navigator.vibrate(patterns[intensity] || patterns.light);
     },
     
     bindKeyboard() {
@@ -508,7 +668,75 @@ const Game = {
                 e.preventDefault();
                 this.toggleDebug();
             }
+            
+            // F: 풀스크린 토글
+            if (e.key === 'f' || e.key === 'F') {
+                this.toggleFullscreen();
+            }
         });
+    },
+    
+    // 📱 풀스크린 버튼 생성
+    createFullscreenButton() {
+        const btn = document.createElement('button');
+        btn.id = 'fullscreen-btn';
+        btn.innerHTML = '⛶';
+        btn.title = '풀스크린';
+        btn.addEventListener('click', () => {
+            this.hapticFeedback('light');
+            this.toggleFullscreen();
+        });
+        document.body.appendChild(btn);
+        
+        // 풀스크린 상태 변화 감지
+        document.addEventListener('fullscreenchange', () => {
+            btn.innerHTML = document.fullscreenElement ? '⛶' : '⛶';
+            btn.style.opacity = document.fullscreenElement ? '0.3' : '1';
+        });
+    },
+    
+    // 📱 풀스크린 토글
+    toggleFullscreen() {
+        if (!document.fullscreenElement) {
+            // 풀스크린 진입
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen(); // iOS Safari
+            }
+        } else {
+            // 풀스크린 종료
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            }
+        }
+    },
+    
+    // 📱 화면 방향 변화
+    onOrientationChange() {
+        console.log('📱 화면 방향 변경');
+        
+        // 약간의 딜레이 후 리사이즈 (iOS 대응)
+        setTimeout(() => {
+            this.mobile.isLandscape = window.innerWidth > window.innerHeight;
+            this.onResize();
+        }, 100);
+    },
+    
+    // 📱 앱 가시성 변화 (탭 전환, 백그라운드)
+    onVisibilityChange() {
+        if (document.hidden) {
+            console.log('📱 앱 백그라운드');
+            // 게임 일시정지 (필요시)
+            // this.pause();
+        } else {
+            console.log('📱 앱 포그라운드');
+            // 게임 재개 (필요시)
+            // this.resume();
+        }
     },
     
     endTurn() {

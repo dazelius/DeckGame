@@ -1,11 +1,19 @@
 /* =====================================================
    🎮 DDOO Game - 스타일시트
+   📱 모바일 최적화 버전
    ===================================================== */
 
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    /* 📱 터치 하이라이트 제거 */
+    -webkit-tap-highlight-color: transparent;
+}
+
+html {
+    /* 📱 iOS 안전 영역 대응 */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 body {
@@ -14,6 +22,14 @@ body {
     color: #eee;
     overflow: hidden;
     user-select: none;
+    /* 📱 모바일 최적화 */
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+    /* 📱 스크롤 방지 */
+    position: fixed;
+    width: 100%;
+    height: 100%;
 }
 
 /* 3D 배경 컨테이너 */
@@ -182,27 +198,225 @@ body {
     background: linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%);
 }
 
-/* ==================== 반응형 ==================== */
+/* ==================== 📱 반응형 & 모바일 ==================== */
 
+/* 태블릿 */
+@media (max-width: 1024px) {
+    .hp-bar { width: 120px; }
+    #center-message { font-size: 2.5rem; }
+}
+
+/* 모바일 */
 @media (max-width: 768px) {
     #top-bar {
-        padding: 10px;
+        padding: 8px 12px;
+        padding-top: max(8px, env(safe-area-inset-top));
+    }
+    
+    .player-info {
+        padding: 6px 10px;
     }
     
     .hp-bar {
-        width: 100px;
+        width: 80px;
+        height: 14px;
+    }
+    
+    .hp-text {
+        font-size: 0.75rem;
+        min-width: 50px;
     }
     
     #center-message {
-        font-size: 2rem;
+        font-size: 1.8rem;
     }
     
     #bottom-bar {
         padding: 10px;
+        padding-bottom: max(10px, env(safe-area-inset-bottom));
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    #card-hand {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    #action-buttons {
+        justify-content: center;
+        width: 100%;
     }
     
     .action-btn {
-        padding: 10px 20px;
-        font-size: 0.9rem;
+        padding: 14px 24px;
+        font-size: 1rem;
+        /* 📱 터치 타겟 최소 44px */
+        min-height: 44px;
+        min-width: 44px;
     }
+}
+
+/* 소형 모바일 */
+@media (max-width: 480px) {
+    #top-bar {
+        padding: 6px 8px;
+    }
+    
+    .hp-bar {
+        width: 60px;
+        height: 12px;
+    }
+    
+    .hp-text {
+        font-size: 0.7rem;
+    }
+    
+    #center-message {
+        font-size: 1.5rem;
+    }
+    
+    .action-btn {
+        padding: 12px 18px;
+        font-size: 0.9rem;
+        flex: 1;
+    }
+}
+
+/* 가로 모드 (Landscape) */
+@media (max-height: 500px) and (orientation: landscape) {
+    #top-bar {
+        padding: 5px 15px;
+    }
+    
+    #bottom-bar {
+        padding: 5px 15px;
+        flex-direction: row;
+    }
+    
+    .player-info {
+        padding: 4px 8px;
+    }
+    
+    .hp-bar {
+        width: 100px;
+        height: 12px;
+    }
+    
+    #center-message {
+        font-size: 1.5rem;
+        top: 35%;
+    }
+    
+    .action-btn {
+        padding: 8px 16px;
+        font-size: 0.85rem;
+    }
+}
+
+/* ==================== 📱 터치 인터랙션 ==================== */
+
+/* 버튼 터치 피드백 */
+.action-btn:active,
+.action-btn.touch-active {
+    transform: scale(0.95);
+    filter: brightness(0.9);
+}
+
+/* 터치 디바이스에서 hover 효과 제거 */
+@media (hover: none) and (pointer: coarse) {
+    .action-btn:hover {
+        transform: none;
+        background: linear-gradient(180deg, #4a4a6a 0%, #2a2a4a 100%);
+        border-color: #5a5a7a;
+    }
+    
+    #btn-end-turn:hover {
+        background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%);
+    }
+}
+
+/* ==================== 📱 풀스크린 & PWA ==================== */
+
+/* iOS 홈스크린 앱 모드 */
+@media (display-mode: standalone) {
+    body {
+        /* 노치 대응 */
+        padding-top: env(safe-area-inset-top);
+    }
+}
+
+/* 풀스크린 버튼 (선택적) */
+#fullscreen-btn {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #555;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: none;
+}
+
+@media (max-width: 768px) {
+    #fullscreen-btn {
+        display: block;
+    }
+}
+
+/* ==================== 📱 로딩 화면 ==================== */
+
+#loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #0a0a12;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    transition: opacity 0.5s ease;
+}
+
+#loading-screen.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #333;
+    border-top-color: #fbbf24;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.loading-text {
+    margin-top: 20px;
+    color: #888;
+    font-size: 0.9rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ==================== 📱 성능 최적화 ==================== */
+
+/* GPU 가속 활성화 */
+#game-container,
+#ddoo-bg3d,
+.action-btn {
+    transform: translateZ(0);
+    will-change: transform;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
 }
