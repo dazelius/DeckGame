@@ -639,6 +639,7 @@ const Game = {
         
         if (this.player) {
             this.player.defaultFacing = 'right';  // Player faces right (toward enemies)
+            this.player.baseScale = 0.6;  // Store base scale for restoration
             this.placeCharacter3D(this.player, this.worldPositions.player);
             this.containers.characters.addChild(this.player);
             
@@ -677,6 +678,7 @@ const Game = {
             
             if (enemy) {
                 enemy.defaultFacing = 'left';  // Enemy faces left (toward player)
+                enemy.baseScale = 0.4;  // Store base scale for restoration
                 this.placeCharacter3D(enemy, this.worldPositions.enemies[i]);
                 enemy.enemyIndex = i;
                 this.containers.characters.addChild(enemy);
@@ -857,46 +859,70 @@ const Game = {
     
     // Restore character visibility after DDOOAction animations
     restoreCharacterVisibility() {
-        // Restore player
+        // Kill any ongoing scale/position tweens
         if (this.player) {
-            this.player.visible = true;
-            this.player.alpha = 1;
-            // Restore scale if needed
-            const baseScale = this.player.baseScale || 1.0;
-            const screenPos = DDOOBackground.project3DToScreen(
-                this.worldPositions.player.x, 
-                this.worldPositions.player.y, 
-                this.worldPositions.player.z
-            );
-            if (screenPos) {
-                const depthScale = screenPos.scale * 0.5;
-                const flipX = this.player.defaultFacing === 'right' ? -1 : 1;
-                this.player.scale.set(flipX * baseScale * depthScale, baseScale * depthScale);
-            }
+            gsap.killTweensOf(this.player);
+            gsap.killTweensOf(this.player.scale);
         }
-        
-        // Restore enemies
-        this.enemySprites.forEach((enemy, i) => {
+        this.enemySprites.forEach(enemy => {
             if (enemy) {
-                enemy.visible = true;
-                enemy.alpha = 1;
-                // Restore scale if needed
-                const baseScale = enemy.baseScale || 1.0;
-                const enemyPos = this.worldPositions.enemies[i];
-                if (enemyPos) {
-                    const screenPos = DDOOBackground.project3DToScreen(
-                        enemyPos.x, enemyPos.y, enemyPos.z
-                    );
-                    if (screenPos) {
-                        const depthScale = screenPos.scale * 0.5;
-                        const flipX = enemy.defaultFacing === 'right' ? -1 : 1;
-                        enemy.scale.set(flipX * baseScale * depthScale, baseScale * depthScale);
-                    }
-                }
+                gsap.killTweensOf(enemy);
+                gsap.killTweensOf(enemy.scale);
             }
         });
         
-        console.log('[Game] Character visibility restored');
+        // Small delay to ensure animations are fully stopped
+        setTimeout(() => {
+            // Restore player
+            if (this.player) {
+                this.player.visible = true;
+                this.player.alpha = 1;
+                this.player.rotation = 0;
+                
+                // Restore scale using stored baseScale
+                const baseScale = this.player.baseScale || 0.6;
+                const screenPos = DDOOBackground.project3DToScreen(
+                    this.worldPositions.player.x, 
+                    this.worldPositions.player.y, 
+                    this.worldPositions.player.z
+                );
+                if (screenPos) {
+                    const depthScale = screenPos.scale * 0.5;
+                    // Use currentFacing if set, otherwise defaultFacing
+                    const facing = this.player.currentFacing || this.player.defaultFacing || 'right';
+                    const flipX = facing === 'right' ? -1 : 1;
+                    this.player.scale.set(flipX * baseScale * depthScale, baseScale * depthScale);
+                }
+            }
+            
+            // Restore enemies
+            this.enemySprites.forEach((enemy, i) => {
+                if (enemy) {
+                    enemy.visible = true;
+                    enemy.alpha = 1;
+                    enemy.rotation = 0;
+                    
+                    // Restore scale using stored baseScale
+                    const baseScale = enemy.baseScale || 0.4;
+                    const enemyPos = this.worldPositions.enemies[i];
+                    if (enemyPos) {
+                        const screenPos = DDOOBackground.project3DToScreen(
+                            enemyPos.x, enemyPos.y, enemyPos.z
+                        );
+                        if (screenPos) {
+                            const depthScale = screenPos.scale * 0.5;
+                            const facing = enemy.currentFacing || enemy.defaultFacing || 'left';
+                            const flipX = facing === 'right' ? -1 : 1;
+                            enemy.scale.set(flipX * baseScale * depthScale, baseScale * depthScale);
+                        }
+                    }
+                }
+            });
+            
+            // Also update positions to ensure sync
+            this.updateAllCharacterPositions();
+            console.log('[Game] Character visibility and scale restored');
+        }, 50);
     },
     
     // Start position update loop (sync with 3D camera)
