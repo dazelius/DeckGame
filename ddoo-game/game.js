@@ -1144,6 +1144,9 @@ const Game = {
         
         this.hapticFeedback('light');
         
+        // SLOW MOTION EFFECT
+        this.startTargetingMode();
+        
         // Show valid targets based on card type
         this.showCardTargets(cardData);
         
@@ -1160,8 +1163,112 @@ const Game = {
         this.cards.selectedIndex = -1;
         this.cards.selectedCard = null;
         
+        // END SLOW MOTION
+        this.endTargetingMode();
+        
         // Hide targets
         this.hideCardTargets();
+    },
+    
+    // Start targeting mode with slow-motion effect
+    startTargetingMode() {
+        // Slow down combat
+        if (typeof Combat !== 'undefined') {
+            Combat.setTimeScale(0.2);  // 20% speed
+        }
+        
+        // Screen effect - vignette + desaturate
+        this.createTargetingOverlay();
+        
+        // Slow down animations
+        if (typeof DDOOAction !== 'undefined' && DDOOAction.config) {
+            this._originalSpeed = DDOOAction.config.speed;
+            DDOOAction.config.speed = 0.3;
+        }
+    },
+    
+    // End targeting mode
+    endTargetingMode() {
+        // Restore combat speed
+        if (typeof Combat !== 'undefined') {
+            Combat.setTimeScale(1.0);
+        }
+        
+        // Remove overlay
+        this.removeTargetingOverlay();
+        
+        // Restore animation speed
+        if (typeof DDOOAction !== 'undefined' && DDOOAction.config && this._originalSpeed) {
+            DDOOAction.config.speed = this._originalSpeed;
+        }
+    },
+    
+    // Create targeting overlay (vignette + tint)
+    createTargetingOverlay() {
+        // Remove existing
+        this.removeTargetingOverlay();
+        
+        // Create overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'targeting-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+            background: radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.5) 100%);
+            animation: targeting-pulse 1s ease-in-out infinite;
+        `;
+        document.body.appendChild(overlay);
+        
+        // Add style for animation
+        if (!document.getElementById('targeting-style')) {
+            const style = document.createElement('style');
+            style.id = 'targeting-style';
+            style.textContent = `
+                @keyframes targeting-pulse {
+                    0%, 100% { opacity: 0.8; }
+                    50% { opacity: 1; }
+                }
+                .enemy-target-highlight {
+                    position: absolute;
+                    border: 3px solid #ff4444;
+                    border-radius: 50%;
+                    background: rgba(255, 68, 68, 0.2);
+                    pointer-events: auto;
+                    cursor: crosshair;
+                    animation: target-pulse 0.5s ease-in-out infinite;
+                    z-index: 60;
+                }
+                @keyframes target-pulse {
+                    0%, 100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 20px rgba(255,68,68,0.5); }
+                    50% { transform: translate(-50%, -50%) scale(1.1); box-shadow: 0 0 40px rgba(255,68,68,0.8); }
+                }
+                .grid-target-highlight {
+                    position: absolute;
+                    border: 2px solid #22c55e;
+                    background: rgba(34, 197, 94, 0.3);
+                    pointer-events: auto;
+                    cursor: pointer;
+                    z-index: 60;
+                }
+                .grid-target-highlight:hover {
+                    background: rgba(34, 197, 94, 0.5);
+                    border-color: #4ade80;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    },
+    
+    // Remove targeting overlay
+    removeTargetingOverlay() {
+        document.getElementById('targeting-overlay')?.remove();
+        document.querySelectorAll('.enemy-target-highlight').forEach(el => el.remove());
+        document.querySelectorAll('.grid-target-highlight').forEach(el => el.remove());
     },
     
     // Show valid targets for selected card
@@ -1173,13 +1280,19 @@ const Game = {
         } else if (cardData.type === 'move' && cardData.targetType === 'grid') {
             // Highlight grid cells
             this.highlightGridCells(cardData.maxDistance);
+        } else if (cardData.type === 'skill') {
+            // Skills are self-cast - execute immediately
+            this.executeCard(this.cards.selectedIndex, { type: 'self' });
         }
-        // Skills don't need targets (self-cast)
     },
     
     // Hide all target indicators
     hideCardTargets() {
-        // Remove enemy highlights
+        // Remove DOM highlights
+        document.querySelectorAll('.enemy-target-highlight').forEach(el => el.remove());
+        document.querySelectorAll('.grid-target-highlight').forEach(el => el.remove());
+        
+        // Remove PixiJS highlights
         this.enemySprites.forEach(enemy => {
             if (enemy.targetHighlight) {
                 enemy.targetHighlight.visible = false;
@@ -1192,9 +1305,11 @@ const Game = {
         }
     },
     
-    // Highlight enemies within attack range
+    // Highlight enemies within attack range (DOM-based for better interaction)
     highlightEnemiesInRange(range) {
         const playerPos = this.worldPositions.player;
+        const battleArea = document.getElementById('battle-area');
+        const rect = battleArea?.getBoundingClientRect() || { left: 0, top: 0 };
         
         this.enemySprites.forEach((enemy, index) => {
             const enemyPos = this.worldPositions.enemies[index];
@@ -1204,15 +1319,81 @@ const Game = {
             const dist = Math.abs(enemyPos.x - playerPos.x) + Math.abs(enemyPos.z - playerPos.z);
             const inRange = dist <= range;
             
-            // Apply highlight
             if (inRange) {
-                DDOORenderer.setTargeted?.(enemy, true, 0xff4444);
+                // Get screen position
+                const screenPos = DDOOBackground.project3DToScreen(
+                    enemyPos.x + 0.5, enemyPos.y, enemyPos.z + 0.5
+                );
+                
+                // Create DOM highlight
+                const highlight = document.createElement('div');
+                highlight.className = 'enemy-target-highlight';
+                highlight.dataset.enemyIndex = index;
+                highlight.style.left = (rect.left + screenPos.screenX) + 'px';
+                highlight.style.top = (rect.top + screenPos.screenY - 40) + 'px';
+                highlight.style.width = '80px';
+                highlight.style.height = '80px';
+                
+                // Click handler
+                highlight.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.executeCard(this.cards.selectedIndex, { type: 'enemy', index });
+                });
+                
+                document.body.appendChild(highlight);
             }
         });
     },
     
-    // Highlight valid grid cells for movement
+    // Highlight valid grid cells for movement (DOM-based)
     highlightGridCells(maxDistance) {
+        const playerPos = this.worldPositions.player;
+        const battleArea = document.getElementById('battle-area');
+        const rect = battleArea?.getBoundingClientRect() || { left: 0, top: 0 };
+        
+        // Highlight valid cells
+        for (let x = 0; x < this.arena.width; x++) {
+            for (let z = 0; z < this.arena.depth; z++) {
+                // Check distance
+                const dist = Math.abs(x - playerPos.x) + Math.abs(z - playerPos.z);
+                if (maxDistance && dist > maxDistance) continue;
+                if (dist === 0) continue;  // Skip current position
+                
+                // Check if occupied by enemy
+                const isOccupied = this.worldPositions.enemies.some(
+                    ep => Math.floor(ep.x) === x && Math.floor(ep.z) === z
+                );
+                if (isOccupied) continue;
+                
+                // Get screen position
+                const screenPos = DDOOBackground.project3DToScreen(x + 0.5, 0, z + 0.5);
+                if (!screenPos || !screenPos.visible) continue;
+                
+                // Create DOM highlight
+                const highlight = document.createElement('div');
+                highlight.className = 'grid-target-highlight';
+                highlight.dataset.gridX = x;
+                highlight.dataset.gridZ = z;
+                highlight.style.left = (rect.left + screenPos.screenX - 25) + 'px';
+                highlight.style.top = (rect.top + screenPos.screenY - 15) + 'px';
+                highlight.style.width = '50px';
+                highlight.style.height = '30px';
+                
+                // Click handler
+                const gridX = x;
+                const gridZ = z;
+                highlight.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.executeCard(this.cards.selectedIndex, { type: 'grid', x: gridX, z: gridZ });
+                });
+                
+                document.body.appendChild(highlight);
+            }
+        }
+    },
+    
+    // Legacy grid highlighting (PixiJS-based, kept for reference)
+    _highlightGridCellsPixi(maxDistance) {
         const playerPos = this.worldPositions.player;
         
         // Use existing grid highlighting from showDragTargets

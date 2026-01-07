@@ -34,7 +34,14 @@ const Combat = {
         running: false,
         paused: false,
         tickId: null,
-        lastTick: 0
+        lastTick: 0,
+        timeScale: 1.0  // Time scale for slow-motion
+    },
+    
+    // Set time scale (for slow-motion targeting)
+    setTimeScale(scale) {
+        this.state.timeScale = Math.max(0, Math.min(2, scale));
+        console.log(`[Combat] Time scale: ${this.state.timeScale}`);
     },
     
     // ========== Enemy Intents ==========
@@ -139,11 +146,14 @@ const Combat = {
     
     // ========== Update (called every tick) ==========
     update(delta) {
+        // Apply time scale
+        const scaledDelta = delta * this.state.timeScale;
+        
         // Update all enemy intents
         this.intents.forEach((intent, enemyId) => {
             if (intent.gauge < intent.maxGauge) {
-                // Fill gauge
-                intent.gauge += delta;
+                // Fill gauge (with time scale)
+                intent.gauge += scaledDelta;
                 
                 // Update UI
                 this.updateIntentUI(enemyId, intent);
