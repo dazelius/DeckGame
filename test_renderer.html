@@ -459,6 +459,7 @@
     <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.x/dist/pixi.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/gsap.min.js"></script>
     <script src="ddoo-renderer.js"></script>
+    <script src="ddoo-floater.js"></script>
     
     <script>
         // ==================== 전역 변수 ====================
@@ -759,7 +760,8 @@
                 gold: Math.floor(Math.random() * 50) + 10
             };
             
-            DDOORenderer.showDamageOnCharacter(enhancedSprite, values[type], type);
+            // DDOOFloater 사용
+            DDOOFloater.showOnCharacter(enhancedSprite, values[type], type);
             log('info', `💢 ${type}: ${values[type] || type.toUpperCase()}`);
         }
         
@@ -785,7 +787,8 @@
                 type: 'critical'
             });
             
-            DDOORenderer.showComboDamage(enhancedApp.stage, x, y, combo, 120);
+            // DDOOFloater 사용
+            DDOOFloater.showCombo(enhancedApp.stage, x, y, combo, 120);
             log('info', `💥 ${combo.length}히트 콤보!`);
         }
         
