@@ -156,3 +156,89 @@
 .card.touch-active {
     transform: translateY(-20px) scale(1.08);
 }
+
+/* ==================== Card Drag States ==================== */
+
+/* Dragging source card (becomes semi-transparent) */
+.card.dragging {
+    opacity: 0.3;
+    transform: scale(0.9);
+    pointer-events: none;
+}
+
+/* Card ghost (follows cursor/finger) */
+.card-ghost {
+    position: fixed;
+    pointer-events: none;
+    z-index: 1001;
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(1.1) rotate(5deg);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(251, 191, 36, 0.3);
+    animation: ghost-float 0.15s ease-out forwards;
+}
+
+@keyframes ghost-float {
+    from {
+        transform: translate(-50%, -50%) scale(1) rotate(0deg);
+    }
+    to {
+        transform: translate(-50%, -50%) scale(1.1) rotate(5deg);
+    }
+}
+
+/* ==================== Responsive Card ==================== */
+
+@media (max-width: 768px) {
+    .card {
+        width: 75px;
+        height: 100px;
+        padding: 4px;
+    }
+    
+    .card-cost {
+        width: 24px;
+        height: 24px;
+        top: -6px;
+        left: -6px;
+        font-size: 0.8rem;
+    }
+    
+    .card-name {
+        font-size: 0.75rem;
+        margin-top: 10px;
+    }
+    
+    .card-desc {
+        font-size: 0.6rem;
+    }
+    
+    .card-image {
+        width: 45px;
+        height: 45px;
+    }
+}
+
+@media (max-width: 480px) {
+    #card-hand {
+        gap: 8px;
+    }
+    
+    .card {
+        width: 65px;
+        height: 90px;
+    }
+    
+    .card-cost {
+        width: 20px;
+        height: 20px;
+        font-size: 0.7rem;
+    }
+    
+    .card-name {
+        font-size: 0.65rem;
+    }
+    
+    .card-desc {
+        font-size: 0.55rem;
+    }
+}

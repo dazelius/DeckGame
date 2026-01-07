@@ -51,21 +51,25 @@
     <div id="card-area">
         <!-- 카드 핸드 -->
         <div id="card-hand">
-            <!-- 테스트 카드 -->
-            <div class="card" data-card="strike">
+            <div class="card" data-card="strike" data-type="attack">
                 <div class="card-cost">1</div>
                 <div class="card-name">Strike</div>
                 <div class="card-desc">Deal 6 damage</div>
             </div>
-            <div class="card" data-card="defend">
+            <div class="card" data-card="defend" data-type="skill">
                 <div class="card-cost">1</div>
                 <div class="card-name">Defend</div>
                 <div class="card-desc">Gain 5 block</div>
             </div>
-            <div class="card" data-card="bash">
+            <div class="card" data-card="bash" data-type="attack">
                 <div class="card-cost">2</div>
                 <div class="card-name">Bash</div>
-                <div class="card-desc">Deal 8 damage, apply 2 vulnerable</div>
+                <div class="card-desc">Deal 8 dmg</div>
+            </div>
+            <div class="card" data-card="dash" data-type="skill">
+                <div class="card-cost">1</div>
+                <div class="card-name">Dash</div>
+                <div class="card-desc">Move to position</div>
             </div>
         </div>
         
@@ -99,6 +103,9 @@
     <script src="engine/ddoo-floater.js"></script>
     <script src="engine/ddoo-action.js"></script>
     <script src="engine/ddoo-chakram.js"></script>
+    
+    <!-- 게임 모듈 -->
+    <script src="modules/combat.js"></script>
     
     <!-- 게임 코드 -->
     <script src="game.js"></script>

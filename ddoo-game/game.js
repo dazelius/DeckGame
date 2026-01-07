@@ -77,9 +77,21 @@ const Game = {
     
     // Selected card
     selectedCard: null,
+    draggingCard: null,
+    cardGhost: null,
+    dropZone: null,
     
     // Position update loop ID
     positionLoopId: null,
+    
+    // Card data
+    cardDatabase: {
+        strike: { name: 'Strike', cost: 1, type: 'attack', damage: 6, range: 2 },
+        defend: { name: 'Defend', cost: 1, type: 'skill', block: 5, range: 0 },
+        bash: { name: 'Bash', cost: 2, type: 'attack', damage: 8, vulnerable: 2, range: 3 },
+        dash: { name: 'Dash', cost: 1, type: 'move', range: 0 },
+        heavyStrike: { name: 'Heavy Strike', cost: 2, type: 'attack', damage: 14, range: 3 }
+    },
     
     // ==================== 초기화 ====================
     
@@ -167,6 +179,14 @@ const Game = {
         // Start position sync loop
         this.startPositionLoop();
         
+        // Initialize Combat system
+        if (typeof Combat !== 'undefined') {
+            Combat.init();
+        }
+        
+        // Setup card drag & drop
+        this.setupCardDragDrop();
+        
         console.log('[Game] Initialized');
         console.log(`[Game] Battle area: ${this.battleAreaSize.width}x${this.battleAreaSize.height}`);
         console.log(`[Game] Mobile: ${this.mobile.isMobile ? 'YES' : 'NO'}`);
@@ -174,6 +194,14 @@ const Game = {
         
         // Start message
         this.showMessage('BATTLE START!', 2000);
+        
+        // Start real-time combat after delay
+        setTimeout(() => {
+            if (typeof Combat !== 'undefined') {
+                Combat.start();
+                console.log('[Game] Combat started');
+            }
+        }, 2500);
     },
     
     // 📱 모바일 감지
@@ -551,6 +579,335 @@ const Game = {
         }
         
         this.state.phase = 'player';
+    },
+    
+    // Enemy attacks player
+    async enemyAttacksPlayer(enemyIndex, damage, options = {}) {
+        const enemy = this.enemySprites[enemyIndex];
+        if (!enemy) return;
+        
+        this.state.phase = 'animation';
+        
+        const { heavy = false } = options;
+        const finalDamage = damage - this.state.player.block;
+        
+        // Block absorption
+        if (this.state.player.block > 0) {
+            const blockedAmount = Math.min(this.state.player.block, damage);
+            this.state.player.block -= blockedAmount;
+            
+            if (blockedAmount > 0) {
+                DDOOFloater.showOnCharacter(this.player, blockedAmount, 'block');
+            }
+        }
+        
+        // Apply damage
+        if (finalDamage > 0) {
+            this.state.player.hp = Math.max(0, this.state.player.hp - finalDamage);
+            
+            // Hit effects
+            this.hapticFeedback(heavy ? 'heavy' : 'hit');
+            DDOORenderer.rapidFlash(this.player);
+            DDOORenderer.damageShake(this.player, heavy ? 12 : 6, 300);
+            DDOOBackground.screenFlash(heavy ? '#ff0000' : '#ff4444', heavy ? 150 : 80);
+            DDOOBackground.shake(heavy ? 1.0 : 0.5, heavy ? 300 : 150);
+            
+            DDOOFloater.showOnCharacter(this.player, finalDamage, 'damage');
+            
+            this.updateUI();
+            
+            // Death check
+            if (this.state.player.hp <= 0) {
+                await DDOORenderer.playDeath(this.player, this.app);
+                this.showMessage('GAME OVER', 5000);
+                Combat.stop();
+            }
+        }
+        
+        this.state.phase = 'player';
+    },
+    
+    // Add enemy block
+    addEnemyBlock(enemyIndex, amount) {
+        const enemyData = this.state.enemies[enemyIndex];
+        if (!enemyData) return;
+        
+        enemyData.block = (enemyData.block || 0) + amount;
+        DDOOFloater.showOnCharacter(this.enemySprites[enemyIndex], `+${amount}`, 'block');
+    },
+    
+    // Move character in 3D space
+    moveCharacter(type, index, targetX, targetZ) {
+        const worldPos = type === 'player' 
+            ? this.worldPositions.player 
+            : this.worldPositions.enemies[index];
+        
+        if (!worldPos) return;
+        
+        // Animate movement
+        gsap.to(worldPos, {
+            x: targetX,
+            z: targetZ,
+            duration: 0.4,
+            ease: 'power2.out',
+            onUpdate: () => this.updateAllCharacterPositions()
+        });
+    },
+    
+    // ==================== Card Drag & Drop ====================
+    
+    setupCardDragDrop() {
+        const cards = document.querySelectorAll('.card');
+        const battleArea = document.getElementById('battle-area');
+        
+        cards.forEach(card => {
+            // Touch events
+            card.addEventListener('touchstart', (e) => this.onCardTouchStart(e, card), { passive: false });
+            card.addEventListener('touchmove', (e) => this.onCardTouchMove(e), { passive: false });
+            card.addEventListener('touchend', (e) => this.onCardTouchEnd(e), { passive: false });
+            
+            // Mouse events
+            card.addEventListener('mousedown', (e) => this.onCardMouseDown(e, card));
+        });
+        
+        // Global mouse events
+        document.addEventListener('mousemove', (e) => this.onCardMouseMove(e));
+        document.addEventListener('mouseup', (e) => this.onCardMouseUp(e));
+    },
+    
+    onCardTouchStart(e, card) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        this.startCardDrag(card, touch.clientX, touch.clientY);
+    },
+    
+    onCardTouchMove(e) {
+        if (!this.draggingCard) return;
+        e.preventDefault();
+        const touch = e.touches[0];
+        this.updateCardDrag(touch.clientX, touch.clientY);
+    },
+    
+    onCardTouchEnd(e) {
+        if (!this.draggingCard) return;
+        this.endCardDrag();
+    },
+    
+    onCardMouseDown(e, card) {
+        e.preventDefault();
+        this.startCardDrag(card, e.clientX, e.clientY);
+    },
+    
+    onCardMouseMove(e) {
+        if (!this.draggingCard) return;
+        this.updateCardDrag(e.clientX, e.clientY);
+    },
+    
+    onCardMouseUp(e) {
+        if (!this.draggingCard) return;
+        this.endCardDrag();
+    },
+    
+    startCardDrag(card, x, y) {
+        this.draggingCard = card;
+        this.hapticFeedback('light');
+        
+        // Create ghost card
+        this.cardGhost = card.cloneNode(true);
+        this.cardGhost.className = 'card card-ghost';
+        this.cardGhost.style.left = `${x}px`;
+        this.cardGhost.style.top = `${y}px`;
+        document.body.appendChild(this.cardGhost);
+        
+        // Original card styling
+        card.classList.add('dragging');
+        
+        // Create drop zone indicator
+        this.createDropZone();
+    },
+    
+    updateCardDrag(x, y) {
+        if (!this.cardGhost) return;
+        
+        // Move ghost
+        this.cardGhost.style.left = `${x}px`;
+        this.cardGhost.style.top = `${y}px`;
+        
+        // Check if over battle area
+        const battleArea = document.getElementById('battle-area');
+        const rect = battleArea.getBoundingClientRect();
+        const isOverBattle = x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+        
+        if (isOverBattle) {
+            // Get grid position
+            const gridPos = this.screenToGrid(x - rect.left, y - rect.top);
+            if (gridPos) {
+                this.updateDropZone(gridPos.x, gridPos.z, gridPos.screenX, gridPos.screenY);
+            }
+        } else {
+            this.hideDropZone();
+        }
+    },
+    
+    endCardDrag() {
+        const card = this.draggingCard;
+        const ghost = this.cardGhost;
+        
+        if (!card || !ghost) return;
+        
+        // Get final position
+        const ghostRect = ghost.getBoundingClientRect();
+        const centerX = ghostRect.left + ghostRect.width / 2;
+        const centerY = ghostRect.top + ghostRect.height / 2;
+        
+        const battleArea = document.getElementById('battle-area');
+        const rect = battleArea.getBoundingClientRect();
+        const isOverBattle = centerX >= rect.left && centerX <= rect.right && centerY >= rect.top && centerY <= rect.bottom;
+        
+        if (isOverBattle) {
+            const gridPos = this.screenToGrid(centerX - rect.left, centerY - rect.top);
+            if (gridPos) {
+                this.useCardAtPosition(card.dataset.card, gridPos.x, gridPos.z);
+            }
+        }
+        
+        // Cleanup
+        card.classList.remove('dragging');
+        ghost.remove();
+        this.hideDropZone();
+        
+        this.draggingCard = null;
+        this.cardGhost = null;
+    },
+    
+    createDropZone() {
+        if (this.dropZone) return;
+        
+        this.dropZone = document.createElement('div');
+        this.dropZone.className = 'drop-zone-highlight';
+        document.getElementById('battle-area').appendChild(this.dropZone);
+    },
+    
+    updateDropZone(gridX, gridZ, screenX, screenY) {
+        if (!this.dropZone) return;
+        
+        this.dropZone.style.display = 'block';
+        this.dropZone.style.left = `${screenX}px`;
+        this.dropZone.style.top = `${screenY}px`;
+        
+        // Check if valid position (in player zone for some cards)
+        const card = this.draggingCard;
+        const cardData = this.cardDatabase[card?.dataset.card];
+        
+        if (cardData?.type === 'move') {
+            // Move cards must target player zone (X <= 4)
+            this.dropZone.classList.toggle('valid', gridX <= 4.5);
+            this.dropZone.classList.toggle('invalid', gridX > 4.5);
+        } else if (cardData?.type === 'attack') {
+            // Attack cards can target anywhere (but prefer enemy zone)
+            this.dropZone.classList.toggle('valid', gridX >= 4.5);
+            this.dropZone.classList.toggle('invalid', gridX < 4.5);
+        } else {
+            this.dropZone.classList.remove('valid', 'invalid');
+        }
+    },
+    
+    hideDropZone() {
+        if (this.dropZone) {
+            this.dropZone.style.display = 'none';
+        }
+    },
+    
+    // Screen to grid conversion
+    screenToGrid(screenX, screenY) {
+        // Find closest grid cell by projecting all cells
+        let closest = null;
+        let closestDist = Infinity;
+        
+        for (let x = 0; x <= 10; x += 0.5) {
+            for (let z = 0; z <= 10; z += 0.5) {
+                const pos = DDOOBackground.project3DToScreen(x, 0, z);
+                if (pos && pos.visible) {
+                    const dist = Math.sqrt(
+                        Math.pow(pos.screenX - screenX, 2) + 
+                        Math.pow(pos.screenY - screenY, 2)
+                    );
+                    if (dist < closestDist) {
+                        closestDist = dist;
+                        closest = { x, z, screenX: pos.screenX, screenY: pos.screenY };
+                    }
+                }
+            }
+        }
+        
+        return closest;
+    },
+    
+    // Use card at grid position
+    useCardAtPosition(cardName, gridX, gridZ) {
+        const cardData = this.cardDatabase[cardName];
+        if (!cardData) return;
+        
+        // Check energy
+        if (this.state.player.energy < cardData.cost) {
+            this.showMessage('Not enough energy!', 1000);
+            this.hapticFeedback('error');
+            return;
+        }
+        
+        // Spend energy
+        this.state.player.energy -= cardData.cost;
+        document.getElementById('energy-text').textContent = 
+            `${this.state.player.energy}/${this.state.player.maxEnergy}`;
+        
+        console.log(`[Game] Card used: ${cardName} at (${gridX}, ${gridZ})`);
+        this.hapticFeedback('medium');
+        
+        // Execute card effect
+        if (typeof Combat !== 'undefined') {
+            Combat.useCard({ ...cardData, name: cardName }, gridX, gridZ);
+        } else {
+            // Fallback direct execution
+            switch (cardData.type) {
+                case 'attack':
+                    this.attackNearGrid(gridX, gridZ, cardData);
+                    break;
+                case 'skill':
+                    this.skillAtGrid(gridX, gridZ, cardData);
+                    break;
+                case 'move':
+                    this.moveCharacter('player', 0, 
+                        Math.min(4.5, Math.max(0.5, gridX)), 
+                        Math.min(9.5, Math.max(0.5, gridZ))
+                    );
+                    break;
+            }
+        }
+    },
+    
+    // Attack enemies near grid position
+    attackNearGrid(gridX, gridZ, cardData) {
+        const range = cardData.range || 2;
+        
+        this.worldPositions.enemies.forEach((pos, i) => {
+            const dist = Math.abs(pos.x - gridX) + Math.abs(pos.z - gridZ);
+            if (dist <= range) {
+                this.attackEnemy(i);
+                
+                // Interrupt enemy gauge
+                if (typeof Combat !== 'undefined') {
+                    Combat.interruptEnemy(i, 300);
+                }
+            }
+        });
+    },
+    
+    // Skill at grid position
+    skillAtGrid(gridX, gridZ, cardData) {
+        if (cardData.block) {
+            this.state.player.block += cardData.block;
+            DDOOFloater.showOnCharacter(this.player, `+${cardData.block}`, 'block');
+        }
     },
     
     // ==================== 디버그 UI ====================
