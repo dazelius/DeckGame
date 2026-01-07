@@ -463,6 +463,23 @@ const Game = {
     
     // ==================== 10x10 Arena Grid (Debug) ====================
     
+    // Get the screen position of a cell's center (by averaging 4 corners)
+    getCellCenterScreen(cellX, cellZ) {
+        const topLeft = DDOOBackground.project3DToScreen(cellX, 0, cellZ);
+        const topRight = DDOOBackground.project3DToScreen(cellX + 1, 0, cellZ);
+        const bottomLeft = DDOOBackground.project3DToScreen(cellX, 0, cellZ + 1);
+        const bottomRight = DDOOBackground.project3DToScreen(cellX + 1, 0, cellZ + 1);
+        
+        if (!topLeft || !topRight || !bottomLeft || !bottomRight) return null;
+        if (!topLeft.visible || !bottomRight.visible) return null;
+        
+        // Average all 4 corners to get true center
+        return {
+            x: (topLeft.screenX + topRight.screenX + bottomLeft.screenX + bottomRight.screenX) / 4,
+            y: (topLeft.screenY + topRight.screenY + bottomLeft.screenY + bottomRight.screenY) / 4
+        };
+    },
+    
     drawDebugGrid() {
         // Remove existing grid
         this.containers.debug.removeChildren();
@@ -561,40 +578,46 @@ const Game = {
             this.containers.debug.addChild(zoneText);
         }
         
-        // Character position markers
+        // Character position markers (at cell centers)
         if (this.debug.showPositions) {
-            // Player position
-            const playerPos = DDOOBackground.project3DToScreen(
-                this.worldPositions.player.x,
-                this.worldPositions.player.y,
-                this.worldPositions.player.z
-            );
-            if (playerPos && playerPos.visible) {
-                grid.circle(playerPos.screenX, playerPos.screenY, 12);
+            // Player position - get cell center by averaging 4 corners
+            const pCellX = Math.floor(this.worldPositions.player.x);
+            const pCellZ = Math.floor(this.worldPositions.player.z);
+            const playerCellCenter = this.getCellCenterScreen(pCellX, pCellZ);
+            
+            if (playerCellCenter) {
+                grid.circle(playerCellCenter.x, playerCellCenter.y, 12);
                 grid.stroke({ color: 0x3b82f6, width: 3 });
+                grid.circle(playerCellCenter.x, playerCellCenter.y, 6);
+                grid.fill({ color: 0x3b82f6, alpha: 0.5 });
                 
                 const text = new PIXI.Text({
-                    text: `P(${this.worldPositions.player.x},${this.worldPositions.player.z})`,
+                    text: `P(${pCellX},${pCellZ})`,
                     style: { fontSize: 11, fill: 0x3b82f6, fontWeight: 'bold' }
                 });
-                text.x = playerPos.screenX + 15;
-                text.y = playerPos.screenY - 8;
+                text.x = playerCellCenter.x + 15;
+                text.y = playerCellCenter.y - 8;
                 this.containers.debug.addChild(text);
             }
             
             // Enemy positions
             this.worldPositions.enemies.forEach((pos, i) => {
-                const enemyPos = DDOOBackground.project3DToScreen(pos.x, pos.y, pos.z);
-                if (enemyPos && enemyPos.visible) {
-                    grid.circle(enemyPos.screenX, enemyPos.screenY, 10);
+                const eCellX = Math.floor(pos.x);
+                const eCellZ = Math.floor(pos.z);
+                const enemyCellCenter = this.getCellCenterScreen(eCellX, eCellZ);
+                
+                if (enemyCellCenter) {
+                    grid.circle(enemyCellCenter.x, enemyCellCenter.y, 10);
                     grid.stroke({ color: 0xef4444, width: 3 });
+                    grid.circle(enemyCellCenter.x, enemyCellCenter.y, 5);
+                    grid.fill({ color: 0xef4444, alpha: 0.5 });
                     
                     const text = new PIXI.Text({
-                        text: `E${i}(${pos.x},${pos.z})`,
+                        text: `E${i}(${eCellX},${eCellZ})`,
                         style: { fontSize: 11, fill: 0xef4444, fontWeight: 'bold' }
                     });
-                    text.x = enemyPos.screenX + 12;
-                    text.y = enemyPos.screenY - 8;
+                    text.x = enemyCellCenter.x + 12;
+                    text.y = enemyCellCenter.y - 8;
                     this.containers.debug.addChild(text);
                 }
             });
