@@ -65,8 +65,9 @@ const Game = {
     worldPositions: {
         player: { x: 2.5, y: 0, z: 1.5 },   // Cell (2,1) center
         enemies: [
-            { x: 6.5, y: 0, z: 0.5 },   // Cell (6,0) center
-            { x: 7.5, y: 0, z: 1.5 }    // Cell (7,1) center
+            { x: 5.5, y: 0, z: 1.5 },   // Cell (5,1) center - front line
+            { x: 6.5, y: 0, z: 1.5 },   // Cell (6,1) center - behind first
+            { x: 7.5, y: 0, z: 1.5 }    // Cell (7,1) center - back line
         ]
     },
     
@@ -2504,7 +2505,9 @@ const Game = {
         // KNOCKBACK: Push enemy back
         if (knockback > 0) {
             const newEnemyX = Math.min(this.arena.width - 1, enemyWorldPos.x + knockback);
-            await this.knockbackEnemy(enemyIndex, newEnemyX, enemyWorldPos.z);
+            // Collision damage is 50% of base card damage
+            const collisionDmg = Math.max(3, Math.floor((cardData.damage || 8) * 0.5));
+            await this.knockbackEnemy(enemyIndex, newEnemyX, enemyWorldPos.z, 0.15, collisionDmg);
             console.log(`[Game] Enemy ${enemyIndex} knocked back: ${enemyWorldPos.x} -> ${newEnemyX}`);
         }
         
@@ -2572,19 +2575,53 @@ const Game = {
         });
     },
     
-    // Enemy knockback animation
-    knockbackEnemy(enemyIndex, newX, newZ, duration = 0.15) {
-        return new Promise(resolve => {
-            const enemyWorldPos = this.worldPositions.enemies[enemyIndex];
-            if (!enemyWorldPos) {
-                resolve();
-                return;
+    // Enemy knockback animation with collision detection
+    async knockbackEnemy(enemyIndex, newX, newZ, duration = 0.15, collisionDamage = 5) {
+        const enemyWorldPos = this.worldPositions.enemies[enemyIndex];
+        if (!enemyWorldPos) return;
+        
+        // Ensure target position is at cell center
+        const targetCellX = Math.floor(newX);
+        const targetCellZ = Math.floor(newZ);
+        let finalX = targetCellX + 0.5;
+        let finalZ = targetCellZ + 0.5;
+        
+        // Check for collision with another enemy at target position
+        const collidedEnemyIndex = this.findEnemyAtCell(targetCellX, targetCellZ, enemyIndex);
+        
+        if (collidedEnemyIndex !== -1) {
+            // Collision detected!
+            console.log(`[Game] Knockback collision! Enemy ${enemyIndex} -> Enemy ${collidedEnemyIndex}`);
+            
+            // Deal collision damage to both enemies
+            this.applyCollisionDamage(enemyIndex, collidedEnemyIndex, collisionDamage);
+            
+            // Calculate chain knockback direction (push further back)
+            const knockbackDir = Math.sign(newX - enemyWorldPos.x) || 1;  // Default to right if no movement
+            const chainKnockbackX = targetCellX + knockbackDir;
+            
+            // First, chain knockback the collided enemy
+            await this.chainKnockback(collidedEnemyIndex, chainKnockbackX, targetCellZ, collisionDamage);
+            
+            // Now move the original enemy to the freed cell
+            // (or stop before if still occupied)
+            if (this.findEnemyAtCell(targetCellX, targetCellZ, enemyIndex) === -1) {
+                finalX = targetCellX + 0.5;
+                finalZ = targetCellZ + 0.5;
+            } else {
+                // Still occupied, stop one cell before
+                const stopCellX = targetCellX - knockbackDir;
+                finalX = stopCellX + 0.5;
+                finalZ = targetCellZ + 0.5;
             }
-            
-            // Ensure target position is at cell center
-            const finalX = Math.floor(newX) + 0.5;
-            const finalZ = Math.floor(newZ) + 0.5;
-            
+        }
+        
+        // Clamp to arena bounds
+        finalX = Math.max(0.5, Math.min(this.arena.width - 0.5, finalX));
+        finalZ = Math.max(0.5, Math.min(this.arena.depth - 0.5, finalZ));
+        
+        // Animate knockback
+        return new Promise(resolve => {
             gsap.to(enemyWorldPos, {
                 x: finalX,
                 z: finalZ,
@@ -2594,7 +2631,114 @@ const Game = {
                     this.updateAllCharacterPositions();
                     this.refreshTargetHighlights();
                 },
-                onComplete: resolve
+                onComplete: () => {
+                    enemyWorldPos.x = finalX;
+                    enemyWorldPos.z = finalZ;
+                    this.updateAllCharacterPositions();
+                    resolve();
+                }
+            });
+        });
+    },
+    
+    // Find enemy at specific cell (excluding specified index)
+    findEnemyAtCell(cellX, cellZ, excludeIndex = -1) {
+        for (let i = 0; i < this.worldPositions.enemies.length; i++) {
+            if (i === excludeIndex) continue;
+            const pos = this.worldPositions.enemies[i];
+            if (!pos) continue;
+            if (Math.floor(pos.x) === cellX && Math.floor(pos.z) === cellZ) {
+                return i;
+            }
+        }
+        return -1;
+    },
+    
+    // Apply collision damage to both enemies
+    applyCollisionDamage(enemy1Index, enemy2Index, damage) {
+        const enemy1 = this.enemySprites[enemy1Index];
+        const enemy2 = this.enemySprites[enemy2Index];
+        const enemy1Data = this.state.enemies[enemy1Index];
+        const enemy2Data = this.state.enemies[enemy2Index];
+        
+        // Impact VFX
+        if (enemy1) {
+            DDOORenderer.rapidFlash(enemy1, 0xffaa00);  // Orange flash
+            DDOOFloater.showOnCharacter(enemy1, `${damage}`, 'collision');
+        }
+        if (enemy2) {
+            DDOORenderer.rapidFlash(enemy2, 0xffaa00);
+            DDOOFloater.showOnCharacter(enemy2, `${damage}`, 'collision');
+        }
+        
+        // Apply damage
+        if (enemy1Data) {
+            enemy1Data.hp = Math.max(0, enemy1Data.hp - damage);
+            this.updateHPBar(enemy1, enemy1Data);
+        }
+        if (enemy2Data) {
+            enemy2Data.hp = Math.max(0, enemy2Data.hp - damage);
+            this.updateHPBar(enemy2, enemy2Data);
+        }
+        
+        // Screen shake for impact
+        if (typeof DDOOBackground !== 'undefined') {
+            DDOOBackground.shake(0.15, 3);
+        }
+        
+        // Show collision message
+        this.showMessage('CRASH!', 400);
+        console.log(`[Game] Collision damage: Enemy ${enemy1Index} and ${enemy2Index} take ${damage} damage each`);
+    },
+    
+    // Chain knockback (recursive, with damage reduction)
+    async chainKnockback(enemyIndex, newCellX, newCellZ, damage, depth = 0) {
+        // Prevent infinite chain (max 3 enemies)
+        if (depth >= 3) return;
+        
+        const enemyWorldPos = this.worldPositions.enemies[enemyIndex];
+        if (!enemyWorldPos) return;
+        
+        // Clamp to arena bounds
+        const clampedX = Math.max(0, Math.min(this.arena.width - 1, newCellX));
+        const clampedZ = Math.max(0, Math.min(this.arena.depth - 1, newCellZ));
+        
+        // Check for another collision
+        const nextCollision = this.findEnemyAtCell(clampedX, clampedZ, enemyIndex);
+        
+        if (nextCollision !== -1) {
+            // Chain collision!
+            const reducedDamage = Math.max(2, Math.floor(damage * 0.7));  // 30% damage reduction per chain
+            console.log(`[Game] Chain collision ${depth + 1}! Enemy ${enemyIndex} -> Enemy ${nextCollision}`);
+            
+            this.applyCollisionDamage(enemyIndex, nextCollision, reducedDamage);
+            
+            // Continue chain
+            const knockbackDir = Math.sign(newCellX - Math.floor(enemyWorldPos.x)) || 1;
+            const nextKnockbackX = clampedX + knockbackDir;
+            
+            await this.chainKnockback(nextCollision, nextKnockbackX, clampedZ, reducedDamage, depth + 1);
+        }
+        
+        // Move this enemy (after chain is resolved)
+        const finalX = clampedX + 0.5;
+        const finalZ = clampedZ + 0.5;
+        
+        return new Promise(resolve => {
+            gsap.to(enemyWorldPos, {
+                x: finalX,
+                z: finalZ,
+                duration: 0.12,
+                ease: 'power2.out',
+                onUpdate: () => {
+                    this.updateAllCharacterPositions();
+                },
+                onComplete: () => {
+                    enemyWorldPos.x = finalX;
+                    enemyWorldPos.z = finalZ;
+                    this.updateAllCharacterPositions();
+                    resolve();
+                }
             });
         });
     },
