@@ -86,21 +86,69 @@ const Game = {
     
     // ==================== Card System (Canvas-based) ====================
     
+    // Card Database - Dark Souls Style
     cardDatabase: {
-        strike: { name: 'Strike', cost: 1, type: 'attack', damage: 6, color: 0xef4444 },
-        defend: { name: 'Defend', cost: 1, type: 'skill', block: 5, color: 0x3b82f6 },
-        bash: { name: 'Bash', cost: 2, type: 'attack', damage: 10, color: 0xef4444 },
-        dash: { name: 'Dash', cost: 1, type: 'move', color: 0x22c55e }
+        // === ATTACKS ===
+        slash: { 
+            name: 'Slash', cost: 1, type: 'attack', damage: 6, 
+            color: 0xef4444, desc: '6 DMG'
+        },
+        heavySlash: { 
+            name: 'Heavy', cost: 2, type: 'attack', damage: 12, 
+            color: 0xff6b35, desc: '12 DMG'
+        },
+        thrust: { 
+            name: 'Thrust', cost: 1, type: 'attack', damage: 8, 
+            color: 0xef4444, desc: '8 DMG, Pierce'
+        },
+        backstab: { 
+            name: 'Backstab', cost: 2, type: 'attack', damage: 20, 
+            color: 0x8b0000, desc: '20 DMG'
+        },
+        
+        // === DEFENSE ===
+        block: { 
+            name: 'Block', cost: 1, type: 'skill', block: 5, 
+            color: 0x3b82f6, desc: '+5 Block'
+        },
+        ironFlesh: { 
+            name: 'Iron', cost: 2, type: 'skill', block: 12, 
+            color: 0x6b7280, desc: '+12 Block'
+        },
+        parry: { 
+            name: 'Parry', cost: 1, type: 'skill', block: 8, interrupt: 800,
+            color: 0xfbbf24, desc: '+8 Block, Interrupt'
+        },
+        
+        // === MOVEMENT ===
+        roll: { 
+            name: 'Roll', cost: 1, type: 'move', dodge: 2, 
+            color: 0x22c55e, desc: 'Dodge Back'
+        },
+        quickstep: { 
+            name: 'Step', cost: 0, type: 'move', dodge: 1, 
+            color: 0x10b981, desc: 'Free Move'
+        },
+        
+        // === SPECIAL ===
+        estus: { 
+            name: 'Estus', cost: 2, type: 'skill', heal: 15, 
+            color: 0xf59e0b, desc: 'Heal 15 HP'
+        },
+        riposte: { 
+            name: 'Riposte', cost: 1, type: 'attack', damage: 15, 
+            color: 0xdc2626, desc: '15 DMG (After Parry)'
+        }
     },
     
     // Card visual settings
     cardConfig: {
-        width: 80,
-        height: 110,
-        spacing: 15,
-        hoverScale: 1.15,
-        hoverY: -25,
-        dragScale: 1.1
+        width: 70,
+        height: 95,
+        spacing: 8,
+        hoverScale: 1.2,
+        hoverY: -20,
+        dragScale: 1.15
     },
     
     // Card state
@@ -180,8 +228,8 @@ const Game = {
         // Create card system
         this.initCardSystem();
         
-        // Draw initial hand
-        this.drawHand(['strike', 'strike', 'defend', 'bash']);
+        // Draw initial hand (5 cards)
+        this.drawHand(['slash', 'slash', 'thrust', 'block', 'roll']);
         
         // UI
         this.createBattleUI();
@@ -685,71 +733,94 @@ const Game = {
     drawCardUI() {
         const { width, height } = this.cardAreaSize;
         
-        // Background gradient
+        console.log(`[Game] Drawing card UI: ${width}x${height}`);
+        
+        // Background
         const bg = new PIXI.Graphics();
         bg.rect(0, 0, width, height);
-        bg.fill({ color: 0x0a0a12 });
-        
-        // Top border line
-        bg.moveTo(0, 0);
-        bg.lineTo(width, 0);
-        bg.stroke({ color: 0x333355, width: 2 });
-        
+        bg.fill({ color: 0x0d0d1a });
+        bg.moveTo(0, 2);
+        bg.lineTo(width, 2);
+        bg.stroke({ color: 0x4a4a6a, width: 2 });
         this.cards.uiContainer.addChild(bg);
         
-        // Energy display (left side)
+        // Energy orb (left)
+        const energyBg = new PIXI.Graphics();
+        energyBg.circle(35, height / 2, 25);
+        energyBg.fill({ color: 0x1a1a2e });
+        energyBg.stroke({ color: 0xfbbf24, width: 3 });
+        this.cards.uiContainer.addChild(energyBg);
+        
         this.cards.energyText = new PIXI.Text({
-            text: `${this.state.player.energy}/${this.state.player.maxEnergy}`,
+            text: `${this.state.player.energy}`,
             style: {
-                fontFamily: 'Arial Black',
-                fontSize: 28,
-                fill: 0xfbbf24,
-                stroke: { color: 0x000000, width: 3 }
+                fontFamily: 'Arial',
+                fontSize: 24,
+                fontWeight: 'bold',
+                fill: 0xfbbf24
             }
         });
-        this.cards.energyText.x = 20;
-        this.cards.energyText.y = height / 2 - 15;
+        this.cards.energyText.anchor.set(0.5);
+        this.cards.energyText.x = 35;
+        this.cards.energyText.y = height / 2;
         this.cards.uiContainer.addChild(this.cards.energyText);
         
-        // End turn button (right side)
-        const btnWidth = 100;
-        const btnHeight = 40;
+        // End turn button (right)
+        const btnX = width - 80;
         const btn = new PIXI.Graphics();
-        btn.roundRect(width - btnWidth - 20, height / 2 - btnHeight / 2, btnWidth, btnHeight, 8);
-        btn.fill({ color: 0x444466 });
-        btn.stroke({ color: 0x666688, width: 2 });
+        btn.roundRect(btnX, height / 2 - 18, 65, 36, 6);
+        btn.fill({ color: 0x3d3d5c });
+        btn.stroke({ color: 0x5a5a7a, width: 2 });
         btn.eventMode = 'static';
         btn.cursor = 'pointer';
-        btn.on('pointerdown', () => this.endTurn());
+        btn.on('pointerdown', () => {
+            this.hapticFeedback('medium');
+            this.endTurn();
+        });
+        btn.on('pointerover', () => btn.tint = 0xcccccc);
+        btn.on('pointerout', () => btn.tint = 0xffffff);
+        this.cards.uiContainer.addChild(btn);
         
         const btnText = new PIXI.Text({
             text: 'END',
-            style: { fontFamily: 'Arial', fontSize: 16, fill: 0xffffff, fontWeight: 'bold' }
+            style: { fontFamily: 'Arial', fontSize: 14, fontWeight: 'bold', fill: 0xffffff }
         });
-        btnText.x = width - btnWidth - 20 + (btnWidth - btnText.width) / 2;
-        btnText.y = height / 2 - 8;
-        
-        this.cards.uiContainer.addChild(btn);
+        btnText.anchor.set(0.5);
+        btnText.x = btnX + 32;
+        btnText.y = height / 2;
         this.cards.uiContainer.addChild(btnText);
     },
     
     // Draw cards in hand
     drawHand(cardIds) {
+        console.log(`[Game] Drawing hand: ${cardIds.join(', ')}`);
+        
         // Clear existing
-        this.cards.sprites.forEach(s => s.destroy());
+        this.cards.sprites.forEach(s => {
+            if (s.parent) s.parent.removeChild(s);
+            s.destroy({ children: true });
+        });
         this.cards.sprites = [];
         this.cards.hand = cardIds.map(id => ({ id, ...this.cardDatabase[id] }));
         
         const { width, height } = this.cardAreaSize;
         const { width: cardW, height: cardH, spacing } = this.cardConfig;
         
-        const totalWidth = cardIds.length * cardW + (cardIds.length - 1) * spacing;
-        const startX = (width - totalWidth) / 2;
+        if (width === 0 || height === 0) {
+            console.warn('[Game] Card area size is 0, skipping drawHand');
+            return;
+        }
+        
+        const totalWidth = cardIds.length * (cardW + spacing) - spacing;
+        const startX = Math.max(80, (width - totalWidth) / 2);  // Leave space for energy
         const baseY = height / 2;
         
         cardIds.forEach((cardId, i) => {
             const cardData = this.cardDatabase[cardId];
-            if (!cardData) return;
+            if (!cardData) {
+                console.warn(`[Game] Card not found: ${cardId}`);
+                return;
+            }
             
             const card = this.createCardSprite(cardData, i);
             card.x = startX + i * (cardW + spacing) + cardW / 2;
@@ -758,9 +829,12 @@ const Game = {
             card.baseY = card.y;
             card.cardIndex = i;
             card.cardId = cardId;
+            card.zIndex = i;
             
             this.cards.container.addChild(card);
             this.cards.sprites.push(card);
+            
+            console.log(`[Game] Card ${cardId} at (${card.x}, ${card.y})`);
         });
     },
     
@@ -771,51 +845,87 @@ const Game = {
         const container = new PIXI.Container();
         container.pivot.set(w / 2, h / 2);
         
-        // Card background
+        // Card background with gradient effect
         const bg = new PIXI.Graphics();
-        bg.roundRect(0, 0, w, h, 8);
+        bg.roundRect(0, 0, w, h, 6);
         bg.fill({ color: 0x1a1a2e });
-        bg.stroke({ color: cardData.color || 0x666666, width: 3 });
+        bg.roundRect(0, 0, w, h, 6);
+        bg.stroke({ color: cardData.color || 0x666666, width: 2 });
         container.addChild(bg);
         
-        // Cost circle
+        // Inner highlight
+        const inner = new PIXI.Graphics();
+        inner.roundRect(3, 3, w - 6, h - 6, 4);
+        inner.stroke({ color: 0x2a2a4e, width: 1 });
+        container.addChild(inner);
+        
+        // Cost circle (top-left)
         const costCircle = new PIXI.Graphics();
-        costCircle.circle(12, 12, 14);
+        costCircle.circle(0, 0, 12);
         costCircle.fill({ color: 0xfbbf24 });
         costCircle.stroke({ color: 0x000000, width: 2 });
+        costCircle.x = 12;
+        costCircle.y = 12;
         container.addChild(costCircle);
         
         const costText = new PIXI.Text({
             text: `${cardData.cost}`,
-            style: { fontFamily: 'Arial Black', fontSize: 16, fill: 0x000000 }
+            style: { fontFamily: 'Arial', fontSize: 14, fontWeight: 'bold', fill: 0x000000 }
         });
-        costText.x = 12 - costText.width / 2;
-        costText.y = 12 - costText.height / 2;
+        costText.anchor.set(0.5);
+        costText.x = 12;
+        costText.y = 12;
         container.addChild(costText);
         
-        // Card name
+        // Card name (top)
         const nameText = new PIXI.Text({
             text: cardData.name,
-            style: { fontFamily: 'Arial', fontSize: 12, fill: 0xffffff, fontWeight: 'bold' }
+            style: { fontFamily: 'Arial', fontSize: 11, fontWeight: 'bold', fill: 0xffffff }
         });
-        nameText.x = (w - nameText.width) / 2;
-        nameText.y = h - 30;
+        nameText.anchor.set(0.5, 0);
+        nameText.x = w / 2;
+        nameText.y = 6;
         container.addChild(nameText);
         
-        // Damage/block value
-        if (cardData.damage || cardData.block) {
+        // Center value (damage/block/etc)
+        let valueStr = '';
+        if (cardData.damage) valueStr = `${cardData.damage}`;
+        else if (cardData.block) valueStr = `${cardData.block}`;
+        else if (cardData.heal) valueStr = `+${cardData.heal}`;
+        
+        if (valueStr) {
             const valText = new PIXI.Text({
-                text: cardData.damage ? `${cardData.damage}` : `${cardData.block}`,
-                style: { fontFamily: 'Arial Black', fontSize: 24, fill: cardData.color || 0xffffff }
+                text: valueStr,
+                style: { fontFamily: 'Arial', fontSize: 22, fontWeight: 'bold', fill: cardData.color || 0xffffff }
             });
-            valText.x = (w - valText.width) / 2;
-            valText.y = h / 2 - 10;
+            valText.anchor.set(0.5);
+            valText.x = w / 2;
+            valText.y = h / 2 - 5;
             container.addChild(valText);
         }
+        
+        // Description (bottom)
+        if (cardData.desc) {
+            const descText = new PIXI.Text({
+                text: cardData.desc,
+                style: { fontFamily: 'Arial', fontSize: 8, fill: 0xaaaaaa }
+            });
+            descText.anchor.set(0.5, 1);
+            descText.x = w / 2;
+            descText.y = h - 5;
+            container.addChild(descText);
+        }
+        
+        // Type indicator line at bottom
+        const typeLine = new PIXI.Graphics();
+        typeLine.roundRect(5, h - 3, w - 10, 2, 1);
+        typeLine.fill({ color: cardData.color || 0x666666 });
+        container.addChild(typeLine);
         
         // Make interactive
         container.eventMode = 'static';
         container.cursor = 'pointer';
+        container.hitArea = new PIXI.Rectangle(0, 0, w, h);
         
         // Hover events
         container.on('pointerover', () => this.onCardHover(container, true));
@@ -1145,19 +1255,60 @@ const Game = {
     },
     
     useSkillCard(cardData) {
+        // Block
         if (cardData.block) {
             this.state.player.block += cardData.block;
             DDOORenderer.rapidFlash(this.player, 0x4488ff);
             DDOOFloater.showOnCharacter(this.player, `+${cardData.block}`, 'block');
-            this.showMessage(`Block +${cardData.block}`, 800);
         }
+        
+        // Heal (Estus)
+        if (cardData.heal) {
+            const healAmount = Math.min(cardData.heal, this.state.player.maxHp - this.state.player.hp);
+            this.state.player.hp += healAmount;
+            DDOORenderer.rapidFlash(this.player, 0x22c55e);
+            DDOOFloater.showOnCharacter(this.player, `+${healAmount}`, 'heal');
+            DDOOBackground.screenFlash('#22c55e', 100);
+        }
+        
+        // Interrupt (Parry)
+        if (cardData.interrupt) {
+            this.enemySprites.forEach((enemy, i) => {
+                if (typeof Combat !== 'undefined') {
+                    Combat.interruptEnemy(i, cardData.interrupt);
+                }
+            });
+            DDOOBackground.screenFlash('#fbbf24', 80);
+            this.showMessage('PARRY!', 600);
+        }
+        
         this.updateUI();
     },
     
     useMoveCard(cardData) {
-        const dodgeX = Math.max(0.5, this.worldPositions.player.x - 2);
-        gsap.to(this.worldPositions.player, { x: dodgeX, duration: 0.2, ease: 'power2.out' });
-        this.showMessage('Dodge!', 600);
+        const dodgeAmount = cardData.dodge || 2;
+        const dodgeX = Math.max(0.5, this.worldPositions.player.x - dodgeAmount);
+        
+        // Quick roll animation
+        gsap.to(this.worldPositions.player, { 
+            x: dodgeX, 
+            duration: 0.15, 
+            ease: 'power2.out' 
+        });
+        
+        // Brief invincibility visual
+        gsap.to(this.player, {
+            alpha: 0.5,
+            duration: 0.1,
+            yoyo: true,
+            repeat: 1
+        });
+        
+        if (cardData.cost === 0) {
+            this.showMessage('Step!', 400);
+        } else {
+            this.showMessage('Roll!', 500);
+        }
     },
     
     // ==================== 디버그 UI ====================
@@ -1478,11 +1629,32 @@ const Game = {
         if (this.state.phase !== 'player') return;
         
         this.state.turn++;
-        this.showMessage(`턴 ${this.state.turn + 1}`, 1000);
         
-        // 에너지 회복
+        // Energy restore
         this.state.player.energy = this.state.player.maxEnergy;
+        
+        // Block decay (Dark Souls style - block resets each turn)
+        this.state.player.block = 0;
+        
+        // Draw new hand
+        const newHand = this.getRandomHand(5);
+        this.drawHand(newHand);
+        
         this.updateUI();
+        this.showMessage(`Turn ${this.state.turn + 1}`, 800);
+    },
+    
+    // Get random cards for new hand
+    getRandomHand(count) {
+        const availableCards = ['slash', 'slash', 'thrust', 'heavySlash', 'block', 'block', 'ironFlesh', 'parry', 'roll', 'quickstep', 'estus'];
+        const hand = [];
+        
+        for (let i = 0; i < count; i++) {
+            const idx = Math.floor(Math.random() * availableCards.length);
+            hand.push(availableCards[idx]);
+        }
+        
+        return hand;
     },
     
     // 테마 변경
