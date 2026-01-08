@@ -68,63 +68,188 @@ const KnockbackSystem = {
         const newPos = this.game.getCellCenter(unit.gridX, unit.gridZ);
         if (!newPos) return;
         
+        // Hit effects at impact moment
+        if (typeof CombatEffects !== 'undefined') {
+            CombatEffects.screenShake(12, 200);
+            CombatEffects.screenFlash('#ffaa00', 80, 0.3);
+            CombatEffects.hitStop(60);
+        }
+        
         // Knockback animation
         return new Promise(resolve => {
             const startX = unit.sprite.x;
             const startY = unit.sprite.y;
+            const distance = Math.abs(newPos.x - startX);
             
-            // Calculate arc for knockback
-            const midY = startY - 25; // Arc up
+            // Calculate dramatic arc - higher for longer distances
+            const arcHeight = Math.max(50, distance * 0.4);
+            const midY = startY - arcHeight;
+            
+            // Create motion blur / afterimage effect
+            this.createAfterImage(unit.sprite, startX, startY);
             
             gsap.timeline()
-                // Hit reaction - squash
+                // Hit reaction - violent squash & flash
                 .to(unit.sprite.scale, { 
-                    x: 0.7, 
-                    y: 1.3, 
-                    duration: 0.05 
+                    x: 0.5, 
+                    y: 1.5, 
+                    duration: 0.04 
                 })
-                // Fly back in arc
+                .call(() => {
+                    // Impact particles at start
+                    if (typeof CombatEffects !== 'undefined') {
+                        CombatEffects.impactEffect(startX, startY - 30, 0xff8800, 1.2);
+                        this.createDustCloud(startX, startY);
+                    }
+                })
+                // Fly back in dramatic arc
                 .to(unit.sprite, {
                     x: newPos.x,
                     y: midY,
-                    duration: 0.15,
+                    duration: 0.18,
                     ease: 'power2.out'
                 })
                 .to(unit.sprite.scale, { 
-                    x: 1.2, 
-                    y: 0.8, 
-                    duration: 0.1 
+                    x: 1.4, 
+                    y: 0.6, 
+                    duration: 0.12 
                 }, '<')
-                // Land
+                // Speed lines during flight
+                .call(() => {
+                    this.createSpeedLines(unit.sprite.x, unit.sprite.y, newPos.x > startX ? 1 : -1);
+                }, null, '<+=0.05')
+                // Land with impact
                 .to(unit.sprite, {
                     y: newPos.y,
-                    duration: 0.1,
-                    ease: 'bounce.out'
+                    duration: 0.12,
+                    ease: 'power3.in'
+                })
+                // Squash on landing
+                .to(unit.sprite.scale, { 
+                    x: 1.3, 
+                    y: 0.7, 
+                    duration: 0.05
+                })
+                .call(() => {
+                    // Landing dust
+                    this.createDustCloud(newPos.x, newPos.y);
+                    if (typeof CombatEffects !== 'undefined') {
+                        CombatEffects.screenShake(6, 100);
+                    }
+                })
+                // Bounce recovery
+                .to(unit.sprite.scale, { 
+                    x: 0.9, 
+                    y: 1.1, 
+                    duration: 0.08
                 })
                 .to(unit.sprite.scale, { 
                     x: 1, 
                     y: 1, 
-                    duration: 0.15,
-                    ease: 'elastic.out(1, 0.5)'
-                }, '<')
+                    duration: 0.2,
+                    ease: 'elastic.out(1, 0.4)'
+                })
                 // Update zIndex and resolve
                 .call(() => {
                     unit.sprite.zIndex = Math.floor(newPos.y);
-                    
-                    // Show knockback effect
-                    if (typeof CombatEffects !== 'undefined') {
-                        CombatEffects.burstParticles(
-                            unit.sprite.x, 
-                            unit.sprite.y - 30, 
-                            0xffaa00, 
-                            5, 
-                            40
-                        );
-                    }
-                    
                     resolve();
                 });
         });
+    },
+    
+    // ==========================================
+    // 잔상 효과
+    // ==========================================
+    createAfterImage(sprite, x, y) {
+        if (!this.game?.app) return;
+        
+        for (let i = 0; i < 3; i++) {
+            setTimeout(() => {
+                const ghost = new PIXI.Graphics();
+                ghost.beginFill(0xffffff, 0.4 - i * 0.1);
+                ghost.drawEllipse(0, -30, 25, 40);
+                ghost.endFill();
+                ghost.x = x;
+                ghost.y = y;
+                this.game.app.stage.addChild(ghost);
+                
+                gsap.to(ghost, {
+                    alpha: 0,
+                    duration: 0.2,
+                    onComplete: () => {
+                        this.game.app.stage.removeChild(ghost);
+                        ghost.destroy();
+                    }
+                });
+            }, i * 30);
+        }
+    },
+    
+    // ==========================================
+    // 먼지 구름 효과
+    // ==========================================
+    createDustCloud(x, y) {
+        if (!this.game?.app) return;
+        
+        for (let i = 0; i < 8; i++) {
+            const dust = new PIXI.Graphics();
+            const size = 5 + Math.random() * 8;
+            dust.beginFill(0xccaa88, 0.6);
+            dust.drawCircle(0, 0, size);
+            dust.endFill();
+            dust.x = x + (Math.random() - 0.5) * 30;
+            dust.y = y - 5;
+            this.game.app.stage.addChild(dust);
+            
+            const angle = Math.random() * Math.PI - Math.PI / 2;
+            const distance = 20 + Math.random() * 30;
+            
+            gsap.to(dust, {
+                x: dust.x + Math.cos(angle) * distance,
+                y: dust.y + Math.sin(angle) * distance - 15,
+                alpha: 0,
+                duration: 0.4 + Math.random() * 0.2,
+                ease: 'power2.out',
+                onComplete: () => {
+                    this.game.app.stage.removeChild(dust);
+                    dust.destroy();
+                }
+            });
+            
+            gsap.to(dust.scale, {
+                x: 0.5,
+                y: 0.5,
+                duration: 0.4
+            });
+        }
+    },
+    
+    // ==========================================
+    // 속도선 효과
+    // ==========================================
+    createSpeedLines(x, y, direction) {
+        if (!this.game?.app) return;
+        
+        for (let i = 0; i < 5; i++) {
+            const line = new PIXI.Graphics();
+            line.lineStyle(2, 0xffffff, 0.7);
+            line.moveTo(0, 0);
+            line.lineTo(-direction * (30 + Math.random() * 20), 0);
+            line.x = x + (Math.random() - 0.5) * 20;
+            line.y = y - 20 - Math.random() * 40;
+            this.game.app.stage.addChild(line);
+            
+            gsap.to(line, {
+                x: line.x + direction * 30,
+                alpha: 0,
+                duration: 0.15,
+                ease: 'power2.out',
+                onComplete: () => {
+                    this.game.app.stage.removeChild(line);
+                    line.destroy();
+                }
+            });
+        }
     },
     
     // ==========================================
