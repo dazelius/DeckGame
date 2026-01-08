@@ -24,10 +24,10 @@ const CardSystem = {
             desc: 'Deal 8 damage. Knockback. Melee: Frontline only.' 
         },
         cleave: { 
-            name: 'Cleave', cost: 1, type: 'attack', damage: 8, 
+            name: 'Cleave', cost: 2, type: 'attack', damage: 6, 
             target: 'all', melee: true, frontOnly: false, globalAoe: true,
             aoe: { width: 10, depth: 3 },
-            desc: 'Deal 8 damage to ALL enemies.' 
+            desc: 'Deal 6 damage to ALL enemies.' 
         },
         ironWave: { 
             name: 'Iron Wave', cost: 1, type: 'attack', damage: 5, block: 5, 
