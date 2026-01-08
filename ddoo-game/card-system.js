@@ -10,36 +10,38 @@ const CardSystem = {
     // ==========================================
     cards: {
         // === 공격 카드 ===
+        // 근접 공격은 모두 최전선 우선 (레인 전략)
         strike: { 
             name: 'Strike', cost: 1, type: 'attack', damage: 6, 
-            target: 'enemy', melee: true, 
+            target: 'enemy', melee: true, frontOnly: true,
             aoe: { width: 2, depth: 1 },
-            desc: 'Pierce 2 cells. Deal 6 damage' 
+            desc: 'Pierce 2 cells. Deal 6 damage. Melee: Frontline only.' 
         },
         bash: { 
             name: 'Bash', cost: 2, type: 'attack', damage: 8, vulnerable: 2, 
             target: 'enemy', melee: true, knockback: 1, frontOnly: true,
             aoe: { width: 1, depth: 1 },
-            desc: 'Deal 8 damage. Knockback 1 cell. Targets frontline only.' 
+            desc: 'Deal 8 damage. Knockback. Melee: Frontline only.' 
         },
         cleave: { 
             name: 'Cleave', cost: 1, type: 'attack', damage: 8, 
-            target: 'all', melee: true, 
+            target: 'all', melee: true, frontOnly: true,
             aoe: { width: 3, depth: 1 },
-            desc: 'Deal 8 damage to 3 cells wide' 
+            desc: 'Deal 8 damage to 3 cells wide. Melee: Frontline only.' 
         },
         ironWave: { 
             name: 'Iron Wave', cost: 1, type: 'attack', damage: 5, block: 5, 
-            target: 'enemy', melee: true, 
+            target: 'enemy', melee: true, frontOnly: true,
             aoe: { width: 1, depth: 1 },
-            desc: 'Gain 5 Block. Deal 5 damage' 
+            desc: 'Gain 5 Block. Deal 5 damage. Melee: Frontline only.' 
         },
+        // 원거리 공격은 아무나 타겟 가능
         fireBolt: { 
             name: 'Fire Bolt', cost: 2, type: 'attack', damage: 5, 
-            target: 'enemy', melee: false, 
+            target: 'enemy', melee: false, frontOnly: false,
             aoe: { width: 1, depth: 1 },
             createZone: 'fire',
-            desc: 'Ranged. Deal 5 damage. Creates burning ground (2 turns)' 
+            desc: 'Ranged. Deal 5 damage. Creates burning ground. Can target any enemy.' 
         },
         
         // === 스킬 카드 ===
