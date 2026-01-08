@@ -178,8 +178,8 @@ const Game = {
         // Initialize deck (2 of each card)
         this.initDeck();
         
-        // Generate initial enemies
-        this.generateEnemyUnits();
+        // Generate initial enemies (await to ensure enemies exist before rolling intents)
+        await this.generateEnemyUnits();
         
         // Start prepare phase
         this.startPreparePhase();
@@ -1408,7 +1408,7 @@ const Game = {
         console.log(`[Game] Placed ${unitType} at (${gridX}, ${gridZ}) for ${team}`);
     },
     
-    generateEnemyUnits() {
+    async generateEnemyUnits() {
         // Generate enemies based on turn
         const turn = this.state.turn;
         const enemyCount = Math.min(1 + Math.floor(turn / 2), 6);
@@ -1423,9 +1423,11 @@ const Game = {
             // Check if cell is occupied
             const occupied = this.state.enemyUnits.some(u => u.gridX === x && u.gridZ === z);
             if (!occupied) {
-                this.placeUnit(type, x, z, 'enemy');
+                await this.placeUnit(type, x, z, 'enemy');
             }
         }
+        
+        console.log(`[Game] Generated ${this.state.enemyUnits.length} enemies`);
     },
     
     // ==================== BATTLE PHASE (Turn-Based) ====================
@@ -1886,8 +1888,8 @@ const Game = {
         if (this.state.enemyUnits.length === 0) {
             this.showMessage('VICTORY!', 2000);
             // Generate new wave of enemies for next combat
-            setTimeout(() => {
-                this.generateEnemyUnits();
+            setTimeout(async () => {
+                await this.generateEnemyUnits();
                 this.startPreparePhase();
             }, 2000);
             return;
