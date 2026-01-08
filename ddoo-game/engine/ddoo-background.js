@@ -271,9 +271,9 @@ const DDOOBackground = {
         const self = this;
         const { width, depth, centerX, centerZ } = this.gridConfig;
         
-        // Floor size - EXACT match to grid (no margin)
-        const floorWidth = width;
-        const floorDepth = depth;
+        // Floor size - slight overhang to cover visible area
+        const floorWidth = width + 0.5;
+        const floorDepth = depth + 1;
         
         // 기본 바닥 (텍스처 로딩 전 폴백)
         const baseFloor = new THREE.Mesh(
