@@ -79,8 +79,8 @@ const Game = {
             hp: 25,
             damage: 8,
             range: 4,
-            sprite: 'goblinarcher.png',
-            scale: 0.35
+            sprite: 'ally_archer.png',
+            scale: 0.4
         },
         // Enemies
         goblin: {
