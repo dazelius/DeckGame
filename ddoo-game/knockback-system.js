@@ -5,6 +5,11 @@
 const KnockbackSystem = {
     game: null,
     
+    // 넉백 대미지 설정
+    KNOCKBACK_DAMAGE: 2,      // 기본 넉백 대미지
+    WALL_DAMAGE: 5,           // 벽 충돌 대미지
+    COLLISION_DAMAGE: 3,      // 유닛 충돌 대미지 (양쪽)
+    
     // ==========================================
     // 초기화
     // ==========================================
@@ -28,8 +33,9 @@ const KnockbackSystem = {
         
         // Check bounds
         if (newGridX < 0 || newGridX >= this.game.arena.width) {
-            // Hit wall - show wall impact effect
+            // Hit wall - show wall impact effect + WALL DAMAGE
             await this.wallImpact(unit);
+            this.dealKnockbackDamage(unit, this.WALL_DAMAGE, 'wall');
             return false;
         }
         
@@ -43,15 +49,54 @@ const KnockbackSystem = {
             // Chain knockback - push the blocking unit too
             const chainSuccess = await this.knockback(blockingUnit, direction, 1);
             if (!chainSuccess) {
-                // Blocking unit couldn't move, collision!
+                // Blocking unit couldn't move, collision! Both take damage
                 await this.collisionImpact(unit, blockingUnit);
+                this.dealKnockbackDamage(unit, this.COLLISION_DAMAGE, 'collision');
+                this.dealKnockbackDamage(blockingUnit, this.COLLISION_DAMAGE, 'collision');
                 return false;
             }
         }
         
         // Execute knockback movement
         await this.executeKnockback(unit, newGridX);
+        
+        // 넉백 성공 시 기본 대미지
+        this.dealKnockbackDamage(unit, this.KNOCKBACK_DAMAGE, 'knockback');
+        
         return true;
+    },
+    
+    // ==========================================
+    // 넉백 대미지 처리
+    // ==========================================
+    dealKnockbackDamage(unit, damage, type = 'knockback') {
+        if (!unit || unit.hp <= 0 || damage <= 0) return;
+        
+        // 대미지 적용
+        const isEnemy = unit.team === 'enemy';
+        if (isEnemy) {
+            this.game.dealDamage(unit, damage);
+        } else {
+            this.game.dealDamageToTarget(unit, damage);
+        }
+        
+        // 대미지 숫자 표시
+        if (typeof CombatEffects !== 'undefined' && unit.sprite) {
+            const colors = {
+                knockback: 'normal',
+                wall: 'bash',      // 벽 충돌은 주황색
+                collision: 'burn'  // 유닛 충돌은 빨강
+            };
+            
+            CombatEffects.showDamageNumber(
+                unit.sprite.x,
+                unit.sprite.y - 60,
+                damage,
+                colors[type] || 'normal'
+            );
+        }
+        
+        console.log(`[KnockbackSystem] ${type} damage: ${damage} to ${unit.name || unit.type}`);
     },
     
     // ==========================================
