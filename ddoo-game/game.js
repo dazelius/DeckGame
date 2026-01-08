@@ -724,8 +724,11 @@ const Game = {
             const cardDef = this.getCard(cardId);
             if (!cardDef) return;
             
+            // 코스트 부족 체크
+            const canAfford = this.state.cost >= cardDef.cost;
+            
             const cardEl = document.createElement('div');
-            cardEl.className = `card ${cardDef.type}`;
+            cardEl.className = `card ${cardDef.type}${canAfford ? '' : ' disabled'}`;
             cardEl.dataset.cardId = cardId;
             cardEl.dataset.index = index;
             
@@ -743,9 +746,11 @@ const Game = {
                 <div class="card-desc">${cardDef.desc}</div>
             `;
             
-            // Drag to play
-            cardEl.addEventListener('mousedown', (e) => this.startCardDrag(e, cardEl, cardId, index));
-            cardEl.addEventListener('touchstart', (e) => this.startCardDrag(e, cardEl, cardId, index), { passive: false });
+            // Drag to play (only if can afford)
+            if (canAfford) {
+                cardEl.addEventListener('mousedown', (e) => this.startCardDrag(e, cardEl, cardId, index));
+                cardEl.addEventListener('touchstart', (e) => this.startCardDrag(e, cardEl, cardId, index), { passive: false });
+            }
             
             handEl.appendChild(cardEl);
             

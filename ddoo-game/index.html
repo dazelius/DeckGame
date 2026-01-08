@@ -478,6 +478,45 @@
             border-color: #302040;
         }
         
+        /* 코스트 부족 - 비활성화 상태 */
+        .card.disabled {
+            filter: grayscale(70%) brightness(0.6);
+            cursor: not-allowed;
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        
+        .card.disabled::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 6px;
+            pointer-events: none;
+        }
+        
+        .card.disabled .card-cost {
+            filter: grayscale(100%);
+            background: radial-gradient(circle at 30% 30%, 
+                #666 0%, 
+                #333 100%) !important;
+        }
+        
+        .card.disabled:hover {
+            transform: translateY(0) scale(1);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.8);
+            z-index: auto;
+            margin-left: -25px;
+            margin-right: 0;
+        }
+        
+        .card.disabled:first-child:hover {
+            margin-left: 0;
+        }
+        
         /* Drag Ghost */
         .drag-card {
             background: linear-gradient(170deg, #3a3530 0%, #2a2825 50%, #1a1815 100%);
