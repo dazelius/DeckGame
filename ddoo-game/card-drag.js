@@ -99,19 +99,29 @@ const CardDrag = {
         this.dragState.startY = touch.clientY;
         this.dragState.cardEl = cardEl;
         
-        // Create ghost
+        // Create ghost with enhanced shadow
         const ghost = this.dragState.ghost;
+        const typeClass = cardDef.type || '';
         ghost.innerHTML = `
-            <div class="card drag-card" style="margin:0; box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
+            <div class="card ${typeClass} drag-card dealt" style="
+                margin: 0;
+                box-shadow: 
+                    0 30px 60px rgba(0,0,0,0.9),
+                    0 15px 30px rgba(0,0,0,0.7),
+                    0 0 50px rgba(0,0,0,0.5),
+                    inset 0 1px 0 rgba(255,255,255,0.1);
+                filter: drop-shadow(0 25px 25px rgba(0,0,0,0.8));
+            ">
                 <div class="card-cost">${cardDef.cost}</div>
                 <div class="card-name">${cardDef.name}</div>
+                <div class="card-type">${cardDef.type?.toUpperCase() || ''}</div>
                 <div class="card-desc">${cardDef.desc}</div>
             </div>
         `;
-        ghost.style.left = (touch.clientX - 45) + 'px';
-        ghost.style.top = (touch.clientY - 60) + 'px';
+        ghost.style.left = (touch.clientX - 70) + 'px';
+        ghost.style.top = (touch.clientY - 95) + 'px';
         ghost.style.opacity = '1';
-        ghost.style.transform = 'scale(1.15) rotate(-3deg)';
+        ghost.style.transform = 'scale(1.2) rotate(-5deg)';
         
         cardEl.style.opacity = '0.3';
         cardEl.style.transform = 'scale(0.9)';
@@ -133,8 +143,8 @@ const CardDrag = {
         const touch = e.touches ? e.touches[0] : e;
         
         const ghost = this.dragState.ghost;
-        ghost.style.left = (touch.clientX - 45) + 'px';
-        ghost.style.top = (touch.clientY - 60) + 'px';
+        ghost.style.left = (touch.clientX - 70) + 'px';
+        ghost.style.top = (touch.clientY - 95) + 'px';
         
         const cardDef = this.game.getCard(this.dragState.cardId);
         
