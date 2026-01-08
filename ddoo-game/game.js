@@ -2031,33 +2031,44 @@ const Game = {
         this.state.phase = 'battle';
         this.updatePhaseUI();
         
-        // Show enemy turn banner
+        // Resolve any collisions before battle
+        await this.resolveAllCollisions();
+        
+        // 1. ALLY PHASE - Player summons attack first (no banner)
+        const summons = this.state.playerUnits.filter(u => u.hp > 0 && !u.isHero && u.damage > 0);
+        if (summons.length > 0) {
+            console.log('[Game] Ally phase - summons attacking');
+            
+            for (const summon of summons) {
+                const target = this.state.enemyUnits.find(e => e.hp > 0);
+                if (target) {
+                    await this.summonAttack(summon, target);
+                    await this.resolveAllCollisions();
+                }
+            }
+            
+            await new Promise(r => setTimeout(r, 400));
+        }
+        
+        // Check if all enemies dead after ally attacks
+        if (this.state.enemyUnits.filter(e => e.hp > 0).length === 0) {
+            setTimeout(() => this.nextTurn(), 500);
+            return;
+        }
+        
+        // 2. ENEMY PHASE - Show banner then enemies attack
         if (typeof TurnEffects !== 'undefined') {
             TurnEffects.showEnemyTurn('ENEMY PHASE');
             await new Promise(r => setTimeout(r, 1200));
         }
         
-        // Resolve any collisions before battle
-        await this.resolveAllCollisions();
+        console.log('[Game] Enemy phase - executing intents');
         
-        console.log('[Game] Enemy turn - executing intents');
-        
-        // 1. Player summons attack (if any)
-        const summons = this.state.playerUnits.filter(u => u.hp > 0 && !u.isHero && u.damage > 0);
-        for (const summon of summons) {
-            const target = this.state.enemyUnits.find(e => e.hp > 0);
-            if (target) {
-                await this.summonAttack(summon, target);
-                await this.resolveAllCollisions(); // Check after each attack
-            }
-        }
-        
-        // 2. Enemies execute their intents (attack hero)
         for (const enemy of this.state.enemyUnits) {
             if (enemy.hp <= 0 || !enemy.intent) continue;
             
             await this.executeEnemyIntent(enemy);
-            await this.resolveAllCollisions(); // Check after each enemy action
+            await this.resolveAllCollisions();
             
             // Check if hero died
             if (this.state.hero && this.state.hero.hp <= 0) {
