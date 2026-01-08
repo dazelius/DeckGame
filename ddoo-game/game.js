@@ -1077,16 +1077,51 @@ const Game = {
                 }
             }
         } else {
-            // Ranged: Attack from current position (fireball, etc.)
-            const targetsInAoe = this.getEnemiesInAoe(targetEnemy.gridX, targetEnemy.gridZ, aoe);
-            await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage, {
-                createZone: cardDef.createZone || null
-            });
+            // Ranged: Attack from current position
             
-            // Deal damage to additional targets in AOE
-            for (const target of targetsInAoe) {
-                if (target !== targetEnemy && target.hp > 0) {
-                    await this.dealDamage(target, cardDef.damage);
+            // 십자가 패턴 처리 (Fireball 등)
+            if (cardDef.aoePattern === 'cross') {
+                const crossTargets = this.getEnemiesInCrossAoe(targetEnemy.gridX, targetEnemy.gridZ, 1);
+                
+                // 파이어볼 발사
+                await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage, {
+                    createZone: cardDef.createZone || null
+                });
+                
+                // 모든 십자가 영역의 적에게 대미지
+                for (const target of crossTargets) {
+                    if (target !== targetEnemy && target.hp > 0) {
+                        this.dealDamage(target, cardDef.damage);
+                        if (typeof CombatEffects !== 'undefined') {
+                            CombatEffects.showDamageNumber(target.sprite.x, target.sprite.y - 30, cardDef.damage, 'burn');
+                        }
+                    }
+                }
+                
+                // 십자가 영역에 불길 생성
+                if (cardDef.createZone && typeof GridAOE !== 'undefined') {
+                    const cells = this.getCrossAoeCells(targetEnemy.gridX, targetEnemy.gridZ, 1);
+                    for (const cell of cells) {
+                        GridAOE.createZone(cardDef.createZone, cell.x, cell.z);
+                    }
+                }
+            } else {
+                // 일반 원거리 공격
+                const targetsInAoe = this.getEnemiesInAoe(targetEnemy.gridX, targetEnemy.gridZ, aoe);
+                await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage, {
+                    createZone: cardDef.createZone || null
+                });
+                
+                // Deal damage to additional targets in AOE
+                for (const target of targetsInAoe) {
+                    if (target !== targetEnemy && target.hp > 0) {
+                        await this.dealDamage(target, cardDef.damage);
+                    }
+                }
+                
+                // Create zone effect for non-cross patterns
+                if (cardDef.createZone && typeof GridAOE !== 'undefined') {
+                    GridAOE.createZone(cardDef.createZone, targetEnemy.gridX, targetEnemy.gridZ);
                 }
             }
         }
@@ -1096,11 +1131,6 @@ const Game = {
             this.state.heroBlock += cardDef.block;
             this.updateBlockUI();
             this.showMessage(`+${cardDef.block} Block`, 500);
-        }
-        
-        // Create zone effect (handled in rangedAttack for fire)
-        if (cardDef.createZone && typeof GridAOE !== 'undefined') {
-            GridAOE.createZone(cardDef.createZone, targetEnemy.gridX, targetEnemy.gridZ);
         }
         
         // Check collisions after attack
@@ -1128,6 +1158,41 @@ const Game = {
         }
         
         return targets;
+    },
+    
+    // 십자가 형태 AOE - 중심점에서 상하좌우로 퍼짐
+    getEnemiesInCrossAoe(centerX, centerZ, range = 1) {
+        const targets = [];
+        const affectedCells = this.getCrossAoeCells(centerX, centerZ, range);
+        
+        for (const enemy of this.state.enemyUnits) {
+            if (enemy.hp <= 0) continue;
+            
+            for (const cell of affectedCells) {
+                if (enemy.gridX === cell.x && enemy.gridZ === cell.z) {
+                    targets.push(enemy);
+                    break;
+                }
+            }
+        }
+        
+        return targets;
+    },
+    
+    // 십자가 형태로 영향받는 셀 목록
+    getCrossAoeCells(centerX, centerZ, range = 1) {
+        const cells = [{ x: centerX, z: centerZ }]; // 중심
+        
+        // 상하좌우로 range만큼 확장
+        for (let i = 1; i <= range; i++) {
+            cells.push({ x: centerX - i, z: centerZ }); // 왼쪽
+            cells.push({ x: centerX + i, z: centerZ }); // 오른쪽
+            cells.push({ x: centerX, z: centerZ - i }); // 위
+            cells.push({ x: centerX, z: centerZ + i }); // 아래
+        }
+        
+        // 그리드 범위 내로 필터링
+        return cells.filter(c => c.x >= 0 && c.x < 10 && c.z >= 0 && c.z < 3);
     },
     
     async executeCard(cardId, handIndex) {

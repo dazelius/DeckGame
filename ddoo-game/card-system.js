@@ -41,7 +41,14 @@ const CardSystem = {
             target: 'enemy', melee: false, frontOnly: false,
             aoe: { width: 1, depth: 1 },
             createZone: 'fire',
-            desc: 'Ranged. Deal 5 damage. Creates burning ground. Can target any enemy.' 
+            desc: 'Ranged. Deal 5 damage. Creates burning ground.' 
+        },
+        fireBall: { 
+            name: 'Fireball', cost: 3, type: 'attack', damage: 8, 
+            target: 'enemy', melee: false, frontOnly: false,
+            aoePattern: 'cross', // 십자가 형태
+            createZone: 'fire',
+            desc: 'Ranged. Cross-shaped explosion. Deal 8 damage. Creates burning ground.' 
         },
         
         // === 스킬 카드 ===
@@ -78,7 +85,8 @@ const CardSystem = {
         bash: 2,
         cleave: 1,
         ironWave: 2,
-        fireBolt: 2,
+        fireBolt: 1,
+        fireBall: 1,
         summonKnight: 2,
         summonArcher: 2,
         heal: 1

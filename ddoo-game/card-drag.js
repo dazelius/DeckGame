@@ -184,10 +184,17 @@ const CardDrag = {
         this.drawTargetingCurvesToEnemies(cursorX, cursorY, targetEnemy, cardDef.frontOnly || false);
         
         if (targetEnemy) {
-            const aoe = cardDef.aoe || { width: 1, depth: 1 };
-            const targetsInAoe = this.game.getEnemiesInAoe(targetEnemy.gridX, targetEnemy.gridZ, aoe);
-            this.highlightEnemiesInAoe(targetsInAoe);
-            this.showAoeHighlight(targetEnemy.gridX, targetEnemy.gridZ, aoe);
+            // 십자가 패턴 처리
+            if (cardDef.aoePattern === 'cross') {
+                const crossTargets = this.game.getEnemiesInCrossAoe(targetEnemy.gridX, targetEnemy.gridZ, 1);
+                this.highlightEnemiesInAoe(crossTargets);
+                this.showCrossAoeHighlight(targetEnemy.gridX, targetEnemy.gridZ, 1);
+            } else {
+                const aoe = cardDef.aoe || { width: 1, depth: 1 };
+                const targetsInAoe = this.game.getEnemiesInAoe(targetEnemy.gridX, targetEnemy.gridZ, aoe);
+                this.highlightEnemiesInAoe(targetsInAoe);
+                this.showAoeHighlight(targetEnemy.gridX, targetEnemy.gridZ, aoe);
+            }
             
             ghost.style.transform = 'scale(1.2) rotate(0deg)';
             ghost.querySelector('.drag-card').style.borderColor = '#ff4444';
@@ -593,6 +600,33 @@ const CardDrag = {
     clearAoeHighlight() {
         if (this.aoeHighlight) {
             this.aoeHighlight.clear();
+        }
+    },
+    
+    // 십자가 형태 AOE 하이라이트
+    showCrossAoeHighlight(centerX, centerZ, range = 1) {
+        this.clearAoeHighlight();
+        
+        if (!this.aoeHighlight) {
+            this.aoeHighlight = new PIXI.Graphics();
+            this.aoeHighlight.zIndex = 5;
+            this.game.containers.effects.addChild(this.aoeHighlight);
+        }
+        
+        const graphics = this.aoeHighlight;
+        const cells = this.game.getCrossAoeCells(centerX, centerZ, range);
+        
+        for (const cell of cells) {
+            const corners = this.game.getCellCorners(cell.x, cell.z);
+            if (!corners) continue;
+            
+            graphics.moveTo(corners[0].x, corners[0].y);
+            graphics.lineTo(corners[1].x, corners[1].y);
+            graphics.lineTo(corners[2].x, corners[2].y);
+            graphics.lineTo(corners[3].x, corners[3].y);
+            graphics.closePath();
+            graphics.fill({ color: 0xff6600, alpha: 0.5 });
+            graphics.stroke({ color: 0xff8800, width: 3, alpha: 0.9 });
         }
     },
     
