@@ -1504,7 +1504,7 @@ const Game = {
             console.log('[Game] Ally phase - summons attacking');
             
             for (const summon of summons) {
-                const target = this.state.enemyUnits.find(e => e.hp > 0);
+                const target = this.findSummonTarget(summon);
                 if (target) {
                     await this.summonAttack(summon, target);
                     await this.resolveAllCollisions();
@@ -1601,6 +1601,36 @@ const Game = {
         } else {
             this.dealDamage(target, summon.damage);
         }
+    },
+    
+    // Find target for summon attack
+    // Rules: 1) Same lane (gridZ) first, 2) Closest X (rightmost = closest to enemy), 3) Adjacent lanes
+    findSummonTarget(summon) {
+        const allTargets = this.state.enemyUnits.filter(e => e.hp > 0);
+        if (allTargets.length === 0) return null;
+        
+        // Helper: find closest target (highest X = closest to enemy side = rightmost)
+        const findClosest = (targets) => {
+            if (targets.length === 0) return null;
+            return targets.reduce((closest, t) => 
+                t.gridX > closest.gridX ? t : closest
+            );
+        };
+        
+        // 1. Same lane targets (same gridZ)
+        const sameLine = allTargets.filter(t => t.gridZ === summon.gridZ);
+        if (sameLine.length > 0) {
+            return findClosest(sameLine);
+        }
+        
+        // 2. Adjacent lanes (gridZ +/- 1)
+        const adjacent = allTargets.filter(t => Math.abs(t.gridZ - summon.gridZ) === 1);
+        if (adjacent.length > 0) {
+            return findClosest(adjacent);
+        }
+        
+        // 3. Any target (fallback)
+        return findClosest(allTargets);
     },
     
     // Find target for enemy attack
