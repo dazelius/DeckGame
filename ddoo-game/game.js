@@ -118,9 +118,9 @@ const Game = {
         defend: { name: 'Defend', cost: 1, type: 'skill', block: 5, target: 'self', desc: 'Gain 5 Block' },
         bash: { 
             name: 'Bash', cost: 2, type: 'attack', damage: 8, vulnerable: 2, 
-            target: 'enemy', melee: true, 
-            aoe: { width: 1, depth: 1 },  // 단일 대상
-            desc: 'Deal 8 damage. Apply 2 Vulnerable' 
+            target: 'enemy', melee: true, knockback: 1,  // 1칸 넉백
+            aoe: { width: 1, depth: 1 },
+            desc: 'Deal 8 damage. Knockback 1 cell' 
         },
         cleave: { 
             name: 'Cleave', cost: 1, type: 'attack', damage: 8, 
@@ -181,6 +181,11 @@ const Game = {
         // Combat Effects
         if (typeof CombatEffects !== 'undefined') {
             CombatEffects.init(this.app);
+        }
+        
+        // Knockback System
+        if (typeof KnockbackSystem !== 'undefined') {
+            KnockbackSystem.init(this);
         }
         
         // Draw grid
@@ -1668,10 +1673,19 @@ const Game = {
             // Attack animation toward primary target
             await this.heroAttackAnimation(hero, targetEnemy, cardDef.damage);
             
+            // Apply knockback if card has it
+            if (cardDef.knockback && targetEnemy.hp > 0 && typeof KnockbackSystem !== 'undefined') {
+                await KnockbackSystem.knockback(targetEnemy, 1, cardDef.knockback);
+            }
+            
             // Deal damage to all targets in AOE (except primary which was already hit)
             for (const target of targetsInAoe) {
                 if (target !== targetEnemy && target.hp > 0) {
                     await this.dealDamage(target, cardDef.damage);
+                    // Also knockback AOE targets
+                    if (cardDef.knockback && target.hp > 0 && typeof KnockbackSystem !== 'undefined') {
+                        await KnockbackSystem.knockback(target, 1, cardDef.knockback);
+                    }
                 }
             }
         } else {
