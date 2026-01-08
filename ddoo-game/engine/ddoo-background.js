@@ -318,6 +318,11 @@ const DDOOBackground = {
         const self = this;
         const { width, depth, centerX, centerZ } = this.gridConfig;
         
+        // Wall dimensions to match floor overhang
+        const wallWidth = width + 2;  // Match floor width
+        const sideWallDepth = depth + 3;  // Match floor depth
+        const wallHeight = 7;
+        
         // 폴백 재질
         const fallbackMat = new THREE.MeshStandardMaterial({ 
             color: 0x1a1a28, 
@@ -334,10 +339,6 @@ const DDOOBackground = {
             tex.magFilter = THREE.NearestFilter;
             tex.minFilter = THREE.NearestFilter;
             
-            // Wall dimensions - match grid
-            const wallWidth = width;
-            const wallHeight = 7;
-            
             const wallMat = new THREE.MeshBasicMaterial({ 
                 map: tex, 
                 transparent: true,
@@ -350,7 +351,7 @@ const DDOOBackground = {
                 new THREE.PlaneGeometry(wallWidth, wallHeight),
                 wallMat
             );
-            backWall.position.set(centerX, wallHeight / 2 - 0.5, -0.5);
+            backWall.position.set(centerX, wallHeight / 2, 0);
             self.dungeonGroup.add(backWall);
             
             // Left wall
@@ -358,7 +359,7 @@ const DDOOBackground = {
             leftTex.magFilter = THREE.NearestFilter;
             leftTex.minFilter = THREE.NearestFilter;
             const leftWall = new THREE.Mesh(
-                new THREE.PlaneGeometry(6, wallHeight),
+                new THREE.PlaneGeometry(sideWallDepth, wallHeight),
                 new THREE.MeshBasicMaterial({ 
                     map: leftTex, 
                     transparent: true,
@@ -366,7 +367,7 @@ const DDOOBackground = {
                     fog: false
                 })
             );
-            leftWall.position.set(-1, wallHeight / 2, centerZ);
+            leftWall.position.set(0, wallHeight / 2, centerZ);
             leftWall.rotation.y = Math.PI / 2;
             self.dungeonGroup.add(leftWall);
             
@@ -375,7 +376,7 @@ const DDOOBackground = {
             rightTex.magFilter = THREE.NearestFilter;
             rightTex.minFilter = THREE.NearestFilter;
             const rightWall = new THREE.Mesh(
-                new THREE.PlaneGeometry(6, wallHeight),
+                new THREE.PlaneGeometry(sideWallDepth, wallHeight),
                 new THREE.MeshBasicMaterial({ 
                     map: rightTex, 
                     transparent: true,
@@ -383,26 +384,25 @@ const DDOOBackground = {
                     fog: false
                 })
             );
-            rightWall.position.set(width + 1, wallHeight / 2, centerZ);
+            rightWall.position.set(width, wallHeight / 2, centerZ);
             rightWall.rotation.y = -Math.PI / 2;
             self.dungeonGroup.add(rightWall);
         };
         wallImg.onerror = function() {
             console.warn('[DDOOBackground] bg-wall.png load failed');
             
-            const fallbackWallHeight = 7;
             // Fallback walls
-            const backWall = new THREE.Mesh(new THREE.PlaneGeometry(width, fallbackWallHeight), fallbackMat);
-            backWall.position.set(centerX, fallbackWallHeight / 2 - 0.5, -0.5);
+            const backWall = new THREE.Mesh(new THREE.PlaneGeometry(wallWidth, wallHeight), fallbackMat);
+            backWall.position.set(centerX, wallHeight / 2, 0);
             self.dungeonGroup.add(backWall);
             
-            const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(6, fallbackWallHeight), fallbackMat.clone());
-            leftWall.position.set(-1, fallbackWallHeight / 2, centerZ);
+            const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(sideWallDepth, wallHeight), fallbackMat.clone());
+            leftWall.position.set(0, wallHeight / 2, centerZ);
             leftWall.rotation.y = Math.PI / 2;
             self.dungeonGroup.add(leftWall);
             
-            const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(6, fallbackWallHeight), fallbackMat.clone());
-            rightWall.position.set(width + 1, fallbackWallHeight / 2, centerZ);
+            const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(sideWallDepth, wallHeight), fallbackMat.clone());
+            rightWall.position.set(width, wallHeight / 2, centerZ);
             rightWall.rotation.y = -Math.PI / 2;
             self.dungeonGroup.add(rightWall);
         };
