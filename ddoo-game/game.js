@@ -213,6 +213,12 @@ const Game = {
         // Generate initial enemies (await to ensure enemies exist before rolling intents)
         await this.generateEnemyUnits();
         
+        // Battle Start effect
+        if (typeof TurnEffects !== 'undefined') {
+            TurnEffects.showBattleStart('ENEMY FORCES');
+            await new Promise(r => setTimeout(r, 1500));
+        }
+        
         // Start prepare phase
         this.startPreparePhase();
     },
@@ -441,6 +447,11 @@ const Game = {
     // ==================== PREPARE PHASE ====================
     startPreparePhase() {
         this.state.phase = 'prepare';
+        
+        // Show turn banner
+        if (typeof TurnEffects !== 'undefined') {
+            TurnEffects.showPlayerTurn(this.state.turn);
+        }
         
         // Reset block at start of turn
         this.state.heroBlock = 0;
@@ -1960,6 +1971,12 @@ const Game = {
         this.state.phase = 'battle';
         this.updatePhaseUI();
         
+        // Show enemy turn banner
+        if (typeof TurnEffects !== 'undefined') {
+            TurnEffects.showEnemyTurn('ENEMY PHASE');
+            await new Promise(r => setTimeout(r, 1200));
+        }
+        
         // Resolve any collisions before battle
         await this.resolveAllCollisions();
         
@@ -2445,6 +2462,27 @@ const Game = {
         const arr = unit.team === 'player' ? this.state.playerUnits : this.state.enemyUnits;
         const idx = arr.indexOf(unit);
         if (idx >= 0) arr.splice(idx, 1);
+        
+        // Check for victory (all enemies dead)
+        if (unit.team === 'enemy') {
+            setTimeout(() => this.checkVictory(), 500);
+        }
+    },
+    
+    checkVictory() {
+        const aliveEnemies = this.state.enemyUnits.filter(e => e.hp > 0);
+        if (aliveEnemies.length === 0) {
+            console.log('[Game] Victory!');
+            
+            if (typeof TurnEffects !== 'undefined') {
+                TurnEffects.showVictory(() => {
+                    console.log('[Game] Victory animation complete');
+                    // Could proceed to next room/rewards here
+                });
+            } else {
+                this.showMessage('VICTORY ACHIEVED', 3000);
+            }
+        }
     },
     
     updateUnitSprite(unit) {
@@ -2507,9 +2545,15 @@ const Game = {
         console.log(`[Game] Turn ${this.state.turn} started (Cost: ${this.state.cost})`);
     },
     
-    gameOver() {
-        this.showMessage('GAME OVER', 5000);
+    async gameOver() {
         console.log('[Game] Game Over');
+        
+        // Show YOU DIED effect
+        if (typeof TurnEffects !== 'undefined') {
+            await TurnEffects.showDefeat();
+        } else {
+            this.showMessage('YOU DIED', 5000);
+        }
     },
     
     // ==================== UTILS ====================
