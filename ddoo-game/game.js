@@ -1961,6 +1961,8 @@ const Game = {
         if (center) {
             sprite.x = center.x;
             sprite.y = center.y;
+            // Units lower on screen (higher Y) should be in front
+            sprite.zIndex = Math.floor(center.y);
         }
         
         // No team tint - use natural sprite colors
@@ -2576,7 +2578,8 @@ const Game = {
         if (center) {
             unit.sprite.x = center.x;
             unit.sprite.y = center.y;
-            unit.sprite.zIndex = Math.floor(1000 - unit.gridZ * 100);
+            // Units lower on screen (higher Y) should be in front
+            unit.sprite.zIndex = Math.floor(unit.sprite.y);
         }
     },
     
