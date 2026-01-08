@@ -919,16 +919,23 @@ const Game = {
         });
     },
     
-    async heroAttackAnimation(hero, target, damage, cardType = 'strike') {
+    async heroAttackAnimation(hero, target, damage, cardType = 'strike', knockback = 0) {
         if (!hero.sprite || !target.sprite) {
             await this.dealDamage(target, damage);
+            if (knockback > 0 && target.hp > 0 && typeof KnockbackSystem !== 'undefined') {
+                await KnockbackSystem.knockback(target, 1, knockback);
+            }
             return;
         }
         
-        // Use CombatEffects for full animation
+        // Use CombatEffects for full animation with knockback
         if (typeof CombatEffects !== 'undefined') {
             await CombatEffects.playerMeleeAttack(hero, target, damage, cardType);
-            await this.dealDamage(target, damage);
+            // Deal damage and knockback simultaneously at hit moment
+            this.dealDamage(target, damage);
+            if (knockback > 0 && target.hp > 0 && typeof KnockbackSystem !== 'undefined') {
+                KnockbackSystem.knockback(target, 1, knockback); // Don't await - run in parallel with return
+            }
             return;
         }
         
@@ -948,9 +955,12 @@ const Game = {
                     duration: 0.15,
                     ease: 'power2.out'
                 })
-                // Deal damage at peak
+                // Deal damage and knockback at peak
                 .call(() => {
                     this.dealDamage(target, damage);
+                    if (knockback > 0 && target.hp > 0 && typeof KnockbackSystem !== 'undefined') {
+                        KnockbackSystem.knockback(target, 1, knockback);
+                    }
                 })
                 // Return to position
                 .to(hero.sprite, {
@@ -1681,21 +1691,17 @@ const Game = {
             // Find all enemies in AOE range from target position
             const targetsInAoe = this.getEnemiesInAoe(targetEnemy.gridX, targetEnemy.gridZ, aoe);
             
-            // Attack animation toward primary target
-            await this.heroAttackAnimation(hero, targetEnemy, cardDef.damage);
-            
-            // Apply knockback if card has it
-            if (cardDef.knockback && targetEnemy.hp > 0 && typeof KnockbackSystem !== 'undefined') {
-                await KnockbackSystem.knockback(targetEnemy, 1, cardDef.knockback);
-            }
+            // Attack animation toward primary target (with knockback at hit moment)
+            const cardType = cardDef.name?.toLowerCase().includes('bash') ? 'bash' : 'strike';
+            await this.heroAttackAnimation(hero, targetEnemy, cardDef.damage, cardType, cardDef.knockback || 0);
             
             // Deal damage to all targets in AOE (except primary which was already hit)
             for (const target of targetsInAoe) {
                 if (target !== targetEnemy && target.hp > 0) {
-                    await this.dealDamage(target, cardDef.damage);
-                    // Also knockback AOE targets
+                    this.dealDamage(target, cardDef.damage);
+                    // Also knockback AOE targets at same time
                     if (cardDef.knockback && target.hp > 0 && typeof KnockbackSystem !== 'undefined') {
-                        await KnockbackSystem.knockback(target, 1, cardDef.knockback);
+                        KnockbackSystem.knockback(target, 1, cardDef.knockback);
                     }
                 }
             }

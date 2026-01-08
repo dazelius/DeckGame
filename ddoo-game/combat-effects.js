@@ -636,6 +636,7 @@ const CombatEffects = {
         switch (cardType) {
             case 'bash':
                 this.heavySlash(endX, endY, -30, 0xff8800);
+                this.screenShake(10, 150);
                 break;
             case 'cleave':
                 this.cleaveEffect(endX, endY, 180);
@@ -651,15 +652,14 @@ const CombatEffects = {
         this.hitEffect(target.sprite);
         this.showDamageNumber(endX, endY - 20, damage);
         
-        // 복귀
-        await new Promise(resolve => {
-            gsap.to(hero.sprite, {
-                x: startX,
-                duration: 0.2,
-                ease: 'power2.out',
-                onComplete: resolve
-            });
+        // 복귀 (await 없이 - 넉백과 동시에 실행되도록)
+        gsap.to(hero.sprite, {
+            x: startX,
+            duration: 0.25,
+            ease: 'power2.out'
         });
+        
+        // 히트 직후 바로 리턴 (넉백이 즉시 시작되도록)
     },
     
     // ==========================================
