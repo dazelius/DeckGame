@@ -106,14 +106,40 @@ const Game = {
     },
     
     // ==================== CARD DEFINITIONS ====================
+    // aoe: { width: X방향, depth: Z방향 } - 공격 범위 (기본 1x1)
+    // melee: true = 근접 (라인 이동 후 공격), melee: false/없음 = 원거리 (제자리 공격)
     cards: {
-        // melee: true = 근접 (라인 이동 후 공격), melee: false/없음 = 원거리 (제자리 공격)
-        strike: { name: 'Strike', cost: 1, type: 'attack', damage: 6, target: 'enemy', melee: true, desc: 'Deal 6 damage' },
+        strike: { 
+            name: 'Strike', cost: 1, type: 'attack', damage: 6, 
+            target: 'enemy', melee: true, 
+            aoe: { width: 2, depth: 1 },  // 2칸 관통
+            desc: 'Pierce 2 cells. Deal 6 damage' 
+        },
         defend: { name: 'Defend', cost: 1, type: 'skill', block: 5, target: 'self', desc: 'Gain 5 Block' },
-        bash: { name: 'Bash', cost: 2, type: 'attack', damage: 8, vulnerable: 2, target: 'enemy', melee: true, desc: 'Deal 8 damage. Apply 2 Vulnerable' },
-        cleave: { name: 'Cleave', cost: 1, type: 'attack', damage: 8, target: 'all', melee: true, desc: 'Deal 8 damage to ALL enemies' },
-        ironWave: { name: 'Iron Wave', cost: 1, type: 'attack', damage: 5, block: 5, target: 'enemy', melee: true, desc: 'Gain 5 Block. Deal 5 damage' },
-        fireBolt: { name: 'Fire Bolt', cost: 1, type: 'attack', damage: 5, target: 'enemy', melee: false, desc: 'Ranged. Deal 5 damage' },
+        bash: { 
+            name: 'Bash', cost: 2, type: 'attack', damage: 8, vulnerable: 2, 
+            target: 'enemy', melee: true, 
+            aoe: { width: 1, depth: 1 },  // 단일 대상
+            desc: 'Deal 8 damage. Apply 2 Vulnerable' 
+        },
+        cleave: { 
+            name: 'Cleave', cost: 1, type: 'attack', damage: 8, 
+            target: 'all', melee: true, 
+            aoe: { width: 3, depth: 1 },  // 3칸 가로
+            desc: 'Deal 8 damage to 3 cells wide' 
+        },
+        ironWave: { 
+            name: 'Iron Wave', cost: 1, type: 'attack', damage: 5, block: 5, 
+            target: 'enemy', melee: true, 
+            aoe: { width: 1, depth: 1 },
+            desc: 'Gain 5 Block. Deal 5 damage' 
+        },
+        fireBolt: { 
+            name: 'Fire Bolt', cost: 1, type: 'attack', damage: 5, 
+            target: 'enemy', melee: false, 
+            aoe: { width: 1, depth: 1 },
+            desc: 'Ranged. Deal 5 damage' 
+        },
         summonKnight: { name: 'Summon Knight', cost: 3, type: 'summon', unit: 'knight', target: 'grid', desc: 'Summon a Knight (40 HP, 12 DMG)' },
         summonArcher: { name: 'Summon Archer', cost: 2, type: 'summon', unit: 'archer', target: 'grid', desc: 'Summon an Archer (25 HP, 8 DMG, Range 4)' },
         heal: { name: 'Heal', cost: 2, type: 'skill', heal: 10, target: 'self', desc: 'Heal 10 HP' }
@@ -1366,16 +1392,37 @@ const Game = {
         if (!hero || !hero.sprite) return;
         
         const isMelee = cardDef.melee === true;
+        const aoe = cardDef.aoe || { width: 1, depth: 1 };
         
         if (isMelee) {
             // Melee: Move hero to same Z line as target, then dash attack
             if (hero.gridZ !== targetEnemy.gridZ) {
                 await this.moveHeroToLine(targetEnemy.gridZ);
             }
+            
+            // Find all enemies in AOE range from target position
+            const targetsInAoe = this.getEnemiesInAoe(targetEnemy.gridX, targetEnemy.gridZ, aoe);
+            
+            // Attack animation toward primary target
             await this.heroAttackAnimation(hero, targetEnemy, cardDef.damage);
+            
+            // Deal damage to all targets in AOE (except primary which was already hit)
+            for (const target of targetsInAoe) {
+                if (target !== targetEnemy && target.hp > 0) {
+                    await this.dealDamage(target, cardDef.damage);
+                }
+            }
         } else {
             // Ranged: Attack from current position
+            const targetsInAoe = this.getEnemiesInAoe(targetEnemy.gridX, targetEnemy.gridZ, aoe);
             await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage);
+            
+            // Deal damage to additional targets in AOE
+            for (const target of targetsInAoe) {
+                if (target !== targetEnemy && target.hp > 0) {
+                    await this.dealDamage(target, cardDef.damage);
+                }
+            }
         }
         
         // Apply block if card has it
@@ -1387,6 +1434,29 @@ const Game = {
         
         // Check collisions after attack
         await this.resolveAllCollisions();
+    },
+    
+    // Get enemies within AOE pattern from a center point
+    // width = X direction (toward enemy side), depth = Z direction
+    getEnemiesInAoe(centerX, centerZ, aoe) {
+        const targets = [];
+        const halfDepth = Math.floor(aoe.depth / 2);
+        
+        for (const enemy of this.state.enemyUnits) {
+            if (enemy.hp <= 0) continue;
+            
+            // Check if enemy is within AOE range
+            // X: from centerX to centerX + width - 1 (piercing toward enemy side)
+            // Z: from centerZ - halfDepth to centerZ + halfDepth
+            const inX = enemy.gridX >= centerX && enemy.gridX < centerX + aoe.width;
+            const inZ = enemy.gridZ >= centerZ - halfDepth && enemy.gridZ <= centerZ + halfDepth;
+            
+            if (inX && inZ) {
+                targets.push(enemy);
+            }
+        }
+        
+        return targets;
     },
     
     async executeCard(cardId, handIndex) {
