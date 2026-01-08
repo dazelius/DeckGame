@@ -22,21 +22,21 @@ const DDOOBackground = {
         smoothing: 0.05
     },
     
-    // Camera defaults (Tight view)
+    // Camera defaults (Balanced view - no cutoff)
     cameraDefaults: {
-        posX: 4.5,     // Center of arena (X axis) - slight left
-        posY: 2.5,     // Lower
-        posZ: 4.8,     // Closer for more zoom
-        lookAtX: 4.5,  // Look at arena center
-        lookAtY: 0.5,  // Look at floor/character level
-        lookAtZ: 1.2   // Look at grid center
+        posX: 5,       // Center of arena (X axis)
+        posY: 3.2,     // Higher to see more
+        posZ: 6.0,     // Further back to show full grid
+        lookAtX: 5,    // Look at arena center
+        lookAtY: 0.3,  // Look at floor level
+        lookAtZ: 1.5   // Look at grid center
     },
     
     // Auto zoom settings
     autoZoom: {
         enabled: true,
-        targetZ: 4.8,
-        currentZ: 4.8,
+        targetZ: 6.0,
+        currentZ: 6.0,
         targetX: 0,
         currentX: 0,
         targetLookAtX: 0,
@@ -271,9 +271,9 @@ const DDOOBackground = {
         const self = this;
         const { width, depth, centerX, centerZ } = this.gridConfig;
         
-        // Floor size - exact fit to grid
-        const floorWidth = width;
-        const floorDepth = depth;
+        // Floor size - slight overhang for clean edges
+        const floorWidth = width + 0.5;
+        const floorDepth = depth + 0.3;
         
         // 기본 바닥 (텍스처 로딩 전 폴백)
         const baseFloor = new THREE.Mesh(
