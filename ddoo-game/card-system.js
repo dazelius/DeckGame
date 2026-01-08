@@ -35,6 +35,14 @@ const CardSystem = {
             aoe: { width: 1, depth: 1 },
             desc: 'Gain 5 Block. Deal 5 damage. Melee: Frontline only.' 
         },
+        flurry: {
+            name: 'Flurry', cost: 1, type: 'attack', damage: 2, 
+            target: 'enemy', melee: true, frontOnly: true,
+            hits: 3, // 3연속 공격!
+            aoe: { width: 1, depth: 1 },
+            element: 'physical',
+            desc: 'Strike 3 times. Deal 2 damage each. Melee: Frontline only.'
+        },
         // 원거리 공격은 아무나 타겟 가능
         fireBolt: { 
             name: 'Fire Bolt', cost: 2, type: 'attack', damage: 5, 
@@ -80,10 +88,11 @@ const CardSystem = {
     // 기본 덱 구성
     // ==========================================
     defaultDeck: {
-        strike: 3,
+        strike: 2,
         defend: 3,
         bash: 2,
         cleave: 1,
+        flurry: 2,  // 연속 찌르기 추가
         ironWave: 2,
         fireBolt: 1,
         fireBall: 1,

@@ -50,6 +50,12 @@ const UnitCombat = {
             return;
         }
         
+        // 연속 찌르기는 빠른 공격
+        if (effectType === 'flurry') {
+            await this.flurryAttack(attacker, target, damage, { isEnemy, onHit });
+            return;
+        }
+        
         attacker.isAnimating = true;
         
         const startX = attacker.sprite.x;
@@ -215,6 +221,72 @@ const UnitCombat = {
         } else {
             if (attacker) attacker.isAnimating = false;
         }
+    },
+    
+    // ==========================================
+    // 연속 찌르기 공격 (Flurry) - 빠른 3연타
+    // ==========================================
+    async flurryAttack(attacker, target, damage, options = {}) {
+        const { isEnemy = false, onHit = null } = options;
+        
+        attacker.isAnimating = true;
+        
+        const startX = attacker.sprite.x;
+        const startY = attacker.sprite.y;
+        const targetX = target.sprite.x;
+        const targetCenter = target.sprite.y - (target.sprite.height || 60) / 2;
+        const dashDirection = isEnemy ? -1 : 1;
+        const dashX = targetX - (dashDirection * 50);
+        
+        // 1. 빠른 돌진
+        await new Promise(resolve => {
+            gsap.timeline()
+                .to(attacker.sprite, { x: dashX, duration: 0.08, ease: 'power3.in' })
+                .to(attacker.sprite.scale, { x: 1.05, y: 0.95, duration: 0.06 }, '<')
+                .add(resolve);
+        });
+        
+        // 2. 짧은 히트스톱
+        if (typeof CombatEffects !== 'undefined') {
+            await CombatEffects.hitStop(25);
+        }
+        
+        // 3. 빠른 찌르기 이펙트 (단일 타격용 - 작은 스파크)
+        if (typeof CombatEffects !== 'undefined') {
+            // 작은 찌르기 이펙트
+            CombatEffects.slashEffect(targetX, targetCenter, 25, 0x88ccff);
+            CombatEffects.burstParticles(targetX, targetCenter, 0x88ccff, 5);
+        }
+        
+        // 4. 피격
+        if (typeof CombatEffects !== 'undefined' && target.sprite) {
+            CombatEffects.hitEffect(target.sprite);
+            CombatEffects.showDamageNumber(targetX, targetCenter - 20, damage, 'flurry');
+        }
+        
+        if (isEnemy) {
+            this.game.dealDamageToTarget(target, damage);
+        } else {
+            this.game.dealDamage(target, damage);
+        }
+        
+        if (onHit) onHit();
+        
+        // 5. 빠른 복귀 (바로 다음 타격 준비)
+        await new Promise(resolve => {
+            gsap.timeline()
+                .to(attacker.sprite.scale, { x: 1, y: 1, duration: 0.06 })
+                .to(attacker.sprite, {
+                    x: startX,
+                    y: startY,
+                    duration: 0.1,
+                    ease: 'power1.out',
+                    onComplete: () => {
+                        if (attacker) attacker.isAnimating = false;
+                        resolve();
+                    }
+                }, '<');
+        });
     },
     
     // ==========================================

@@ -790,6 +790,12 @@ const CombatEffects = {
                 stroke: '#441100',
                 fontSize: 72,
                 prefix: '💥'
+            },
+            flurry: { 
+                fill: '#88ccff',
+                stroke: '#002244',
+                fontSize: 38,
+                prefix: ''
             }
         };
         

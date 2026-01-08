@@ -489,18 +489,24 @@ const Game = {
     },
     
     rollEnemyIntents() {
-        this.state.enemyUnits.forEach(enemy => {
-            const unitDef = this.unitTypes[enemy.type];
-            if (unitDef.intents && unitDef.intents.length > 0) {
-                const intentType = unitDef.intents[Math.floor(Math.random() * unitDef.intents.length)];
-                enemy.intent = {
-                    type: intentType,
-                    damage: intentType === 'attack' ? unitDef.damage : 0
-                };
-            } else {
-                enemy.intent = { type: 'attack', damage: enemy.damage };
-            }
-        });
+        // MonsterPatterns 시스템 사용
+        if (typeof MonsterPatterns !== 'undefined') {
+            MonsterPatterns.rollAllIntents(this.state.enemyUnits);
+        } else {
+            // 폴백: 기존 방식
+            this.state.enemyUnits.forEach(enemy => {
+                const unitDef = this.unitTypes[enemy.type];
+                if (unitDef.intents && unitDef.intents.length > 0) {
+                    const intentType = unitDef.intents[Math.floor(Math.random() * unitDef.intents.length)];
+                    enemy.intent = {
+                        type: intentType,
+                        damage: intentType === 'attack' ? unitDef.damage : 0
+                    };
+                } else {
+                    enemy.intent = { type: 'attack', damage: enemy.damage };
+                }
+            });
+        }
         
         this.renderEnemyIntents();
     },
@@ -521,13 +527,15 @@ const Game = {
         }
         
         const container = new PIXI.Container();
-        
-        // Set zIndex to render in front of sprite
         container.zIndex = 100;
+        
+        // 브레이크 가능한 인텐트인지 확인
+        const hasBreakRecipe = enemy.intent.breakRecipe && enemy.intent.breakRecipe.length > 0;
+        const bgWidth = hasBreakRecipe ? 60 : 44;
         
         // Intent background
         const bg = new PIXI.Graphics();
-        bg.roundRect(-22, -28, 44, 36, 4);
+        bg.roundRect(-bgWidth/2, -28, bgWidth, hasBreakRecipe ? 50 : 36, 4);
         bg.fill({ color: 0x0a0806, alpha: 0.9 });
         
         // Border color based on type
@@ -541,6 +549,11 @@ const Game = {
             textColor = 0xffaa44;
         }
         
+        // 브레이크 가능하면 금색 테두리
+        if (hasBreakRecipe) {
+            borderColor = 0xfbbf24;
+        }
+        
         bg.stroke({ color: borderColor, width: 2 });
         container.addChild(bg);
         
@@ -548,6 +561,8 @@ const Game = {
         let iconText = '⚔';
         if (enemy.intent.type === 'defend') iconText = '🛡';
         else if (enemy.intent.type === 'buff') iconText = '↑';
+        else if (enemy.intent.type === 'debuff') iconText = '↓';
+        else if (enemy.intent.type === 'summon') iconText = '👥';
         
         const icon = new PIXI.Text({
             text: iconText,
@@ -559,10 +574,16 @@ const Game = {
         
         // Damage value (for attack)
         if (enemy.intent.type === 'attack' && enemy.intent.damage) {
+            let dmgString = enemy.intent.damage.toString();
+            // 다중 공격 표시
+            if (enemy.intent.hits && enemy.intent.hits > 1) {
+                dmgString = `${enemy.intent.damage}x${enemy.intent.hits}`;
+            }
+            
             const dmgText = new PIXI.Text({
-                text: enemy.intent.damage.toString(),
+                text: dmgString,
                 style: { 
-                    fontSize: 14, 
+                    fontSize: 13, 
                     fill: textColor,
                     fontFamily: 'Cinzel, serif',
                     fontWeight: 'bold'
@@ -573,26 +594,75 @@ const Game = {
             container.addChild(dmgText);
         }
         
+        // 브레이크 레시피 표시
+        if (hasBreakRecipe) {
+            this.renderBreakRecipe(container, enemy);
+        }
+        
         // Arrow pointing down
         const arrow = new PIXI.Graphics();
-        arrow.moveTo(0, 8);
-        arrow.lineTo(-5, 2);
-        arrow.lineTo(5, 2);
+        arrow.moveTo(0, hasBreakRecipe ? 22 : 8);
+        arrow.lineTo(-5, hasBreakRecipe ? 16 : 2);
+        arrow.lineTo(5, hasBreakRecipe ? 16 : 2);
         arrow.closePath();
         arrow.fill({ color: borderColor });
         arrow.y = 0;
         container.addChild(arrow);
         
         // Position at top of sprite with margin
-        // Sprite anchor is at bottom (0.5, 1), so top is at negative height
         const spriteHeight = enemy.sprite.height || 60;
         const margin = 5;
         container.y = -spriteHeight - margin;
         
-        // Add to sprite (enable sortChildren for zIndex to work)
+        // Add to sprite
         enemy.sprite.sortableChildren = true;
         enemy.sprite.addChild(container);
         enemy.intentContainer = container;
+    },
+    
+    // 브레이크 레시피 렌더링
+    renderBreakRecipe(container, enemy) {
+        const recipe = enemy.intent.breakRecipe;
+        const progress = enemy.breakProgress || [];
+        
+        const recipeContainer = new PIXI.Container();
+        recipeContainer.y = 14;
+        
+        const totalWidth = recipe.length * 16;
+        const ElementIcons = {
+            physical: '⚔',
+            fire: '🔥',
+            ice: '❄',
+            lightning: '⚡',
+            bleed: '🩸',
+            poison: '☠',
+            magic: '✨',
+            dark: '🌑'
+        };
+        
+        recipe.forEach((element, i) => {
+            const isCompleted = i < progress.length;
+            
+            // 원형 배경
+            const circle = new PIXI.Graphics();
+            circle.circle(0, 0, 7);
+            circle.fill({ color: isCompleted ? 0x22c55e : 0x222222 });
+            circle.stroke({ width: 1, color: isCompleted ? 0x22c55e : 0x555555 });
+            circle.x = -totalWidth / 2 + i * 16 + 8;
+            recipeContainer.addChild(circle);
+            
+            // 속성 아이콘
+            const iconText = new PIXI.Text({
+                text: ElementIcons[element] || '?',
+                style: { fontSize: 8 }
+            });
+            iconText.anchor.set(0.5);
+            iconText.x = circle.x;
+            iconText.y = 0;
+            recipeContainer.addChild(iconText);
+        });
+        
+        container.addChild(recipeContainer);
     },
     
     clearEnemyIntents() {
@@ -1079,6 +1149,7 @@ const Game = {
         
         const isMelee = cardDef.melee === true;
         const aoe = cardDef.aoe || { width: 1, depth: 1 };
+        const hits = cardDef.hits || 1; // 다중 공격 횟수
         
         if (isMelee) {
             // Melee: Move hero to same Z line as target, then dash attack
@@ -1089,14 +1160,35 @@ const Game = {
             // Find all enemies in AOE range from target position
             const targetsInAoe = this.getEnemiesInAoe(targetEnemy.gridX, targetEnemy.gridZ, aoe);
             
-            // Attack animation toward primary target (with knockback at hit moment)
-            const cardType = cardDef.name?.toLowerCase().includes('bash') ? 'bash' : 'strike';
-            await this.heroAttackAnimation(hero, targetEnemy, cardDef.damage, cardType, cardDef.knockback || 0);
+            // 다중 공격 처리 (flurry 등)
+            for (let hitNum = 0; hitNum < hits; hitNum++) {
+                if (targetEnemy.hp <= 0) break;
+                
+                // 브레이크 시스템 연동
+                if (typeof BreakSystem !== 'undefined') {
+                    const breakResult = BreakSystem.onAttack(targetEnemy, cardDef, 1);
+                    if (breakResult.broken) {
+                        console.log(`[Game] ${targetEnemy.name || targetEnemy.type} BROKEN!`);
+                    }
+                }
+                
+                // Attack animation toward primary target
+                const cardType = cardDef.name?.toLowerCase().includes('bash') ? 'bash' : 
+                                 cardDef.name?.toLowerCase().includes('flurry') ? 'flurry' : 'strike';
+                const knockback = (hitNum === hits - 1) ? (cardDef.knockback || 0) : 0; // 마지막 타격에만 넉백
+                
+                await this.heroAttackAnimation(hero, targetEnemy, cardDef.damage, cardType, knockback);
+                
+                // 다중 공격 시 타격 간 짧은 딜레이
+                if (hits > 1 && hitNum < hits - 1) {
+                    await new Promise(r => setTimeout(r, 100));
+                }
+            }
             
             // Deal damage to all targets in AOE (except primary which was already hit)
             for (const target of targetsInAoe) {
                 if (target !== targetEnemy && target.hp > 0) {
-                    this.dealDamage(target, cardDef.damage);
+                    this.dealDamage(target, cardDef.damage * hits);
                     // Also knockback AOE targets at same time
                     if (cardDef.knockback && target.hp > 0 && typeof KnockbackSystem !== 'undefined') {
                         KnockbackSystem.knockback(target, 1, cardDef.knockback);
@@ -1694,11 +1786,25 @@ const Game = {
     
     async executeEnemyIntent(enemy) {
         const intent = enemy.intent;
+        if (!intent) return;
+        
+        // 브레이크 상태면 행동 불가
+        if (typeof BreakSystem !== 'undefined' && !BreakSystem.canAct(enemy)) {
+            console.log(`[Game] ${enemy.name || enemy.type} is BROKEN - skipping action`);
+            return;
+        }
         
         // Find target using targeting rules
         const target = this.findEnemyTarget(enemy);
         if (!target) return;
         
+        // MonsterPatterns가 있으면 위임
+        if (typeof MonsterPatterns !== 'undefined') {
+            await MonsterPatterns.executeIntent(enemy, target, this);
+            return;
+        }
+        
+        // 폴백: 기존 방식
         switch (intent.type) {
             case 'attack':
                 const isMelee = (enemy.range || 1) <= 1;
@@ -1716,15 +1822,16 @@ const Game = {
                 break;
                 
             case 'defend':
-                // Enemy gains block (visual only for now)
-                this.showMessage(`${enemy.type} defends!`, 500);
+                // Enemy gains block
+                enemy.block = (enemy.block || 0) + (intent.block || 5);
+                this.showMessage(`${enemy.name || enemy.type} defends! +${intent.block || 5}`, 500);
                 await new Promise(r => setTimeout(r, 300));
                 break;
                 
             case 'buff':
                 // Enemy buffs (increase damage for next turn)
                 enemy.damage = Math.floor(enemy.damage * 1.25);
-                this.showMessage(`${enemy.type} powers up!`, 500);
+                this.showMessage(`${enemy.name || enemy.type} powers up!`, 500);
                 await new Promise(r => setTimeout(r, 300));
                 break;
         }
@@ -1976,6 +2083,13 @@ const Game = {
             }
             return true;
         });
+        
+        // 턴 종료 시 브레이크 상태 해제
+        if (typeof BreakSystem !== 'undefined') {
+            this.state.enemyUnits.forEach(enemy => {
+                BreakSystem.onTurnEnd(enemy);
+            });
+        }
         
         // Check victory - all enemies dead (handled by checkVictory)
         if (this.state.enemyUnits.length === 0) {
