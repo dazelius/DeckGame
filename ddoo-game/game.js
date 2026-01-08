@@ -70,7 +70,7 @@ const Game = {
             hp: 40,
             damage: 12,
             range: 1,
-            sprite: 'hero.png',
+            sprite: 'ally_knight.png',
             scale: 0.4
         },
         archer: {
