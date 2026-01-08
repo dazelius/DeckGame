@@ -118,9 +118,9 @@ const Game = {
         defend: { name: 'Defend', cost: 1, type: 'skill', block: 5, target: 'self', desc: 'Gain 5 Block' },
         bash: { 
             name: 'Bash', cost: 2, type: 'attack', damage: 8, vulnerable: 2, 
-            target: 'enemy', melee: true, knockback: 1,  // 1칸 넉백
+            target: 'enemy', melee: true, knockback: 1, frontOnly: true,  // 최전선만 타겟 가능
             aoe: { width: 1, depth: 1 },
-            desc: 'Deal 8 damage. Knockback 1 cell' 
+            desc: 'Deal 8 damage. Knockback 1 cell. Targets frontline only.' 
         },
         cleave: { 
             name: 'Cleave', cost: 1, type: 'attack', damage: 8, 
@@ -1244,8 +1244,8 @@ const Game = {
             }
             this.clearEnemyHighlights();
         } else if (cardDef && cardDef.type === 'attack') {
-            // Attack cards - check if hovering over enemy
-            const targetEnemy = this.getEnemyAtScreen(touch.clientX, touch.clientY);
+            // Attack cards - check if hovering over enemy (frontOnly for bash-like cards)
+            const targetEnemy = this.getEnemyAtScreen(touch.clientX, touch.clientY, cardDef.frontOnly || false);
             this.dragState.targetEnemy = targetEnemy;
             
             // Get cursor position relative to canvas
@@ -1255,7 +1255,7 @@ const Game = {
             const cursorY = touch.clientY - rect.top;
             
             // Draw bezier curves from card to ALL targetable enemies
-            this.drawTargetingCurvesToEnemies(cursorX, cursorY, targetEnemy);
+            this.drawTargetingCurvesToEnemies(cursorX, cursorY, targetEnemy, cardDef.frontOnly || false);
             
             if (targetEnemy) {
                 // Get AOE pattern from card
@@ -1331,16 +1331,53 @@ const Game = {
         }
     },
     
-    getEnemyAtScreen(screenX, screenY) {
+    // Check if enemy is at the frontline (lowest X on their Z line)
+    isFrontlineEnemy(enemy) {
+        if (!enemy || enemy.hp <= 0) return false;
+        
+        // Find the minimum X position among all enemies on the same Z line
+        const sameLineEnemies = this.state.enemyUnits.filter(e => 
+            e.hp > 0 && e.gridZ === enemy.gridZ
+        );
+        
+        if (sameLineEnemies.length === 0) return false;
+        
+        const minX = Math.min(...sameLineEnemies.map(e => e.gridX));
+        return enemy.gridX === minX;
+    },
+    
+    // Get all frontline enemies (one per Z line)
+    getFrontlineEnemies() {
+        const frontline = [];
+        const zLines = new Set(this.state.enemyUnits.filter(e => e.hp > 0).map(e => e.gridZ));
+        
+        for (const z of zLines) {
+            const enemiesOnLine = this.state.enemyUnits.filter(e => e.hp > 0 && e.gridZ === z);
+            if (enemiesOnLine.length > 0) {
+                const front = enemiesOnLine.reduce((a, b) => a.gridX < b.gridX ? a : b);
+                frontline.push(front);
+            }
+        }
+        
+        return frontline;
+    },
+    
+    getEnemyAtScreen(screenX, screenY, frontOnly = false) {
         // Get canvas bounds
         const canvas = this.app.canvas;
         const rect = canvas.getBoundingClientRect();
         const localX = screenX - rect.left;
         const localY = screenY - rect.top;
         
+        // If frontOnly, get valid targets first
+        const validTargets = frontOnly ? this.getFrontlineEnemies() : null;
+        
         // Check each enemy sprite using their current screen position
         for (const enemy of this.state.enemyUnits) {
             if (enemy.hp <= 0 || !enemy.sprite) continue;
+            
+            // Skip if frontOnly and enemy is not on frontline
+            if (frontOnly && !validTargets.includes(enemy)) continue;
             
             const sprite = enemy.sprite;
             
@@ -1425,7 +1462,7 @@ const Game = {
     },
     
     // FGO-style bezier curves from card to ALL targetable enemies
-    drawTargetingCurvesToEnemies(cardX, cardY, hoveredEnemy) {
+    drawTargetingCurvesToEnemies(cardX, cardY, hoveredEnemy, frontOnly = false) {
         if (!this.targetingCurve) {
             this.targetingCurve = new PIXI.Graphics();
             this.targetingCurve.zIndex = 15;
@@ -1435,10 +1472,14 @@ const Game = {
         const g = this.targetingCurve;
         g.clear();
         
-        // Draw curves to all living enemies
+        // Get valid targets based on frontOnly
+        const validTargets = frontOnly ? this.getFrontlineEnemies() : this.state.enemyUnits.filter(e => e.hp > 0);
+        
+        // Draw curves to valid enemies only
         for (const enemy of this.state.enemyUnits) {
             if (enemy.hp <= 0 || !enemy.sprite) continue;
             
+            const isValidTarget = validTargets.includes(enemy);
             const isHovered = (enemy === hoveredEnemy);
             const endX = enemy.sprite.x;
             const endY = enemy.sprite.y - (enemy.sprite.height || 60) / 2;
@@ -1447,10 +1488,24 @@ const Game = {
             const midX = (cardX + endX) / 2;
             const midY = Math.min(cardY, endY) - 60;
             
-            // Colors: hovered = bright red, others = dim orange
-            const color = isHovered ? 0xff4444 : 0xffaa44;
-            const alpha = isHovered ? 0.9 : 0.3;
-            const lineWidth = isHovered ? 4 : 2;
+            // Colors based on validity and hover state
+            let color, alpha, lineWidth;
+            if (!isValidTarget) {
+                // Invalid target (not on frontline) - grayed out
+                color = 0x666666;
+                alpha = 0.2;
+                lineWidth = 1;
+            } else if (isHovered) {
+                // Valid and hovered - bright red
+                color = 0xff4444;
+                alpha = 0.9;
+                lineWidth = 4;
+            } else {
+                // Valid but not hovered - dim orange
+                color = 0xffaa44;
+                alpha = 0.4;
+                lineWidth = 2;
+            }
             
             // Draw bezier curve
             g.moveTo(cardX, cardY);
@@ -1606,7 +1661,7 @@ const Game = {
             }
         } else if (cardDef && cardDef.type === 'attack') {
             // Attack card - check if dropped on enemy OR dragged up
-            const targetEnemy = this.dragState.targetEnemy || this.getEnemyAtScreen(touch.clientX, touch.clientY);
+            const targetEnemy = this.dragState.targetEnemy || this.getEnemyAtScreen(touch.clientX, touch.clientY, cardDef.frontOnly || false);
             const dragDist = this.dragState.startY - touch.clientY;
             
             if (this.state.cost >= cardDef.cost) {
