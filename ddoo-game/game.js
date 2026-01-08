@@ -527,7 +527,7 @@ const Game = {
         // Position at top of sprite with margin
         // Sprite anchor is at bottom (0.5, 1), so top is at negative height
         const spriteHeight = enemy.sprite.height || 60;
-        const margin = 10;
+        const margin = 5;
         container.y = -spriteHeight - margin;
         
         // Add to sprite (enable sortChildren for zIndex to work)
