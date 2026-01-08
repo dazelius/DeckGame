@@ -80,7 +80,7 @@ const Game = {
             damage: 8,
             range: 4,
             sprite: 'ally_archer.png',
-            scale: 0.35
+            scale: 0.45  // 30% bigger
         },
         // Enemies
         goblin: {
@@ -1976,8 +1976,8 @@ const Game = {
         const sprite = await DDOORenderer.createSprite(unitDef.sprite, {
             scale: unitDef.scale,
             outline: { enabled: false },
-            shadow: { enabled: false },
-            breathing: { enabled: true, scaleAmount: 0.01 }
+            shadow: { enabled: true, alpha: 0.5 },
+            breathing: { enabled: true, scaleAmount: 0.025, speed: 2.5 }
         });
         
         // Position
