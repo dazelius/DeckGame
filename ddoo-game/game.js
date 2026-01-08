@@ -18,12 +18,16 @@ const Game = {
         playerUnits: [],     // Includes hero + summons
         enemyUnits: [],
         
-        // HP
-        playerHP: 100,
-        enemyHP: 100,
+        // Hero stats
+        heroBlock: 0,        // Current block (resets each turn)
         
         // Hero reference
-        hero: null
+        hero: null,
+        
+        // Hand of cards
+        hand: [],
+        deck: [],
+        discard: []
     },
     
     // ==================== CONTAINERS ====================
@@ -52,19 +56,19 @@ const Game = {
         hero: {
             name: 'Hero',
             cost: 0,
-            hp: 100,
-            damage: 20,
-            range: 1,
+            hp: 80,
+            damage: 0,  // Hero doesn't auto-attack, uses cards
+            range: 0,
             sprite: 'hero.png',
             scale: 0.5,
             isHero: true
         },
         // Summons
-        warrior: {
-            name: 'Warrior',
+        knight: {
+            name: 'Knight',
             cost: 3,
-            hp: 60,
-            damage: 15,
+            hp: 40,
+            damage: 12,
             range: 1,
             sprite: 'hero.png',
             scale: 0.4
@@ -72,31 +76,45 @@ const Game = {
         archer: {
             name: 'Archer',
             cost: 2,
-            hp: 40,
-            damage: 10,
-            range: 3,
-            sprite: 'goblin.png',
+            hp: 25,
+            damage: 8,
+            range: 4,
+            sprite: 'goblinarcher.png',
             scale: 0.35
         },
         // Enemies
         goblin: {
             name: 'Goblin',
             cost: 0,
-            hp: 30,
+            hp: 25,
             damage: 8,
             range: 1,
             sprite: 'goblin.png',
-            scale: 0.35
+            scale: 0.4,
+            intents: ['attack', 'attack', 'defend']
         },
         goblinArcher: {
             name: 'Goblin Archer',
             cost: 0,
-            hp: 20,
+            hp: 18,
             damage: 6,
-            range: 3,
+            range: 4,
             sprite: 'goblinarcher.png',
-            scale: 0.35
+            scale: 0.35,
+            intents: ['attack', 'attack', 'buff']
         }
+    },
+    
+    // ==================== CARD DEFINITIONS ====================
+    cards: {
+        strike: { name: 'Strike', cost: 1, type: 'attack', damage: 6, target: 'enemy', desc: 'Deal 6 damage' },
+        defend: { name: 'Defend', cost: 1, type: 'skill', block: 5, target: 'self', desc: 'Gain 5 Block' },
+        bash: { name: 'Bash', cost: 2, type: 'attack', damage: 8, vulnerable: 2, target: 'enemy', desc: 'Deal 8 damage. Apply 2 Vulnerable' },
+        cleave: { name: 'Cleave', cost: 1, type: 'attack', damage: 8, target: 'all', desc: 'Deal 8 damage to ALL enemies' },
+        ironWave: { name: 'Iron Wave', cost: 1, type: 'attack', damage: 5, block: 5, target: 'enemy', desc: 'Gain 5 Block. Deal 5 damage' },
+        summonKnight: { name: 'Summon Knight', cost: 3, type: 'summon', unit: 'knight', target: 'grid', desc: 'Summon a Knight (40 HP, 12 DMG)' },
+        summonArcher: { name: 'Summon Archer', cost: 2, type: 'summon', unit: 'archer', target: 'grid', desc: 'Summon an Archer (25 HP, 8 DMG, Range 4)' },
+        heal: { name: 'Heal', cost: 2, type: 'skill', heal: 10, target: 'self', desc: 'Heal 10 HP' }
     },
     
     // ==================== TIMERS ====================
@@ -155,11 +173,70 @@ const Game = {
         await this.placeUnit('hero', 2, 1, 'player');
         this.state.hero = this.state.playerUnits[0];
         
+        // Initialize deck (2 of each card)
+        this.initDeck();
+        
         // Generate initial enemies
         this.generateEnemyUnits();
         
         // Start prepare phase
         this.startPreparePhase();
+    },
+    
+    initDeck() {
+        // Create deck with multiple copies of each card
+        const cardCounts = {
+            strike: 4,
+            defend: 4,
+            bash: 2,
+            cleave: 1,
+            ironWave: 2,
+            summonKnight: 2,
+            summonArcher: 2,
+            heal: 1
+        };
+        
+        this.state.deck = [];
+        for (const [cardId, count] of Object.entries(cardCounts)) {
+            for (let i = 0; i < count; i++) {
+                this.state.deck.push(cardId);
+            }
+        }
+        
+        // Shuffle deck
+        this.shuffleDeck();
+    },
+    
+    shuffleDeck() {
+        const deck = this.state.deck;
+        for (let i = deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [deck[i], deck[j]] = [deck[j], deck[i]];
+        }
+    },
+    
+    drawCards(count = 5) {
+        for (let i = 0; i < count; i++) {
+            if (this.state.deck.length === 0) {
+                // Shuffle discard into deck
+                this.state.deck = [...this.state.discard];
+                this.state.discard = [];
+                this.shuffleDeck();
+            }
+            
+            if (this.state.deck.length > 0) {
+                const cardId = this.state.deck.pop();
+                this.state.hand.push(cardId);
+            }
+        }
+        
+        this.renderHand();
+    },
+    
+    discardHand() {
+        this.state.discard.push(...this.state.hand);
+        this.state.hand = [];
+        this.renderHand();
     },
     
     setupContainers() {
@@ -291,18 +368,226 @@ const Game = {
     // ==================== PREPARE PHASE ====================
     startPreparePhase() {
         this.state.phase = 'prepare';
+        
+        // Reset block at start of turn
+        this.state.heroBlock = 0;
+        
+        // Draw 5 cards
+        this.drawCards(5);
+        
+        // Roll enemy intents
+        this.rollEnemyIntents();
+        
         this.updatePhaseUI();
         this.updateTurnUI();
         this.updateCostUI();
+        this.updateBlockUI();
         
         console.log(`[Game] Turn ${this.state.turn} - Prepare phase`);
+    },
+    
+    rollEnemyIntents() {
+        this.state.enemyUnits.forEach(enemy => {
+            const unitDef = this.unitTypes[enemy.type];
+            if (unitDef.intents && unitDef.intents.length > 0) {
+                const intentType = unitDef.intents[Math.floor(Math.random() * unitDef.intents.length)];
+                enemy.intent = {
+                    type: intentType,
+                    damage: intentType === 'attack' ? unitDef.damage : 0
+                };
+            } else {
+                enemy.intent = { type: 'attack', damage: enemy.damage };
+            }
+        });
+        
+        this.renderEnemyIntents();
+    },
+    
+    renderEnemyIntents() {
+        // Clear existing intent UI
+        document.querySelectorAll('.enemy-intent').forEach(el => el.remove());
+        
+        this.state.enemyUnits.forEach(enemy => {
+            if (!enemy.sprite || !enemy.intent) return;
+            
+            const intentEl = document.createElement('div');
+            intentEl.className = 'enemy-intent';
+            
+            let icon = '';
+            let text = '';
+            switch (enemy.intent.type) {
+                case 'attack':
+                    icon = '&#9876;'; // Sword
+                    text = enemy.intent.damage;
+                    intentEl.style.color = '#ff4444';
+                    break;
+                case 'defend':
+                    icon = '&#128737;'; // Shield
+                    text = '';
+                    intentEl.style.color = '#44aaff';
+                    break;
+                case 'buff':
+                    icon = '&#10024;'; // Sparkle
+                    text = '';
+                    intentEl.style.color = '#ffaa44';
+                    break;
+            }
+            
+            intentEl.innerHTML = `<span class="intent-icon">${icon}</span><span class="intent-value">${text}</span>`;
+            
+            // Position above enemy
+            const rect = document.getElementById('battle-area').getBoundingClientRect();
+            intentEl.style.position = 'absolute';
+            intentEl.style.left = (enemy.sprite.x + rect.left) + 'px';
+            intentEl.style.top = (enemy.sprite.y + rect.top - 60) + 'px';
+            intentEl.style.transform = 'translateX(-50%)';
+            intentEl.style.zIndex = '1000';
+            intentEl.style.fontSize = '20px';
+            intentEl.style.fontWeight = 'bold';
+            intentEl.style.textShadow = '0 0 5px black';
+            
+            document.body.appendChild(intentEl);
+        });
+    },
+    
+    updateBlockUI() {
+        const blockEl = document.getElementById('block-display');
+        if (blockEl) {
+            blockEl.textContent = this.state.heroBlock;
+            blockEl.style.display = this.state.heroBlock > 0 ? 'block' : 'none';
+        }
     },
     
     endTurn() {
         if (this.state.phase !== 'prepare') return;
         
+        // Discard remaining hand
+        this.discardHand();
+        
+        // Clear intent UI
+        document.querySelectorAll('.enemy-intent').forEach(el => el.remove());
+        
         console.log('[Game] End turn - starting battle');
         this.startBattlePhase();
+    },
+    
+    renderHand() {
+        const handEl = document.getElementById('card-hand');
+        if (!handEl) return;
+        
+        handEl.innerHTML = '';
+        
+        this.state.hand.forEach((cardId, index) => {
+            const cardDef = this.cards[cardId];
+            if (!cardDef) return;
+            
+            const cardEl = document.createElement('div');
+            cardEl.className = 'card';
+            cardEl.dataset.cardId = cardId;
+            cardEl.dataset.index = index;
+            
+            cardEl.innerHTML = `
+                <div class="card-cost">${cardDef.cost}</div>
+                <div class="card-name">${cardDef.name}</div>
+                <div class="card-desc">${cardDef.desc}</div>
+            `;
+            
+            // Click to play card
+            cardEl.addEventListener('click', () => this.playCard(index));
+            
+            handEl.appendChild(cardEl);
+        });
+    },
+    
+    async playCard(handIndex) {
+        if (this.state.phase !== 'prepare') return;
+        
+        const cardId = this.state.hand[handIndex];
+        const cardDef = this.cards[cardId];
+        
+        if (!cardDef) return;
+        
+        // Check cost
+        if (this.state.cost < cardDef.cost) {
+            this.showMessage('Not enough cost!', 1000);
+            return;
+        }
+        
+        // Handle different card types
+        switch (cardDef.type) {
+            case 'attack':
+                await this.playAttackCard(cardDef);
+                break;
+            case 'skill':
+                await this.playSkillCard(cardDef);
+                break;
+            case 'summon':
+                // Need to select grid position - for now just show message
+                this.showMessage('Drag summon card to grid', 1000);
+                return;
+        }
+        
+        // Deduct cost and discard card
+        this.state.cost -= cardDef.cost;
+        this.state.hand.splice(handIndex, 1);
+        this.state.discard.push(cardId);
+        
+        this.updateCostUI();
+        this.renderHand();
+    },
+    
+    async playAttackCard(cardDef) {
+        // Deal damage to first enemy (or all for cleave)
+        const targets = cardDef.target === 'all' 
+            ? this.state.enemyUnits.filter(e => e.hp > 0)
+            : [this.state.enemyUnits.find(e => e.hp > 0)].filter(Boolean);
+        
+        for (const target of targets) {
+            await this.dealDamage(target, cardDef.damage);
+        }
+        
+        // Apply block if card has it
+        if (cardDef.block) {
+            this.state.heroBlock += cardDef.block;
+            this.updateBlockUI();
+        }
+    },
+    
+    async playSkillCard(cardDef) {
+        if (cardDef.block) {
+            this.state.heroBlock += cardDef.block;
+            this.updateBlockUI();
+            this.showMessage(`+${cardDef.block} Block`, 500);
+        }
+        
+        if (cardDef.heal && this.state.hero) {
+            this.state.hero.hp = Math.min(this.state.hero.hp + cardDef.heal, this.state.hero.maxHp);
+            this.showMessage(`+${cardDef.heal} HP`, 500);
+        }
+    },
+    
+    async dealDamage(target, amount) {
+        if (!target || target.hp <= 0) return;
+        
+        target.hp -= amount;
+        this.showDamage(target, amount);
+        
+        // Hit effect
+        if (target.sprite) {
+            gsap.to(target.sprite, {
+                alpha: 0.5,
+                x: target.sprite.x + 10,
+                duration: 0.1,
+                yoyo: true,
+                repeat: 1
+            });
+        }
+        
+        if (target.hp <= 0) {
+            this.killUnit(target);
+        }
+        
+        await new Promise(r => setTimeout(r, 200));
     },
     
     // ==================== UNIT PLACEMENT (DOM Drag) ====================
@@ -504,8 +789,8 @@ const Game = {
             sprite.y = center.y;
         }
         
-        // Team color tint
-        sprite.tint = team === 'player' ? 0x8888ff : 0xff8888;
+        // No team tint - use natural sprite colors
+        sprite.tint = 0xffffff;
         
         this.containers.units.addChild(sprite);
         
