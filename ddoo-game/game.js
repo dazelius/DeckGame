@@ -1976,7 +1976,7 @@ const Game = {
         const sprite = await DDOORenderer.createSprite(unitDef.sprite, {
             scale: unitDef.scale,
             outline: { enabled: false },
-            shadow: { enabled: true, alpha: 0.5 },
+            shadow: { enabled: false },
             breathing: { enabled: true, scaleAmount: 0.025, speed: 2.5 }
         });
         
