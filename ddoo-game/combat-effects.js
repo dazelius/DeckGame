@@ -376,68 +376,121 @@ const CombatEffects = {
     },
     
     // ==========================================
-    // 데미지 숫자 표시 (고급)
+    // 데미지 숫자 표시 (크고 명확하게)
     // ==========================================
     showDamageNumber(x, y, damage, type = 'normal') {
         if (!this.app) return;
         
-        const colors = {
-            normal: { fill: '#ff4444', stroke: '#000000' },
-            critical: { fill: '#ffff00', stroke: '#ff6600' },
-            heal: { fill: '#44ff44', stroke: '#006600' },
-            block: { fill: '#4488ff', stroke: '#002266' }
+        const styles = {
+            normal: { 
+                fill: ['#ff6666', '#ff2222'],  // 그라데이션
+                stroke: '#000000',
+                fontSize: 48,
+                prefix: ''
+            },
+            critical: { 
+                fill: ['#ffff00', '#ffaa00'],
+                stroke: '#cc4400',
+                fontSize: 64,
+                prefix: ''
+            },
+            heal: { 
+                fill: ['#66ff66', '#22cc22'],
+                stroke: '#004400',
+                fontSize: 48,
+                prefix: '+'
+            },
+            block: { 
+                fill: ['#66aaff', '#2266ff'],
+                stroke: '#001144',
+                fontSize: 44,
+                prefix: ''
+            }
         };
         
-        const style = colors[type] || colors.normal;
+        const style = styles[type] || styles.normal;
         const isCritical = type === 'critical';
+        const isHeal = type === 'heal';
         
+        // 메인 텍스트
         const text = new PIXI.Text({
-            text: type === 'heal' ? `+${damage}` : `-${damage}`,
+            text: `${style.prefix}${damage}`,
             style: {
-                fontSize: isCritical ? 36 : 28,
-                fontFamily: 'Cinzel, serif',
+                fontSize: style.fontSize,
+                fontFamily: 'Impact, Arial Black, sans-serif',
                 fontWeight: 'bold',
                 fill: style.fill,
-                stroke: { color: style.stroke, width: isCritical ? 4 : 3 },
+                stroke: { color: style.stroke, width: 6 },
                 dropShadow: {
                     color: 0x000000,
-                    blur: 4,
-                    distance: 2
-                }
+                    blur: 8,
+                    distance: 4,
+                    angle: Math.PI / 4
+                },
+                letterSpacing: 2
             }
         });
         
-        text.x = x;
+        // 랜덤 오프셋 (여러 데미지가 겹치지 않게)
+        const offsetX = (Math.random() - 0.5) * 30;
+        text.x = x + offsetX;
         text.y = y;
         text.anchor.set(0.5);
-        text.zIndex = 200;
+        text.zIndex = 200 + Math.random() * 10;
         
         this.container.addChild(text);
         
         // 애니메이션
         if (isCritical) {
-            // 크리티컬: 커졌다 작아지며 튀어오름
-            gsap.timeline()
-                .from(text.scale, { x: 0.3, y: 0.3, duration: 0.1, ease: 'back.out(3)' })
-                .to(text.scale, { x: 1.2, y: 1.2, duration: 0.1 })
-                .to(text.scale, { x: 1, y: 1, duration: 0.1 });
+            // 크리티컬: 크게 펑! 터지며 나타남
+            text.scale.set(0.2);
+            text.alpha = 0;
             
-            gsap.to(text, {
-                y: y - 80,
-                alpha: 0,
-                duration: 1,
-                ease: 'power2.out',
-                onComplete: () => text.destroy()
-            });
+            gsap.timeline()
+                .to(text, { alpha: 1, duration: 0.05 })
+                .to(text.scale, { x: 1.5, y: 1.5, duration: 0.15, ease: 'back.out(2)' })
+                .to(text.scale, { x: 1.2, y: 1.2, duration: 0.1 })
+                .to(text, { 
+                    y: y - 100, 
+                    alpha: 0, 
+                    duration: 1.2,
+                    delay: 0.3,
+                    ease: 'power2.out',
+                    onComplete: () => text.destroy()
+                }, '<');
+                
+        } else if (isHeal) {
+            // 힐: 아래서 위로 부드럽게
+            text.y = y + 20;
+            text.alpha = 0;
+            
+            gsap.timeline()
+                .to(text, { alpha: 1, y: y - 30, duration: 0.3, ease: 'power2.out' })
+                .to(text, { 
+                    y: y - 80, 
+                    alpha: 0, 
+                    duration: 0.8,
+                    ease: 'power1.out',
+                    onComplete: () => text.destroy()
+                });
+                
         } else {
-            // 일반: 위로 떠오르며 사라짐
-            gsap.to(text, {
-                y: y - 50,
-                alpha: 0,
-                duration: 0.8,
-                ease: 'power2.out',
-                onComplete: () => text.destroy()
-            });
+            // 일반: 튀어나오며 위로
+            text.scale.set(0.5);
+            text.alpha = 0;
+            
+            gsap.timeline()
+                .to(text, { alpha: 1, duration: 0.05 })
+                .to(text.scale, { x: 1.2, y: 1.2, duration: 0.1, ease: 'back.out(3)' })
+                .to(text.scale, { x: 1, y: 1, duration: 0.1 })
+                .to(text, { 
+                    y: y - 70, 
+                    alpha: 0, 
+                    duration: 1,
+                    delay: 0.2,
+                    ease: 'power2.out',
+                    onComplete: () => text.destroy()
+                }, '<');
         }
     },
     
