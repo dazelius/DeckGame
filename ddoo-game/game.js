@@ -1581,7 +1581,7 @@ const Game = {
         }
         
         // Render HP bar
-        this.renderUnitHPBar(unit);
+        this.createUnitHPBar(unit);
         
         console.log(`[Game] Placed ${unitType} at (${gridX}, ${gridZ}) for ${team}`);
     },
