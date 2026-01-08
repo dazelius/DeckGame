@@ -556,6 +556,9 @@ const Game = {
             this.updateBlockUI();
             this.showMessage(`+${cardDef.block} Block`, 500);
         }
+        
+        // Check collisions after attack
+        await this.resolveAllCollisions();
     },
     
     async moveHeroToLine(targetZ) {
@@ -1102,6 +1105,9 @@ const Game = {
             this.updateBlockUI();
             this.showMessage(`+${cardDef.block} Block`, 500);
         }
+        
+        // Check collisions after attack
+        await this.resolveAllCollisions();
     },
     
     async executeCard(cardId, handIndex) {
@@ -1157,6 +1163,117 @@ const Game = {
     isCellOccupied(x, z) {
         return [...this.state.playerUnits, ...this.state.enemyUnits]
             .some(u => u.gridX === x && u.gridZ === z && u.hp > 0);
+    },
+    
+    // ==================== GLOBAL COLLISION CHECK ====================
+    async resolveAllCollisions() {
+        const allUnits = [...this.state.playerUnits, ...this.state.enemyUnits].filter(u => u.hp > 0);
+        
+        // Group units by cell
+        const cellMap = new Map();
+        for (const unit of allUnits) {
+            const key = `${unit.gridX},${unit.gridZ}`;
+            if (!cellMap.has(key)) {
+                cellMap.set(key, []);
+            }
+            cellMap.get(key).push(unit);
+        }
+        
+        // Resolve collisions where multiple units share a cell
+        for (const [key, units] of cellMap) {
+            if (units.length <= 1) continue;
+            
+            console.log(`[Collision] ${units.length} units at ${key}`);
+            
+            // Keep the first unit (or hero), move others
+            const sorted = units.sort((a, b) => {
+                // Hero has highest priority
+                if (a.isHero) return -1;
+                if (b.isHero) return 1;
+                // Then by team (player > enemy)
+                if (a.team === 'player' && b.team === 'enemy') return -1;
+                if (a.team === 'enemy' && b.team === 'player') return 1;
+                return 0;
+            });
+            
+            const stayUnit = sorted[0];
+            const moveUnits = sorted.slice(1);
+            
+            for (const unit of moveUnits) {
+                await this.relocateUnit(unit, stayUnit.gridX, stayUnit.gridZ);
+            }
+        }
+    },
+    
+    async relocateUnit(unit, avoidX, avoidZ) {
+        if (!unit || !unit.sprite) return;
+        
+        // Find the nearest free cell
+        const isPlayerSide = unit.team === 'player';
+        const minX = isPlayerSide ? 0 : this.arena.playerZoneX;
+        const maxX = isPlayerSide ? this.arena.playerZoneX : this.arena.width;
+        
+        let bestCell = null;
+        let bestDist = Infinity;
+        
+        for (let x = minX; x < maxX; x++) {
+            for (let z = 0; z < this.arena.depth; z++) {
+                if (x === avoidX && z === avoidZ) continue;
+                if (this.isCellOccupied(x, z)) continue;
+                
+                const dist = Math.abs(x - unit.gridX) + Math.abs(z - unit.gridZ);
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    bestCell = { x, z };
+                }
+            }
+        }
+        
+        if (!bestCell) {
+            console.log(`[Collision] No free cell found for ${unit.type}`);
+            return;
+        }
+        
+        console.log(`[Collision] Moving ${unit.type} from (${unit.gridX},${unit.gridZ}) to (${bestCell.x},${bestCell.z})`);
+        
+        // Update position
+        unit.gridX = bestCell.x;
+        unit.gridZ = bestCell.z;
+        unit.x = bestCell.x + 0.5;
+        unit.z = bestCell.z + 0.5;
+        
+        // Animate
+        const newPos = this.getCellCenter(unit.gridX, unit.gridZ);
+        if (newPos) {
+            return new Promise(resolve => {
+                gsap.to(unit.sprite, {
+                    x: newPos.x,
+                    y: newPos.y,
+                    duration: 0.2,
+                    ease: 'power2.out',
+                    onComplete: resolve
+                });
+            });
+        }
+    },
+    
+    // Quick check and fix collisions (call after any movement)
+    checkAndFixCollisions() {
+        const allUnits = [...this.state.playerUnits, ...this.state.enemyUnits].filter(u => u.hp > 0);
+        
+        for (let i = 0; i < allUnits.length; i++) {
+            for (let j = i + 1; j < allUnits.length; j++) {
+                const a = allUnits[i];
+                const b = allUnits[j];
+                
+                if (a.gridX === b.gridX && a.gridZ === b.gridZ) {
+                    // Collision detected - queue resolution
+                    this.resolveAllCollisions();
+                    return true;
+                }
+            }
+        }
+        return false;
     },
     
     highlightCell(x, z, valid) {
@@ -1317,6 +1434,9 @@ const Game = {
         this.state.phase = 'battle';
         this.updatePhaseUI();
         
+        // Resolve any collisions before battle
+        await this.resolveAllCollisions();
+        
         console.log('[Game] Enemy turn - executing intents');
         
         // 1. Player summons attack (if any)
@@ -1325,6 +1445,7 @@ const Game = {
             const target = this.state.enemyUnits.find(e => e.hp > 0);
             if (target) {
                 await this.summonAttack(summon, target);
+                await this.resolveAllCollisions(); // Check after each attack
             }
         }
         
@@ -1333,6 +1454,7 @@ const Game = {
             if (enemy.hp <= 0 || !enemy.intent) continue;
             
             await this.executeEnemyIntent(enemy);
+            await this.resolveAllCollisions(); // Check after each enemy action
             
             // Check if hero died
             if (this.state.hero && this.state.hero.hp <= 0) {
@@ -1340,6 +1462,9 @@ const Game = {
                 return;
             }
         }
+        
+        // Final collision check
+        await this.resolveAllCollisions();
         
         // 3. Go to next turn
         setTimeout(() => this.nextTurn(), 500);
