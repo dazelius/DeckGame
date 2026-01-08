@@ -829,6 +829,8 @@ const Game = {
     },
     
     async heroRangedAnimation(hero, target, damage, options = {}) {
+        console.log('[Game] heroRangedAnimation - options:', options, '| createZone:', options.createZone);
+        
         if (typeof UnitCombat !== 'undefined') {
             await UnitCombat.rangedAttack(hero, target, damage, {
                 projectileColor: options.projectileColor || 0xffaa00,

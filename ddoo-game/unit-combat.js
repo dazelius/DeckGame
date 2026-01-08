@@ -256,9 +256,12 @@ const UnitCombat = {
         });
         
         // 2. 투사체 (파이어볼은 특별 처리)
+        console.log('[UnitCombat] rangedAttack - createZone:', createZone, '| fireballEffect exists:', typeof CombatEffects?.fireballEffect);
+        
         if (typeof CombatEffects !== 'undefined') {
-            if (createZone === 'fire' && CombatEffects.fireballEffect) {
+            if (createZone === 'fire') {
                 // 파이어볼 전용 이펙트
+                console.log('[UnitCombat] 🔥 파이어볼 이펙트 실행!');
                 await CombatEffects.fireballEffect(startX, startY, endX, endY);
                 CombatEffects.showDamageNumber(endX, endY - 20, damage, 'burn');
             } else {
