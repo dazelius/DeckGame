@@ -508,20 +508,101 @@ const Game = {
     },
     
     async playAttackCard(cardDef) {
-        // Deal damage to first enemy (or all for cleave)
+        const hero = this.state.hero;
+        if (!hero || !hero.sprite) return;
+        
+        // Find target(s)
         const targets = cardDef.target === 'all' 
             ? this.state.enemyUnits.filter(e => e.hp > 0)
             : [this.state.enemyUnits.find(e => e.hp > 0)].filter(Boolean);
         
-        for (const target of targets) {
-            await this.dealDamage(target, cardDef.damage);
+        if (targets.length === 0) return;
+        
+        // For single target attacks, move to same line (Z) as enemy then attack
+        if (cardDef.target === 'enemy' && targets[0]) {
+            const target = targets[0];
+            
+            // Move hero to same Z line as target
+            if (hero.gridZ !== target.gridZ) {
+                await this.moveHeroToLine(target.gridZ);
+            }
+            
+            // Dash toward enemy and attack
+            await this.heroAttackAnimation(hero, target, cardDef.damage);
+        } else {
+            // Cleave - attack all from current position
+            for (const target of targets) {
+                await this.dealDamage(target, cardDef.damage);
+            }
         }
         
         // Apply block if card has it
         if (cardDef.block) {
             this.state.heroBlock += cardDef.block;
             this.updateBlockUI();
+            this.showMessage(`+${cardDef.block} Block`, 500);
         }
+    },
+    
+    async moveHeroToLine(targetZ) {
+        const hero = this.state.hero;
+        if (!hero || !hero.sprite) return;
+        
+        // Update hero position
+        hero.gridZ = targetZ;
+        hero.z = targetZ + 0.5;
+        
+        // Get new screen position
+        const newPos = this.getCellCenter(hero.gridX, hero.gridZ);
+        if (!newPos) return;
+        
+        // Animate movement
+        return new Promise(resolve => {
+            gsap.to(hero.sprite, {
+                x: newPos.x,
+                y: newPos.y,
+                duration: 0.25,
+                ease: 'power2.out',
+                onComplete: resolve
+            });
+        });
+    },
+    
+    async heroAttackAnimation(hero, target, damage) {
+        if (!hero.sprite || !target.sprite) {
+            await this.dealDamage(target, damage);
+            return;
+        }
+        
+        const originalX = hero.sprite.x;
+        const originalY = hero.sprite.y;
+        
+        // Dash toward enemy
+        const dashX = originalX + (target.sprite.x - originalX) * 0.6;
+        const dashY = originalY + (target.sprite.y - originalY) * 0.3;
+        
+        return new Promise(resolve => {
+            gsap.timeline()
+                // Dash forward
+                .to(hero.sprite, {
+                    x: dashX,
+                    y: dashY,
+                    duration: 0.15,
+                    ease: 'power2.out'
+                })
+                // Deal damage at peak
+                .call(() => {
+                    this.dealDamage(target, damage);
+                })
+                // Return to position
+                .to(hero.sprite, {
+                    x: originalX,
+                    y: originalY,
+                    duration: 0.25,
+                    ease: 'power2.inOut',
+                    onComplete: resolve
+                });
+        });
     },
     
     async playSkillCard(cardDef) {
