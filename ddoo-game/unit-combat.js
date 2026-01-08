@@ -99,15 +99,19 @@ const UnitCombat = {
         if (onHit) onHit();
         
         // 5. 복귀 (await 없이)
-        gsap.to(attacker.sprite, {
-            x: startX,
-            y: startY,
-            duration: 0.25,
-            ease: 'power2.out',
-            onComplete: () => {
-                attacker.isAnimating = false;
-            }
-        });
+        if (attacker.sprite) {
+            gsap.to(attacker.sprite, {
+                x: startX,
+                y: startY,
+                duration: 0.25,
+                ease: 'power2.out',
+                onComplete: () => {
+                    if (attacker) attacker.isAnimating = false;
+                }
+            });
+        } else {
+            if (attacker) attacker.isAnimating = false;
+        }
     },
     
     // ==========================================
@@ -115,6 +119,19 @@ const UnitCombat = {
     // ==========================================
     async bashAttack(attacker, target, damage, options = {}) {
         const { knockback = 0, isEnemy = false, onHit = null } = options;
+        
+        // 스프라이트 체크
+        if (!attacker?.sprite || !target?.sprite) {
+            if (isEnemy) {
+                this.game.dealDamageToTarget(target, damage);
+            } else {
+                this.game.dealDamage(target, damage);
+            }
+            if (knockback > 0 && target?.hp > 0 && typeof KnockbackSystem !== 'undefined') {
+                await KnockbackSystem.knockback(target, 1, knockback);
+            }
+            return;
+        }
         
         attacker.isAnimating = true;
         
@@ -124,26 +141,24 @@ const UnitCombat = {
         const targetCenter = target.sprite.y - (target.sprite.height || 60) / 2;
         
         const dashDirection = isEnemy ? -1 : 1;
-        // 배쉬는 더 가깝게 접근 (80 대신 40)
         const bashX = targetX - (dashDirection * 40);
         
         // 1. 큰 윈드업 (무기 들어올림)
         await new Promise(resolve => {
+            if (!attacker.sprite) { resolve(); return; }
+            
             gsap.timeline()
-                // 뒤로 살짝 물러나며 몸 움츠리기
                 .to(attacker.sprite, { x: startX - (dashDirection * 25), duration: 0.12 })
                 .to(attacker.sprite.scale, { x: 0.85, y: 1.2, duration: 0.12 }, '<')
-                // 점프하며 전진
                 .to(attacker.sprite, { 
                     x: bashX, 
-                    y: startY - 30,  // 점프
+                    y: startY - 30,
                     duration: 0.15, 
                     ease: 'power2.out' 
                 })
                 .to(attacker.sprite.scale, { x: 1.3, y: 0.75, duration: 0.1 }, '<')
-                // 내려찍기
                 .to(attacker.sprite, { 
-                    y: startY + 5,  // 착지 + 약간 찌그러짐
+                    y: startY + 5,
                     duration: 0.08, 
                     ease: 'power3.in' 
                 })
@@ -151,21 +166,21 @@ const UnitCombat = {
                 .add(resolve);
         });
         
-        // 2. 긴 히트스톱 (묵직한 임팩트)
+        // 2. 긴 히트스톱
         if (typeof CombatEffects !== 'undefined') {
-            await CombatEffects.hitStop(80);  // 2배
+            await CombatEffects.hitStop(80);
         }
         
         // 3. 강력한 이펙트
         if (typeof CombatEffects !== 'undefined') {
             CombatEffects.heavySlash(targetX, targetCenter, -30, 0xff8800);
-            CombatEffects.screenShake(15, 200);  // 강한 흔들림
+            CombatEffects.screenShake(15, 200);
             CombatEffects.screenFlash('#ff6600', 100, 0.3);
             CombatEffects.burstParticles(targetX, targetCenter, 0xff8800, 12);
         }
         
         // 4. 피격
-        if (typeof CombatEffects !== 'undefined') {
+        if (typeof CombatEffects !== 'undefined' && target.sprite) {
             CombatEffects.hitEffect(target.sprite);
             CombatEffects.showDamageNumber(targetX, targetCenter - 20, damage, 'bash');
         }
@@ -176,28 +191,30 @@ const UnitCombat = {
             this.game.dealDamage(target, damage);
         }
         
-        // 5. 넉백 (바로 실행)
+        // 5. 넉백
         if (knockback > 0 && target.hp > 0 && typeof KnockbackSystem !== 'undefined') {
             KnockbackSystem.knockback(target, 1, knockback);
         }
         
         if (onHit) onHit();
         
-        // 6. 느린 복귀 (여운)
-        gsap.timeline()
-            // 잠시 멈춤 (여운)
-            .to({}, { duration: 0.15 })
-            // 스케일 복구하면서 천천히 복귀
-            .to(attacker.sprite.scale, { x: 1, y: 1, duration: 0.2, ease: 'power2.out' })
-            .to(attacker.sprite, {
-                x: startX,
-                y: startY,
-                duration: 0.35,
-                ease: 'power2.out',
-                onComplete: () => {
-                    attacker.isAnimating = false;
-                }
-            }, '<');
+        // 6. 느린 복귀
+        if (attacker.sprite) {
+            gsap.timeline()
+                .to({}, { duration: 0.15 })
+                .to(attacker.sprite.scale, { x: 1, y: 1, duration: 0.2, ease: 'power2.out' })
+                .to(attacker.sprite, {
+                    x: startX,
+                    y: startY,
+                    duration: 0.35,
+                    ease: 'power2.out',
+                    onComplete: () => {
+                        if (attacker) attacker.isAnimating = false;
+                    }
+                }, '<');
+        } else {
+            if (attacker) attacker.isAnimating = false;
+        }
     },
     
     // ==========================================
@@ -261,10 +278,14 @@ const UnitCombat = {
         if (onHit) onHit();
         
         // 5. 복귀
-        gsap.timeline()
-            .to(attacker.sprite.scale, { x: 1, y: 1, duration: 0.1 })
-            .to(attacker.sprite, { x: originalX, duration: 0.1 }, 0)
-            .call(() => { attacker.isAnimating = false; });
+        if (attacker.sprite) {
+            gsap.timeline()
+                .to(attacker.sprite.scale, { x: 1, y: 1, duration: 0.1 })
+                .to(attacker.sprite, { x: originalX, duration: 0.1 }, 0)
+                .call(() => { if (attacker) attacker.isAnimating = false; });
+        } else {
+            if (attacker) attacker.isAnimating = false;
+        }
     },
     
     // ==========================================
