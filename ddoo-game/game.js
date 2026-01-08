@@ -178,6 +178,11 @@ const Game = {
         // Containers
         this.setupContainers();
         
+        // Combat Effects
+        if (typeof CombatEffects !== 'undefined') {
+            CombatEffects.init(this.app);
+        }
+        
         // Draw grid
         this.drawGrid();
         
@@ -865,8 +870,15 @@ const Game = {
         });
     },
     
-    async heroAttackAnimation(hero, target, damage) {
+    async heroAttackAnimation(hero, target, damage, cardType = 'strike') {
         if (!hero.sprite || !target.sprite) {
+            await this.dealDamage(target, damage);
+            return;
+        }
+        
+        // Use CombatEffects for full animation
+        if (typeof CombatEffects !== 'undefined') {
+            await CombatEffects.playerMeleeAttack(hero, target, damage, cardType);
             await this.dealDamage(target, damage);
             return;
         }
@@ -908,18 +920,23 @@ const Game = {
             return;
         }
         
-        // Simple ranged attack - slight recoil animation
+        // Use CombatEffects for ranged attack
+        if (typeof CombatEffects !== 'undefined') {
+            await CombatEffects.playerRangedAttack(hero, target, damage);
+            await this.dealDamage(target, damage);
+            return;
+        }
+        
+        // Fallback - simple ranged attack
         const originalX = hero.sprite.x;
         
         return new Promise(resolve => {
             gsap.timeline()
-                // Slight backward recoil (casting)
                 .to(hero.sprite, {
                     x: originalX - 10,
                     duration: 0.1,
                     ease: 'power2.out'
                 })
-                // Return and deal damage
                 .to(hero.sprite, {
                     x: originalX,
                     duration: 0.1,
@@ -927,7 +944,6 @@ const Game = {
                 })
                 .call(() => {
                     this.dealDamage(target, damage);
-                    // TODO: Add projectile VFX here
                 }, null, '-=0.05')
                 .call(resolve, null, '+=0.1');
         });
@@ -935,6 +951,15 @@ const Game = {
     
     async heroAoeAnimation(hero, targets, damage) {
         if (!hero.sprite || targets.length === 0) {
+            for (const target of targets) {
+                await this.dealDamage(target, damage);
+            }
+            return;
+        }
+        
+        // Use CombatEffects for AOE attack
+        if (typeof CombatEffects !== 'undefined') {
+            await CombatEffects.aoeAttackEffect(hero, targets, damage);
             for (const target of targets) {
                 await this.dealDamage(target, damage);
             }
@@ -979,15 +1004,31 @@ const Game = {
     },
     
     async playSkillCard(cardDef) {
+        const hero = this.state.hero;
+        
         if (cardDef.block) {
             this.state.heroBlock += cardDef.block;
             this.updateBlockUI();
-            this.showMessage(`+${cardDef.block} Block`, 500);
+            
+            // Block effect
+            if (typeof CombatEffects !== 'undefined' && hero?.sprite) {
+                CombatEffects.gainBlockEffect(hero.sprite.x, hero.sprite.y - 40, cardDef.block);
+            } else {
+                this.showMessage(`+${cardDef.block} Block`, 500);
+            }
         }
         
-        if (cardDef.heal && this.state.hero) {
-            this.state.hero.hp = Math.min(this.state.hero.hp + cardDef.heal, this.state.hero.maxHp);
-            this.showMessage(`+${cardDef.heal} HP`, 500);
+        if (cardDef.heal && hero) {
+            hero.hp = Math.min(hero.hp + cardDef.heal, hero.maxHp);
+            this.updateUnitHPBar(hero);
+            this.updateHPUI();
+            
+            // Heal effect
+            if (typeof CombatEffects !== 'undefined' && hero.sprite) {
+                CombatEffects.healEffect(hero.sprite.x, hero.sprite.y - 40, cardDef.heal);
+            } else {
+                this.showMessage(`+${cardDef.heal} HP`, 500);
+            }
         }
     },
     
@@ -1913,6 +1954,11 @@ const Game = {
         
         this.containers.units.addChild(sprite);
         
+        // Summon effect (only for summon cards, not hero or enemies)
+        if (team === 'player' && unitType !== 'hero' && typeof CombatEffects !== 'undefined') {
+            CombatEffects.summonEffect(sprite.x, sprite.y);
+        }
+        
         // Create unit object
         const unit = {
             id: Date.now() + Math.random(),
@@ -2257,6 +2303,13 @@ const Game = {
             return;
         }
         
+        // Use CombatEffects for enemy attack
+        if (typeof CombatEffects !== 'undefined') {
+            await CombatEffects.enemyAttackEffect(enemy, target, intentDamage);
+            this.dealDamageToTarget(target, intentDamage);
+            return;
+        }
+        
         const originalX = enemy.sprite.x;
         const originalY = enemy.sprite.y;
         
@@ -2287,6 +2340,13 @@ const Game = {
     
     async enemyRangedAttack(enemy, target, intentDamage) {
         if (!enemy.sprite) {
+            this.dealDamageToTarget(target, intentDamage);
+            return;
+        }
+        
+        // Use CombatEffects for ranged attack
+        if (typeof CombatEffects !== 'undefined') {
+            await CombatEffects.enemyRangedAttackEffect(enemy, target, intentDamage);
             this.dealDamageToTarget(target, intentDamage);
             return;
         }
