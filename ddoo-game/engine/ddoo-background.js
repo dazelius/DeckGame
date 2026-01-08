@@ -22,21 +22,21 @@ const DDOOBackground = {
         smoothing: 0.05
     },
     
-    // Camera defaults - fit grid exactly
+    // Camera defaults - fit grid exactly, hide back edge
     cameraDefaults: {
         posX: 5,       // Center of arena (X axis)
-        posY: 2.2,     // Lower for tighter fit
-        posZ: 4.0,     // Closer to zoom in more
+        posY: 3.5,     // Higher to look down more
+        posZ: 5.5,     // Further back
         lookAtX: 5,    // Look at arena center
-        lookAtY: 0.2,  // Look at floor level
-        lookAtZ: 1.5   // Look at grid center
+        lookAtY: 0,    // Look at floor level
+        lookAtZ: 1.0   // Look slightly forward to hide back edge
     },
     
     // Auto zoom settings
     autoZoom: {
         enabled: true,
-        targetZ: 4.0,
-        currentZ: 4.0,
+        targetZ: 5.5,
+        currentZ: 5.5,
         targetX: 0,
         currentX: 0,
         targetLookAtX: 0,
@@ -271,9 +271,10 @@ const DDOOBackground = {
         const self = this;
         const { width, depth, centerX, centerZ } = this.gridConfig;
         
-        // Floor size - minimal overhang, mostly matching grid
-        const floorWidth = width + 0.2;
-        const floorDepth = depth + 0.2;
+        // Floor size - extend back to hide edge from camera
+        const floorWidth = width + 1;
+        const floorDepth = depth + 3;  // Extend back significantly
+        const floorCenterZ = centerZ - 1;  // Shift center back
         
         // 기본 바닥 (텍스처 로딩 전 폴백)
         const baseFloor = new THREE.Mesh(
@@ -281,7 +282,7 @@ const DDOOBackground = {
             new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 })
         );
         baseFloor.rotation.x = -Math.PI / 2;
-        baseFloor.position.set(centerX, -0.05, centerZ);
+        baseFloor.position.set(centerX, -0.05, floorCenterZ);
         this.dungeonGroup.add(baseFloor);
         
         // bg-floor.png 텍스처 로드
@@ -305,7 +306,7 @@ const DDOOBackground = {
                 })
             );
             floorMesh.rotation.x = -Math.PI / 2;
-            floorMesh.position.set(centerX, 0.01, centerZ);
+            floorMesh.position.set(centerX, 0.01, floorCenterZ);
             self.dungeonGroup.add(floorMesh);
         };
         floorImg.onerror = function() {
@@ -318,10 +319,11 @@ const DDOOBackground = {
         const self = this;
         const { width, depth, centerX, centerZ } = this.gridConfig;
         
-        // Wall dimensions to match grid
-        const wallWidth = width + 0.2;  // Match floor width
-        const sideWallDepth = depth + 0.2;  // Match floor depth
-        const wallHeight = 7;
+        // Wall dimensions - extended to cover floor
+        const wallWidth = width + 2;  // Wider than floor
+        const sideWallDepth = depth + 4;  // Match extended floor
+        const wallHeight = 8;
+        const floorCenterZ = centerZ - 1;  // Match floor center
         
         // 폴백 재질
         const fallbackMat = new THREE.MeshStandardMaterial({ 
@@ -346,12 +348,12 @@ const DDOOBackground = {
                 fog: false
             });
             
-            // Back wall (at Z = 0, touching the floor edge)
+            // Back wall (push back to hide floor edge)
             const backWall = new THREE.Mesh(
                 new THREE.PlaneGeometry(wallWidth, wallHeight),
                 wallMat
             );
-            backWall.position.set(centerX, wallHeight / 2, 0);
+            backWall.position.set(centerX, wallHeight / 2, -1.5);  // Behind floor edge
             self.dungeonGroup.add(backWall);
             
             // Left wall
@@ -367,7 +369,7 @@ const DDOOBackground = {
                     fog: false
                 })
             );
-            leftWall.position.set(0, wallHeight / 2, centerZ);
+            leftWall.position.set(-0.5, wallHeight / 2, floorCenterZ);
             leftWall.rotation.y = Math.PI / 2;
             self.dungeonGroup.add(leftWall);
             
@@ -384,7 +386,7 @@ const DDOOBackground = {
                     fog: false
                 })
             );
-            rightWall.position.set(width, wallHeight / 2, centerZ);
+            rightWall.position.set(width + 0.5, wallHeight / 2, floorCenterZ);
             rightWall.rotation.y = -Math.PI / 2;
             self.dungeonGroup.add(rightWall);
         };
@@ -393,16 +395,16 @@ const DDOOBackground = {
             
             // Fallback walls
             const backWall = new THREE.Mesh(new THREE.PlaneGeometry(wallWidth, wallHeight), fallbackMat);
-            backWall.position.set(centerX, wallHeight / 2, 0);
+            backWall.position.set(centerX, wallHeight / 2, -1.5);
             self.dungeonGroup.add(backWall);
             
             const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(sideWallDepth, wallHeight), fallbackMat.clone());
-            leftWall.position.set(0, wallHeight / 2, centerZ);
+            leftWall.position.set(-0.5, wallHeight / 2, floorCenterZ);
             leftWall.rotation.y = Math.PI / 2;
             self.dungeonGroup.add(leftWall);
             
             const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(sideWallDepth, wallHeight), fallbackMat.clone());
-            rightWall.position.set(width, wallHeight / 2, centerZ);
+            rightWall.position.set(width + 0.5, wallHeight / 2, floorCenterZ);
             rightWall.rotation.y = -Math.PI / 2;
             self.dungeonGroup.add(rightWall);
         };
