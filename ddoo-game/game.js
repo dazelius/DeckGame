@@ -1050,10 +1050,10 @@ const Game = {
     },
     
     createGridHighlight() {
-        // PixiJS grid highlight graphics
+        // PixiJS grid highlight graphics (use effects container - grid gets cleared every frame)
         this.gridHighlight = new PIXI.Graphics();
         this.gridHighlight.zIndex = 5;
-        this.containers.grid.addChild(this.gridHighlight);
+        this.containers.effects.addChild(this.gridHighlight);
     },
     
     startCardDrag(e, cardEl, cardId, handIndex) {
