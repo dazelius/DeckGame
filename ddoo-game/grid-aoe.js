@@ -163,29 +163,245 @@ const GridAOE = {
         zoneContainer.y = pos.y;
         zoneContainer.zIndex = zone.gridZ; // Depth sort
         
-        // Base glow
-        const baseGlow = new PIXI.Graphics();
-        this.drawZoneBase(baseGlow, zone.options.color, zone.type);
-        zoneContainer.addChild(baseGlow);
-        
-        // Particle container
-        const particleContainer = new PIXI.Container();
-        zoneContainer.addChild(particleContainer);
+        // Type-specific visual creation
+        if (zone.type === 'fire') {
+            this.createFireZoneVisual(zone, zoneContainer);
+        } else {
+            // Default base glow for other types
+            const baseGlow = new PIXI.Graphics();
+            this.drawZoneBase(baseGlow, zone.options.color, zone.type);
+            zoneContainer.addChild(baseGlow);
+            zone.baseGlow = baseGlow;
+            
+            // Particle container
+            const particleContainer = new PIXI.Container();
+            zoneContainer.addChild(particleContainer);
+            zone.particleContainer = particleContainer;
+            
+            // Create initial particles
+            this.createZoneParticles(zone);
+        }
         
         zone.graphics = zoneContainer;
-        zone.baseGlow = baseGlow;
-        zone.particleContainer = particleContainer;
-        
-        // Create initial particles
-        this.createZoneParticles(zone);
         
         // Spawn animation
         zoneContainer.scale.set(0);
         zoneContainer.alpha = 0;
-        gsap.to(zoneContainer.scale, { x: 1, y: 1, duration: 0.3, ease: 'back.out(1.5)' });
-        gsap.to(zoneContainer, { alpha: 1, duration: 0.2 });
+        gsap.to(zoneContainer.scale, { x: 1, y: 1, duration: 0.4, ease: 'back.out(2)' });
+        gsap.to(zoneContainer, { alpha: 1, duration: 0.3 });
+        
+        // Fire burst on spawn
+        if (zone.type === 'fire') {
+            this.fireSpawnBurst(pos.x, pos.y);
+        }
         
         this.container.addChild(zoneContainer);
+    },
+    
+    // ==========================================
+    // 화염 지대 전용 시각화
+    // ==========================================
+    createFireZoneVisual(zone, container) {
+        const size = 70;
+        
+        // Layer 1: Outer glow (heat haze)
+        const outerGlow = new PIXI.Graphics();
+        outerGlow.beginFill(0xff2200, 0.15);
+        outerGlow.drawEllipse(0, 0, size * 0.7, size * 0.4);
+        outerGlow.endFill();
+        container.addChild(outerGlow);
+        zone.outerGlow = outerGlow;
+        
+        // Layer 2: Mid glow (hot core)
+        const midGlow = new PIXI.Graphics();
+        midGlow.beginFill(0xff4400, 0.25);
+        midGlow.drawEllipse(0, 0, size * 0.55, size * 0.32);
+        midGlow.endFill();
+        midGlow.beginFill(0xff6600, 0.35);
+        midGlow.drawEllipse(0, 0, size * 0.4, size * 0.24);
+        midGlow.endFill();
+        container.addChild(midGlow);
+        zone.midGlow = midGlow;
+        
+        // Layer 3: Inner core (white-hot center)
+        const innerCore = new PIXI.Graphics();
+        innerCore.beginFill(0xffaa00, 0.5);
+        innerCore.drawEllipse(0, 0, size * 0.25, size * 0.15);
+        innerCore.endFill();
+        innerCore.beginFill(0xffdd44, 0.6);
+        innerCore.drawEllipse(0, 0, size * 0.15, size * 0.09);
+        innerCore.endFill();
+        container.addChild(innerCore);
+        zone.innerCore = innerCore;
+        
+        // Layer 4: Flame tongues container
+        const flameContainer = new PIXI.Container();
+        container.addChild(flameContainer);
+        zone.flameContainer = flameContainer;
+        
+        // Create multiple flame tongues
+        zone.flames = [];
+        for (let i = 0; i < 8; i++) {
+            const flame = this.createFlameTongue();
+            flame.x = (Math.random() - 0.5) * size * 0.6;
+            flame.y = (Math.random() - 0.5) * size * 0.3;
+            flame.baseX = flame.x;
+            flame.baseY = flame.y;
+            flame.phase = Math.random() * Math.PI * 2;
+            flame.speed = 3 + Math.random() * 2;
+            flameContainer.addChild(flame);
+            zone.flames.push(flame);
+        }
+        
+        // Layer 5: Ember/spark container
+        const emberContainer = new PIXI.Container();
+        container.addChild(emberContainer);
+        zone.emberContainer = emberContainer;
+        zone.embers = [];
+        
+        // Initial embers
+        for (let i = 0; i < 12; i++) {
+            this.spawnFireEmber(zone);
+        }
+        
+        // Layer 6: Smoke wisps
+        const smokeContainer = new PIXI.Container();
+        container.addChild(smokeContainer);
+        zone.smokeContainer = smokeContainer;
+        zone.smokeParticles = [];
+    },
+    
+    // ==========================================
+    // 불꽃 혀 생성
+    // ==========================================
+    createFlameTongue() {
+        const flame = new PIXI.Graphics();
+        const height = 15 + Math.random() * 20;
+        const width = 6 + Math.random() * 6;
+        
+        // Draw flame shape (teardrop)
+        flame.beginFill(0xff6600, 0.8);
+        flame.moveTo(0, 0);
+        flame.bezierCurveTo(-width/2, -height*0.3, -width/3, -height*0.7, 0, -height);
+        flame.bezierCurveTo(width/3, -height*0.7, width/2, -height*0.3, 0, 0);
+        flame.endFill();
+        
+        // Inner bright core
+        flame.beginFill(0xffaa00, 0.9);
+        flame.moveTo(0, 0);
+        flame.bezierCurveTo(-width/4, -height*0.25, -width/5, -height*0.5, 0, -height*0.7);
+        flame.bezierCurveTo(width/5, -height*0.5, width/4, -height*0.25, 0, 0);
+        flame.endFill();
+        
+        // Hottest center
+        flame.beginFill(0xffffaa, 0.7);
+        flame.drawEllipse(0, -height*0.2, width*0.2, height*0.15);
+        flame.endFill();
+        
+        return flame;
+    },
+    
+    // ==========================================
+    // 불씨/스파크 생성
+    // ==========================================
+    spawnFireEmber(zone) {
+        if (!zone.emberContainer) return;
+        
+        const ember = new PIXI.Graphics();
+        const size = 2 + Math.random() * 3;
+        
+        // Bright ember color
+        const colors = [0xffff00, 0xffaa00, 0xff6600, 0xff4400];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        
+        ember.beginFill(color, 0.9);
+        ember.drawCircle(0, 0, size);
+        ember.endFill();
+        
+        // Add glow
+        ember.beginFill(color, 0.3);
+        ember.drawCircle(0, 0, size * 2);
+        ember.endFill();
+        
+        // Position
+        ember.x = (Math.random() - 0.5) * 50;
+        ember.y = (Math.random() - 0.5) * 25;
+        
+        // Animation properties
+        ember.vx = (Math.random() - 0.5) * 1.5;
+        ember.vy = -2 - Math.random() * 3;
+        ember.life = 1;
+        ember.decay = 0.015 + Math.random() * 0.02;
+        ember.wobble = Math.random() * Math.PI * 2;
+        ember.wobbleSpeed = 5 + Math.random() * 5;
+        
+        zone.emberContainer.addChild(ember);
+        zone.embers.push(ember);
+    },
+    
+    // ==========================================
+    // 화염 스폰 버스트
+    // ==========================================
+    fireSpawnBurst(x, y) {
+        // Screen effects
+        if (typeof CombatEffects !== 'undefined') {
+            CombatEffects.screenFlash('#ff4400', 150, 0.3);
+            CombatEffects.screenShake(8, 200);
+        }
+        
+        // Burst particles
+        for (let i = 0; i < 15; i++) {
+            const particle = new PIXI.Graphics();
+            const size = 4 + Math.random() * 6;
+            
+            particle.beginFill(0xff6600, 0.9);
+            particle.drawCircle(0, 0, size);
+            particle.endFill();
+            particle.beginFill(0xffaa00, 0.5);
+            particle.drawCircle(0, 0, size * 1.5);
+            particle.endFill();
+            
+            particle.x = x;
+            particle.y = y;
+            this.app.stage.addChild(particle);
+            
+            const angle = (Math.PI * 2 * i) / 15 + Math.random() * 0.3;
+            const distance = 40 + Math.random() * 40;
+            
+            gsap.to(particle, {
+                x: x + Math.cos(angle) * distance,
+                y: y + Math.sin(angle) * distance * 0.5 - 30,
+                alpha: 0,
+                duration: 0.5 + Math.random() * 0.3,
+                ease: 'power2.out',
+                onComplete: () => {
+                    this.app.stage.removeChild(particle);
+                    particle.destroy();
+                }
+            });
+        }
+        
+        // Fire pillar
+        const pillar = new PIXI.Graphics();
+        pillar.beginFill(0xff4400, 0.6);
+        pillar.drawRect(-20, -80, 40, 80);
+        pillar.endFill();
+        pillar.beginFill(0xffaa00, 0.4);
+        pillar.drawRect(-12, -80, 24, 80);
+        pillar.endFill();
+        pillar.x = x;
+        pillar.y = y;
+        this.app.stage.addChild(pillar);
+        
+        gsap.to(pillar, {
+            alpha: 0,
+            duration: 0.4,
+            onComplete: () => {
+                this.app.stage.removeChild(pillar);
+                pillar.destroy();
+            }
+        });
+        gsap.to(pillar.scale, { x: 1.5, y: 1.2, duration: 0.4, ease: 'power2.out' });
     },
     
     // ==========================================
@@ -328,21 +544,154 @@ const GridAOE = {
                 zone.graphics.y = pos.y;
             }
             
-            // Animate base glow
-            if (zone.baseGlow) {
-                const pulse = 0.8 + Math.sin(zone.animationTime * 3) * 0.2;
-                zone.baseGlow.alpha = pulse;
+            // Type-specific animations
+            if (zone.type === 'fire') {
+                this.updateFireZone(zone, delta);
+            } else {
+                // Default animation for other types
+                if (zone.baseGlow) {
+                    const pulse = 0.8 + Math.sin(zone.animationTime * 3) * 0.2;
+                    zone.baseGlow.alpha = pulse;
+                }
+                this.updateParticles(zone);
+            }
+        }
+    },
+    
+    // ==========================================
+    // 화염 지대 애니메이션 업데이트
+    // ==========================================
+    updateFireZone(zone, delta) {
+        const t = zone.animationTime;
+        
+        // Outer glow - slow pulse with heat shimmer
+        if (zone.outerGlow) {
+            zone.outerGlow.alpha = 0.12 + Math.sin(t * 2) * 0.05;
+            zone.outerGlow.scale.x = 1 + Math.sin(t * 1.5) * 0.08;
+            zone.outerGlow.scale.y = 1 + Math.cos(t * 1.8) * 0.05;
+        }
+        
+        // Mid glow - faster flicker
+        if (zone.midGlow) {
+            zone.midGlow.alpha = 0.25 + Math.sin(t * 5) * 0.1;
+            zone.midGlow.scale.x = 1 + Math.sin(t * 6) * 0.1;
+            zone.midGlow.scale.y = 1 + Math.cos(t * 4) * 0.08;
+        }
+        
+        // Inner core - intense rapid flicker
+        if (zone.innerCore) {
+            zone.innerCore.alpha = 0.5 + Math.sin(t * 10) * 0.2;
+            zone.innerCore.scale.x = 1 + Math.sin(t * 12) * 0.15;
+            zone.innerCore.scale.y = 1 + Math.cos(t * 8) * 0.1;
+            zone.innerCore.rotation = Math.sin(t * 3) * 0.1;
+        }
+        
+        // Animate flame tongues
+        if (zone.flames) {
+            for (const flame of zone.flames) {
+                flame.phase += delta * flame.speed;
                 
-                if (zone.type === 'fire') {
-                    // Flicker
-                    zone.baseGlow.scale.x = 1 + Math.sin(zone.animationTime * 10) * 0.1;
-                    zone.baseGlow.scale.y = 1 + Math.cos(zone.animationTime * 8) * 0.1;
+                // Sway and dance
+                flame.x = flame.baseX + Math.sin(flame.phase) * 5;
+                flame.y = flame.baseY + Math.cos(flame.phase * 0.7) * 3;
+                
+                // Scale flicker
+                flame.scale.x = 0.8 + Math.sin(flame.phase * 1.5) * 0.3;
+                flame.scale.y = 0.9 + Math.sin(flame.phase * 2) * 0.2;
+                
+                // Alpha flicker
+                flame.alpha = 0.6 + Math.sin(flame.phase * 3) * 0.3;
+                
+                // Slight rotation
+                flame.rotation = Math.sin(flame.phase * 0.8) * 0.2;
+            }
+        }
+        
+        // Update embers
+        if (zone.embers) {
+            const toRemove = [];
+            
+            for (const ember of zone.embers) {
+                ember.wobble += delta * ember.wobbleSpeed;
+                
+                // Movement with wobble
+                ember.x += ember.vx + Math.sin(ember.wobble) * 0.5;
+                ember.y += ember.vy;
+                ember.vy -= 0.03; // Float up faster over time
+                
+                // Fade
+                ember.life -= ember.decay;
+                ember.alpha = ember.life;
+                ember.scale.set(0.5 + ember.life * 0.5);
+                
+                if (ember.life <= 0) {
+                    toRemove.push(ember);
                 }
             }
             
-            // Update particles
-            this.updateParticles(zone);
+            // Remove dead embers and spawn new ones
+            for (const e of toRemove) {
+                const idx = zone.embers.indexOf(e);
+                if (idx > -1) zone.embers.splice(idx, 1);
+                if (zone.emberContainer) zone.emberContainer.removeChild(e);
+                e.destroy();
+                
+                // Spawn replacement
+                this.spawnFireEmber(zone);
+            }
         }
+        
+        // Occasional smoke puff
+        if (Math.random() < 0.02 && zone.smokeContainer) {
+            this.spawnSmokePuff(zone);
+        }
+        
+        // Update smoke
+        if (zone.smokeParticles) {
+            const smokeToRemove = [];
+            
+            for (const smoke of zone.smokeParticles) {
+                smoke.x += smoke.vx;
+                smoke.y += smoke.vy;
+                smoke.vy -= 0.02;
+                smoke.life -= smoke.decay;
+                smoke.alpha = smoke.life * 0.3;
+                smoke.scale.set(smoke.scale.x + 0.01);
+                
+                if (smoke.life <= 0) {
+                    smokeToRemove.push(smoke);
+                }
+            }
+            
+            for (const s of smokeToRemove) {
+                const idx = zone.smokeParticles.indexOf(s);
+                if (idx > -1) zone.smokeParticles.splice(idx, 1);
+                if (zone.smokeContainer) zone.smokeContainer.removeChild(s);
+                s.destroy();
+            }
+        }
+    },
+    
+    // ==========================================
+    // 연기 생성
+    // ==========================================
+    spawnSmokePuff(zone) {
+        const smoke = new PIXI.Graphics();
+        const size = 8 + Math.random() * 8;
+        
+        smoke.beginFill(0x444444, 0.3);
+        smoke.drawCircle(0, 0, size);
+        smoke.endFill();
+        
+        smoke.x = (Math.random() - 0.5) * 30;
+        smoke.y = -10;
+        smoke.vx = (Math.random() - 0.5) * 0.5;
+        smoke.vy = -1 - Math.random();
+        smoke.life = 1;
+        smoke.decay = 0.02;
+        
+        zone.smokeContainer.addChild(smoke);
+        zone.smokeParticles.push(smoke);
     },
     
     updateParticles(zone) {
@@ -354,10 +703,7 @@ const GridAOE = {
             particle.y += particle.vy;
             
             // Type-specific behavior
-            if (zone.type === 'fire') {
-                particle.vy -= 0.05; // Rise faster
-                particle.vx += (Math.random() - 0.5) * 0.3; // Flicker sideways
-            } else if (zone.type === 'poison') {
+            if (zone.type === 'poison') {
                 particle.vy = Math.sin(zone.animationTime * 5 + particle.x) * 0.5; // Bubble
             } else if (zone.type === 'lightning') {
                 particle.x += (Math.random() - 0.5) * 5; // Jitter
