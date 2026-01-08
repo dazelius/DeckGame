@@ -164,9 +164,10 @@ const Game = {
         // Resize handler
         window.addEventListener('resize', () => this.onResize());
         
-        // Frame update - keep grid synced with 3D camera
+        // Frame update - keep grid and characters synced with 3D camera
         this.app.ticker.add(() => {
             this.drawGrid();
+            this.updateAllUnitPositions();
         });
         
         // Start game
@@ -2205,11 +2206,22 @@ const Game = {
     },
     
     updateUnitSprite(unit) {
-        const screenPos = DDOOBackground.project3DToScreen(unit.x, 0, unit.z);
-        if (screenPos && unit.sprite) {
-            unit.sprite.x = screenPos.screenX;
-            unit.sprite.y = screenPos.screenY;
-            unit.sprite.zIndex = Math.floor(1000 - unit.z * 100);
+        if (!unit || !unit.sprite) return;
+        const center = this.getCellCenter(unit.gridX, unit.gridZ);
+        if (center) {
+            unit.sprite.x = center.x;
+            unit.sprite.y = center.y;
+            unit.sprite.zIndex = Math.floor(1000 - unit.gridZ * 100);
+        }
+    },
+    
+    updateAllUnitPositions() {
+        // Update all unit positions based on current 3D projection
+        const allUnits = [...this.state.playerUnits, ...this.state.enemyUnits];
+        for (const unit of allUnits) {
+            if (unit.hp > 0 && unit.sprite) {
+                this.updateUnitSprite(unit);
+            }
         }
     },
     
