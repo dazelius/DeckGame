@@ -1346,19 +1346,111 @@ const Game = {
     },
     
     async summonAttack(summon, target) {
-        // Simple attack animation
-        if (summon.sprite && target.sprite) {
-            const originalX = summon.sprite.x;
-            
-            await new Promise(resolve => {
-                gsap.timeline()
-                    .to(summon.sprite, { x: originalX + 20, duration: 0.15 })
-                    .call(() => {
-                        this.dealDamage(target, summon.damage);
-                    })
-                    .to(summon.sprite, { x: originalX, duration: 0.2, onComplete: resolve });
-            });
+        if (!summon.sprite || !target.sprite) {
+            this.dealDamage(target, summon.damage);
+            return;
         }
+        
+        const isMelee = (summon.range || 1) <= 1;
+        
+        if (isMelee) {
+            // Melee: Move to same line as target, then dash attack
+            if (summon.gridZ !== target.gridZ) {
+                await this.moveSummonToLine(summon, target.gridZ);
+            }
+            await this.summonMeleeAttack(summon, target);
+        } else {
+            // Ranged: Attack from current position
+            await this.summonRangedAttack(summon, target);
+        }
+    },
+    
+    async moveSummonToLine(unit, targetZ) {
+        if (!unit || !unit.sprite) return;
+        
+        // Check if there's a friendly unit at the target position
+        const blockingUnit = this.state.playerUnits.find(u => 
+            u !== unit && !u.isHero && u.hp > 0 && u.gridX === unit.gridX && u.gridZ === targetZ
+        );
+        
+        if (blockingUnit) {
+            await this.moveUnitAside(blockingUnit, targetZ);
+        }
+        
+        // Update unit position
+        unit.gridZ = targetZ;
+        unit.z = targetZ + 0.5;
+        
+        // Get new screen position
+        const newPos = this.getCellCenter(unit.gridX, unit.gridZ);
+        if (!newPos) return;
+        
+        // Animate movement
+        return new Promise(resolve => {
+            gsap.to(unit.sprite, {
+                x: newPos.x,
+                y: newPos.y,
+                duration: 0.2,
+                ease: 'power2.out',
+                onComplete: resolve
+            });
+        });
+    },
+    
+    async summonMeleeAttack(summon, target) {
+        const originalX = summon.sprite.x;
+        const originalY = summon.sprite.y;
+        
+        // Dash toward enemy
+        const dashX = originalX + (target.sprite.x - originalX) * 0.5;
+        const dashY = originalY + (target.sprite.y - originalY) * 0.2;
+        
+        return new Promise(resolve => {
+            gsap.timeline()
+                // Dash forward
+                .to(summon.sprite, {
+                    x: dashX,
+                    y: dashY,
+                    duration: 0.12,
+                    ease: 'power2.out'
+                })
+                // Deal damage at peak
+                .call(() => {
+                    this.dealDamage(target, summon.damage);
+                })
+                // Return to position
+                .to(summon.sprite, {
+                    x: originalX,
+                    y: originalY,
+                    duration: 0.2,
+                    ease: 'power2.inOut',
+                    onComplete: resolve
+                });
+        });
+    },
+    
+    async summonRangedAttack(summon, target) {
+        const originalX = summon.sprite.x;
+        
+        return new Promise(resolve => {
+            gsap.timeline()
+                // Slight backward recoil (shooting)
+                .to(summon.sprite, {
+                    x: originalX - 8,
+                    duration: 0.08,
+                    ease: 'power2.out'
+                })
+                // Return and deal damage
+                .to(summon.sprite, {
+                    x: originalX,
+                    duration: 0.08,
+                    ease: 'power2.in'
+                })
+                .call(() => {
+                    this.dealDamage(target, summon.damage);
+                }, null, '-=0.04')
+                .call(resolve, null, '+=0.1');
+        });
     },
     
     async executeEnemyIntent(enemy) {
@@ -1369,42 +1461,17 @@ const Game = {
         
         switch (intent.type) {
             case 'attack':
-                // Attack animation
-                if (enemy.sprite) {
-                    const originalX = enemy.sprite.x;
-                    await new Promise(resolve => {
-                        gsap.timeline()
-                            .to(enemy.sprite, { x: originalX - 30, duration: 0.2 })
-                            .call(() => {
-                                // Damage goes through block first
-                                let damage = intent.damage;
-                                if (this.state.heroBlock > 0) {
-                                    const blocked = Math.min(this.state.heroBlock, damage);
-                                    this.state.heroBlock -= blocked;
-                                    damage -= blocked;
-                                    if (blocked > 0) {
-                                        this.showMessage(`Blocked ${blocked}!`, 500);
-                                    }
-                                    this.updateBlockUI();
-                                }
-                                
-                                if (damage > 0) {
-                                    hero.hp -= damage;
-                                    this.showDamage(hero, damage);
-                                    
-                                    // Hero hit effect
-                                    if (hero.sprite) {
-                                        gsap.to(hero.sprite, {
-                                            alpha: 0.5,
-                                            duration: 0.1,
-                                            yoyo: true,
-                                            repeat: 1
-                                        });
-                                    }
-                                }
-                            })
-                            .to(enemy.sprite, { x: originalX, duration: 0.2, onComplete: resolve });
-                    });
+                const isMelee = (enemy.range || 1) <= 1;
+                
+                if (isMelee) {
+                    // Melee: Move to same line as hero, then dash attack
+                    if (enemy.gridZ !== hero.gridZ) {
+                        await this.moveEnemyToLine(enemy, hero.gridZ);
+                    }
+                    await this.enemyMeleeAttack(enemy, hero, intent.damage);
+                } else {
+                    // Ranged: Attack from current position
+                    await this.enemyRangedAttack(enemy, hero, intent.damage);
                 }
                 break;
                 
@@ -1421,6 +1488,146 @@ const Game = {
                 await new Promise(r => setTimeout(r, 300));
                 break;
         }
+    },
+    
+    async moveEnemyToLine(enemy, targetZ) {
+        if (!enemy || !enemy.sprite) return;
+        
+        // Check if there's another enemy at the target position
+        const blockingEnemy = this.state.enemyUnits.find(u => 
+            u !== enemy && u.hp > 0 && u.gridX === enemy.gridX && u.gridZ === targetZ
+        );
+        
+        if (blockingEnemy) {
+            // Find alternative Z position
+            for (let z = 0; z < this.arena.depth; z++) {
+                if (z === targetZ) continue;
+                const occupied = this.state.enemyUnits.some(u => 
+                    u !== blockingEnemy && u.hp > 0 && u.gridX === blockingEnemy.gridX && u.gridZ === z
+                );
+                if (!occupied) {
+                    blockingEnemy.gridZ = z;
+                    blockingEnemy.z = z + 0.5;
+                    const newPos = this.getCellCenter(blockingEnemy.gridX, blockingEnemy.gridZ);
+                    if (newPos) {
+                        gsap.to(blockingEnemy.sprite, {
+                            x: newPos.x,
+                            y: newPos.y,
+                            duration: 0.15
+                        });
+                    }
+                    break;
+                }
+            }
+        }
+        
+        // Update enemy position
+        enemy.gridZ = targetZ;
+        enemy.z = targetZ + 0.5;
+        
+        const newPos = this.getCellCenter(enemy.gridX, enemy.gridZ);
+        if (!newPos) return;
+        
+        return new Promise(resolve => {
+            gsap.to(enemy.sprite, {
+                x: newPos.x,
+                y: newPos.y,
+                duration: 0.2,
+                ease: 'power2.out',
+                onComplete: resolve
+            });
+        });
+    },
+    
+    async enemyMeleeAttack(enemy, target, intentDamage) {
+        if (!enemy.sprite || !target.sprite) {
+            this.dealDamageToHero(target, intentDamage);
+            return;
+        }
+        
+        const originalX = enemy.sprite.x;
+        const originalY = enemy.sprite.y;
+        
+        // Dash toward hero
+        const dashX = originalX + (target.sprite.x - originalX) * 0.5;
+        const dashY = originalY + (target.sprite.y - originalY) * 0.2;
+        
+        return new Promise(resolve => {
+            gsap.timeline()
+                .to(enemy.sprite, {
+                    x: dashX,
+                    y: dashY,
+                    duration: 0.15,
+                    ease: 'power2.out'
+                })
+                .call(() => {
+                    this.dealDamageToHero(target, intentDamage);
+                })
+                .to(enemy.sprite, {
+                    x: originalX,
+                    y: originalY,
+                    duration: 0.2,
+                    ease: 'power2.inOut',
+                    onComplete: resolve
+                });
+        });
+    },
+    
+    async enemyRangedAttack(enemy, target, intentDamage) {
+        if (!enemy.sprite) {
+            this.dealDamageToHero(target, intentDamage);
+            return;
+        }
+        
+        const originalX = enemy.sprite.x;
+        
+        return new Promise(resolve => {
+            gsap.timeline()
+                .to(enemy.sprite, {
+                    x: originalX + 8,
+                    duration: 0.08,
+                    ease: 'power2.out'
+                })
+                .to(enemy.sprite, {
+                    x: originalX,
+                    duration: 0.08,
+                    ease: 'power2.in'
+                })
+                .call(() => {
+                    this.dealDamageToHero(target, intentDamage);
+                }, null, '-=0.04')
+                .call(resolve, null, '+=0.1');
+        });
+    },
+    
+    dealDamageToHero(hero, damage) {
+        // Damage goes through block first
+        if (this.state.heroBlock > 0) {
+            const blocked = Math.min(this.state.heroBlock, damage);
+            this.state.heroBlock -= blocked;
+            damage -= blocked;
+            if (blocked > 0) {
+                this.showMessage(`Blocked ${blocked}!`, 500);
+            }
+            this.updateBlockUI();
+        }
+        
+        if (damage > 0) {
+            hero.hp -= damage;
+            this.showDamage(hero, damage);
+            
+            // Hero hit effect
+            if (hero.sprite) {
+                gsap.to(hero.sprite, {
+                    alpha: 0.5,
+                    duration: 0.1,
+                    yoyo: true,
+                    repeat: 1
+                });
+            }
+        }
+        
+        this.updateHPUI();
     },
     
     async attackUnit(attacker, target) {
