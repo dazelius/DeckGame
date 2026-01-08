@@ -271,9 +271,9 @@ const DDOOBackground = {
         const self = this;
         const { width, depth, centerX, centerZ } = this.gridConfig;
         
-        // Floor size to match grid (with small margin)
-        const floorWidth = width + 2;
-        const floorDepth = depth + 4;
+        // Floor size to match grid (extended back to meet wall)
+        const floorWidth = width + 4;
+        const floorDepth = depth + 2;
         
         // 기본 바닥 (텍스처 로딩 전 폴백)
         const baseFloor = new THREE.Mesh(
@@ -345,12 +345,12 @@ const DDOOBackground = {
                 fog: false
             });
             
-            // Back wall (at Z = -1, just behind grid)
+            // Back wall (at Z = 0, touching the floor edge)
             const backWall = new THREE.Mesh(
                 new THREE.PlaneGeometry(wallWidth, wallHeight),
                 wallMat
             );
-            backWall.position.set(centerX, wallHeight / 2, -1);
+            backWall.position.set(centerX, wallHeight / 2 - 0.5, -0.5);
             self.dungeonGroup.add(backWall);
             
             // Left wall
@@ -393,7 +393,7 @@ const DDOOBackground = {
             const wallHeight = 8;
             // Fallback walls
             const backWall = new THREE.Mesh(new THREE.PlaneGeometry(width + 4, wallHeight), fallbackMat);
-            backWall.position.set(centerX, wallHeight / 2, -1);
+            backWall.position.set(centerX, wallHeight / 2 - 0.5, -0.5);
             self.dungeonGroup.add(backWall);
             
             const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(8, wallHeight), fallbackMat.clone());
