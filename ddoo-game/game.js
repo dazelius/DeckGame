@@ -365,9 +365,15 @@ const Game = {
     },
     
     updateCostUI() {
+        // Update top bar cost
         const costEl = document.getElementById('cost-display');
         if (costEl) {
             costEl.textContent = this.state.cost;
+        }
+        // Update bottom panel cost
+        const costElBottom = document.getElementById('cost-display-bottom');
+        if (costElBottom) {
+            costElBottom.textContent = this.state.cost;
         }
     },
     
