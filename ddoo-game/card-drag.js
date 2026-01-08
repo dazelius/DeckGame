@@ -290,7 +290,7 @@ const CardDrag = {
         this.resetDragState();
         
         if (success) {
-            this.game.renderHand();
+            this.game.renderHand(false);
         }
     },
     

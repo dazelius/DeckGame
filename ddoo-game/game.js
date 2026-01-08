@@ -273,7 +273,7 @@ const Game = {
             this.state.discard.push(...this.state.hand);
             this.state.hand = [];
         }
-        this.renderHand();
+        this.renderHand(false);
     },
     
     setupContainers() {
@@ -709,7 +709,7 @@ const Game = {
         this.startBattlePhase();
     },
     
-    renderHand() {
+    renderHand(animate = true) {
         const handEl = document.getElementById('card-hand');
         if (!handEl) return;
         
@@ -743,6 +743,17 @@ const Game = {
             cardEl.addEventListener('touchstart', (e) => this.startCardDrag(e, cardEl, cardId, index), { passive: false });
             
             handEl.appendChild(cardEl);
+            
+            // 딜링 애니메이션
+            if (animate) {
+                setTimeout(() => {
+                    cardEl.classList.add('dealt');
+                    // 카드 딜링 사운드 (옵션)
+                    if (navigator.vibrate) navigator.vibrate(10);
+                }, index * 80); // 카드마다 80ms 간격
+            } else {
+                cardEl.classList.add('dealt');
+            }
         });
     },
     
@@ -1042,7 +1053,7 @@ const Game = {
             await this.playAttackCardOnTarget(cardDef, targetEnemy);
         }
         
-        this.renderHand();
+        this.renderHand(false);
         if (navigator.vibrate) navigator.vibrate([20, 30, 20]);
     },
     
@@ -1212,7 +1223,7 @@ const Game = {
             await this.playSkillCard(cardDef);
         }
         
-        this.renderHand();
+        this.renderHand(false);
         if (navigator.vibrate) navigator.vibrate([20, 30, 20]);
     },
     
