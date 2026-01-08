@@ -22,21 +22,21 @@ const DDOOBackground = {
         smoothing: 0.05
     },
     
-    // Camera defaults (Balanced view - no cutoff)
+    // Camera defaults
     cameraDefaults: {
         posX: 5,       // Center of arena (X axis)
-        posY: 3.2,     // Higher to see more
-        posZ: 6.0,     // Further back to show full grid
+        posY: 2.8,     // Height
+        posZ: 5.2,     // Distance
         lookAtX: 5,    // Look at arena center
-        lookAtY: 0.3,  // Look at floor level
+        lookAtY: 0.5,  // Look at floor level
         lookAtZ: 1.5   // Look at grid center
     },
     
     // Auto zoom settings
     autoZoom: {
         enabled: true,
-        targetZ: 6.0,
-        currentZ: 6.0,
+        targetZ: 5.2,
+        currentZ: 5.2,
         targetX: 0,
         currentX: 0,
         targetLookAtX: 0,
@@ -271,9 +271,9 @@ const DDOOBackground = {
         const self = this;
         const { width, depth, centerX, centerZ } = this.gridConfig;
         
-        // Floor size - slight overhang for clean edges
-        const floorWidth = width + 0.5;
-        const floorDepth = depth + 0.3;
+        // Floor size - match grid with small margin
+        const floorWidth = width + 1;
+        const floorDepth = depth + 1;
         
         // 기본 바닥 (텍스처 로딩 전 폴백)
         const baseFloor = new THREE.Mesh(
@@ -334,8 +334,8 @@ const DDOOBackground = {
             tex.magFilter = THREE.NearestFilter;
             tex.minFilter = THREE.NearestFilter;
             
-            // Wall dimensions - exact fit
-            const wallWidth = width;
+            // Wall dimensions
+            const wallWidth = width + 2;
             const wallHeight = 7;
             
             const wallMat = new THREE.MeshBasicMaterial({ 
@@ -392,7 +392,7 @@ const DDOOBackground = {
             
             const fallbackWallHeight = 7;
             // Fallback walls
-            const backWall = new THREE.Mesh(new THREE.PlaneGeometry(width, fallbackWallHeight), fallbackMat);
+            const backWall = new THREE.Mesh(new THREE.PlaneGeometry(width + 2, fallbackWallHeight), fallbackMat);
             backWall.position.set(centerX, fallbackWallHeight / 2 - 0.5, -0.5);
             self.dungeonGroup.add(backWall);
             
