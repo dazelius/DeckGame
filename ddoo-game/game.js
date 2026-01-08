@@ -842,125 +842,115 @@ const Game = {
     },
     
     // ==================== BATTLE PHASE (Turn-Based) ====================
-    startBattlePhase() {
+    // ==================== BATTLE PHASE (Slay the Spire style) ====================
+    async startBattlePhase() {
         this.state.phase = 'battle';
-        this.state.battleTurn = 0;
         this.updatePhaseUI();
         
-        console.log('[Game] Battle phase started!');
+        console.log('[Game] Enemy turn - executing intents');
         
-        // Start first turn
-        this.nextBattleTurn();
-    },
-    
-    async nextBattleTurn() {
-        if (this.state.phase !== 'battle') return;
-        
-        this.state.battleTurn++;
-        console.log(`[Game] === Turn ${this.state.battleTurn} ===`);
-        
-        // Check battle end before turn
-        if (this.checkBattleEnd()) {
-            this.endBattlePhase();
-            return;
+        // 1. Player summons attack (if any)
+        const summons = this.state.playerUnits.filter(u => u.hp > 0 && !u.isHero && u.damage > 0);
+        for (const summon of summons) {
+            const target = this.state.enemyUnits.find(e => e.hp > 0);
+            if (target) {
+                await this.summonAttack(summon, target);
+            }
         }
         
-        // All units attack once (alternating: player then enemy)
-        const playerUnits = this.state.playerUnits.filter(u => u.hp > 0);
-        const enemyUnits = this.state.enemyUnits.filter(u => u.hp > 0);
-        
-        // Interleave attacks: player1, enemy1, player2, enemy2...
-        const maxLen = Math.max(playerUnits.length, enemyUnits.length);
-        
-        for (let i = 0; i < maxLen; i++) {
-            // Player unit attacks
-            if (playerUnits[i]) {
-                await this.unitTakeTurn(playerUnits[i]);
-                if (this.checkBattleEnd()) break;
-            }
+        // 2. Enemies execute their intents (attack hero)
+        for (const enemy of this.state.enemyUnits) {
+            if (enemy.hp <= 0 || !enemy.intent) continue;
             
-            // Enemy unit attacks
-            if (enemyUnits[i]) {
-                await this.unitTakeTurn(enemyUnits[i]);
-                if (this.checkBattleEnd()) break;
-            }
-        }
-        
-        // Check battle end after turn
-        if (this.checkBattleEnd()) {
-            this.endBattlePhase();
-            return;
-        }
-        
-        // Next turn after delay
-        setTimeout(() => this.nextBattleTurn(), 800);
-    },
-    
-    async unitTakeTurn(unit) {
-        if (unit.hp <= 0) return;
-        
-        const enemies = unit.team === 'player' ? this.state.enemyUnits : this.state.playerUnits;
-        const aliveEnemies = enemies.filter(e => e.hp > 0);
-        
-        if (aliveEnemies.length === 0) return;
-        
-        // Find nearest enemy
-        let nearest = null;
-        let nearestDist = Infinity;
-        
-        aliveEnemies.forEach(enemy => {
-            const dist = Math.abs(unit.x - enemy.x) + Math.abs(unit.z - enemy.z);
-            if (dist < nearestDist) {
-                nearestDist = dist;
-                nearest = enemy;
-            }
-        });
-        
-        if (!nearest) return;
-        
-        // In range? Attack! Otherwise move closer
-        if (nearestDist <= unit.range) {
-            await this.attackUnit(unit, nearest);
-        } else {
-            await this.moveUnitToward(unit, nearest);
-        }
-    },
-    
-    async moveUnitToward(unit, target) {
-        const unitDef = this.unitTypes[unit.type];
-        const dx = target.x - unit.x;
-        const dz = target.z - unit.z;
-        const dist = Math.sqrt(dx * dx + dz * dz);
-        
-        if (dist <= 0) return;
-        
-        // Move 1 cell toward target
-        const moveX = dx !== 0 ? Math.sign(dx) : 0;
-        const moveZ = dz !== 0 ? Math.sign(dz) : 0;
-        
-        const newX = unit.x + moveX;
-        const newZ = unit.z + moveZ;
-        
-        // Animate movement
-        return new Promise(resolve => {
-            unit.x = newX;
-            unit.z = newZ;
-            unit.gridX = Math.floor(newX);
-            unit.gridZ = Math.floor(newZ);
+            await this.executeEnemyIntent(enemy);
             
-            const targetPos = this.getCellCenter(unit.gridX, unit.gridZ);
-            if (targetPos && unit.sprite) {
-                gsap.to(unit.sprite, {
-                    x: targetPos.x,
-                    y: targetPos.y,
-                    duration: 0.3,
-                    ease: 'power2.out',
-                    onComplete: resolve
-                });
-            } else {
-                resolve();
+            // Check if hero died
+            if (this.state.hero && this.state.hero.hp <= 0) {
+                this.gameOver();
+                return;
             }
-        });
+        }
+        
+        // 3. Go to next turn
+        setTimeout(() => this.nextTurn(), 500);
+    },
+    
+    async summonAttack(summon, target) {
+        // Simple attack animation
+        if (summon.sprite && target.sprite) {
+            const originalX = summon.sprite.x;
+            
+            await new Promise(resolve => {
+                gsap.timeline()
+                    .to(summon.sprite, { x: originalX + 20, duration: 0.15 })
+                    .call(() => {
+                        this.dealDamage(target, summon.damage);
+                    })
+                    .to(summon.sprite, { x: originalX, duration: 0.2, onComplete: resolve });
+            });
+        }
+    },
+    
+    async executeEnemyIntent(enemy) {
+        const intent = enemy.intent;
+        const hero = this.state.hero;
+        
+        if (!hero || hero.hp <= 0) return;
+        
+        switch (intent.type) {
+            case 'attack':
+                // Attack animation
+                if (enemy.sprite) {
+                    const originalX = enemy.sprite.x;
+                    await new Promise(resolve => {
+                        gsap.timeline()
+                            .to(enemy.sprite, { x: originalX - 30, duration: 0.2 })
+                            .call(() => {
+                                // Damage goes through block first
+                                let damage = intent.damage;
+                                if (this.state.heroBlock > 0) {
+                                    const blocked = Math.min(this.state.heroBlock, damage);
+                                    this.state.heroBlock -= blocked;
+                                    damage -= blocked;
+                                    if (blocked > 0) {
+                                        this.showMessage(`Blocked ${blocked}!`, 500);
+                                    }
+                                    this.updateBlockUI();
+                                }
+                                
+                                if (damage > 0) {
+                                    hero.hp -= damage;
+                                    this.showDamage(hero, damage);
+                                    
+                                    // Hero hit effect
+                                    if (hero.sprite) {
+                                        gsap.to(hero.sprite, {
+                                            alpha: 0.5,
+                                            duration: 0.1,
+                                            yoyo: true,
+                                            repeat: 1
+                                        });
+                                    }
+                                }
+                            })
+                            .to(enemy.sprite, { x: originalX, duration: 0.2, onComplete: resolve });
+                    });
+                }
+                break;
+                
+            case 'defend':
+                // Enemy gains block (visual only for now)
+                this.showMessage(`${enemy.type} defends!`, 500);
+                await new Promise(r => setTimeout(r, 300));
+                break;
+                
+            case 'buff':
+                // Enemy buffs (increase damage for next turn)
+                enemy.damage = Math.floor(enemy.damage * 1.25);
+                this.showMessage(`${enemy.type} powers up!`, 500);
+                await new Promise(r => setTimeout(r, 300));
+                break;
+        }
     },
     
     async attackUnit(attacker, target) {
@@ -991,13 +981,9 @@ const Game = {
                         if (target.sprite) {
                             gsap.to(target.sprite, {
                                 alpha: 0.3,
-                                tint: 0xff0000,
                                 duration: 0.08,
                                 yoyo: true,
-                                repeat: 1,
-                                onComplete: () => {
-                                    if (target.sprite) target.sprite.tint = target.team === 'player' ? 0x8888ff : 0xff8888;
-                                }
+                                repeat: 1
                             });
                         }
                         
@@ -1071,43 +1057,13 @@ const Game = {
         }
     },
     
-    checkBattleEnd() {
-        const playerAlive = this.state.playerUnits.filter(u => u.hp > 0).length;
-        const enemyAlive = this.state.enemyUnits.filter(u => u.hp > 0).length;
-        
-        return playerAlive === 0 || enemyAlive === 0;
-    },
-    
-    endBattlePhase() {
-        const heroAlive = this.state.hero && this.state.hero.hp > 0;
-        const enemyAlive = this.state.enemyUnits.filter(u => u.hp > 0).length;
-        
-        if (!heroAlive) {
-            // Hero died - game over
-            this.showMessage('GAME OVER', 3000);
-            this.state.phase = 'result';
-            this.updatePhaseUI();
-            return;
-        }
-        
-        if (enemyAlive === 0) {
-            // All enemies dead - next turn
-            this.showMessage('Turn Complete!', 1000);
-        }
-        
-        // Next turn after delay
-        setTimeout(() => {
-            this.nextTurn();
-        }, 1500);
-    },
-    
     nextTurn() {
         this.state.turn++;
         
         // Increase cost (like Hearthstone mana)
         this.state.cost = Math.min(this.state.turn + 2, this.state.maxCost);
         
-        // Clear dead player summons (not hero)
+        // Clear dead units
         this.state.playerUnits = this.state.playerUnits.filter(u => {
             if (u.hp <= 0 && !u.isHero) {
                 if (u.sprite) u.sprite.destroy();
@@ -1116,14 +1072,24 @@ const Game = {
             return true;
         });
         
-        // Clear all enemy units
-        this.state.enemyUnits.forEach(u => {
-            if (u.sprite) u.sprite.destroy();
+        this.state.enemyUnits = this.state.enemyUnits.filter(u => {
+            if (u.hp <= 0) {
+                if (u.sprite) u.sprite.destroy();
+                return false;
+            }
+            return true;
         });
-        this.state.enemyUnits = [];
         
-        // Generate new enemies
-        this.generateEnemyUnits();
+        // Check victory - all enemies dead
+        if (this.state.enemyUnits.length === 0) {
+            this.showMessage('VICTORY!', 2000);
+            // Generate new wave of enemies for next combat
+            setTimeout(() => {
+                this.generateEnemyUnits();
+                this.startPreparePhase();
+            }, 2000);
+            return;
+        }
         
         // Start prepare phase
         this.startPreparePhase();
