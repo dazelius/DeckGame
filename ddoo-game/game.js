@@ -588,9 +588,11 @@ const Game = {
         unit.hpBarWidth = barWidth;
         unit.hpBarHeight = barHeight;
         
-        // Position below sprite (at feet level)
-        const spriteHeight = unit.sprite.height || 60;
-        hpBar.y = spriteHeight * 0.45;
+        // Position at sprite's feet (bottom) with small margin
+        // Sprite anchor is at bottom center (0.5, 1), so y=0 is at feet
+        // Add small margin below feet
+        const margin = 5;
+        hpBar.y = margin;
         
         // Add to sprite (so it moves together)
         unit.sprite.addChild(hpBar);
