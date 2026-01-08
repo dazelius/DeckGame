@@ -840,6 +840,8 @@ const Game = {
         ghost.style.left = (touch.clientX - 45) + 'px';
         ghost.style.top = (touch.clientY - 60) + 'px';
         
+        const cardDef = this.cards[this.dragState.cardId];
+        
         if (this.dragState.isSummon) {
             // Check grid position for summons
             const gridPos = this.screenToGrid(touch.clientX, touch.clientY);
@@ -854,8 +856,31 @@ const Game = {
                 ghost.style.transform = 'scale(1.15) rotate(-3deg)';
                 ghost.querySelector('.drag-card').style.borderColor = '#666';
             }
+            this.clearEnemyHighlights();
+        } else if (cardDef && cardDef.type === 'attack') {
+            // Attack cards - check if hovering over enemy
+            const targetEnemy = this.getEnemyAtScreen(touch.clientX, touch.clientY);
+            this.dragState.targetEnemy = targetEnemy;
+            
+            if (targetEnemy) {
+                // Hovering over enemy - highlight them
+                this.highlightEnemy(targetEnemy, true);
+                ghost.style.transform = 'scale(1.2) rotate(0deg)';
+                ghost.querySelector('.drag-card').style.borderColor = '#ff4444';
+            } else {
+                // Check if dragged up (to play on first enemy)
+                const dragDist = this.dragState.startY - touch.clientY;
+                this.clearEnemyHighlights();
+                if (dragDist > 100) {
+                    ghost.style.transform = 'scale(1.2) rotate(0deg)';
+                    ghost.querySelector('.drag-card').style.borderColor = '#44ff44';
+                } else {
+                    ghost.style.transform = 'scale(1.15) rotate(-3deg)';
+                    ghost.querySelector('.drag-card').style.borderColor = '#666';
+                }
+            }
         } else {
-            // Non-summon cards - check if dragged up (to play)
+            // Skill cards - check if dragged up
             const dragDist = this.dragState.startY - touch.clientY;
             if (dragDist > 100) {
                 ghost.style.transform = 'scale(1.2) rotate(0deg)';
@@ -864,6 +889,52 @@ const Game = {
                 ghost.style.transform = 'scale(1.15) rotate(-3deg)';
                 ghost.querySelector('.drag-card').style.borderColor = '#666';
             }
+        }
+    },
+    
+    getEnemyAtScreen(screenX, screenY) {
+        // Get canvas bounds
+        const canvas = this.app.canvas;
+        const rect = canvas.getBoundingClientRect();
+        const localX = screenX - rect.left;
+        const localY = screenY - rect.top;
+        
+        // Check each enemy sprite
+        for (const enemy of this.state.enemyUnits) {
+            if (enemy.hp <= 0 || !enemy.sprite) continue;
+            
+            const sprite = enemy.sprite;
+            const bounds = sprite.getBounds();
+            
+            // Expand hitbox for easier targeting
+            const padding = 30;
+            if (localX >= bounds.x - padding && 
+                localX <= bounds.x + bounds.width + padding &&
+                localY >= bounds.y - padding && 
+                localY <= bounds.y + bounds.height + padding) {
+                return enemy;
+            }
+        }
+        return null;
+    },
+    
+    highlightEnemy(enemy, highlight) {
+        this.clearEnemyHighlights();
+        if (highlight && enemy && enemy.sprite) {
+            enemy.sprite.tint = 0xff6666;
+            this._highlightedEnemy = enemy;
+        }
+    },
+    
+    clearEnemyHighlights() {
+        if (this._highlightedEnemy && this._highlightedEnemy.sprite) {
+            this._highlightedEnemy.sprite.tint = 0xffffff;
+        }
+        this._highlightedEnemy = null;
+        
+        // Clear all enemy tints
+        for (const enemy of this.state.enemyUnits) {
+            if (enemy.sprite) enemy.sprite.tint = 0xffffff;
         }
     },
     
@@ -892,8 +963,24 @@ const Game = {
                 success = true;
                 if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
             }
+        } else if (cardDef && cardDef.type === 'attack') {
+            // Attack card - check if dropped on enemy OR dragged up
+            const targetEnemy = this.dragState.targetEnemy || this.getEnemyAtScreen(touch.clientX, touch.clientY);
+            const dragDist = this.dragState.startY - touch.clientY;
+            
+            if (this.state.cost >= cardDef.cost) {
+                if (targetEnemy) {
+                    // Dropped on specific enemy
+                    this.executeCardOnTarget(cardId, handIndex, targetEnemy);
+                    success = true;
+                } else if (dragDist > 100) {
+                    // Dragged up - auto-target first enemy
+                    this.executeCard(cardId, handIndex);
+                    success = true;
+                }
+            }
         } else {
-            // Non-summon card - check if dragged up
+            // Skill card - check if dragged up
             const dragDist = this.dragState.startY - touch.clientY;
             if (dragDist > 100 && this.state.cost >= cardDef.cost) {
                 // Play the card
@@ -905,7 +992,9 @@ const Game = {
         // Reset visual state
         this.dragState.isDragging = false;
         this.dragState.ghost.style.opacity = '0';
+        this.dragState.targetEnemy = null;
         this.clearHighlight();
+        this.clearEnemyHighlights();
         this.hideSummonZones();
         
         if (this.dragState.cardEl) {
@@ -916,6 +1005,48 @@ const Game = {
         // Re-render hand
         if (success) {
             this.renderHand();
+        }
+    },
+    
+    async executeCardOnTarget(cardId, handIndex, targetEnemy) {
+        const cardDef = this.cards[cardId];
+        if (!cardDef || this.state.cost < cardDef.cost) return;
+        
+        // Deduct cost
+        this.state.cost -= cardDef.cost;
+        this.state.hand.splice(handIndex, 1);
+        this.state.discard.push(cardId);
+        this.updateCostUI();
+        
+        // Execute attack on specific target
+        await this.playAttackCardOnTarget(cardDef, targetEnemy);
+        
+        this.renderHand();
+        if (navigator.vibrate) navigator.vibrate([20, 30, 20]);
+    },
+    
+    async playAttackCardOnTarget(cardDef, targetEnemy) {
+        const hero = this.state.hero;
+        if (!hero || !hero.sprite) return;
+        
+        const isMelee = cardDef.melee === true;
+        
+        if (isMelee) {
+            // Melee: Move hero to same Z line as target, then dash attack
+            if (hero.gridZ !== targetEnemy.gridZ) {
+                await this.moveHeroToLine(targetEnemy.gridZ);
+            }
+            await this.heroAttackAnimation(hero, targetEnemy, cardDef.damage);
+        } else {
+            // Ranged: Attack from current position
+            await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage);
+        }
+        
+        // Apply block if card has it
+        if (cardDef.block) {
+            this.state.heroBlock += cardDef.block;
+            this.updateBlockUI();
+            this.showMessage(`+${cardDef.block} Block`, 500);
         }
     },
     
