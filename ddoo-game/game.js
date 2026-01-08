@@ -71,7 +71,7 @@ const Game = {
             damage: 12,
             range: 1,
             sprite: 'ally_knight.png',
-            scale: 0.4
+            scale: 0.35
         },
         archer: {
             name: 'Archer',
@@ -80,7 +80,7 @@ const Game = {
             damage: 8,
             range: 4,
             sprite: 'ally_archer.png',
-            scale: 0.4
+            scale: 0.35
         },
         // Enemies
         goblin: {
@@ -90,7 +90,7 @@ const Game = {
             damage: 8,
             range: 1,
             sprite: 'goblin.png',
-            scale: 0.4,
+            scale: 0.35,
             intents: ['attack', 'attack', 'defend']
         },
         goblinArcher: {
