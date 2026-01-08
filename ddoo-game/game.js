@@ -2126,44 +2126,85 @@ const Game = {
         const newPos = this.getCellCenter(unit.gridX, unit.gridZ);
         if (!newPos) return;
         
-        // Animate movement
+        // Animate movement with hop effect
         return new Promise(resolve => {
-            gsap.to(unit.sprite, {
-                x: newPos.x,
-                y: newPos.y,
-                duration: 0.2,
-                ease: 'power2.out',
-                onComplete: resolve
-            });
+            const startY = unit.sprite.y;
+            const midY = Math.min(startY, newPos.y) - 20; // Hop up
+            
+            gsap.timeline()
+                // Prepare to move
+                .to(unit.sprite.scale, { x: 1.1, y: 0.9, duration: 0.08 })
+                // Jump/dash
+                .to(unit.sprite, {
+                    x: newPos.x,
+                    y: midY,
+                    duration: 0.15,
+                    ease: 'power2.out'
+                })
+                .to(unit.sprite.scale, { x: 0.95, y: 1.05, duration: 0.08 }, '<')
+                // Land
+                .to(unit.sprite, {
+                    y: newPos.y,
+                    duration: 0.1,
+                    ease: 'power2.in'
+                })
+                .to(unit.sprite.scale, { x: 1, y: 1, duration: 0.1 }, '<')
+                .call(() => {
+                    // Update zIndex after movement
+                    unit.sprite.zIndex = Math.floor(newPos.y);
+                    resolve();
+                });
         });
     },
     
     async summonMeleeAttack(summon, target) {
+        if (!summon.sprite || !target.sprite) {
+            this.dealDamage(target, summon.damage);
+            return;
+        }
+        
         const originalX = summon.sprite.x;
         const originalY = summon.sprite.y;
+        const targetX = target.sprite.x;
+        const targetY = target.sprite.y - (target.sprite.height || 60) / 2;
         
         // Dash toward enemy
-        const dashX = originalX + (target.sprite.x - originalX) * 0.5;
-        const dashY = originalY + (target.sprite.y - originalY) * 0.2;
+        const dashX = originalX + (targetX - originalX) * 0.7;
+        const dashY = originalY + (target.sprite.y - originalY) * 0.3;
         
         return new Promise(resolve => {
             gsap.timeline()
-                // Dash forward
+                // Prepare (slight wind-up)
+                .to(summon.sprite, {
+                    x: originalX - 15,
+                    duration: 0.1,
+                    ease: 'power2.in'
+                })
+                // Dash forward fast
                 .to(summon.sprite, {
                     x: dashX,
                     y: dashY,
                     duration: 0.12,
                     ease: 'power2.out'
                 })
-                // Deal damage at peak
+                // Hit effect
                 .call(() => {
+                    // Combat effects
+                    if (typeof CombatEffects !== 'undefined') {
+                        CombatEffects.slashEffect(targetX, targetY, -30 + Math.random() * 20, 0x44ff44, 1.0);
+                        CombatEffects.hitEffect(target.sprite);
+                        CombatEffects.showDamageNumber(targetX, targetY - 20, summon.damage);
+                        CombatEffects.screenShake(5, 100);
+                    }
                     this.dealDamage(target, summon.damage);
                 })
+                // Hold briefly
+                .to({}, { duration: 0.1 })
                 // Return to position
                 .to(summon.sprite, {
                     x: originalX,
                     y: originalY,
-                    duration: 0.2,
+                    duration: 0.25,
                     ease: 'power2.inOut',
                     onComplete: resolve
                 });
@@ -2171,26 +2212,41 @@ const Game = {
     },
     
     async summonRangedAttack(summon, target) {
-        const originalX = summon.sprite.x;
+        if (!summon.sprite || !target.sprite) {
+            this.dealDamage(target, summon.damage);
+            return;
+        }
         
-        return new Promise(resolve => {
+        const originalX = summon.sprite.x;
+        const startX = summon.sprite.x;
+        const startY = summon.sprite.y - (summon.sprite.height || 60) / 2;
+        const endX = target.sprite.x;
+        const endY = target.sprite.y - (target.sprite.height || 60) / 2;
+        
+        return new Promise(async resolve => {
+            // Shooting stance animation
+            await new Promise(r => {
+                gsap.timeline()
+                    .to(summon.sprite.scale, { x: 0.95, y: 1.05, duration: 0.1 })
+                    .to(summon.sprite, { x: originalX - 10, duration: 0.1 }, 0)
+                    .add(r);
+            });
+            
+            // Fire projectile
+            if (typeof CombatEffects !== 'undefined') {
+                await CombatEffects.projectileEffect(startX, startY, endX, endY, 0x88ff44, 8);
+                CombatEffects.hitEffect(target.sprite);
+                CombatEffects.showDamageNumber(endX, endY - 20, summon.damage);
+            }
+            
+            // Deal damage
+            this.dealDamage(target, summon.damage);
+            
+            // Return to normal
             gsap.timeline()
-                // Slight backward recoil (shooting)
-                .to(summon.sprite, {
-                    x: originalX - 8,
-                    duration: 0.08,
-                    ease: 'power2.out'
-                })
-                // Return and deal damage
-                .to(summon.sprite, {
-                    x: originalX,
-                    duration: 0.08,
-                    ease: 'power2.in'
-                })
-                .call(() => {
-                    this.dealDamage(target, summon.damage);
-                }, null, '-=0.04')
-                .call(resolve, null, '+=0.1');
+                .to(summon.sprite.scale, { x: 1, y: 1, duration: 0.1 })
+                .to(summon.sprite, { x: originalX, duration: 0.1 }, 0)
+                .add(resolve);
         });
     },
     
