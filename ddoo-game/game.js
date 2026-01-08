@@ -107,11 +107,13 @@ const Game = {
     
     // ==================== CARD DEFINITIONS ====================
     cards: {
-        strike: { name: 'Strike', cost: 1, type: 'attack', damage: 6, target: 'enemy', desc: 'Deal 6 damage' },
+        // melee: true = 근접 (라인 이동 후 공격), melee: false/없음 = 원거리 (제자리 공격)
+        strike: { name: 'Strike', cost: 1, type: 'attack', damage: 6, target: 'enemy', melee: true, desc: 'Deal 6 damage' },
         defend: { name: 'Defend', cost: 1, type: 'skill', block: 5, target: 'self', desc: 'Gain 5 Block' },
-        bash: { name: 'Bash', cost: 2, type: 'attack', damage: 8, vulnerable: 2, target: 'enemy', desc: 'Deal 8 damage. Apply 2 Vulnerable' },
-        cleave: { name: 'Cleave', cost: 1, type: 'attack', damage: 8, target: 'all', desc: 'Deal 8 damage to ALL enemies' },
-        ironWave: { name: 'Iron Wave', cost: 1, type: 'attack', damage: 5, block: 5, target: 'enemy', desc: 'Gain 5 Block. Deal 5 damage' },
+        bash: { name: 'Bash', cost: 2, type: 'attack', damage: 8, vulnerable: 2, target: 'enemy', melee: true, desc: 'Deal 8 damage. Apply 2 Vulnerable' },
+        cleave: { name: 'Cleave', cost: 1, type: 'attack', damage: 8, target: 'all', melee: true, desc: 'Deal 8 damage to ALL enemies' },
+        ironWave: { name: 'Iron Wave', cost: 1, type: 'attack', damage: 5, block: 5, target: 'enemy', melee: true, desc: 'Gain 5 Block. Deal 5 damage' },
+        fireBolt: { name: 'Fire Bolt', cost: 1, type: 'attack', damage: 5, target: 'enemy', melee: false, desc: 'Ranged. Deal 5 damage' },
         summonKnight: { name: 'Summon Knight', cost: 3, type: 'summon', unit: 'knight', target: 'grid', desc: 'Summon a Knight (40 HP, 12 DMG)' },
         summonArcher: { name: 'Summon Archer', cost: 2, type: 'summon', unit: 'archer', target: 'grid', desc: 'Summon an Archer (25 HP, 8 DMG, Range 4)' },
         heal: { name: 'Heal', cost: 2, type: 'skill', heal: 10, target: 'self', desc: 'Heal 10 HP' }
@@ -186,11 +188,12 @@ const Game = {
     initDeck() {
         // Create deck with multiple copies of each card
         const cardCounts = {
-            strike: 4,
-            defend: 4,
+            strike: 3,
+            defend: 3,
             bash: 2,
             cleave: 1,
             ironWave: 2,
+            fireBolt: 2,  // Ranged attack
             summonKnight: 2,
             summonArcher: 2,
             heal: 1
@@ -518,21 +521,32 @@ const Game = {
         
         if (targets.length === 0) return;
         
-        // For single target attacks, move to same line (Z) as enemy then attack
+        const isMelee = cardDef.melee === true;
+        
+        // For single target attacks
         if (cardDef.target === 'enemy' && targets[0]) {
             const target = targets[0];
             
-            // Move hero to same Z line as target
-            if (hero.gridZ !== target.gridZ) {
-                await this.moveHeroToLine(target.gridZ);
+            if (isMelee) {
+                // Melee: Move hero to same Z line as target, then dash attack
+                if (hero.gridZ !== target.gridZ) {
+                    await this.moveHeroToLine(target.gridZ);
+                }
+                await this.heroAttackAnimation(hero, target, cardDef.damage);
+            } else {
+                // Ranged: Attack from current position
+                await this.heroRangedAnimation(hero, target, cardDef.damage);
             }
-            
-            // Dash toward enemy and attack
-            await this.heroAttackAnimation(hero, target, cardDef.damage);
-        } else {
-            // Cleave - attack all from current position
-            for (const target of targets) {
-                await this.dealDamage(target, cardDef.damage);
+        } else if (cardDef.target === 'all') {
+            // Cleave - melee AoE
+            if (isMelee) {
+                // Dash to center and attack all
+                await this.heroAoeAnimation(hero, targets, cardDef.damage);
+            } else {
+                // Ranged AoE
+                for (const target of targets) {
+                    await this.dealDamage(target, cardDef.damage);
+                }
             }
         }
         
@@ -599,6 +613,82 @@ const Game = {
                     x: originalX,
                     y: originalY,
                     duration: 0.25,
+                    ease: 'power2.inOut',
+                    onComplete: resolve
+                });
+        });
+    },
+    
+    async heroRangedAnimation(hero, target, damage) {
+        if (!hero.sprite || !target.sprite) {
+            await this.dealDamage(target, damage);
+            return;
+        }
+        
+        // Simple ranged attack - slight recoil animation
+        const originalX = hero.sprite.x;
+        
+        return new Promise(resolve => {
+            gsap.timeline()
+                // Slight backward recoil (casting)
+                .to(hero.sprite, {
+                    x: originalX - 10,
+                    duration: 0.1,
+                    ease: 'power2.out'
+                })
+                // Return and deal damage
+                .to(hero.sprite, {
+                    x: originalX,
+                    duration: 0.1,
+                    ease: 'power2.in'
+                })
+                .call(() => {
+                    this.dealDamage(target, damage);
+                    // TODO: Add projectile VFX here
+                }, null, '-=0.05')
+                .call(resolve, null, '+=0.1');
+        });
+    },
+    
+    async heroAoeAnimation(hero, targets, damage) {
+        if (!hero.sprite || targets.length === 0) {
+            for (const target of targets) {
+                await this.dealDamage(target, damage);
+            }
+            return;
+        }
+        
+        const originalX = hero.sprite.x;
+        const originalY = hero.sprite.y;
+        
+        // Calculate center of all targets
+        const centerX = targets.reduce((sum, t) => sum + t.sprite.x, 0) / targets.length;
+        const centerY = targets.reduce((sum, t) => sum + t.sprite.y, 0) / targets.length;
+        
+        // Dash to a point between hero and targets
+        const dashX = originalX + (centerX - originalX) * 0.4;
+        const dashY = originalY + (centerY - originalY) * 0.2;
+        
+        return new Promise(resolve => {
+            gsap.timeline()
+                // Dash forward
+                .to(hero.sprite, {
+                    x: dashX,
+                    y: dashY,
+                    duration: 0.2,
+                    ease: 'power2.out'
+                })
+                // Deal damage to all targets
+                .call(() => {
+                    targets.forEach(target => {
+                        this.dealDamage(target, damage);
+                    });
+                })
+                // Return to position
+                .to(hero.sprite, {
+                    x: originalX,
+                    y: originalY,
+                    duration: 0.3,
                     ease: 'power2.inOut',
                     onComplete: resolve
                 });
