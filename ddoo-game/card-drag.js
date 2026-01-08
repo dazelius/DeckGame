@@ -469,6 +469,10 @@ const CardDrag = {
         
         if (x < 0 || z < 0) return;
         
+        // Re-draw summon zones first
+        this.showSummonZones();
+        
+        // Then highlight specific cell
         const corners = this.game.getCellCorners(x, z);
         if (!corners) return;
         
@@ -671,6 +675,38 @@ const CardDrag = {
     clearTargetingCurve() {
         if (this.targetingCurve) {
             this.targetingCurve.clear();
+        }
+    },
+    
+    // ==========================================
+    // 소환 존 하이라이트
+    // ==========================================
+    showSummonZones() {
+        if (!this.gridHighlight) return;
+        
+        this.gridHighlight.clear();
+        
+        for (let x = 0; x < this.game.arena.playerZoneX; x++) {
+            for (let z = 0; z < this.game.arena.depth; z++) {
+                if (this.game.isCellOccupied(x, z)) continue;
+                
+                const corners = this.game.getCellCorners(x, z);
+                if (!corners) continue;
+                
+                this.gridHighlight.moveTo(corners[0].x, corners[0].y);
+                this.gridHighlight.lineTo(corners[1].x, corners[1].y);
+                this.gridHighlight.lineTo(corners[2].x, corners[2].y);
+                this.gridHighlight.lineTo(corners[3].x, corners[3].y);
+                this.gridHighlight.closePath();
+                this.gridHighlight.fill({ color: 0x44ff44, alpha: 0.15 });
+                this.gridHighlight.stroke({ color: 0x44ff44, width: 2, alpha: 0.5 });
+            }
+        }
+    },
+    
+    hideSummonZones() {
+        if (this.gridHighlight) {
+            this.gridHighlight.clear();
         }
     }
 };

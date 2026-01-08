@@ -1146,31 +1146,14 @@ const Game = {
     },
     
     showSummonZones() {
-        const graphics = this.gridHighlight;
-        graphics.clear();
-        
-        // Highlight all valid player zone cells
-        for (let x = 0; x < this.arena.playerZoneX; x++) {
-            for (let z = 0; z < this.arena.depth; z++) {
-                if (this.isCellOccupied(x, z)) continue;
-                
-                const corners = this.getCellCorners(x, z);
-                if (!corners) continue;
-                
-                graphics.moveTo(corners[0].x, corners[0].y);
-                graphics.lineTo(corners[1].x, corners[1].y);
-                graphics.lineTo(corners[2].x, corners[2].y);
-                graphics.lineTo(corners[3].x, corners[3].y);
-                graphics.closePath();
-                graphics.fill({ color: 0x44ff44, alpha: 0.15 });
-                graphics.stroke({ color: 0x44ff44, width: 2, alpha: 0.5 });
-            }
+        if (typeof CardDrag !== 'undefined') {
+            CardDrag.showSummonZones();
         }
     },
     
     hideSummonZones() {
-        if (this.gridHighlight) {
-            this.gridHighlight.clear();
+        if (typeof CardDrag !== 'undefined') {
+            CardDrag.hideSummonZones();
         }
     },
     
@@ -1288,36 +1271,6 @@ const Game = {
             }
         }
         return false;
-    },
-    
-    highlightCell(x, z, valid) {
-        const graphics = this.gridHighlight;
-        graphics.clear();
-        
-        if (x < 0) return;
-        
-        // Re-draw summon zones
-        this.showSummonZones();
-        
-        // Highlight specific cell
-        const corners = this.getCellCorners(x, z);
-        if (!corners) return;
-        
-        const color = valid ? 0x44ff44 : 0xff4444;
-        
-        graphics.moveTo(corners[0].x, corners[0].y);
-        graphics.lineTo(corners[1].x, corners[1].y);
-        graphics.lineTo(corners[2].x, corners[2].y);
-        graphics.lineTo(corners[3].x, corners[3].y);
-        graphics.closePath();
-        graphics.fill({ color: color, alpha: 0.4 });
-        graphics.stroke({ color: color, width: 3, alpha: 1 });
-    },
-    
-    clearHighlight() {
-        if (this.gridHighlight) {
-            this.gridHighlight.clear();
-        }
     },
     
     screenToGrid(screenX, screenY) {
