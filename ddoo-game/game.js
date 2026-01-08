@@ -11,8 +11,8 @@ const Game = {
         phase: 'placement',  // 'placement' | 'battle' | 'result'
         round: 1,
         timer: 30,           // Placement phase timer (seconds)
-        gold: 10,
-        maxGold: 10,
+        cost: 10,            // Current cost points
+        maxCost: 10,         // Max cost points
         battleTurn: 0,       // Current battle turn
         
         // Player units on board
@@ -224,7 +224,7 @@ const Game = {
     // ==================== UI ====================
     setupUI() {
         this.updateTimerUI();
-        this.updateGoldUI();
+        this.updateCostUI();
         this.updatePhaseUI();
     },
     
@@ -236,10 +236,15 @@ const Game = {
         }
     },
     
-    updateGoldUI() {
-        const goldEl = document.getElementById('gold-display');
-        if (goldEl) {
-            goldEl.textContent = this.state.gold;
+    updateCostUI() {
+        const costEl = document.getElementById('cost-display');
+        if (costEl) {
+            costEl.textContent = this.state.cost;
+        }
+        // Update cost bar
+        const costBar = document.getElementById('cost-bar-fill');
+        if (costBar) {
+            costBar.style.width = (this.state.cost / this.state.maxCost * 100) + '%';
         }
     },
     
@@ -329,9 +334,9 @@ const Game = {
         const rerollBtn = document.getElementById('btn-reroll');
         if (rerollBtn) {
             rerollBtn.addEventListener('click', () => {
-                if (this.state.gold >= 2) {
-                    this.state.gold -= 2;
-                    this.updateGoldUI();
+                if (this.state.cost >= 2) {
+                    this.state.cost -= 2;
+                    this.updateCostUI();
                     this.showMessage('Reroll!', 500);
                 }
             });
@@ -467,8 +472,8 @@ const Game = {
         if (!unitDef) return;
         
         // Check cost
-        if (team === 'player' && this.state.gold < unitDef.cost) {
-            this.showMessage('Not enough gold!', 1000);
+        if (team === 'player' && this.state.cost < unitDef.cost) {
+            this.showMessage('Not enough cost!', 1000);
             return;
         }
         
@@ -480,10 +485,10 @@ const Game = {
             return;
         }
         
-        // Deduct gold
+        // Deduct cost
         if (team === 'player') {
-            this.state.gold -= unitDef.cost;
-            this.updateGoldUI();
+            this.state.cost -= unitDef.cost;
+            this.updateCostUI();
         }
         
         // Create sprite
@@ -797,7 +802,7 @@ const Game = {
         
         if (playerAlive > 0 && enemyAlive === 0) {
             this.showMessage('VICTORY!', 2000);
-            this.state.gold += 5 + this.state.round;  // Bonus gold
+            // Victory - no gold bonus in cost system
         } else {
             this.showMessage('DEFEAT!', 2000);
             this.state.playerHP -= 10 * enemyAlive;  // Damage based on survivors
@@ -818,13 +823,14 @@ const Game = {
     
     nextRound() {
         this.state.round++;
-        this.state.gold = Math.min(this.state.gold + 5, this.state.maxGold + this.state.round);
+        // Reset cost for new round
+        this.state.cost = this.state.maxCost;
         
         // Clear units
         this.clearAllUnits();
         
         // Update UI
-        this.updateGoldUI();
+        this.updateCostUI();
         
         // Start new placement phase
         this.startPlacementPhase();

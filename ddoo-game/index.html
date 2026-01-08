@@ -82,8 +82,33 @@
             text-shadow: 0 0 10px #ffcc00;
         }
         
-        #gold-display {
-            color: #ffd700;
+        /* Cost Bar */
+        #cost-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        #cost-bar {
+            width: 150px;
+            height: 20px;
+            background: rgba(0,0,0,0.6);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #6644aa;
+        }
+        
+        #cost-bar-fill {
+            height: 100%;
+            background: linear-gradient(to right, #8855ff, #aa77ff);
+            transition: width 0.2s;
+            box-shadow: 0 0 10px #8855ff;
+        }
+        
+        #cost-display {
+            color: #aa88ff;
+            font-size: 18px;
+            font-weight: bold;
         }
         
         #phase-display {
@@ -334,9 +359,11 @@
                 <span id="phase-display">PLACEMENT</span>
             </div>
             
-            <div class="stat-box">
-                <span class="stat-label">Gold</span>
-                <span class="stat-value" id="gold-display">10</span>
+            <div id="cost-section">
+                <div id="cost-bar">
+                    <div id="cost-bar-fill" style="width: 100%"></div>
+                </div>
+                <span id="cost-display">10</span>
             </div>
         </div>
         
@@ -377,7 +404,6 @@
         
         <!-- Buttons -->
         <div id="panel-buttons">
-            <button class="panel-btn" id="btn-reroll">Reroll (2g)</button>
             <button class="panel-btn" id="btn-start-battle">Start Battle</button>
         </div>
     </div>
