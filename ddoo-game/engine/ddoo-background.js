@@ -22,21 +22,21 @@ const DDOOBackground = {
         smoothing: 0.05
     },
     
-    // Camera defaults - fit grid tightly
+    // Camera defaults - fit grid exactly
     cameraDefaults: {
         posX: 5,       // Center of arena (X axis)
-        posY: 2.5,     // Height
-        posZ: 4.5,     // Closer to zoom in
+        posY: 2.2,     // Lower for tighter fit
+        posZ: 4.0,     // Closer to zoom in more
         lookAtX: 5,    // Look at arena center
-        lookAtY: 0.3,  // Look at floor level
+        lookAtY: 0.2,  // Look at floor level
         lookAtZ: 1.5   // Look at grid center
     },
     
     // Auto zoom settings
     autoZoom: {
         enabled: true,
-        targetZ: 4.5,
-        currentZ: 4.5,
+        targetZ: 4.0,
+        currentZ: 4.0,
         targetX: 0,
         currentX: 0,
         targetLookAtX: 0,
@@ -271,9 +271,9 @@ const DDOOBackground = {
         const self = this;
         const { width, depth, centerX, centerZ } = this.gridConfig;
         
-        // Floor size - generous overhang to cover all visible area
-        const floorWidth = width + 2;
-        const floorDepth = depth + 3;
+        // Floor size - minimal overhang, mostly matching grid
+        const floorWidth = width + 0.2;
+        const floorDepth = depth + 0.2;
         
         // 기본 바닥 (텍스처 로딩 전 폴백)
         const baseFloor = new THREE.Mesh(
@@ -318,9 +318,9 @@ const DDOOBackground = {
         const self = this;
         const { width, depth, centerX, centerZ } = this.gridConfig;
         
-        // Wall dimensions to match floor overhang
-        const wallWidth = width + 2;  // Match floor width
-        const sideWallDepth = depth + 3;  // Match floor depth
+        // Wall dimensions to match grid
+        const wallWidth = width + 0.2;  // Match floor width
+        const sideWallDepth = depth + 0.2;  // Match floor depth
         const wallHeight = 7;
         
         // 폴백 재질
