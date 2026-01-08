@@ -381,6 +381,9 @@ const Game = {
         // Roll enemy intents
         this.rollEnemyIntents();
         
+        // Render HP bars
+        this.renderAllHPBars();
+        
         this.updatePhaseUI();
         this.updateTurnUI();
         this.updateCostUI();
@@ -414,42 +417,123 @@ const Game = {
             if (!enemy.sprite || !enemy.intent) return;
             
             const intentEl = document.createElement('div');
-            intentEl.className = 'enemy-intent';
+            intentEl.className = `enemy-intent ${enemy.intent.type}`;
             
             let icon = '';
-            let text = '';
+            let value = '';
             switch (enemy.intent.type) {
                 case 'attack':
-                    icon = '&#9876;'; // Sword
-                    text = enemy.intent.damage;
-                    intentEl.style.color = '#ff4444';
+                    icon = '⚔'; // Crossed swords
+                    value = enemy.intent.damage;
                     break;
                 case 'defend':
-                    icon = '&#128737;'; // Shield
-                    text = '';
-                    intentEl.style.color = '#44aaff';
+                    icon = '🛡'; // Shield
+                    value = '';
                     break;
                 case 'buff':
-                    icon = '&#10024;'; // Sparkle
-                    text = '';
-                    intentEl.style.color = '#ffaa44';
+                    icon = '⬆'; // Up arrow
+                    value = '';
                     break;
             }
             
-            intentEl.innerHTML = `<span class="intent-icon">${icon}</span><span class="intent-value">${text}</span>`;
+            intentEl.innerHTML = `
+                <div class="intent-container">
+                    <span class="intent-icon">${icon}</span>
+                    ${value ? `<span class="intent-value">${value}</span>` : ''}
+                </div>
+            `;
             
-            // Position above enemy
+            // Position above enemy sprite
             const rect = document.getElementById('battle-area').getBoundingClientRect();
-            intentEl.style.position = 'absolute';
+            const spriteHeight = enemy.sprite.height || 80;
             intentEl.style.left = (enemy.sprite.x + rect.left) + 'px';
-            intentEl.style.top = (enemy.sprite.y + rect.top - 60) + 'px';
-            intentEl.style.transform = 'translateX(-50%)';
-            intentEl.style.zIndex = '1000';
-            intentEl.style.fontSize = '20px';
-            intentEl.style.fontWeight = 'bold';
-            intentEl.style.textShadow = '0 0 5px black';
+            intentEl.style.top = (enemy.sprite.y + rect.top - spriteHeight * 0.5 - 50) + 'px';
             
             document.body.appendChild(intentEl);
+        });
+    },
+    
+    // ==================== CHARACTER HP BARS ====================
+    renderAllHPBars() {
+        // Clear existing HP bars
+        document.querySelectorAll('.char-hp-bar').forEach(el => el.remove());
+        
+        // Render HP bars for all units
+        [...this.state.playerUnits, ...this.state.enemyUnits].forEach(unit => {
+            if (unit.hp > 0 && unit.sprite) {
+                this.renderUnitHPBar(unit);
+            }
+        });
+    },
+    
+    renderUnitHPBar(unit) {
+        if (!unit.sprite) return;
+        
+        // Remove existing HP bar for this unit
+        if (unit.hpBarEl) {
+            unit.hpBarEl.remove();
+        }
+        
+        const hpPercent = Math.max(0, (unit.hp / unit.maxHp) * 100);
+        const isLow = hpPercent < 30;
+        
+        let hpClass = 'enemy';
+        if (unit.isHero) hpClass = 'player';
+        else if (unit.team === 'player') hpClass = 'summon';
+        
+        const hpBarEl = document.createElement('div');
+        hpBarEl.className = `char-hp-bar ${hpClass}${isLow ? ' low' : ''}`;
+        hpBarEl.innerHTML = `
+            <div class="char-hp-container">
+                <div class="char-hp-fill" style="width: ${hpPercent}%"></div>
+            </div>
+            <span class="char-hp-text">${unit.hp}/${unit.maxHp}</span>
+        `;
+        
+        // Position below unit sprite
+        const rect = document.getElementById('battle-area').getBoundingClientRect();
+        const spriteHeight = unit.sprite.height || 60;
+        hpBarEl.style.position = 'absolute';
+        hpBarEl.style.left = (unit.sprite.x + rect.left) + 'px';
+        hpBarEl.style.top = (unit.sprite.y + rect.top + spriteHeight * 0.3) + 'px';
+        hpBarEl.style.zIndex = '500';
+        
+        document.body.appendChild(hpBarEl);
+        unit.hpBarEl = hpBarEl;
+    },
+    
+    updateUnitHPBar(unit) {
+        if (!unit.hpBarEl || !unit.sprite) {
+            this.renderUnitHPBar(unit);
+            return;
+        }
+        
+        const hpPercent = Math.max(0, (unit.hp / unit.maxHp) * 100);
+        const isLow = hpPercent < 30;
+        
+        const fillEl = unit.hpBarEl.querySelector('.char-hp-fill');
+        const textEl = unit.hpBarEl.querySelector('.char-hp-text');
+        
+        if (fillEl) fillEl.style.width = `${hpPercent}%`;
+        if (textEl) textEl.textContent = `${Math.max(0, unit.hp)}/${unit.maxHp}`;
+        
+        unit.hpBarEl.classList.toggle('low', isLow);
+        
+        // Update position
+        const rect = document.getElementById('battle-area').getBoundingClientRect();
+        const spriteHeight = unit.sprite.height || 60;
+        unit.hpBarEl.style.left = (unit.sprite.x + rect.left) + 'px';
+        unit.hpBarEl.style.top = (unit.sprite.y + rect.top + spriteHeight * 0.3) + 'px';
+    },
+    
+    updateAllHPBars() {
+        [...this.state.playerUnits, ...this.state.enemyUnits].forEach(unit => {
+            if (unit.hp > 0 && unit.sprite) {
+                this.updateUnitHPBar(unit);
+            } else if (unit.hpBarEl) {
+                unit.hpBarEl.remove();
+                unit.hpBarEl = null;
+            }
         });
     },
     
@@ -770,6 +854,9 @@ const Game = {
         
         target.hp -= amount;
         this.showDamage(target, amount);
+        
+        // Update HP bar
+        this.updateUnitHPBar(target);
         
         // Hit effect
         if (target.sprite) {
@@ -1405,6 +1492,9 @@ const Game = {
             this.state.enemyUnits.push(unit);
         }
         
+        // Render HP bar
+        this.renderUnitHPBar(unit);
+        
         console.log(`[Game] Placed ${unitType} at (${gridX}, ${gridZ}) for ${team}`);
     },
     
@@ -1743,6 +1833,9 @@ const Game = {
             hero.hp -= damage;
             this.showDamage(hero, damage);
             
+            // Update HP bar
+            this.updateUnitHPBar(hero);
+            
             // Hero hit effect
             if (hero.sprite) {
                 gsap.to(hero.sprite, {
@@ -1832,6 +1925,12 @@ const Game = {
     
     killUnit(unit) {
         console.log(`[Game] ${unit.type} died!`);
+        
+        // Remove HP bar
+        if (unit.hpBarEl) {
+            unit.hpBarEl.remove();
+            unit.hpBarEl = null;
+        }
         
         // Death animation
         if (unit.sprite) {
@@ -1929,6 +2028,10 @@ const Game = {
         
         DDOOBackground.handleResize();
         this.drawGrid();
+        
+        // Update UI positions
+        this.updateAllHPBars();
+        this.renderEnemyIntents();
     }
 };
 
