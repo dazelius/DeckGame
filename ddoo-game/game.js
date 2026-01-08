@@ -750,6 +750,12 @@ const Game = {
             if (canAfford) {
                 cardEl.addEventListener('mousedown', (e) => this.startCardDrag(e, cardEl, cardId, index));
                 cardEl.addEventListener('touchstart', (e) => this.startCardDrag(e, cardEl, cardId, index), { passive: false });
+            } else {
+                // 코스트 부족 시 클릭하면 메시지
+                cardEl.addEventListener('click', () => {
+                    this.showMessage(`코스트 부족! (${cardDef.cost} 필요)`, 800);
+                    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+                });
             }
             
             handEl.appendChild(cardEl);

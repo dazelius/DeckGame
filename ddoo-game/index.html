@@ -478,43 +478,49 @@
             border-color: #302040;
         }
         
-        /* 코스트 부족 - 비활성화 상태 */
+        /* 코스트 부족 - 비활성화 상태 (인터랙션 유지) */
         .card.disabled {
-            filter: grayscale(70%) brightness(0.6);
+            filter: saturate(0.3) brightness(0.75);
             cursor: not-allowed;
-            opacity: 0.7;
-            pointer-events: none;
-        }
-        
-        .card.disabled::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 6px;
-            pointer-events: none;
+            opacity: 0.85;
         }
         
         .card.disabled .card-cost {
-            filter: grayscale(100%);
             background: radial-gradient(circle at 30% 30%, 
-                #666 0%, 
-                #333 100%) !important;
+                #888 0%, 
+                #444 100%) !important;
+            border-color: #333;
         }
         
+        /* 비활성화 카드 호버 - 흔들림 + 빨간 테두리 */
         .card.disabled:hover {
-            transform: translateY(0) scale(1);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.8);
-            z-index: auto;
-            margin-left: -30px;
-            margin-right: 0;
+            transform: translateY(-15px) scale(1.05);
+            border-color: #aa4444 !important;
+            box-shadow: 
+                0 15px 30px rgba(0,0,0,0.7),
+                0 0 20px rgba(170, 68, 68, 0.4);
+            z-index: 50;
+            animation: card-shake 0.4s ease-in-out;
         }
         
-        .card.disabled:first-child:hover {
-            margin-left: 0;
+        @keyframes card-shake {
+            0%, 100% { transform: translateY(-15px) scale(1.05) rotate(0deg); }
+            20% { transform: translateY(-15px) scale(1.05) rotate(-3deg); }
+            40% { transform: translateY(-15px) scale(1.05) rotate(3deg); }
+            60% { transform: translateY(-15px) scale(1.05) rotate(-2deg); }
+            80% { transform: translateY(-15px) scale(1.05) rotate(2deg); }
+        }
+        
+        .card.disabled:hover .card-cost {
+            background: radial-gradient(circle at 30% 30%, 
+                #cc4444 0%, 
+                #662222 100%) !important;
+            animation: cost-pulse 0.5s ease-in-out infinite;
+        }
+        
+        @keyframes cost-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
         }
         
         /* Drag Ghost */
