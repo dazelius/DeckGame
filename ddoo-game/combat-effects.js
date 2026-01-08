@@ -405,6 +405,24 @@ const CombatEffects = {
                 stroke: '#001144',
                 fontSize: 48,
                 prefix: ''
+            },
+            burn: { 
+                fill: '#ff6600',
+                stroke: '#440000',
+                fontSize: 48,
+                prefix: '🔥'
+            },
+            dot: { 
+                fill: '#88ff44',
+                stroke: '#003300',
+                fontSize: 46,
+                prefix: '☠'
+            },
+            poison: { 
+                fill: '#44ff00',
+                stroke: '#003300',
+                fontSize: 48,
+                prefix: '🧪'
             }
         };
         

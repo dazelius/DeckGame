@@ -135,10 +135,11 @@ const Game = {
             desc: 'Gain 5 Block. Deal 5 damage' 
         },
         fireBolt: { 
-            name: 'Fire Bolt', cost: 1, type: 'attack', damage: 5, 
+            name: 'Fire Bolt', cost: 2, type: 'attack', damage: 5, 
             target: 'enemy', melee: false, 
             aoe: { width: 1, depth: 1 },
-            desc: 'Ranged. Deal 5 damage' 
+            createZone: 'fire',  // 화염 지대 생성
+            desc: 'Ranged. Deal 5 damage. Creates burning ground (2 turns)' 
         },
         summonKnight: { name: 'Summon Knight', cost: 3, type: 'summon', unit: 'knight', target: 'grid', desc: 'Summon a Knight (40 HP, 12 DMG)' },
         summonArcher: { name: 'Summon Archer', cost: 2, type: 'summon', unit: 'archer', target: 'grid', desc: 'Summon an Archer (25 HP, 8 DMG, Range 4)' },
@@ -186,6 +187,11 @@ const Game = {
         // Knockback System
         if (typeof KnockbackSystem !== 'undefined') {
             KnockbackSystem.init(this);
+        }
+        
+        // Grid AOE System
+        if (typeof GridAOE !== 'undefined') {
+            GridAOE.init(this, this.app);
         }
         
         // Draw grid
@@ -470,6 +476,11 @@ const Game = {
         // Show turn banner
         if (typeof TurnEffects !== 'undefined') {
             TurnEffects.showPlayerTurn(this.state.turn);
+        }
+        
+        // Process grid AOE effects (damage over time to enemies)
+        if (typeof GridAOE !== 'undefined') {
+            GridAOE.processTurnStart('enemy');
         }
         
         // Reset block at start of turn
@@ -1708,10 +1719,15 @@ const Game = {
             this.showMessage(`+${cardDef.block} Block`, 500);
         }
         
+        // Create zone effect if card has it
+        if (cardDef.createZone && typeof GridAOE !== 'undefined') {
+            GridAOE.createZone(cardDef.createZone, targetEnemy.gridX, targetEnemy.gridZ);
+        }
+        
         // Check collisions after attack
         await this.resolveAllCollisions();
     },
-    
+
     // Get enemies within AOE pattern from a center point
     // width = X direction (toward enemy side), depth = Z direction
     getEnemiesInAoe(centerX, centerZ, aoe) {
@@ -2119,6 +2135,11 @@ const Game = {
         
         // Final collision check
         await this.resolveAllCollisions();
+        
+        // Process grid AOE durations at end of turn
+        if (typeof GridAOE !== 'undefined') {
+            GridAOE.processTurnEnd();
+        }
         
         // 3. Go to next turn
         setTimeout(() => this.nextTurn(), 500);
