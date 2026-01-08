@@ -255,12 +255,19 @@ const UnitCombat = {
                 .add(resolve);
         });
         
-        // 2. 투사체
+        // 2. 투사체 (파이어볼은 특별 처리)
         if (typeof CombatEffects !== 'undefined') {
-            await CombatEffects.projectileEffect(startX, startY, endX, endY, projectileColor, projectileSize);
-            CombatEffects.hitEffect(target.sprite);
-            CombatEffects.impactEffect(endX, endY, projectileColor, 0.8);
-            CombatEffects.showDamageNumber(endX, endY - 20, damage);
+            if (createZone === 'fire' && CombatEffects.fireballEffect) {
+                // 파이어볼 전용 이펙트
+                await CombatEffects.fireballEffect(startX, startY, endX, endY);
+                CombatEffects.showDamageNumber(endX, endY - 20, damage, 'burn');
+            } else {
+                // 일반 투사체
+                await CombatEffects.projectileEffect(startX, startY, endX, endY, projectileColor, projectileSize);
+                CombatEffects.hitEffect(target.sprite);
+                CombatEffects.impactEffect(endX, endY, projectileColor, 0.8);
+                CombatEffects.showDamageNumber(endX, endY - 20, damage);
+            }
         }
         
         // 3. 데미지

@@ -770,8 +770,10 @@ const Game = {
                 }
                 await this.heroAttackAnimation(hero, target, cardDef.damage);
             } else {
-                // Ranged: Attack from current position
-                await this.heroRangedAnimation(hero, target, cardDef.damage);
+                // Ranged: Attack from current position (with createZone for fire, etc.)
+                await this.heroRangedAnimation(hero, target, cardDef.damage, {
+                    createZone: cardDef.createZone || null
+                });
             }
         } else if (cardDef.target === 'all') {
             // Cleave - melee AoE
@@ -1073,9 +1075,11 @@ const Game = {
                 }
             }
         } else {
-            // Ranged: Attack from current position
+            // Ranged: Attack from current position (fireball, etc.)
             const targetsInAoe = this.getEnemiesInAoe(targetEnemy.gridX, targetEnemy.gridZ, aoe);
-            await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage);
+            await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage, {
+                createZone: cardDef.createZone || null
+            });
             
             // Deal damage to additional targets in AOE
             for (const target of targetsInAoe) {
@@ -1092,7 +1096,7 @@ const Game = {
             this.showMessage(`+${cardDef.block} Block`, 500);
         }
         
-        // Create zone effect if card has it
+        // Create zone effect (handled in rangedAttack for fire)
         if (cardDef.createZone && typeof GridAOE !== 'undefined') {
             GridAOE.createZone(cardDef.createZone, targetEnemy.gridX, targetEnemy.gridZ);
         }
