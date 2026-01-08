@@ -486,54 +486,25 @@ const Game = {
             cardEl.dataset.cardId = cardId;
             cardEl.dataset.index = index;
             
+            // Color based on card type
+            let typeColor = '#666';
+            if (cardDef.type === 'attack') typeColor = '#ff6644';
+            else if (cardDef.type === 'skill') typeColor = '#44aaff';
+            else if (cardDef.type === 'summon') typeColor = '#44ff66';
+            
             cardEl.innerHTML = `
                 <div class="card-cost">${cardDef.cost}</div>
                 <div class="card-name">${cardDef.name}</div>
+                <div class="card-type" style="color:${typeColor};font-size:9px;text-transform:uppercase;">${cardDef.type}</div>
                 <div class="card-desc">${cardDef.desc}</div>
             `;
             
-            // Click to play card
-            cardEl.addEventListener('click', () => this.playCard(index));
+            // Drag to play
+            cardEl.addEventListener('mousedown', (e) => this.startCardDrag(e, cardEl, cardId, index));
+            cardEl.addEventListener('touchstart', (e) => this.startCardDrag(e, cardEl, cardId, index), { passive: false });
             
             handEl.appendChild(cardEl);
         });
-    },
-    
-    async playCard(handIndex) {
-        if (this.state.phase !== 'prepare') return;
-        
-        const cardId = this.state.hand[handIndex];
-        const cardDef = this.cards[cardId];
-        
-        if (!cardDef) return;
-        
-        // Check cost
-        if (this.state.cost < cardDef.cost) {
-            this.showMessage('Not enough cost!', 1000);
-            return;
-        }
-        
-        // Handle different card types
-        switch (cardDef.type) {
-            case 'attack':
-                await this.playAttackCard(cardDef);
-                break;
-            case 'skill':
-                await this.playSkillCard(cardDef);
-                break;
-            case 'summon':
-                // Need to select grid position - for now just show message
-                this.showMessage('Drag summon card to grid', 1000);
-                return;
-        }
-        
-        // Deduct cost and discard card
-        this.state.cost -= cardDef.cost;
-        this.state.hand.splice(handIndex, 1);
-        this.state.discard.push(cardId);
-        
-        this.updateCostUI();
-        this.renderHand();
     },
     
     async playAttackCard(cardDef) {
@@ -600,24 +571,15 @@ const Game = {
     },
     
     setupUnitPlacement() {
-        const cards = document.querySelectorAll('.unit-card');
-        
-        // Create ghost element for drag shadow
+        // Create drag elements
         this.createDragGhost();
+        this.createGridHighlight();
         
-        cards.forEach(card => {
-            // Mouse drag
-            card.addEventListener('mousedown', (e) => this.startDrag(e, card));
-            
-            // Touch drag
-            card.addEventListener('touchstart', (e) => this.startDrag(e, card), { passive: false });
-        });
-        
-        // Global move/end handlers
-        document.addEventListener('mousemove', (e) => this.onDrag(e));
-        document.addEventListener('mouseup', (e) => this.endDrag(e));
-        document.addEventListener('touchmove', (e) => this.onDrag(e), { passive: false });
-        document.addEventListener('touchend', (e) => this.endDrag(e));
+        // Global move/end handlers for card dragging
+        document.addEventListener('mousemove', (e) => this.onCardDrag(e));
+        document.addEventListener('mouseup', (e) => this.endCardDrag(e));
+        document.addEventListener('touchmove', (e) => this.onCardDrag(e), { passive: false });
+        document.addEventListener('touchend', (e) => this.endCardDrag(e));
         
         // End Turn button
         const endTurnBtn = document.getElementById('btn-end-turn');
@@ -634,81 +596,241 @@ const Game = {
             pointer-events: none;
             z-index: 9999;
             opacity: 0;
-            transition: opacity 0.15s, transform 0.1s;
-            transform: scale(1.1) rotate(-5deg);
-            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+            transform: scale(1.1) rotate(-3deg);
+            transition: transform 0.1s ease-out;
         `;
         document.body.appendChild(ghost);
         this.dragState.ghost = ghost;
     },
     
-    startDrag(e, card) {
+    createGridHighlight() {
+        // PixiJS grid highlight graphics
+        this.gridHighlight = new PIXI.Graphics();
+        this.gridHighlight.zIndex = 5;
+        this.containers.grid.addChild(this.gridHighlight);
+    },
+    
+    startCardDrag(e, cardEl, cardId, handIndex) {
         if (this.state.phase !== 'prepare') return;
         
         e.preventDefault();
+        e.stopPropagation();
+        
+        const cardDef = this.cards[cardId];
+        if (!cardDef) return;
+        
+        // Check if this is a summon card
+        const isSummon = cardDef.type === 'summon';
+        
         const touch = e.touches ? e.touches[0] : e;
         
         this.dragState.isDragging = true;
-        this.dragState.unitType = card.dataset.unit;
+        this.dragState.cardId = cardId;
+        this.dragState.handIndex = handIndex;
+        this.dragState.isSummon = isSummon;
         this.dragState.startX = touch.clientX;
         this.dragState.startY = touch.clientY;
+        this.dragState.cardEl = cardEl;
         
-        // Clone card as ghost
+        // Create ghost
         const ghost = this.dragState.ghost;
-        ghost.innerHTML = card.outerHTML;
-        ghost.firstChild.style.margin = '0';
-        ghost.firstChild.classList.add('dragging');
-        ghost.style.left = (touch.clientX - 50) + 'px';
-        ghost.style.top = (touch.clientY - 65) + 'px';
-        ghost.style.opacity = '0.9';
+        ghost.innerHTML = `
+            <div class="card drag-card" style="margin:0; box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
+                <div class="card-cost">${cardDef.cost}</div>
+                <div class="card-name">${cardDef.name}</div>
+                <div class="card-desc">${cardDef.desc}</div>
+            </div>
+        `;
+        ghost.style.left = (touch.clientX - 45) + 'px';
+        ghost.style.top = (touch.clientY - 60) + 'px';
+        ghost.style.opacity = '1';
+        ghost.style.transform = 'scale(1.15) rotate(-3deg)';
         
-        card.classList.add('dragging');
+        cardEl.style.opacity = '0.3';
+        cardEl.style.transform = 'scale(0.9)';
         
-        // Vibrate on mobile
-        if (navigator.vibrate) navigator.vibrate(30);
+        // Vibrate
+        if (navigator.vibrate) navigator.vibrate(20);
+        
+        // Show grid highlight for summons
+        if (isSummon) {
+            this.showSummonZones();
+        }
     },
     
-    onDrag(e) {
+    onCardDrag(e) {
         if (!this.dragState.isDragging) return;
         
         e.preventDefault();
         const touch = e.touches ? e.touches[0] : e;
         
-        // Move ghost
+        // Move ghost smoothly
         const ghost = this.dragState.ghost;
-        ghost.style.left = (touch.clientX - 50) + 'px';
-        ghost.style.top = (touch.clientY - 65) + 'px';
+        ghost.style.left = (touch.clientX - 45) + 'px';
+        ghost.style.top = (touch.clientY - 60) + 'px';
         
-        // Highlight valid cell
-        const gridPos = this.screenToGrid(touch.clientX, touch.clientY);
-        if (gridPos && gridPos.x < this.arena.playerZoneX) {
-            this.highlightCell(gridPos.x, gridPos.z);
-            ghost.style.transform = 'scale(1.15) rotate(0deg)';
+        if (this.dragState.isSummon) {
+            // Check grid position for summons
+            const gridPos = this.screenToGrid(touch.clientX, touch.clientY);
+            const isValid = gridPos && gridPos.x < this.arena.playerZoneX && !this.isCellOccupied(gridPos.x, gridPos.z);
+            
+            if (isValid) {
+                this.highlightCell(gridPos.x, gridPos.z, true);
+                ghost.style.transform = 'scale(1.2) rotate(0deg)';
+                ghost.querySelector('.drag-card').style.borderColor = '#44ff44';
+            } else {
+                this.highlightCell(-1, -1, false);
+                ghost.style.transform = 'scale(1.15) rotate(-3deg)';
+                ghost.querySelector('.drag-card').style.borderColor = '#666';
+            }
         } else {
-            this.clearHighlight();
-            ghost.style.transform = 'scale(1.1) rotate(-5deg)';
+            // Non-summon cards - check if dragged up (to play)
+            const dragDist = this.dragState.startY - touch.clientY;
+            if (dragDist > 100) {
+                ghost.style.transform = 'scale(1.2) rotate(0deg)';
+                ghost.querySelector('.drag-card').style.borderColor = '#44ff44';
+            } else {
+                ghost.style.transform = 'scale(1.15) rotate(-3deg)';
+                ghost.querySelector('.drag-card').style.borderColor = '#666';
+            }
         }
     },
     
-    endDrag(e) {
+    endCardDrag(e) {
         if (!this.dragState.isDragging) return;
         
         const touch = e.changedTouches ? e.changedTouches[0] : e;
-        const gridPos = this.screenToGrid(touch.clientX, touch.clientY);
+        const cardId = this.dragState.cardId;
+        const handIndex = this.dragState.handIndex;
+        const cardDef = this.cards[cardId];
         
-        // Place unit if valid position
-        if (gridPos && gridPos.x < this.arena.playerZoneX) {
-            this.placeUnit(this.dragState.unitType, gridPos.x, gridPos.z, 'player');
-            if (navigator.vibrate) navigator.vibrate([20, 30, 20]);
+        let success = false;
+        
+        if (this.dragState.isSummon) {
+            // Summon card - check grid position
+            const gridPos = this.screenToGrid(touch.clientX, touch.clientY);
+            const isValid = gridPos && gridPos.x < this.arena.playerZoneX && !this.isCellOccupied(gridPos.x, gridPos.z);
+            
+            if (isValid && this.state.cost >= cardDef.cost) {
+                // Place summon
+                this.placeUnit(cardDef.unit, gridPos.x, gridPos.z, 'player');
+                this.state.cost -= cardDef.cost;
+                this.state.hand.splice(handIndex, 1);
+                this.state.discard.push(cardId);
+                this.updateCostUI();
+                success = true;
+                if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+            }
+        } else {
+            // Non-summon card - check if dragged up
+            const dragDist = this.dragState.startY - touch.clientY;
+            if (dragDist > 100 && this.state.cost >= cardDef.cost) {
+                // Play the card
+                this.executeCard(cardId, handIndex);
+                success = true;
+            }
         }
         
-        // Reset
+        // Reset visual state
         this.dragState.isDragging = false;
         this.dragState.ghost.style.opacity = '0';
         this.clearHighlight();
+        this.hideSummonZones();
         
-        // Remove dragging class from all cards
-        document.querySelectorAll('.unit-card').forEach(c => c.classList.remove('dragging'));
+        if (this.dragState.cardEl) {
+            this.dragState.cardEl.style.opacity = '1';
+            this.dragState.cardEl.style.transform = '';
+        }
+        
+        // Re-render hand
+        if (success) {
+            this.renderHand();
+        }
+    },
+    
+    async executeCard(cardId, handIndex) {
+        const cardDef = this.cards[cardId];
+        if (!cardDef || this.state.cost < cardDef.cost) return;
+        
+        // Deduct cost
+        this.state.cost -= cardDef.cost;
+        this.state.hand.splice(handIndex, 1);
+        this.state.discard.push(cardId);
+        this.updateCostUI();
+        
+        // Execute based on type
+        if (cardDef.type === 'attack') {
+            await this.playAttackCard(cardDef);
+        } else if (cardDef.type === 'skill') {
+            await this.playSkillCard(cardDef);
+        }
+        
+        this.renderHand();
+        if (navigator.vibrate) navigator.vibrate([20, 30, 20]);
+    },
+    
+    showSummonZones() {
+        const graphics = this.gridHighlight;
+        graphics.clear();
+        
+        // Highlight all valid player zone cells
+        for (let x = 0; x < this.arena.playerZoneX; x++) {
+            for (let z = 0; z < this.arena.depth; z++) {
+                if (this.isCellOccupied(x, z)) continue;
+                
+                const corners = this.getCellCorners(x, z);
+                if (!corners) continue;
+                
+                graphics.moveTo(corners[0].x, corners[0].y);
+                graphics.lineTo(corners[1].x, corners[1].y);
+                graphics.lineTo(corners[2].x, corners[2].y);
+                graphics.lineTo(corners[3].x, corners[3].y);
+                graphics.closePath();
+                graphics.fill({ color: 0x44ff44, alpha: 0.15 });
+                graphics.stroke({ color: 0x44ff44, width: 2, alpha: 0.5 });
+            }
+        }
+    },
+    
+    hideSummonZones() {
+        if (this.gridHighlight) {
+            this.gridHighlight.clear();
+        }
+    },
+    
+    isCellOccupied(x, z) {
+        return [...this.state.playerUnits, ...this.state.enemyUnits]
+            .some(u => u.gridX === x && u.gridZ === z && u.hp > 0);
+    },
+    
+    highlightCell(x, z, valid) {
+        const graphics = this.gridHighlight;
+        graphics.clear();
+        
+        if (x < 0) return;
+        
+        // Re-draw summon zones
+        this.showSummonZones();
+        
+        // Highlight specific cell
+        const corners = this.getCellCorners(x, z);
+        if (!corners) return;
+        
+        const color = valid ? 0x44ff44 : 0xff4444;
+        
+        graphics.moveTo(corners[0].x, corners[0].y);
+        graphics.lineTo(corners[1].x, corners[1].y);
+        graphics.lineTo(corners[2].x, corners[2].y);
+        graphics.lineTo(corners[3].x, corners[3].y);
+        graphics.closePath();
+        graphics.fill({ color: color, alpha: 0.4 });
+        graphics.stroke({ color: color, width: 3, alpha: 1 });
+    },
+    
+    clearHighlight() {
+        if (this.gridHighlight) {
+            this.gridHighlight.clear();
+        }
     },
     
     screenToGrid(screenX, screenY) {
@@ -740,14 +862,6 @@ const Game = {
             }
         }
         return inside;
-    },
-    
-    highlightCell(x, z) {
-        // TODO: Visual highlight
-    },
-    
-    clearHighlight() {
-        // TODO: Clear highlight
     },
     
     async placeUnit(unitType, gridX, gridZ, team) {
