@@ -216,19 +216,39 @@ const BreakSystem = {
             enemy.intentContainer.visible = false;
         }
         
-        // 스프라이트 효과
+        // 🔥 스턴 떨림 애니메이션 (지속)
         if (enemy.sprite && typeof gsap !== 'undefined') {
+            // 원래 위치 저장
+            enemy.sprite.originalX = enemy.sprite.x;
+            
+            // 히트스톱 + 흰색 번쩍
             gsap.timeline()
                 .set(enemy.sprite, { tint: 0xffffff })
+                .to({}, { duration: 0.15 }) // 히트스톱
                 .to(enemy.sprite, { 
-                    duration: 0.1,
-                    onComplete: () => enemy.sprite.tint = 0x6666dd
+                    tint: 0x8888ff,
+                    duration: 0.3
                 });
+            
+            // 바들바들 떨림 (지속) - 더 강하게
+            enemy.stunShakeTween = gsap.to(enemy.sprite, {
+                x: enemy.sprite.originalX + 4,
+                duration: 0.025,
+                yoyo: true,
+                repeat: -1,
+                ease: 'none',
+                onUpdate: () => {
+                    // 랜덤 Y 떨림도 추가
+                    if (enemy.sprite) {
+                        enemy.sprite.rotation = (Math.random() - 0.5) * 0.03;
+                    }
+                }
+            });
         }
     },
     
     // ==========================================
-    // 브레이크 이펙트
+    // 브레이크 이펙트 (강력하게!)
     // ==========================================
     showBreakEffect(enemy) {
         if (!enemy.sprite) return;
@@ -237,14 +257,46 @@ const BreakSystem = {
         const x = globalPos.x;
         const y = globalPos.y - 50;
         
-        // 화면 플래시
+        // 1. 강력한 화면 플래시
         this.createBreakFlash();
         
-        // BREAK 텍스트
+        // 2. 히트스톱 (게임 전체 멈춤 느낌)
+        if (typeof CombatEffects !== 'undefined') {
+            CombatEffects.hitStop(120);
+        }
+        
+        // 3. 강력한 화면 흔들림
+        if (typeof CombatEffects !== 'undefined') {
+            CombatEffects.screenShake(20, 400);
+        } else if (this.game && this.game.app) {
+            const stage = this.game.app.stage;
+            gsap.timeline()
+                .to(stage, { x: 15, duration: 0.02 })
+                .to(stage, { x: -15, duration: 0.02 })
+                .to(stage, { x: 12, duration: 0.02 })
+                .to(stage, { x: -12, duration: 0.02 })
+                .to(stage, { x: 8, duration: 0.02 })
+                .to(stage, { x: -8, duration: 0.02 })
+                .to(stage, { x: 5, duration: 0.02 })
+                .to(stage, { x: -5, duration: 0.02 })
+                .to(stage, { x: 0, duration: 0.03 });
+        }
+        
+        // 4. 스턴 별 VFX
+        this.createStunStars(x, y - 30);
+        
+        // 5. 충격파 VFX
+        this.createShockwave(x, y);
+        
+        // 6. 대량 파티클 폭발
+        this.createBreakParticles(x, y);
+        this.createGlassShards(x, y);
+        
+        // 7. BREAK 텍스트 (더 크고 화려하게)
         const breakText = document.createElement('div');
         breakText.innerHTML = `
             <div class="break-main">BREAK!</div>
-            <div class="break-sub">취약 +${enemy.vulnerable || 1}</div>
+            <div class="break-sub">💔 취약 +${enemy.vulnerable || 1}</div>
         `;
         breakText.style.cssText = `
             position: fixed;
@@ -257,40 +309,33 @@ const BreakSystem = {
         `;
         document.body.appendChild(breakText);
         
-        // 파티클
-        this.createBreakParticles(x, y);
-        
         // 애니메이션
         if (typeof gsap !== 'undefined') {
             gsap.timeline()
                 .to(breakText, {
-                    scale: 1.3,
-                    duration: 0.15,
-                    ease: 'back.out(3)'
+                    scale: 1.5,
+                    rotation: -5,
+                    duration: 0.1,
+                    ease: 'back.out(4)'
+                })
+                .to(breakText, {
+                    scale: 1.2,
+                    rotation: 3,
+                    duration: 0.08
                 })
                 .to(breakText, {
                     scale: 1,
-                    duration: 0.1
+                    rotation: 0,
+                    duration: 0.08
                 })
                 .to(breakText, {
-                    y: -30,
+                    y: -40,
                     opacity: 0,
-                    duration: 0.5,
-                    delay: 0.5,
+                    duration: 0.6,
+                    delay: 0.8,
                     ease: 'power2.in',
                     onComplete: () => breakText.remove()
                 });
-                
-            // 화면 흔들림
-            if (this.game && this.game.app) {
-                const stage = this.game.app.stage;
-                gsap.timeline()
-                    .to(stage, { x: 8, duration: 0.03 })
-                    .to(stage, { x: -8, duration: 0.03 })
-                    .to(stage, { x: 5, duration: 0.03 })
-                    .to(stage, { x: -5, duration: 0.03 })
-                    .to(stage, { x: 0, duration: 0.03 });
-            }
         } else {
             breakText.style.transform = 'translate(-50%, -50%) scale(1)';
             setTimeout(() => breakText.remove(), 1500);
@@ -298,7 +343,127 @@ const BreakSystem = {
         
         // 사운드
         if (typeof SoundSystem !== 'undefined') {
-            SoundSystem.play('break', { volume: 0.8 });
+            SoundSystem.play('break', { volume: 1.0 });
+        }
+    },
+    
+    // ==========================================
+    // 스턴 별 VFX (머리 위에서 도는 별)
+    // ==========================================
+    createStunStars(x, y) {
+        const starContainer = document.createElement('div');
+        starContainer.className = 'stun-stars-container';
+        starContainer.style.cssText = `
+            position: fixed;
+            left: ${x}px;
+            top: ${y}px;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 40px;
+            z-index: 10002;
+            pointer-events: none;
+        `;
+        
+        // 3개의 별 생성
+        for (let i = 0; i < 3; i++) {
+            const star = document.createElement('div');
+            star.textContent = '⭐';
+            star.style.cssText = `
+                position: absolute;
+                font-size: 24px;
+                animation: stunStarOrbit 0.8s linear infinite;
+                animation-delay: ${i * 0.27}s;
+                filter: drop-shadow(0 0 6px #ffd700);
+            `;
+            starContainer.appendChild(star);
+        }
+        
+        document.body.appendChild(starContainer);
+        
+        // 2초 후 제거
+        setTimeout(() => starContainer.remove(), 2000);
+    },
+    
+    // ==========================================
+    // 충격파 VFX
+    // ==========================================
+    createShockwave(x, y) {
+        for (let i = 0; i < 3; i++) {
+            const ring = document.createElement('div');
+            ring.style.cssText = `
+                position: fixed;
+                left: ${x}px;
+                top: ${y}px;
+                width: 20px;
+                height: 20px;
+                border: 4px solid rgba(255, 200, 50, ${1 - i * 0.2});
+                border-radius: 50%;
+                transform: translate(-50%, -50%) scale(0);
+                z-index: 9999;
+                pointer-events: none;
+                box-shadow: 
+                    0 0 20px rgba(255, 200, 50, 0.6),
+                    inset 0 0 20px rgba(255, 200, 50, 0.3);
+            `;
+            document.body.appendChild(ring);
+            
+            if (typeof gsap !== 'undefined') {
+                gsap.to(ring, {
+                    scale: 8 + i * 3,
+                    opacity: 0,
+                    duration: 0.5 + i * 0.1,
+                    delay: i * 0.05,
+                    ease: 'power2.out',
+                    onComplete: () => ring.remove()
+                });
+            } else {
+                setTimeout(() => ring.remove(), 700);
+            }
+        }
+    },
+    
+    // ==========================================
+    // 유리 파편 VFX
+    // ==========================================
+    createGlassShards(x, y) {
+        const colors = ['#ffd700', '#ffffff', '#ffcc00', '#ff8800'];
+        
+        for (let i = 0; i < 20; i++) {
+            const shard = document.createElement('div');
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 60 + Math.random() * 80;
+            const size = 8 + Math.random() * 12;
+            const rotation = Math.random() * 720;
+            
+            shard.style.cssText = `
+                position: fixed;
+                left: ${x}px;
+                top: ${y}px;
+                width: ${size}px;
+                height: ${size * 0.6}px;
+                background: linear-gradient(135deg, ${colors[i % colors.length]}, white);
+                clip-path: polygon(20% 0%, 80% 0%, 100% 50%, 80% 100%, 20% 100%, 0% 50%);
+                transform: translate(-50%, -50%);
+                z-index: 10000;
+                pointer-events: none;
+                box-shadow: 0 0 ${size/2}px ${colors[i % colors.length]};
+            `;
+            document.body.appendChild(shard);
+            
+            if (typeof gsap !== 'undefined') {
+                gsap.to(shard, {
+                    x: Math.cos(angle) * distance,
+                    y: Math.sin(angle) * distance + 40, // 중력
+                    rotation: rotation,
+                    opacity: 0,
+                    scale: 0,
+                    duration: 0.5 + Math.random() * 0.3,
+                    ease: 'power2.out',
+                    onComplete: () => shard.remove()
+                });
+            } else {
+                setTimeout(() => shard.remove(), 800);
+            }
         }
     },
     
@@ -427,9 +592,19 @@ const BreakSystem = {
             enemy.currentBreakRecipe = null;
             enemy.breakProgress = [];
             
+            // 떨림 애니메이션 중지
+            if (enemy.stunShakeTween) {
+                enemy.stunShakeTween.kill();
+                enemy.stunShakeTween = null;
+            }
+            
             // 스프라이트 복구
             if (enemy.sprite) {
                 enemy.sprite.tint = 0xffffff;
+                if (enemy.sprite.originalX !== undefined) {
+                    enemy.sprite.x = enemy.sprite.originalX;
+                }
+                enemy.sprite.rotation = 0;
             }
             
             // 인텐트 UI 복구
@@ -533,22 +708,60 @@ const BreakSystem = {
             
             .break-main {
                 font-family: 'Cinzel', serif;
-                font-size: 2.5rem;
+                font-size: 3.5rem;
                 font-weight: 900;
-                background: linear-gradient(180deg, #fef3c7 0%, #f59e0b 50%, #dc2626 100%);
+                background: linear-gradient(180deg, #ffffff 0%, #ffd700 30%, #ff8c00 70%, #ff4500 100%);
                 -webkit-background-clip: text;
                 -webkit-text-fill-color: transparent;
-                filter: drop-shadow(0 0 10px rgba(251, 191, 36, 1))
-                        drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.8));
-                letter-spacing: 4px;
+                filter: drop-shadow(0 0 20px rgba(255, 200, 50, 1))
+                        drop-shadow(0 0 40px rgba(255, 150, 0, 0.8))
+                        drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.9));
+                letter-spacing: 6px;
+                animation: breakTextPulse 0.3s ease-in-out;
+            }
+            
+            @keyframes breakTextPulse {
+                0%, 100% { filter: drop-shadow(0 0 20px rgba(255, 200, 50, 1)) drop-shadow(0 0 40px rgba(255, 150, 0, 0.8)) drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.9)); }
+                50% { filter: drop-shadow(0 0 40px rgba(255, 255, 255, 1)) drop-shadow(0 0 60px rgba(255, 200, 50, 1)) drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.9)); }
             }
             
             .break-sub {
                 font-family: 'Cinzel', serif;
-                font-size: 1rem;
-                color: #ef4444;
-                text-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
-                margin-top: 4px;
+                font-size: 1.3rem;
+                color: #ff6666;
+                text-shadow: 0 0 12px rgba(255, 100, 100, 1), 2px 2px 0 #000;
+                margin-top: 6px;
+                animation: breakSubPulse 0.5s ease-out;
+            }
+            
+            @keyframes breakSubPulse {
+                0% { transform: scale(0); opacity: 0; }
+                50% { transform: scale(1.2); }
+                100% { transform: scale(1); opacity: 1; }
+            }
+            
+            /* 스턴 별 회전 애니메이션 */
+            @keyframes stunStarOrbit {
+                0% {
+                    transform: translate(-50%, -50%) rotate(0deg) translateX(35px) rotate(0deg);
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.6;
+                }
+                100% {
+                    transform: translate(-50%, -50%) rotate(360deg) translateX(35px) rotate(-360deg);
+                    opacity: 1;
+                }
+            }
+            
+            .stun-stars-container {
+                animation: stunStarsFloat 0.5s ease-in-out infinite alternate;
+            }
+            
+            @keyframes stunStarsFloat {
+                0% { transform: translate(-50%, -50%) translateY(0); }
+                100% { transform: translate(-50%, -50%) translateY(-5px); }
             }
             
             /* 브레이크된 유닛 스타일 */
