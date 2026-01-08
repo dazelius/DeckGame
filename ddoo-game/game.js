@@ -1214,19 +1214,26 @@ const Game = {
         const localX = screenX - rect.left;
         const localY = screenY - rect.top;
         
-        // Check each enemy sprite
+        // Check each enemy sprite using their current screen position
         for (const enemy of this.state.enemyUnits) {
             if (enemy.hp <= 0 || !enemy.sprite) continue;
             
             const sprite = enemy.sprite;
-            const bounds = sprite.getBounds();
             
-            // Expand hitbox for easier targeting
-            const padding = 30;
-            if (localX >= bounds.x - padding && 
-                localX <= bounds.x + bounds.width + padding &&
-                localY >= bounds.y - padding && 
-                localY <= bounds.y + bounds.height + padding) {
+            // Use sprite's position directly (sprite.x, sprite.y is already screen coords)
+            const spriteX = sprite.x;
+            const spriteY = sprite.y;
+            const spriteWidth = sprite.width || 80;
+            const spriteHeight = sprite.height || 100;
+            
+            // Hitbox centered on sprite position (anchor is at bottom center)
+            const hitPadding = 50;
+            const left = spriteX - spriteWidth / 2 - hitPadding;
+            const right = spriteX + spriteWidth / 2 + hitPadding;
+            const top = spriteY - spriteHeight - hitPadding;
+            const bottom = spriteY + hitPadding;
+            
+            if (localX >= left && localX <= right && localY >= top && localY <= bottom) {
                 return enemy;
             }
         }
@@ -1329,15 +1336,21 @@ const Game = {
             if (!ally || !ally.sprite || ally.hp <= 0) continue;
             
             const sprite = ally.sprite;
-            const bounds = sprite.getBounds();
             
-            // Expand hitbox for easier targeting
-            const hitPadding = 30;
+            // Use sprite's position directly
+            const spriteX = sprite.x;
+            const spriteY = sprite.y;
+            const spriteWidth = sprite.width || 80;
+            const spriteHeight = sprite.height || 100;
             
-            if (localX >= bounds.x - hitPadding && 
-                localX <= bounds.x + bounds.width + hitPadding &&
-                localY >= bounds.y - hitPadding && 
-                localY <= bounds.y + bounds.height + hitPadding) {
+            // Hitbox centered on sprite position (anchor is at bottom center)
+            const hitPadding = 50;
+            const left = spriteX - spriteWidth / 2 - hitPadding;
+            const right = spriteX + spriteWidth / 2 + hitPadding;
+            const top = spriteY - spriteHeight - hitPadding;
+            const bottom = spriteY + hitPadding;
+            
+            if (localX >= left && localX <= right && localY >= top && localY <= bottom) {
                 return ally;
             }
         }
