@@ -463,6 +463,9 @@ const Game = {
         
         const container = new PIXI.Container();
         
+        // Set zIndex to render in front of sprite
+        container.zIndex = 100;
+        
         // Intent background
         const bg = new PIXI.Graphics();
         bg.roundRect(-22, -28, 44, 36, 4);
@@ -521,11 +524,14 @@ const Game = {
         arrow.y = 0;
         container.addChild(arrow);
         
-        // Position above sprite
+        // Position at top of sprite with margin
+        // Sprite anchor is at bottom (0.5, 1), so top is at negative height
         const spriteHeight = enemy.sprite.height || 60;
-        container.y = -spriteHeight * 0.55 - 35;
+        const margin = 10;
+        container.y = -spriteHeight - margin;
         
-        // Add to sprite
+        // Add to sprite (enable sortChildren for zIndex to work)
+        enemy.sprite.sortableChildren = true;
         enemy.sprite.addChild(container);
         enemy.intentContainer = container;
     },
@@ -593,8 +599,10 @@ const Game = {
         // Add small margin below feet
         const margin = 5;
         hpBar.y = margin;
+        hpBar.zIndex = 50;
         
-        // Add to sprite (so it moves together)
+        // Add to sprite (so it moves together, enable sortChildren for zIndex)
+        unit.sprite.sortableChildren = true;
         unit.sprite.addChild(hpBar);
         unit.hpBar = hpBar;
     },
