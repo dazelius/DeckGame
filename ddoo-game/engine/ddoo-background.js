@@ -22,21 +22,21 @@ const DDOOBackground = {
         smoothing: 0.05
     },
     
-    // Camera defaults (Hearthstone style - top-down angled view)
+    // Camera defaults (Side view with slight angle)
     cameraDefaults: {
-        posX: 4,       // Center of arena (X axis)
-        posY: 8,       // High for overview
-        posZ: 6,       // Front position
-        lookAtX: 4,    // Look at arena center
-        lookAtY: 0,    // Look at floor level
-        lookAtZ: 1.5   // Look at arena center (Z axis)
+        posX: 3,       // Center of arena (X axis)
+        posY: 3,       // Medium height for side view
+        posZ: 8,       // Far enough to see full grid
+        lookAtX: 3,    // Look at arena center
+        lookAtY: 0.5,  // Look slightly above floor
+        lookAtZ: 1     // Look at arena center
     },
     
     // Auto zoom settings
     autoZoom: {
         enabled: true,
-        targetZ: 6,
-        currentZ: 6,
+        targetZ: 8,
+        currentZ: 8,
         targetX: 0,
         currentX: 0,
         targetLookAtX: 0,
@@ -170,7 +170,7 @@ const DDOOBackground = {
         }
         
         this.camera = new THREE.PerspectiveCamera(
-            60,  // Wider FOV to fill screen
+            55,  // FOV for side view
             width / height,
             0.1,
             100

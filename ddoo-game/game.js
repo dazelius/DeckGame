@@ -13,6 +13,7 @@ const Game = {
         timer: 30,           // Placement phase timer (seconds)
         gold: 10,
         maxGold: 10,
+        battleTurn: 0,       // Current battle turn
         
         // Player units on board
         playerUnits: [],
@@ -36,10 +37,10 @@ const Game = {
     // ==================== ARENA ====================
     // Hearthstone style: LEFT = player, RIGHT = enemy
     arena: {
-        width: 8,       // X: 0-7 (horizontal - left to right)
-        depth: 3,       // Z: 0-2 (vertical rows)
-        playerZoneX: 4, // Player can place in X: 0-3 (left half)
-        enemyZoneX: 4   // Enemy spawns in X: 4-7 (right half)
+        width: 6,       // X: 0-5 (horizontal - left to right)
+        depth: 2,       // Z: 0-1 (2 rows - front/back)
+        playerZoneX: 3, // Player can place in X: 0-2 (left half)
+        enemyZoneX: 3   // Enemy spawns in X: 3-5 (right half)
     },
     
     battleAreaSize: { width: 0, height: 0 },
@@ -546,121 +547,185 @@ const Game = {
         }
     },
     
-    // ==================== BATTLE PHASE ====================
+    // ==================== BATTLE PHASE (Turn-Based) ====================
     startBattlePhase() {
         this.state.phase = 'battle';
+        this.state.battleTurn = 0;
         this.updatePhaseUI();
-        this.lastBattleTime = performance.now();
-        
-        // Start battle loop
-        this.battleLoop();
         
         console.log('[Game] Battle phase started!');
+        
+        // Start first turn
+        this.nextBattleTurn();
     },
     
-    battleLoop() {
+    async nextBattleTurn() {
         if (this.state.phase !== 'battle') return;
         
-        const now = performance.now();
-        const delta = (now - this.lastBattleTime) / 1000;  // seconds
-        this.lastBattleTime = now;
+        this.state.battleTurn++;
+        console.log(`[Game] === Turn ${this.state.battleTurn} ===`);
         
-        // Update all units
-        this.updateUnits(delta);
-        
-        // Check battle end
+        // Check battle end before turn
         if (this.checkBattleEnd()) {
             this.endBattlePhase();
             return;
         }
         
-        this.battleLoopId = requestAnimationFrame(() => this.battleLoop());
+        // All units attack once (alternating: player then enemy)
+        const playerUnits = this.state.playerUnits.filter(u => u.hp > 0);
+        const enemyUnits = this.state.enemyUnits.filter(u => u.hp > 0);
+        
+        // Interleave attacks: player1, enemy1, player2, enemy2...
+        const maxLen = Math.max(playerUnits.length, enemyUnits.length);
+        
+        for (let i = 0; i < maxLen; i++) {
+            // Player unit attacks
+            if (playerUnits[i]) {
+                await this.unitTakeTurn(playerUnits[i]);
+                if (this.checkBattleEnd()) break;
+            }
+            
+            // Enemy unit attacks
+            if (enemyUnits[i]) {
+                await this.unitTakeTurn(enemyUnits[i]);
+                if (this.checkBattleEnd()) break;
+            }
+        }
+        
+        // Check battle end after turn
+        if (this.checkBattleEnd()) {
+            this.endBattlePhase();
+            return;
+        }
+        
+        // Next turn after delay
+        setTimeout(() => this.nextBattleTurn(), 800);
     },
     
-    updateUnits(delta) {
-        const allUnits = [...this.state.playerUnits, ...this.state.enemyUnits];
+    async unitTakeTurn(unit) {
+        if (unit.hp <= 0) return;
         
-        allUnits.forEach(unit => {
-            if (unit.hp <= 0) return;
+        const unitDef = this.unitTypes[unit.type];
+        const enemies = unit.team === 'player' ? this.state.enemyUnits : this.state.playerUnits;
+        const aliveEnemies = enemies.filter(e => e.hp > 0);
+        
+        if (aliveEnemies.length === 0) return;
+        
+        // Find nearest enemy
+        let nearest = null;
+        let nearestDist = Infinity;
+        
+        aliveEnemies.forEach(enemy => {
+            const dist = Math.abs(unit.x - enemy.x) + Math.abs(unit.z - enemy.z);
+            if (dist < nearestDist) {
+                nearestDist = dist;
+                nearest = enemy;
+            }
+        });
+        
+        if (!nearest) return;
+        
+        // In range? Attack! Otherwise move closer
+        if (nearestDist <= unitDef.range) {
+            await this.attackUnit(unit, nearest);
+        } else {
+            await this.moveUnitToward(unit, nearest);
+        }
+    },
+    
+    async moveUnitToward(unit, target) {
+        const unitDef = this.unitTypes[unit.type];
+        const dx = target.x - unit.x;
+        const dz = target.z - unit.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        
+        if (dist <= 0) return;
+        
+        // Move 1 cell toward target
+        const moveX = dx !== 0 ? Math.sign(dx) : 0;
+        const moveZ = dz !== 0 ? Math.sign(dz) : 0;
+        
+        const newX = unit.x + moveX;
+        const newZ = unit.z + moveZ;
+        
+        // Animate movement
+        return new Promise(resolve => {
+            unit.x = newX;
+            unit.z = newZ;
+            unit.gridX = Math.floor(newX);
+            unit.gridZ = Math.floor(newZ);
             
-            const unitDef = this.unitTypes[unit.type];
-            
-            // Find target
-            const enemies = unit.team === 'player' ? this.state.enemyUnits : this.state.playerUnits;
-            const aliveEnemies = enemies.filter(e => e.hp > 0);
-            
-            if (aliveEnemies.length === 0) return;
-            
-            // Find nearest enemy
-            let nearest = null;
-            let nearestDist = Infinity;
-            
-            aliveEnemies.forEach(enemy => {
-                const dist = Math.abs(unit.x - enemy.x) + Math.abs(unit.z - enemy.z);
-                if (dist < nearestDist) {
-                    nearestDist = dist;
-                    nearest = enemy;
-                }
-            });
-            
-            unit.target = nearest;
-            
-            // Attack or move
-            if (nearestDist <= unitDef.range) {
-                // In range - attack
-                unit.attackCooldown -= delta;
-                
-                if (unit.attackCooldown <= 0) {
-                    this.attackUnit(unit, nearest);
-                    unit.attackCooldown = 1 / unitDef.attackSpeed;
-                }
-                unit.state = 'attacking';
+            const targetPos = this.getCellCenter(unit.gridX, unit.gridZ);
+            if (targetPos && unit.sprite) {
+                gsap.to(unit.sprite, {
+                    x: targetPos.x,
+                    y: targetPos.y,
+                    duration: 0.3,
+                    ease: 'power2.out',
+                    onComplete: resolve
+                });
             } else {
-                // Move towards target
-                const dx = nearest.x - unit.x;
-                const dz = nearest.z - unit.z;
-                const dist = Math.sqrt(dx * dx + dz * dz);
-                
-                if (dist > 0) {
-                    const moveAmount = unitDef.moveSpeed * delta;
-                    unit.x += (dx / dist) * moveAmount;
-                    unit.z += (dz / dist) * moveAmount;
-                    
-                    // Update grid position
-                    unit.gridX = Math.floor(unit.x);
-                    unit.gridZ = Math.floor(unit.z);
-                    
-                    // Update sprite position
-                    this.updateUnitSprite(unit);
-                }
-                unit.state = 'moving';
+                resolve();
             }
         });
     },
     
-    attackUnit(attacker, target) {
+    async attackUnit(attacker, target) {
         const unitDef = this.unitTypes[attacker.type];
         const damage = unitDef.damage;
         
-        target.hp -= damage;
-        
-        // Visual feedback
-        if (target.sprite) {
-            gsap.to(target.sprite, {
-                alpha: 0.5,
-                duration: 0.1,
-                yoyo: true,
-                repeat: 1
-            });
-        }
-        
-        // Damage number
-        this.showDamage(target, damage);
-        
-        // Check death
-        if (target.hp <= 0) {
-            this.killUnit(target);
-        }
+        // Attack animation: lunge toward target
+        return new Promise(resolve => {
+            const originalX = attacker.sprite?.x || 0;
+            const originalY = attacker.sprite?.y || 0;
+            const targetX = target.sprite?.x || originalX;
+            
+            // Lunge animation
+            if (attacker.sprite) {
+                const lungeX = originalX + (targetX - originalX) * 0.3;
+                
+                gsap.timeline()
+                    .to(attacker.sprite, {
+                        x: lungeX,
+                        duration: 0.15,
+                        ease: 'power2.out'
+                    })
+                    .call(() => {
+                        // Deal damage at peak of lunge
+                        target.hp -= damage;
+                        this.showDamage(target, damage);
+                        
+                        // Hit flash on target
+                        if (target.sprite) {
+                            gsap.to(target.sprite, {
+                                alpha: 0.3,
+                                tint: 0xff0000,
+                                duration: 0.08,
+                                yoyo: true,
+                                repeat: 1,
+                                onComplete: () => {
+                                    if (target.sprite) target.sprite.tint = target.team === 'player' ? 0x8888ff : 0xff8888;
+                                }
+                            });
+                        }
+                        
+                        // Check death
+                        if (target.hp <= 0) {
+                            this.killUnit(target);
+                        }
+                    })
+                    .to(attacker.sprite, {
+                        x: originalX,
+                        duration: 0.2,
+                        ease: 'power2.in',
+                        onComplete: resolve
+                    });
+            } else {
+                target.hp -= damage;
+                if (target.hp <= 0) this.killUnit(target);
+                resolve();
+            }
+        });
     },
     
     showDamage(unit, damage) {
