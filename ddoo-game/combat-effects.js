@@ -710,17 +710,23 @@ const CombatEffects = {
     hitEffect(sprite, color = 0xff0000) {
         if (!sprite) return;
         
-        // 깜빡임
-        const originalTint = sprite.tint;
-        sprite.tint = color;
+        // 기존 애니메이션 중단 (알파 꼬임 방지)
+        gsap.killTweensOf(sprite, 'alpha,tint');
         
+        // 원래 값 저장
+        const originalTint = sprite.tint || 0xffffff;
+        const originalAlpha = 1;
+        
+        // 즉시 흰색 플래시
+        sprite.tint = 0xffffff;
+        sprite.alpha = 1;
+        
+        // 빨간색으로 깜빡이고 복원
         gsap.timeline()
-            .to(sprite, { alpha: 0.5, duration: 0.05 })
-            .to(sprite, { alpha: 1, duration: 0.05 })
-            .to(sprite, { alpha: 0.5, duration: 0.05 })
-            .to(sprite, { alpha: 1, duration: 0.05, onComplete: () => {
-                sprite.tint = originalTint;
-            }});
+            .to(sprite, { duration: 0.03 }) // 흰색 유지
+            .set(sprite, { tint: color })
+            .to(sprite, { duration: 0.08 })
+            .set(sprite, { tint: originalTint, alpha: originalAlpha });
         
         // 넉백 느낌
         const originalX = sprite.x;
