@@ -562,6 +562,16 @@ const Game = {
         const hero = this.state.hero;
         if (!hero || !hero.sprite) return;
         
+        // Check if there's a friendly unit at the target position
+        const blockingUnit = this.state.playerUnits.find(u => 
+            u !== hero && u.hp > 0 && u.gridX === hero.gridX && u.gridZ === targetZ
+        );
+        
+        if (blockingUnit) {
+            // Move the blocking unit out of the way
+            await this.moveUnitAside(blockingUnit, hero.gridZ);
+        }
+        
         // Update hero position
         hero.gridZ = targetZ;
         hero.z = targetZ + 0.5;
@@ -576,6 +586,50 @@ const Game = {
                 x: newPos.x,
                 y: newPos.y,
                 duration: 0.25,
+                ease: 'power2.out',
+                onComplete: resolve
+            });
+        });
+    },
+    
+    async moveUnitAside(unit, avoidZ) {
+        if (!unit || !unit.sprite) return;
+        
+        // Find a free adjacent cell to move to
+        const possibleZ = [];
+        for (let z = 0; z < this.arena.depth; z++) {
+            if (z === avoidZ) continue;
+            if (z === unit.gridZ) continue;
+            
+            // Check if cell is free
+            const occupied = this.state.playerUnits.some(u => 
+                u !== unit && u.hp > 0 && u.gridX === unit.gridX && u.gridZ === z
+            );
+            if (!occupied) {
+                possibleZ.push(z);
+            }
+        }
+        
+        if (possibleZ.length === 0) return; // No free space
+        
+        // Pick the closest free cell
+        possibleZ.sort((a, b) => Math.abs(a - unit.gridZ) - Math.abs(b - unit.gridZ));
+        const newZ = possibleZ[0];
+        
+        // Update unit position
+        unit.gridZ = newZ;
+        unit.z = newZ + 0.5;
+        
+        // Get new screen position
+        const newPos = this.getCellCenter(unit.gridX, unit.gridZ);
+        if (!newPos) return;
+        
+        // Animate movement
+        return new Promise(resolve => {
+            gsap.to(unit.sprite, {
+                x: newPos.x,
+                y: newPos.y,
+                duration: 0.2,
                 ease: 'power2.out',
                 onComplete: resolve
             });
