@@ -1138,14 +1138,23 @@ const Game = {
             this.dragState.targetEnemy = targetEnemy;
             
             if (targetEnemy) {
-                // Hovering over enemy - highlight them
-                this.highlightEnemy(targetEnemy, true);
+                // Get AOE pattern from card
+                const aoe = cardDef.aoe || { width: 1, depth: 1 };
+                
+                // Find all enemies in AOE and highlight them
+                const targetsInAoe = this.getEnemiesInAoe(targetEnemy.gridX, targetEnemy.gridZ, aoe);
+                this.highlightEnemiesInAoe(targetsInAoe);
+                
+                // Show AOE grid highlight
+                this.showAoeHighlight(targetEnemy.gridX, targetEnemy.gridZ, aoe);
+                
                 ghost.style.transform = 'scale(1.2) rotate(0deg)';
                 ghost.querySelector('.drag-card').style.borderColor = '#ff4444';
             } else {
                 // Check if dragged up (to play on first enemy)
                 const dragDist = this.dragState.startY - touch.clientY;
                 this.clearEnemyHighlights();
+                this.clearAoeHighlight();
                 if (dragDist > 100) {
                     ghost.style.transform = 'scale(1.2) rotate(0deg)';
                     ghost.querySelector('.drag-card').style.borderColor = '#44ff44';
@@ -1232,11 +1241,71 @@ const Game = {
         }
     },
     
+    highlightEnemiesInAoe(enemies) {
+        this.clearEnemyHighlights();
+        this._highlightedEnemies = enemies;
+        for (const enemy of enemies) {
+            if (enemy && enemy.sprite) {
+                enemy.sprite.tint = 0xff6666;
+            }
+        }
+    },
+    
+    showAoeHighlight(centerX, centerZ, aoe) {
+        this.clearAoeHighlight();
+        
+        if (!this.aoeHighlight) {
+            this.aoeHighlight = new PIXI.Graphics();
+            this.containers.grid.addChild(this.aoeHighlight);
+        }
+        
+        const graphics = this.aoeHighlight;
+        const halfDepth = Math.floor(aoe.depth / 2);
+        
+        // Draw AOE cells
+        for (let dx = 0; dx < aoe.width; dx++) {
+            for (let dz = -halfDepth; dz <= halfDepth; dz++) {
+                const x = centerX + dx;
+                const z = centerZ + dz;
+                
+                if (z < 0 || z >= this.arena.depth) continue;
+                if (x < 0 || x >= this.arena.width) continue;
+                
+                const corners = this.getCellCorners(x, z);
+                if (!corners) continue;
+                
+                graphics.moveTo(corners[0].x, corners[0].y);
+                graphics.lineTo(corners[1].x, corners[1].y);
+                graphics.lineTo(corners[2].x, corners[2].y);
+                graphics.lineTo(corners[3].x, corners[3].y);
+                graphics.closePath();
+                graphics.fill({ color: 0xff4444, alpha: 0.3 });
+                graphics.stroke({ color: 0xff6666, width: 2, alpha: 0.8 });
+            }
+        }
+    },
+    
+    clearAoeHighlight() {
+        if (this.aoeHighlight) {
+            this.aoeHighlight.clear();
+        }
+    },
+    
     clearEnemyHighlights() {
         if (this._highlightedEnemy && this._highlightedEnemy.sprite) {
             this._highlightedEnemy.sprite.tint = 0xffffff;
         }
         this._highlightedEnemy = null;
+        
+        // Clear AOE highlighted enemies
+        if (this._highlightedEnemies) {
+            for (const enemy of this._highlightedEnemies) {
+                if (enemy && enemy.sprite) {
+                    enemy.sprite.tint = 0xffffff;
+                }
+            }
+            this._highlightedEnemies = null;
+        }
         
         // Clear all enemy tints
         for (const enemy of this.state.enemyUnits) {
@@ -1357,6 +1426,7 @@ const Game = {
         this.clearHighlight();
         this.clearEnemyHighlights();
         this.clearAllyHighlights();
+        this.clearAoeHighlight();
         this.hideSummonZones();
         
         if (this.dragState.cardEl) {
