@@ -523,7 +523,7 @@ const Game = {
         
         // Position above sprite
         const spriteHeight = enemy.sprite.height || 60;
-        container.y = -spriteHeight * 0.5 - 25;
+        container.y = -spriteHeight * 0.55 - 35;
         
         // Add to sprite
         enemy.sprite.addChild(container);
@@ -588,9 +588,9 @@ const Game = {
         unit.hpBarWidth = barWidth;
         unit.hpBarHeight = barHeight;
         
-        // Position below sprite
+        // Position below sprite (at feet level)
         const spriteHeight = unit.sprite.height || 60;
-        hpBar.y = spriteHeight * 0.35;
+        hpBar.y = spriteHeight * 0.45;
         
         // Add to sprite (so it moves together)
         unit.sprite.addChild(hpBar);
@@ -1111,9 +1111,40 @@ const Game = {
                     ghost.querySelector('.drag-card').style.borderColor = '#666';
                 }
             }
+        } else if (cardDef && cardDef.type === 'skill') {
+            // Skill cards - check if targeting self/ally or dragged up
+            const hero = this.state.hero;
+            const targetAlly = this.getAllyAtScreen(touch.clientX, touch.clientY);
+            this.dragState.targetAlly = targetAlly;
+            
+            // Clear enemy highlights
+            this.clearEnemyHighlights();
+            
+            if (cardDef.target === 'self' && targetAlly && targetAlly.isHero) {
+                // Skill targets self (hero) - highlight when hovering
+                this.highlightAlly(targetAlly, true);
+                ghost.style.transform = 'scale(1.2) rotate(0deg)';
+                ghost.querySelector('.drag-card').style.borderColor = '#44aaff';
+            } else {
+                this.clearAllyHighlights();
+                const dragDist = this.dragState.startY - touch.clientY;
+                if (dragDist > 100) {
+                    // Highlight hero when dragged up for self-targeting skills
+                    if (cardDef.target === 'self' && hero && hero.sprite) {
+                        this.highlightAlly(hero, true);
+                    }
+                    ghost.style.transform = 'scale(1.2) rotate(0deg)';
+                    ghost.querySelector('.drag-card').style.borderColor = '#44aaff';
+                } else {
+                    ghost.style.transform = 'scale(1.15) rotate(-3deg)';
+                    ghost.querySelector('.drag-card').style.borderColor = '#666';
+                }
+            }
         } else {
-            // Skill cards - check if dragged up
+            // Other cards - check if dragged up
             const dragDist = this.dragState.startY - touch.clientY;
+            this.clearEnemyHighlights();
+            this.clearAllyHighlights();
             if (dragDist > 100) {
                 ghost.style.transform = 'scale(1.2) rotate(0deg)';
                 ghost.querySelector('.drag-card').style.borderColor = '#44ff44';
@@ -1167,6 +1198,60 @@ const Game = {
         // Clear all enemy tints
         for (const enemy of this.state.enemyUnits) {
             if (enemy.sprite) enemy.sprite.tint = 0xffffff;
+        }
+    },
+    
+    getAllyAtScreen(screenX, screenY) {
+        // Get canvas bounds
+        const canvas = this.app.canvas;
+        const rect = canvas.getBoundingClientRect();
+        
+        // Convert to local position
+        const localX = screenX - rect.left;
+        const localY = screenY - rect.top;
+        
+        // Check all player units (hero + summons)
+        const allAllies = [this.state.hero, ...this.state.playerUnits.filter(u => u !== this.state.hero)];
+        
+        for (const ally of allAllies) {
+            if (!ally || !ally.sprite || ally.hp <= 0) continue;
+            
+            const sprite = ally.sprite;
+            const bounds = sprite.getBounds();
+            
+            // Expand hitbox for easier targeting
+            const hitPadding = 30;
+            
+            if (localX >= bounds.x - hitPadding && 
+                localX <= bounds.x + bounds.width + hitPadding &&
+                localY >= bounds.y - hitPadding && 
+                localY <= bounds.y + bounds.height + hitPadding) {
+                return ally;
+            }
+        }
+        return null;
+    },
+    
+    highlightAlly(ally, highlight) {
+        this.clearAllyHighlights();
+        if (highlight && ally && ally.sprite) {
+            ally.sprite.tint = 0x66aaff;  // Blue tint for allies
+            this._highlightedAlly = ally;
+        }
+    },
+    
+    clearAllyHighlights() {
+        if (this._highlightedAlly && this._highlightedAlly.sprite) {
+            this._highlightedAlly.sprite.tint = 0xffffff;
+        }
+        this._highlightedAlly = null;
+        
+        // Clear all ally tints
+        if (this.state.hero && this.state.hero.sprite) {
+            this.state.hero.sprite.tint = 0xffffff;
+        }
+        for (const ally of this.state.playerUnits) {
+            if (ally.sprite) ally.sprite.tint = 0xffffff;
         }
     },
     
@@ -1225,8 +1310,10 @@ const Game = {
         this.dragState.isDragging = false;
         this.dragState.ghost.style.opacity = '0';
         this.dragState.targetEnemy = null;
+        this.dragState.targetAlly = null;
         this.clearHighlight();
         this.clearEnemyHighlights();
+        this.clearAllyHighlights();
         this.hideSummonZones();
         
         if (this.dragState.cardEl) {
