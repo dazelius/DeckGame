@@ -531,12 +531,13 @@ const Game = {
         
         // 브레이크 가능한 인텐트인지 확인
         const hasBreakRecipe = enemy.intent.breakRecipe && enemy.intent.breakRecipe.length > 0;
-        const bgWidth = hasBreakRecipe ? 60 : 44;
+        const bgWidth = hasBreakRecipe ? 90 : 70;
+        const bgHeight = hasBreakRecipe ? 70 : 52;
         
-        // Intent background
+        // Intent background (크게!)
         const bg = new PIXI.Graphics();
-        bg.roundRect(-bgWidth/2, -28, bgWidth, hasBreakRecipe ? 50 : 36, 4);
-        bg.fill({ color: 0x0a0806, alpha: 0.9 });
+        bg.roundRect(-bgWidth/2, -bgHeight + 10, bgWidth, bgHeight, 6);
+        bg.fill({ color: 0x0a0806, alpha: 0.95 });
         
         // Border color based on type
         let borderColor = 0x8b2020; // Attack - red
@@ -549,15 +550,20 @@ const Game = {
             textColor = 0xffaa44;
         }
         
-        // 브레이크 가능하면 금색 테두리
+        // 브레이크 가능하면 금색 테두리 + 글로우
         if (hasBreakRecipe) {
             borderColor = 0xfbbf24;
+            // 글로우 효과
+            const glow = new PIXI.Graphics();
+            glow.roundRect(-bgWidth/2 - 3, -bgHeight + 7, bgWidth + 6, bgHeight + 6, 8);
+            glow.fill({ color: 0xfbbf24, alpha: 0.2 });
+            container.addChild(glow);
         }
         
-        bg.stroke({ color: borderColor, width: 2 });
+        bg.stroke({ color: borderColor, width: 3 });
         container.addChild(bg);
         
-        // Icon
+        // Icon (큰 아이콘)
         let iconText = '⚔';
         if (enemy.intent.type === 'defend') iconText = '🛡';
         else if (enemy.intent.type === 'buff') iconText = '↑';
@@ -566,13 +572,13 @@ const Game = {
         
         const icon = new PIXI.Text({
             text: iconText,
-            style: { fontSize: 16, fill: textColor }
+            style: { fontSize: 26, fill: textColor }
         });
         icon.anchor.set(0.5);
-        icon.y = -16;
+        icon.y = -bgHeight + 30;
         container.addChild(icon);
         
-        // Damage value (for attack)
+        // Damage value (for attack) - 크게!
         if (enemy.intent.type === 'attack' && enemy.intent.damage) {
             let dmgString = enemy.intent.damage.toString();
             // 다중 공격 표시
@@ -583,30 +589,30 @@ const Game = {
             const dmgText = new PIXI.Text({
                 text: dmgString,
                 style: { 
-                    fontSize: 13, 
+                    fontSize: 22, 
                     fill: textColor,
                     fontFamily: 'Cinzel, serif',
-                    fontWeight: 'bold'
+                    fontWeight: 'bold',
+                    stroke: { color: '#000000', width: 3 }
                 }
             });
             dmgText.anchor.set(0.5);
-            dmgText.y = 0;
+            dmgText.y = -bgHeight + 55;
             container.addChild(dmgText);
         }
         
         // 브레이크 레시피 표시
         if (hasBreakRecipe) {
-            this.renderBreakRecipe(container, enemy);
+            this.renderBreakRecipe(container, enemy, bgHeight);
         }
         
-        // Arrow pointing down
+        // Arrow pointing down (크게)
         const arrow = new PIXI.Graphics();
-        arrow.moveTo(0, hasBreakRecipe ? 22 : 8);
-        arrow.lineTo(-5, hasBreakRecipe ? 16 : 2);
-        arrow.lineTo(5, hasBreakRecipe ? 16 : 2);
+        arrow.moveTo(0, 12);
+        arrow.lineTo(-8, 4);
+        arrow.lineTo(8, 4);
         arrow.closePath();
         arrow.fill({ color: borderColor });
-        arrow.y = 0;
         container.addChild(arrow);
         
         // Position at top of sprite with margin
@@ -620,15 +626,17 @@ const Game = {
         enemy.intentContainer = container;
     },
     
-    // 브레이크 레시피 렌더링
-    renderBreakRecipe(container, enemy) {
+    // 브레이크 레시피 렌더링 (크게!)
+    renderBreakRecipe(container, enemy, bgHeight = 70) {
         const recipe = enemy.intent.breakRecipe;
         const progress = enemy.breakProgress || [];
         
         const recipeContainer = new PIXI.Container();
-        recipeContainer.y = 14;
+        recipeContainer.y = -bgHeight + 78;
         
-        const totalWidth = recipe.length * 16;
+        const circleSize = 10;
+        const spacing = 24;
+        const totalWidth = recipe.length * spacing;
         const ElementIcons = {
             physical: '⚔',
             fire: '🔥',
@@ -643,18 +651,18 @@ const Game = {
         recipe.forEach((element, i) => {
             const isCompleted = i < progress.length;
             
-            // 원형 배경
+            // 원형 배경 (크게)
             const circle = new PIXI.Graphics();
-            circle.circle(0, 0, 7);
-            circle.fill({ color: isCompleted ? 0x22c55e : 0x222222 });
-            circle.stroke({ width: 1, color: isCompleted ? 0x22c55e : 0x555555 });
-            circle.x = -totalWidth / 2 + i * 16 + 8;
+            circle.circle(0, 0, circleSize);
+            circle.fill({ color: isCompleted ? 0x22c55e : 0x333333 });
+            circle.stroke({ width: 2, color: isCompleted ? 0x22c55e : 0x666666 });
+            circle.x = -totalWidth / 2 + i * spacing + spacing / 2;
             recipeContainer.addChild(circle);
             
-            // 속성 아이콘
+            // 속성 아이콘 (크게)
             const iconText = new PIXI.Text({
                 text: ElementIcons[element] || '?',
-                style: { fontSize: 8 }
+                style: { fontSize: 12 }
             });
             iconText.anchor.set(0.5);
             iconText.x = circle.x;
