@@ -1137,6 +1137,24 @@ const Game = {
             const targetEnemy = this.getEnemyAtScreen(touch.clientX, touch.clientY);
             this.dragState.targetEnemy = targetEnemy;
             
+            // Get cursor position relative to canvas
+            const canvas = this.app.canvas;
+            const rect = canvas.getBoundingClientRect();
+            const cursorX = touch.clientX - rect.left;
+            const cursorY = touch.clientY - rect.top;
+            
+            // Always show targeting bezier curve from hero
+            const hero = this.state.hero;
+            if (hero && hero.sprite) {
+                if (targetEnemy) {
+                    // Draw curve to target enemy
+                    this.drawTargetingCurve(hero.sprite.x, hero.sprite.y - 40, targetEnemy.sprite.x, targetEnemy.sprite.y - 40, true);
+                } else {
+                    // Draw curve to cursor
+                    this.drawTargetingCurve(hero.sprite.x, hero.sprite.y - 40, cursorX, cursorY, false);
+                }
+            }
+            
             if (targetEnemy) {
                 // Get AOE pattern from card
                 const aoe = cardDef.aoe || { width: 1, depth: 1 };
@@ -1169,8 +1187,10 @@ const Game = {
             const targetAlly = this.getAllyAtScreen(touch.clientX, touch.clientY);
             this.dragState.targetAlly = targetAlly;
             
-            // Clear enemy highlights
+            // Clear attack visuals
             this.clearEnemyHighlights();
+            this.clearTargetingCurve();
+            this.clearAoeHighlight();
             
             if (cardDef.target === 'self' && targetAlly && targetAlly.isHero) {
                 // Skill targets self (hero) - highlight when hovering
@@ -1197,6 +1217,8 @@ const Game = {
             const dragDist = this.dragState.startY - touch.clientY;
             this.clearEnemyHighlights();
             this.clearAllyHighlights();
+            this.clearTargetingCurve();
+            this.clearAoeHighlight();
             if (dragDist > 100) {
                 ghost.style.transform = 'scale(1.2) rotate(0deg)';
                 ghost.querySelector('.drag-card').style.borderColor = '#44ff44';
@@ -1297,6 +1319,70 @@ const Game = {
     clearAoeHighlight() {
         if (this.aoeHighlight) {
             this.aoeHighlight.clear();
+        }
+    },
+    
+    // FGO-style bezier curve targeting line
+    drawTargetingCurve(startX, startY, endX, endY, hasTarget) {
+        if (!this.targetingCurve) {
+            this.targetingCurve = new PIXI.Graphics();
+            this.targetingCurve.zIndex = 15;
+            this.containers.effects.addChild(this.targetingCurve);
+        }
+        
+        const g = this.targetingCurve;
+        g.clear();
+        
+        // Calculate control point for bezier curve (arc upward)
+        const midX = (startX + endX) / 2;
+        const midY = Math.min(startY, endY) - 80; // Arc upward
+        
+        // Line color based on target
+        const color = hasTarget ? 0xff4444 : 0xffaa44;
+        const alpha = hasTarget ? 0.9 : 0.6;
+        
+        // Draw bezier curve
+        g.moveTo(startX, startY);
+        g.quadraticCurveTo(midX, midY, endX, endY);
+        g.stroke({ color: color, width: 4, alpha: alpha });
+        
+        // Draw inner glow line
+        g.moveTo(startX, startY);
+        g.quadraticCurveTo(midX, midY, endX, endY);
+        g.stroke({ color: 0xffffff, width: 2, alpha: alpha * 0.5 });
+        
+        // Draw arrow/indicator at end point
+        if (hasTarget) {
+            // Draw target reticle
+            g.circle(endX, endY, 15);
+            g.stroke({ color: color, width: 3, alpha: 0.8 });
+            g.circle(endX, endY, 8);
+            g.fill({ color: color, alpha: 0.4 });
+            
+            // Crosshair lines
+            g.moveTo(endX - 20, endY);
+            g.lineTo(endX - 10, endY);
+            g.moveTo(endX + 10, endY);
+            g.lineTo(endX + 20, endY);
+            g.moveTo(endX, endY - 20);
+            g.lineTo(endX, endY - 10);
+            g.moveTo(endX, endY + 10);
+            g.lineTo(endX, endY + 20);
+            g.stroke({ color: color, width: 2, alpha: 0.8 });
+        } else {
+            // Draw small circle at cursor
+            g.circle(endX, endY, 6);
+            g.fill({ color: color, alpha: 0.6 });
+        }
+        
+        // Draw start point indicator
+        g.circle(startX, startY, 5);
+        g.fill({ color: 0x44aaff, alpha: 0.8 });
+    },
+    
+    clearTargetingCurve() {
+        if (this.targetingCurve) {
+            this.targetingCurve.clear();
         }
     },
     
@@ -1442,6 +1528,7 @@ const Game = {
         this.clearEnemyHighlights();
         this.clearAllyHighlights();
         this.clearAoeHighlight();
+        this.clearTargetingCurve();
         this.hideSummonZones();
         
         if (this.dragState.cardEl) {
