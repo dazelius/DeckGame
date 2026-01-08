@@ -164,6 +164,11 @@ const Game = {
         // Resize handler
         window.addEventListener('resize', () => this.onResize());
         
+        // Frame update - keep grid synced with 3D camera
+        this.app.ticker.add(() => {
+            this.drawGrid();
+        });
+        
         // Start game
         await this.startGame();
         
