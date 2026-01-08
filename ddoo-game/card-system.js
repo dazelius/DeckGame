@@ -25,9 +25,9 @@ const CardSystem = {
         },
         cleave: { 
             name: 'Cleave', cost: 1, type: 'attack', damage: 8, 
-            target: 'all', melee: true, frontOnly: true,
-            aoe: { width: 3, depth: 1 },
-            desc: 'Deal 8 damage to 3 cells wide. Melee: Frontline only.' 
+            target: 'all', melee: true, frontOnly: false, globalAoe: true,
+            aoe: { width: 10, depth: 3 },
+            desc: 'Deal 8 damage to ALL enemies.' 
         },
         ironWave: { 
             name: 'Iron Wave', cost: 1, type: 'attack', damage: 5, block: 5, 
