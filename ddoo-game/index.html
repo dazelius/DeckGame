@@ -199,8 +199,15 @@
         }
         
         .unit-card.dragging {
-            opacity: 0.5;
-            transform: scale(0.9);
+            opacity: 0.3;
+            transform: scale(0.95);
+            border-color: #fff !important;
+        }
+        
+        .unit-card {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
         }
         
         .unit-card .cost {
@@ -346,21 +353,21 @@
         
         <!-- Unit Cards -->
         <div id="unit-cards">
-            <div class="unit-card" data-unit="warrior" draggable="true">
+            <div class="unit-card" data-unit="warrior">
                 <div class="cost">3</div>
                 <div class="icon">&#9876;</div>
                 <div class="name">Warrior</div>
                 <div class="stats">HP:100 DMG:15</div>
             </div>
             
-            <div class="unit-card" data-unit="archer" draggable="true">
+            <div class="unit-card" data-unit="archer">
                 <div class="cost">2</div>
                 <div class="icon">&#127993;</div>
                 <div class="name">Archer</div>
                 <div class="stats">HP:50 DMG:12</div>
             </div>
             
-            <div class="unit-card" data-unit="tank" draggable="true">
+            <div class="unit-card" data-unit="tank">
                 <div class="cost">4</div>
                 <div class="icon">&#128737;</div>
                 <div class="name">Tank</div>

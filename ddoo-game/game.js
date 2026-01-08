@@ -285,53 +285,34 @@ const Game = {
         this.startBattlePhase();
     },
     
-    // ==================== UNIT PLACEMENT ====================
+    // ==================== UNIT PLACEMENT (DOM Drag) ====================
+    dragState: {
+        isDragging: false,
+        unitType: null,
+        ghost: null,
+        startX: 0,
+        startY: 0
+    },
+    
     setupUnitPlacement() {
         const cards = document.querySelectorAll('.unit-card');
         
+        // Create ghost element for drag shadow
+        this.createDragGhost();
+        
         cards.forEach(card => {
-            card.addEventListener('dragstart', (e) => {
-                e.dataTransfer.setData('unitType', card.dataset.unit);
-                card.classList.add('dragging');
-            });
+            // Mouse drag
+            card.addEventListener('mousedown', (e) => this.startDrag(e, card));
             
-            card.addEventListener('dragend', () => {
-                card.classList.remove('dragging');
-            });
+            // Touch drag
+            card.addEventListener('touchstart', (e) => this.startDrag(e, card), { passive: false });
         });
         
-        // Drop zone (battle area)
-        const battleArea = document.getElementById('battle-area');
-        
-        battleArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            if (this.state.phase !== 'placement') return;
-            
-            // Highlight valid cell (LEFT side = player zone)
-            const gridPos = this.screenToGrid(e.clientX, e.clientY);
-            if (gridPos && gridPos.x < this.arena.playerZoneX) {
-                this.highlightCell(gridPos.x, gridPos.z);
-            }
-        });
-        
-        battleArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            if (this.state.phase !== 'placement') return;
-            
-            const unitType = e.dataTransfer.getData('unitType');
-            const gridPos = this.screenToGrid(e.clientX, e.clientY);
-            
-            // Only allow placement on LEFT side (player zone)
-            if (gridPos && gridPos.x < this.arena.playerZoneX) {
-                this.placeUnit(unitType, gridPos.x, gridPos.z, 'player');
-            }
-            
-            this.clearHighlight();
-        });
-        
-        battleArea.addEventListener('dragleave', () => {
-            this.clearHighlight();
-        });
+        // Global move/end handlers
+        document.addEventListener('mousemove', (e) => this.onDrag(e));
+        document.addEventListener('mouseup', (e) => this.endDrag(e));
+        document.addEventListener('touchmove', (e) => this.onDrag(e), { passive: false });
+        document.addEventListener('touchend', (e) => this.endDrag(e));
         
         // Start Battle button
         const startBtn = document.getElementById('btn-start-battle');
@@ -354,6 +335,91 @@ const Game = {
                 }
             });
         }
+    },
+    
+    createDragGhost() {
+        const ghost = document.createElement('div');
+        ghost.id = 'drag-ghost';
+        ghost.style.cssText = `
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.15s, transform 0.1s;
+            transform: scale(1.1) rotate(-5deg);
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+        `;
+        document.body.appendChild(ghost);
+        this.dragState.ghost = ghost;
+    },
+    
+    startDrag(e, card) {
+        if (this.state.phase !== 'placement') return;
+        
+        e.preventDefault();
+        const touch = e.touches ? e.touches[0] : e;
+        
+        this.dragState.isDragging = true;
+        this.dragState.unitType = card.dataset.unit;
+        this.dragState.startX = touch.clientX;
+        this.dragState.startY = touch.clientY;
+        
+        // Clone card as ghost
+        const ghost = this.dragState.ghost;
+        ghost.innerHTML = card.outerHTML;
+        ghost.firstChild.style.margin = '0';
+        ghost.firstChild.classList.add('dragging');
+        ghost.style.left = (touch.clientX - 50) + 'px';
+        ghost.style.top = (touch.clientY - 65) + 'px';
+        ghost.style.opacity = '0.9';
+        
+        card.classList.add('dragging');
+        
+        // Vibrate on mobile
+        if (navigator.vibrate) navigator.vibrate(30);
+    },
+    
+    onDrag(e) {
+        if (!this.dragState.isDragging) return;
+        
+        e.preventDefault();
+        const touch = e.touches ? e.touches[0] : e;
+        
+        // Move ghost
+        const ghost = this.dragState.ghost;
+        ghost.style.left = (touch.clientX - 50) + 'px';
+        ghost.style.top = (touch.clientY - 65) + 'px';
+        
+        // Highlight valid cell
+        const gridPos = this.screenToGrid(touch.clientX, touch.clientY);
+        if (gridPos && gridPos.x < this.arena.playerZoneX) {
+            this.highlightCell(gridPos.x, gridPos.z);
+            ghost.style.transform = 'scale(1.15) rotate(0deg)';
+        } else {
+            this.clearHighlight();
+            ghost.style.transform = 'scale(1.1) rotate(-5deg)';
+        }
+    },
+    
+    endDrag(e) {
+        if (!this.dragState.isDragging) return;
+        
+        const touch = e.changedTouches ? e.changedTouches[0] : e;
+        const gridPos = this.screenToGrid(touch.clientX, touch.clientY);
+        
+        // Place unit if valid position
+        if (gridPos && gridPos.x < this.arena.playerZoneX) {
+            this.placeUnit(this.dragState.unitType, gridPos.x, gridPos.z, 'player');
+            if (navigator.vibrate) navigator.vibrate([20, 30, 20]);
+        }
+        
+        // Reset
+        this.dragState.isDragging = false;
+        this.dragState.ghost.style.opacity = '0';
+        this.clearHighlight();
+        
+        // Remove dragging class from all cards
+        document.querySelectorAll('.unit-card').forEach(c => c.classList.remove('dragging'));
     },
     
     screenToGrid(screenX, screenY) {
