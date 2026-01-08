@@ -202,22 +202,27 @@ const GridAOE = {
     // 화염 지대 전용 시각화
     // ==========================================
     createFireZoneVisual(zone, container) {
-        const size = 70;
+        // Get actual cell size from game
+        const cellSize = this.getApproxCellSize();
+        const size = Math.max(cellSize * 1.2, 120); // Ensure minimum size
         
-        // Layer 1: Outer glow (heat haze)
+        // Layer 1: Outer glow (heat haze) - covers full cell
         const outerGlow = new PIXI.Graphics();
-        outerGlow.beginFill(0xff2200, 0.15);
-        outerGlow.drawEllipse(0, 0, size * 0.7, size * 0.4);
+        outerGlow.beginFill(0xff2200, 0.2);
+        outerGlow.drawEllipse(0, 0, size * 0.8, size * 0.45);
+        outerGlow.endFill();
+        outerGlow.beginFill(0xff4400, 0.15);
+        outerGlow.drawEllipse(0, 0, size * 0.65, size * 0.38);
         outerGlow.endFill();
         container.addChild(outerGlow);
         zone.outerGlow = outerGlow;
         
         // Layer 2: Mid glow (hot core)
         const midGlow = new PIXI.Graphics();
-        midGlow.beginFill(0xff4400, 0.25);
+        midGlow.beginFill(0xff4400, 0.3);
         midGlow.drawEllipse(0, 0, size * 0.55, size * 0.32);
         midGlow.endFill();
-        midGlow.beginFill(0xff6600, 0.35);
+        midGlow.beginFill(0xff6600, 0.4);
         midGlow.drawEllipse(0, 0, size * 0.4, size * 0.24);
         midGlow.endFill();
         container.addChild(midGlow);
@@ -239,12 +244,17 @@ const GridAOE = {
         container.addChild(flameContainer);
         zone.flameContainer = flameContainer;
         
-        // Create multiple flame tongues
+        // Create multiple flame tongues - spread across full cell
         zone.flames = [];
-        for (let i = 0; i < 8; i++) {
-            const flame = this.createFlameTongue();
-            flame.x = (Math.random() - 0.5) * size * 0.6;
-            flame.y = (Math.random() - 0.5) * size * 0.3;
+        const flameCount = 14; // More flames
+        for (let i = 0; i < flameCount; i++) {
+            const flame = this.createFlameTongue(size);
+            // Spread across elliptical area
+            const angle = (i / flameCount) * Math.PI * 2;
+            const radiusX = (0.3 + Math.random() * 0.4) * size * 0.5;
+            const radiusY = (0.3 + Math.random() * 0.4) * size * 0.3;
+            flame.x = Math.cos(angle) * radiusX;
+            flame.y = Math.sin(angle) * radiusY;
             flame.baseX = flame.x;
             flame.baseY = flame.y;
             flame.phase = Math.random() * Math.PI * 2;
@@ -258,9 +268,10 @@ const GridAOE = {
         container.addChild(emberContainer);
         zone.emberContainer = emberContainer;
         zone.embers = [];
+        zone.zoneSize = size; // Store for ember spawning
         
-        // Initial embers
-        for (let i = 0; i < 12; i++) {
+        // Initial embers - more of them
+        for (let i = 0; i < 20; i++) {
             this.spawnFireEmber(zone);
         }
         
@@ -272,12 +283,26 @@ const GridAOE = {
     },
     
     // ==========================================
+    // 그리드 셀 크기 추정
+    // ==========================================
+    getApproxCellSize() {
+        // Get two adjacent cell centers and calculate distance
+        const pos1 = this.game.getCellCenter(0, 0);
+        const pos2 = this.game.getCellCenter(1, 0);
+        if (pos1 && pos2) {
+            return Math.abs(pos2.x - pos1.x);
+        }
+        return 100; // Default fallback
+    },
+    
+    // ==========================================
     // 불꽃 혀 생성
     // ==========================================
-    createFlameTongue() {
+    createFlameTongue(zoneSize = 100) {
         const flame = new PIXI.Graphics();
-        const height = 15 + Math.random() * 20;
-        const width = 6 + Math.random() * 6;
+        const scale = zoneSize / 100;
+        const height = (20 + Math.random() * 30) * scale;
+        const width = (8 + Math.random() * 8) * scale;
         
         // Draw flame shape (teardrop)
         flame.beginFill(0xff6600, 0.8);
@@ -295,7 +320,7 @@ const GridAOE = {
         
         // Hottest center
         flame.beginFill(0xffffaa, 0.7);
-        flame.drawEllipse(0, -height*0.2, width*0.2, height*0.15);
+        flame.drawEllipse(0, -height*0.2, width*0.25, height*0.18);
         flame.endFill();
         
         return flame;
@@ -307,8 +332,9 @@ const GridAOE = {
     spawnFireEmber(zone) {
         if (!zone.emberContainer) return;
         
+        const zoneSize = zone.zoneSize || 100;
         const ember = new PIXI.Graphics();
-        const size = 2 + Math.random() * 3;
+        const size = 2 + Math.random() * 4;
         
         // Bright ember color
         const colors = [0xffff00, 0xffaa00, 0xff6600, 0xff4400];
@@ -320,18 +346,18 @@ const GridAOE = {
         
         // Add glow
         ember.beginFill(color, 0.3);
-        ember.drawCircle(0, 0, size * 2);
+        ember.drawCircle(0, 0, size * 2.5);
         ember.endFill();
         
-        // Position
-        ember.x = (Math.random() - 0.5) * 50;
-        ember.y = (Math.random() - 0.5) * 25;
+        // Position - spread across full zone
+        ember.x = (Math.random() - 0.5) * zoneSize * 0.7;
+        ember.y = (Math.random() - 0.5) * zoneSize * 0.4;
         
         // Animation properties
-        ember.vx = (Math.random() - 0.5) * 1.5;
-        ember.vy = -2 - Math.random() * 3;
+        ember.vx = (Math.random() - 0.5) * 2;
+        ember.vy = -2.5 - Math.random() * 4;
         ember.life = 1;
-        ember.decay = 0.015 + Math.random() * 0.02;
+        ember.decay = 0.012 + Math.random() * 0.015;
         ember.wobble = Math.random() * Math.PI * 2;
         ember.wobbleSpeed = 5 + Math.random() * 5;
         
@@ -343,36 +369,38 @@ const GridAOE = {
     // 화염 스폰 버스트
     // ==========================================
     fireSpawnBurst(x, y) {
+        const cellSize = this.getApproxCellSize();
+        
         // Screen effects
         if (typeof CombatEffects !== 'undefined') {
-            CombatEffects.screenFlash('#ff4400', 150, 0.3);
-            CombatEffects.screenShake(8, 200);
+            CombatEffects.screenFlash('#ff4400', 200, 0.4);
+            CombatEffects.screenShake(12, 250);
         }
         
-        // Burst particles
-        for (let i = 0; i < 15; i++) {
+        // Burst particles - more and bigger
+        for (let i = 0; i < 25; i++) {
             const particle = new PIXI.Graphics();
-            const size = 4 + Math.random() * 6;
+            const size = 5 + Math.random() * 10;
             
             particle.beginFill(0xff6600, 0.9);
             particle.drawCircle(0, 0, size);
             particle.endFill();
             particle.beginFill(0xffaa00, 0.5);
-            particle.drawCircle(0, 0, size * 1.5);
+            particle.drawCircle(0, 0, size * 1.8);
             particle.endFill();
             
             particle.x = x;
             particle.y = y;
             this.app.stage.addChild(particle);
             
-            const angle = (Math.PI * 2 * i) / 15 + Math.random() * 0.3;
-            const distance = 40 + Math.random() * 40;
+            const angle = (Math.PI * 2 * i) / 25 + Math.random() * 0.3;
+            const distance = cellSize * 0.5 + Math.random() * cellSize * 0.5;
             
             gsap.to(particle, {
                 x: x + Math.cos(angle) * distance,
-                y: y + Math.sin(angle) * distance * 0.5 - 30,
+                y: y + Math.sin(angle) * distance * 0.5 - 40,
                 alpha: 0,
-                duration: 0.5 + Math.random() * 0.3,
+                duration: 0.6 + Math.random() * 0.4,
                 ease: 'power2.out',
                 onComplete: () => {
                     this.app.stage.removeChild(particle);
@@ -381,13 +409,17 @@ const GridAOE = {
             });
         }
         
-        // Fire pillar
+        // Fire pillar - bigger
         const pillar = new PIXI.Graphics();
-        pillar.beginFill(0xff4400, 0.6);
-        pillar.drawRect(-20, -80, 40, 80);
+        const pillarWidth = cellSize * 0.4;
+        pillar.beginFill(0xff4400, 0.7);
+        pillar.drawRect(-pillarWidth/2, -120, pillarWidth, 120);
         pillar.endFill();
-        pillar.beginFill(0xffaa00, 0.4);
-        pillar.drawRect(-12, -80, 24, 80);
+        pillar.beginFill(0xffaa00, 0.5);
+        pillar.drawRect(-pillarWidth/3, -120, pillarWidth*0.66, 120);
+        pillar.endFill();
+        pillar.beginFill(0xffdd00, 0.3);
+        pillar.drawRect(-pillarWidth/5, -120, pillarWidth*0.4, 120);
         pillar.endFill();
         pillar.x = x;
         pillar.y = y;
@@ -395,13 +427,13 @@ const GridAOE = {
         
         gsap.to(pillar, {
             alpha: 0,
-            duration: 0.4,
+            duration: 0.5,
             onComplete: () => {
                 this.app.stage.removeChild(pillar);
                 pillar.destroy();
             }
         });
-        gsap.to(pillar.scale, { x: 1.5, y: 1.2, duration: 0.4, ease: 'power2.out' });
+        gsap.to(pillar.scale, { x: 2, y: 1.5, duration: 0.5, ease: 'power2.out' });
     },
     
     // ==========================================
