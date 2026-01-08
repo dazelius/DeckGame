@@ -335,12 +335,32 @@ const Game = {
         this.updateTurnUI();
         this.updateCostUI();
         this.updatePhaseUI();
+        this.updateHPUI();
+    },
+    
+    // Convert number to Roman numeral
+    toRoman(num) {
+        const romanNumerals = [
+            ['X', 10], ['IX', 9], ['V', 5], ['IV', 4], ['I', 1]
+        ];
+        let result = '';
+        for (const [letter, value] of romanNumerals) {
+            while (num >= value) {
+                result += letter;
+                num -= value;
+            }
+        }
+        return result || 'I';
     },
     
     updateTurnUI() {
         const turnEl = document.getElementById('turn-display');
         if (turnEl) {
-            turnEl.textContent = this.state.turn;
+            turnEl.textContent = this.toRoman(this.state.turn);
+        }
+        const turnEl2 = document.getElementById('turn-display-2');
+        if (turnEl2) {
+            turnEl2.textContent = this.state.turn;
         }
     },
     
@@ -349,22 +369,33 @@ const Game = {
         if (costEl) {
             costEl.textContent = this.state.cost;
         }
-        // Update cost bar
-        const costBar = document.getElementById('cost-bar-fill');
-        if (costBar) {
-            costBar.style.width = (this.state.cost / this.state.maxCost * 100) + '%';
-        }
     },
     
     updatePhaseUI() {
         const phaseEl = document.getElementById('phase-display');
         if (phaseEl) {
             const phaseNames = {
-                prepare: 'YOUR TURN',
+                prepare: 'PREPARE',
                 battle: 'BATTLE',
-                result: 'RESULT'
+                result: 'VICTORY'
             };
             phaseEl.textContent = phaseNames[this.state.phase] || this.state.phase;
+        }
+    },
+    
+    updateHPUI() {
+        const hero = this.state.hero;
+        if (!hero) return;
+        
+        const hpBar = document.getElementById('player-hp-bar');
+        const hpText = document.getElementById('player-hp-text');
+        
+        if (hpBar) {
+            const percent = Math.max(0, (hero.hp / hero.maxHp) * 100);
+            hpBar.style.width = percent + '%';
+        }
+        if (hpText) {
+            hpText.textContent = `${Math.max(0, hero.hp)}/${hero.maxHp}`;
         }
     },
     
@@ -569,20 +600,21 @@ const Game = {
             if (!cardDef) return;
             
             const cardEl = document.createElement('div');
-            cardEl.className = 'card';
+            cardEl.className = `card ${cardDef.type}`;
             cardEl.dataset.cardId = cardId;
             cardEl.dataset.index = index;
             
-            // Color based on card type
-            let typeColor = '#666';
-            if (cardDef.type === 'attack') typeColor = '#ff6644';
-            else if (cardDef.type === 'skill') typeColor = '#44aaff';
-            else if (cardDef.type === 'summon') typeColor = '#44ff66';
+            // Type label
+            const typeLabels = {
+                attack: 'STRIKE',
+                skill: 'MIRACLE',
+                summon: 'SUMMON'
+            };
             
             cardEl.innerHTML = `
                 <div class="card-cost">${cardDef.cost}</div>
                 <div class="card-name">${cardDef.name}</div>
-                <div class="card-type" style="color:${typeColor};font-size:9px;text-transform:uppercase;">${cardDef.type}</div>
+                <div class="card-type">${typeLabels[cardDef.type] || cardDef.type}</div>
                 <div class="card-desc">${cardDef.desc}</div>
             `;
             
