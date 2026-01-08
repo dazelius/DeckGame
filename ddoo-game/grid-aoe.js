@@ -88,16 +88,21 @@ const GridAOE = {
         this.game = gameRef;
         this.app = pixiApp;
         
-        // Create container for zone effects
-        this.container = new PIXI.Container();
-        this.container.sortableChildren = true;
-        this.container.zIndex = 5; // Below units, above grid
-        this.app.stage.addChild(this.container);
+        // Use game's ground container for zone effects (below units)
+        if (this.game.containers && this.game.containers.ground) {
+            this.container = this.game.containers.ground;
+        } else {
+            // Fallback: create own container
+            this.container = new PIXI.Container();
+            this.container.sortableChildren = true;
+            this.container.zIndex = 5; // Below units, above grid
+            this.app.stage.addChild(this.container);
+        }
         
         // Start animation ticker
         this.app.ticker.add(() => this.updateAnimations());
         
-        console.log('[GridAOE] 그리드 영역 효과 시스템 초기화 완료');
+        console.log('[GridAOE] 그리드 영역 효과 시스템 초기화 완료 (ground container)');
     },
     
     // ==========================================

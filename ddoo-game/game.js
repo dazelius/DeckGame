@@ -281,6 +281,11 @@ const Game = {
         this.containers.grid.zIndex = 1;
         this.app.stage.addChild(this.containers.grid);
         
+        // 바닥 이펙트 (불길 등) - 유닛보다 아래
+        this.containers.ground = new PIXI.Container();
+        this.containers.ground.zIndex = 5;
+        this.app.stage.addChild(this.containers.ground);
+        
         this.containers.units = new PIXI.Container();
         this.containers.units.zIndex = 10;
         this.containers.units.sortableChildren = true;
