@@ -2725,7 +2725,7 @@ const Game = {
         // Update all unit positions based on current 3D projection
         const allUnits = [...this.state.playerUnits, ...this.state.enemyUnits];
         for (const unit of allUnits) {
-            if (unit.hp > 0 && unit.sprite) {
+            if (unit.hp > 0 && unit.sprite && !unit.isAnimating) {
                 this.updateUnitSprite(unit);
             }
         }

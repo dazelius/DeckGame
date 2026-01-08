@@ -60,13 +60,20 @@ const KnockbackSystem = {
     async executeKnockback(unit, newGridX) {
         const oldGridX = unit.gridX;
         
-        // Update grid position
+        // Store current sprite position before updating grid position
+        const startX = unit.sprite.x;
+        const startY = unit.sprite.y;
+        
+        // Update grid position (for game logic)
         unit.gridX = newGridX;
         unit.x = newGridX + 0.5;
         
         // Get new screen position
         const newPos = this.game.getCellCenter(unit.gridX, unit.gridZ);
         if (!newPos) return;
+        
+        // Mark unit as animating to prevent ticker from updating position
+        unit.isAnimating = true;
         
         // Hit effects at impact moment
         if (typeof CombatEffects !== 'undefined') {
@@ -77,8 +84,6 @@ const KnockbackSystem = {
         
         // Knockback animation
         return new Promise(resolve => {
-            const startX = unit.sprite.x;
-            const startY = unit.sprite.y;
             const distance = Math.abs(newPos.x - startX);
             
             // Calculate dramatic arc - higher for longer distances
@@ -152,6 +157,7 @@ const KnockbackSystem = {
                 // Update zIndex and resolve
                 .call(() => {
                     unit.sprite.zIndex = Math.floor(newPos.y);
+                    unit.isAnimating = false; // Allow ticker to update position again
                     resolve();
                 });
         });
@@ -258,6 +264,8 @@ const KnockbackSystem = {
     async wallImpact(unit) {
         if (!unit.sprite) return;
         
+        unit.isAnimating = true;
+        
         return new Promise(resolve => {
             const originalX = unit.sprite.x;
             
@@ -295,7 +303,10 @@ const KnockbackSystem = {
                     y: 1, 
                     duration: 0.1 
                 })
-                .call(resolve);
+                .call(() => {
+                    unit.isAnimating = false;
+                    resolve();
+                });
         });
     },
     
