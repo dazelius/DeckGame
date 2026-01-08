@@ -176,13 +176,18 @@ const Game = {
             UnitCombat.init(this, this.app);
         }
         
+        // Card Drag System
+        if (typeof CardDrag !== 'undefined') {
+            CardDrag.init(this, this.app);
+        }
+        
         // Draw grid
         this.drawGrid();
         
         // Setup UI
         this.setupUI();
         
-        // Setup card drag
+        // Setup card drag (delegates to CardDrag or fallback)
         this.setupUnitPlacement();
         
         // Resize handler
@@ -952,585 +957,67 @@ const Game = {
         startY: 0
     },
     
+    // ==========================================
+    // 카드 드래그 - CardDrag 모듈로 위임
+    // ==========================================
     setupUnitPlacement() {
-        // Create drag elements
-        this.createDragGhost();
-        this.createGridHighlight();
-        
-        // Global move/end handlers for card dragging
-        document.addEventListener('mousemove', (e) => this.onCardDrag(e));
-        document.addEventListener('mouseup', (e) => this.endCardDrag(e));
-        document.addEventListener('touchmove', (e) => this.onCardDrag(e), { passive: false });
-        document.addEventListener('touchend', (e) => this.endCardDrag(e));
-        
-        // End Turn button
+        // End Turn button (keep in game.js for simplicity)
         const endTurnBtn = document.getElementById('btn-end-turn');
         if (endTurnBtn) {
             endTurnBtn.addEventListener('click', () => this.endTurn());
         }
     },
     
-    createDragGhost() {
-        const ghost = document.createElement('div');
-        ghost.id = 'drag-ghost';
-        ghost.style.cssText = `
-            position: fixed;
-            pointer-events: none;
-            z-index: 9999;
-            opacity: 0;
-            transform: scale(1.1) rotate(-3deg);
-            transition: transform 0.1s ease-out;
-        `;
-        document.body.appendChild(ghost);
-        this.dragState.ghost = ghost;
-    },
-    
-    createGridHighlight() {
-        // PixiJS grid highlight graphics (use effects container - grid gets cleared every frame)
-        this.gridHighlight = new PIXI.Graphics();
-        this.gridHighlight.zIndex = 5;
-        this.containers.effects.addChild(this.gridHighlight);
-    },
-    
     startCardDrag(e, cardEl, cardId, handIndex) {
-        if (this.state.phase !== 'prepare') return;
-        
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const cardDef = this.getCard(cardId);
-        if (!cardDef) return;
-        
-        // Check if this is a summon card
-        const isSummon = cardDef.type === 'summon';
-        
-        const touch = e.touches ? e.touches[0] : e;
-        
-        this.dragState.isDragging = true;
-        this.dragState.cardId = cardId;
-        this.dragState.handIndex = handIndex;
-        this.dragState.isSummon = isSummon;
-        this.dragState.startX = touch.clientX;
-        this.dragState.startY = touch.clientY;
-        this.dragState.cardEl = cardEl;
-        
-        // Create ghost
-        const ghost = this.dragState.ghost;
-        ghost.innerHTML = `
-            <div class="card drag-card" style="margin:0; box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
-                <div class="card-cost">${cardDef.cost}</div>
-                <div class="card-name">${cardDef.name}</div>
-                <div class="card-desc">${cardDef.desc}</div>
-            </div>
-        `;
-        ghost.style.left = (touch.clientX - 45) + 'px';
-        ghost.style.top = (touch.clientY - 60) + 'px';
-        ghost.style.opacity = '1';
-        ghost.style.transform = 'scale(1.15) rotate(-3deg)';
-        
-        cardEl.style.opacity = '0.3';
-        cardEl.style.transform = 'scale(0.9)';
-        
-        // Vibrate
-        if (navigator.vibrate) navigator.vibrate(20);
-        
-        // Show grid highlight for summons
-        if (isSummon) {
-            this.showSummonZones();
+        if (typeof CardDrag !== 'undefined') {
+            CardDrag.startCardDrag(e, cardEl, cardId, handIndex);
         }
     },
     
-    onCardDrag(e) {
-        if (!this.dragState.isDragging) return;
-        
-        e.preventDefault();
-        const touch = e.touches ? e.touches[0] : e;
-        
-        // Move ghost smoothly
-        const ghost = this.dragState.ghost;
-        ghost.style.left = (touch.clientX - 45) + 'px';
-        ghost.style.top = (touch.clientY - 60) + 'px';
-        
-        const cardDef = this.getCard(this.dragState.cardId);
-        
-        if (this.dragState.isSummon) {
-            // Check grid position for summons
-            const gridPos = this.screenToGrid(touch.clientX, touch.clientY);
-            const isValid = gridPos && gridPos.x < this.arena.playerZoneX && !this.isCellOccupied(gridPos.x, gridPos.z);
-            
-            if (isValid) {
-                this.highlightCell(gridPos.x, gridPos.z, true);
-                ghost.style.transform = 'scale(1.2) rotate(0deg)';
-                ghost.querySelector('.drag-card').style.borderColor = '#44ff44';
-            } else {
-                this.highlightCell(-1, -1, false);
-                ghost.style.transform = 'scale(1.15) rotate(-3deg)';
-                ghost.querySelector('.drag-card').style.borderColor = '#666';
-            }
-            this.clearEnemyHighlights();
-        } else if (cardDef && cardDef.type === 'attack') {
-            // Attack cards - check if hovering over enemy (frontOnly for bash-like cards)
-            const targetEnemy = this.getEnemyAtScreen(touch.clientX, touch.clientY, cardDef.frontOnly || false);
-            this.dragState.targetEnemy = targetEnemy;
-            
-            // Get cursor position relative to canvas
-            const canvas = this.app.canvas;
-            const rect = canvas.getBoundingClientRect();
-            const cursorX = touch.clientX - rect.left;
-            const cursorY = touch.clientY - rect.top;
-            
-            // Draw bezier curves from card to ALL targetable enemies
-            this.drawTargetingCurvesToEnemies(cursorX, cursorY, targetEnemy, cardDef.frontOnly || false);
-            
-            if (targetEnemy) {
-                // Get AOE pattern from card
-                const aoe = cardDef.aoe || { width: 1, depth: 1 };
-                
-                // Find all enemies in AOE and highlight them
-                const targetsInAoe = this.getEnemiesInAoe(targetEnemy.gridX, targetEnemy.gridZ, aoe);
-                this.highlightEnemiesInAoe(targetsInAoe);
-                
-                // Show AOE grid highlight
-                this.showAoeHighlight(targetEnemy.gridX, targetEnemy.gridZ, aoe);
-                
-                ghost.style.transform = 'scale(1.2) rotate(0deg)';
-                ghost.querySelector('.drag-card').style.borderColor = '#ff4444';
-            } else {
-                // Check if dragged up (to play on first enemy)
-                const dragDist = this.dragState.startY - touch.clientY;
-                this.clearEnemyHighlights();
-                this.clearAoeHighlight();
-                if (dragDist > 100) {
-                    ghost.style.transform = 'scale(1.2) rotate(0deg)';
-                    ghost.querySelector('.drag-card').style.borderColor = '#44ff44';
-                } else {
-                    ghost.style.transform = 'scale(1.15) rotate(-3deg)';
-                    ghost.querySelector('.drag-card').style.borderColor = '#666';
-                }
-            }
-        } else if (cardDef && cardDef.type === 'skill') {
-            // Skill cards - check if targeting self/ally or dragged up
-            const hero = this.state.hero;
-            const targetAlly = this.getAllyAtScreen(touch.clientX, touch.clientY);
-            this.dragState.targetAlly = targetAlly;
-            
-            // Clear attack visuals
-            this.clearEnemyHighlights();
-            this.clearTargetingCurve();
-            this.clearAoeHighlight();
-            
-            if (cardDef.target === 'self' && targetAlly && targetAlly.isHero) {
-                // Skill targets self (hero) - highlight when hovering
-                this.highlightAlly(targetAlly, true);
-                ghost.style.transform = 'scale(1.2) rotate(0deg)';
-                ghost.querySelector('.drag-card').style.borderColor = '#44aaff';
-            } else {
-                this.clearAllyHighlights();
-                const dragDist = this.dragState.startY - touch.clientY;
-                if (dragDist > 100) {
-                    // Highlight hero when dragged up for self-targeting skills
-                    if (cardDef.target === 'self' && hero && hero.sprite) {
-                        this.highlightAlly(hero, true);
-                    }
-                    ghost.style.transform = 'scale(1.2) rotate(0deg)';
-                    ghost.querySelector('.drag-card').style.borderColor = '#44aaff';
-                } else {
-                    ghost.style.transform = 'scale(1.15) rotate(-3deg)';
-                    ghost.querySelector('.drag-card').style.borderColor = '#666';
-                }
-            }
-        } else {
-            // Other cards - check if dragged up
-            const dragDist = this.dragState.startY - touch.clientY;
-            this.clearEnemyHighlights();
-            this.clearAllyHighlights();
-            this.clearTargetingCurve();
-            this.clearAoeHighlight();
-            if (dragDist > 100) {
-                ghost.style.transform = 'scale(1.2) rotate(0deg)';
-                ghost.querySelector('.drag-card').style.borderColor = '#44ff44';
-            } else {
-                ghost.style.transform = 'scale(1.15) rotate(-3deg)';
-                ghost.querySelector('.drag-card').style.borderColor = '#666';
-            }
+    // Delegates for highlight functions (used by other modules)
+    highlightCell(x, z, valid) {
+        if (typeof CardDrag !== 'undefined') {
+            CardDrag.highlightCell(x, z, valid);
         }
     },
     
-    // Check if enemy is at the frontline (lowest X on their Z line)
-    isFrontlineEnemy(enemy) {
-        if (!enemy || enemy.hp <= 0) return false;
-        
-        // Find the minimum X position among all enemies on the same Z line
-        const sameLineEnemies = this.state.enemyUnits.filter(e => 
-            e.hp > 0 && e.gridZ === enemy.gridZ
-        );
-        
-        if (sameLineEnemies.length === 0) return false;
-        
-        const minX = Math.min(...sameLineEnemies.map(e => e.gridX));
-        return enemy.gridX === minX;
-    },
-    
-    // Get all frontline enemies (one per Z line)
-    getFrontlineEnemies() {
-        const frontline = [];
-        const zLines = new Set(this.state.enemyUnits.filter(e => e.hp > 0).map(e => e.gridZ));
-        
-        for (const z of zLines) {
-            const enemiesOnLine = this.state.enemyUnits.filter(e => e.hp > 0 && e.gridZ === z);
-            if (enemiesOnLine.length > 0) {
-                const front = enemiesOnLine.reduce((a, b) => a.gridX < b.gridX ? a : b);
-                frontline.push(front);
-            }
-        }
-        
-        return frontline;
-    },
-    
-    getEnemyAtScreen(screenX, screenY, frontOnly = false) {
-        // Get canvas bounds
-        const canvas = this.app.canvas;
-        const rect = canvas.getBoundingClientRect();
-        const localX = screenX - rect.left;
-        const localY = screenY - rect.top;
-        
-        // If frontOnly, get valid targets first
-        const validTargets = frontOnly ? this.getFrontlineEnemies() : null;
-        
-        // Check each enemy sprite using their current screen position
-        for (const enemy of this.state.enemyUnits) {
-            if (enemy.hp <= 0 || !enemy.sprite) continue;
-            
-            // Skip if frontOnly and enemy is not on frontline
-            if (frontOnly && !validTargets.includes(enemy)) continue;
-            
-            const sprite = enemy.sprite;
-            
-            // Use sprite's position directly (sprite.x, sprite.y is already screen coords)
-            const spriteX = sprite.x;
-            const spriteY = sprite.y;
-            const spriteWidth = sprite.width || 80;
-            const spriteHeight = sprite.height || 100;
-            
-            // Hitbox centered on sprite position (anchor is at bottom center)
-            const hitPadding = 50;
-            const left = spriteX - spriteWidth / 2 - hitPadding;
-            const right = spriteX + spriteWidth / 2 + hitPadding;
-            const top = spriteY - spriteHeight - hitPadding;
-            const bottom = spriteY + hitPadding;
-            
-            if (localX >= left && localX <= right && localY >= top && localY <= bottom) {
-                return enemy;
-            }
-        }
-        return null;
-    },
-    
-    highlightEnemy(enemy, highlight) {
-        this.clearEnemyHighlights();
-        if (highlight && enemy && enemy.sprite) {
-            enemy.sprite.tint = 0xff6666;
-            this._highlightedEnemy = enemy;
-        }
-    },
-    
-    highlightEnemiesInAoe(enemies) {
-        this.clearEnemyHighlights();
-        this._highlightedEnemies = enemies;
-        for (const enemy of enemies) {
-            if (enemy && enemy.sprite) {
-                enemy.sprite.tint = 0xff6666;
-            }
-        }
-    },
-    
-    showAoeHighlight(centerX, centerZ, aoe) {
-        this.clearAoeHighlight();
-        
-        // Use effects container (not grid - grid gets cleared every frame)
-        if (!this.aoeHighlight) {
-            this.aoeHighlight = new PIXI.Graphics();
-            this.aoeHighlight.zIndex = 5;
-            this.containers.effects.addChild(this.aoeHighlight);
-        }
-        
-        const graphics = this.aoeHighlight;
-        const halfDepth = Math.floor(aoe.depth / 2);
-        
-        // Draw AOE cells
-        for (let dx = 0; dx < aoe.width; dx++) {
-            for (let dz = -halfDepth; dz <= halfDepth; dz++) {
-                const x = centerX + dx;
-                const z = centerZ + dz;
-                
-                if (z < 0 || z >= this.arena.depth) continue;
-                if (x < 0 || x >= this.arena.width) continue;
-                
-                const corners = this.getCellCorners(x, z);
-                if (!corners) continue;
-                
-                graphics.moveTo(corners[0].x, corners[0].y);
-                graphics.lineTo(corners[1].x, corners[1].y);
-                graphics.lineTo(corners[2].x, corners[2].y);
-                graphics.lineTo(corners[3].x, corners[3].y);
-                graphics.closePath();
-                graphics.fill({ color: 0xff4444, alpha: 0.4 });
-                graphics.stroke({ color: 0xff6666, width: 3, alpha: 0.9 });
-            }
-        }
-    },
-    
-    clearAoeHighlight() {
-        if (this.aoeHighlight) {
-            this.aoeHighlight.clear();
-        }
-    },
-    
-    // FGO-style bezier curves from card to ALL targetable enemies
-    drawTargetingCurvesToEnemies(cardX, cardY, hoveredEnemy, frontOnly = false) {
-        if (!this.targetingCurve) {
-            this.targetingCurve = new PIXI.Graphics();
-            this.targetingCurve.zIndex = 15;
-            this.containers.effects.addChild(this.targetingCurve);
-        }
-        
-        const g = this.targetingCurve;
-        g.clear();
-        
-        // Get valid targets based on frontOnly
-        const validTargets = frontOnly ? this.getFrontlineEnemies() : this.state.enemyUnits.filter(e => e.hp > 0);
-        
-        // Draw curves to valid enemies only
-        for (const enemy of this.state.enemyUnits) {
-            if (enemy.hp <= 0 || !enemy.sprite) continue;
-            
-            const isValidTarget = validTargets.includes(enemy);
-            const isHovered = (enemy === hoveredEnemy);
-            const endX = enemy.sprite.x;
-            const endY = enemy.sprite.y - (enemy.sprite.height || 60) / 2;
-            
-            // Calculate control point for bezier curve (arc upward)
-            const midX = (cardX + endX) / 2;
-            const midY = Math.min(cardY, endY) - 60;
-            
-            // Colors based on validity and hover state
-            let color, alpha, lineWidth;
-            if (!isValidTarget) {
-                // Invalid target (not on frontline) - grayed out
-                color = 0x666666;
-                alpha = 0.2;
-                lineWidth = 1;
-            } else if (isHovered) {
-                // Valid and hovered - bright red
-                color = 0xff4444;
-                alpha = 0.9;
-                lineWidth = 4;
-            } else {
-                // Valid but not hovered - dim orange
-                color = 0xffaa44;
-                alpha = 0.4;
-                lineWidth = 2;
-            }
-            
-            // Draw bezier curve
-            g.moveTo(cardX, cardY);
-            g.quadraticCurveTo(midX, midY, endX, endY);
-            g.stroke({ color: color, width: lineWidth, alpha: alpha });
-            
-            // Draw inner glow for hovered
-            if (isHovered) {
-                g.moveTo(cardX, cardY);
-                g.quadraticCurveTo(midX, midY, endX, endY);
-                g.stroke({ color: 0xffffff, width: 2, alpha: 0.4 });
-                
-                // Draw target reticle on hovered enemy
-                g.circle(endX, endY, 18);
-                g.stroke({ color: color, width: 3, alpha: 0.9 });
-                g.circle(endX, endY, 10);
-                g.fill({ color: color, alpha: 0.5 });
-                
-                // Crosshair
-                g.moveTo(endX - 25, endY);
-                g.lineTo(endX - 12, endY);
-                g.moveTo(endX + 12, endY);
-                g.lineTo(endX + 25, endY);
-                g.moveTo(endX, endY - 25);
-                g.lineTo(endX, endY - 12);
-                g.moveTo(endX, endY + 12);
-                g.lineTo(endX, endY + 25);
-                g.stroke({ color: color, width: 2, alpha: 0.9 });
-            } else {
-                // Small indicator for non-hovered targets
-                g.circle(endX, endY, 8);
-                g.stroke({ color: color, width: 2, alpha: 0.4 });
-            }
-        }
-        
-        // Draw start point at card position
-        g.circle(cardX, cardY, 6);
-        g.fill({ color: 0x44aaff, alpha: 0.8 });
-    },
-    
-    clearTargetingCurve() {
-        if (this.targetingCurve) {
-            this.targetingCurve.clear();
+    clearHighlight() {
+        if (typeof CardDrag !== 'undefined') {
+            CardDrag.clearHighlight();
         }
     },
     
     clearEnemyHighlights() {
-        if (this._highlightedEnemy && this._highlightedEnemy.sprite) {
-            this._highlightedEnemy.sprite.tint = 0xffffff;
-        }
-        this._highlightedEnemy = null;
-        
-        // Clear AOE highlighted enemies
-        if (this._highlightedEnemies) {
-            for (const enemy of this._highlightedEnemies) {
-                if (enemy && enemy.sprite) {
-                    enemy.sprite.tint = 0xffffff;
-                }
-            }
-            this._highlightedEnemies = null;
-        }
-        
-        // Clear all enemy tints
-        for (const enemy of this.state.enemyUnits) {
-            if (enemy.sprite) enemy.sprite.tint = 0xffffff;
-        }
-    },
-    
-    getAllyAtScreen(screenX, screenY) {
-        // Get canvas bounds
-        const canvas = this.app.canvas;
-        const rect = canvas.getBoundingClientRect();
-        
-        // Convert to local position
-        const localX = screenX - rect.left;
-        const localY = screenY - rect.top;
-        
-        // Check all player units (hero + summons)
-        const allAllies = [this.state.hero, ...this.state.playerUnits.filter(u => u !== this.state.hero)];
-        
-        for (const ally of allAllies) {
-            if (!ally || !ally.sprite || ally.hp <= 0) continue;
-            
-            const sprite = ally.sprite;
-            
-            // Use sprite's position directly
-            const spriteX = sprite.x;
-            const spriteY = sprite.y;
-            const spriteWidth = sprite.width || 80;
-            const spriteHeight = sprite.height || 100;
-            
-            // Hitbox centered on sprite position (anchor is at bottom center)
-            const hitPadding = 50;
-            const left = spriteX - spriteWidth / 2 - hitPadding;
-            const right = spriteX + spriteWidth / 2 + hitPadding;
-            const top = spriteY - spriteHeight - hitPadding;
-            const bottom = spriteY + hitPadding;
-            
-            if (localX >= left && localX <= right && localY >= top && localY <= bottom) {
-                return ally;
-            }
-        }
-        return null;
-    },
-    
-    highlightAlly(ally, highlight) {
-        this.clearAllyHighlights();
-        if (highlight && ally && ally.sprite) {
-            ally.sprite.tint = 0x66aaff;  // Blue tint for allies
-            this._highlightedAlly = ally;
+        if (typeof CardDrag !== 'undefined') {
+            CardDrag.clearEnemyHighlights();
         }
     },
     
     clearAllyHighlights() {
-        if (this._highlightedAlly && this._highlightedAlly.sprite) {
-            this._highlightedAlly.sprite.tint = 0xffffff;
-        }
-        this._highlightedAlly = null;
-        
-        // Clear all ally tints
-        if (this.state.hero && this.state.hero.sprite) {
-            this.state.hero.sprite.tint = 0xffffff;
-        }
-        for (const ally of this.state.playerUnits) {
-            if (ally.sprite) ally.sprite.tint = 0xffffff;
+        if (typeof CardDrag !== 'undefined') {
+            CardDrag.clearAllyHighlights();
         }
     },
     
-    endCardDrag(e) {
-        if (!this.dragState.isDragging) return;
-        
-        const touch = e.changedTouches ? e.changedTouches[0] : e;
-        const cardId = this.dragState.cardId;
-        const handIndex = this.dragState.handIndex;
-        const cardDef = this.getCard(cardId);
-        
-        let success = false;
-        
-        if (this.dragState.isSummon) {
-            // Summon card - check grid position
-            const gridPos = this.screenToGrid(touch.clientX, touch.clientY);
-            const isValid = gridPos && gridPos.x < this.arena.playerZoneX && !this.isCellOccupied(gridPos.x, gridPos.z);
-            
-            if (isValid && this.state.cost >= cardDef.cost) {
-                // Place summon
-                this.placeUnit(cardDef.unit, gridPos.x, gridPos.z, 'player');
-                this.state.cost -= cardDef.cost;
-                this.state.hand.splice(handIndex, 1);
-                this.state.discard.push(cardId);
-                this.updateCostUI();
-                success = true;
-                if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
-            }
-        } else if (cardDef && cardDef.type === 'attack') {
-            // Attack card - check if dropped on enemy OR dragged up
-            const targetEnemy = this.dragState.targetEnemy || this.getEnemyAtScreen(touch.clientX, touch.clientY, cardDef.frontOnly || false);
-            const dragDist = this.dragState.startY - touch.clientY;
-            
-            if (this.state.cost >= cardDef.cost) {
-                if (targetEnemy) {
-                    // Dropped on specific enemy
-                    this.executeCardOnTarget(cardId, handIndex, targetEnemy);
-                    success = true;
-                } else if (dragDist > 100) {
-                    // Dragged up - auto-target first enemy
-                    this.executeCard(cardId, handIndex);
-                    success = true;
-                }
-            }
-        } else {
-            // Skill card - check if dragged up
-            const dragDist = this.dragState.startY - touch.clientY;
-            if (dragDist > 100 && this.state.cost >= cardDef.cost) {
-                // Play the card
-                this.executeCard(cardId, handIndex);
-                success = true;
-            }
+    getEnemyAtScreen(screenX, screenY, frontOnly = false) {
+        if (typeof CardDrag !== 'undefined') {
+            return CardDrag.getEnemyAtScreen(screenX, screenY, frontOnly);
         }
-        
-        // Reset visual state
-        this.dragState.isDragging = false;
-        this.dragState.ghost.style.opacity = '0';
-        this.dragState.targetEnemy = null;
-        this.dragState.targetAlly = null;
-        this.clearHighlight();
-        this.clearEnemyHighlights();
-        this.clearAllyHighlights();
-        this.clearAoeHighlight();
-        this.clearTargetingCurve();
-        this.hideSummonZones();
-        
-        if (this.dragState.cardEl) {
-            this.dragState.cardEl.style.opacity = '1';
-            this.dragState.cardEl.style.transform = '';
+        return null;
+    },
+    
+    getFrontlineEnemies() {
+        if (typeof CardDrag !== 'undefined') {
+            return CardDrag.getFrontlineEnemies();
         }
-        
-        // Re-render hand
-        if (success) {
-            this.renderHand();
+        return [];
+    },
+    
+    isFrontlineEnemy(enemy) {
+        if (typeof CardDrag !== 'undefined') {
+            return CardDrag.isFrontlineEnemy(enemy);
         }
+        return false;
     },
     
     async executeCardOnTarget(cardId, handIndex, targetEnemy) {
