@@ -283,9 +283,6 @@
         .unit-card[data-unit="archer"] { border-color: #44ff66; }
         .unit-card[data-unit="archer"] .icon { color: #44ff66; }
         
-        .unit-card[data-unit="tank"] { border-color: #6644ff; }
-        .unit-card[data-unit="tank"] .icon { color: #6644ff; }
-        
         /* ==================== BUTTONS ==================== */
         #panel-buttons {
             display: flex;
@@ -306,23 +303,16 @@
             transition: all 0.2s;
         }
         
-        #btn-start-battle {
-            background: linear-gradient(145deg, #ff4444, #cc2222);
+        #btn-end-turn {
+            background: linear-gradient(145deg, #44aa44, #228822);
             color: white;
+            font-size: 16px;
+            padding: 15px 50px;
         }
         
-        #btn-start-battle:hover {
+        #btn-end-turn:hover {
             transform: scale(1.05);
-            box-shadow: 0 0 20px rgba(255, 50, 50, 0.5);
-        }
-        
-        #btn-reroll {
-            background: linear-gradient(145deg, #4444ff, #2222cc);
-            color: white;
-        }
-        
-        #btn-reroll:hover {
-            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(50, 200, 50, 0.5);
         }
     </style>
 </head>
@@ -351,12 +341,12 @@
             </div>
             
             <div class="stat-box">
-                <span class="stat-label">Time</span>
-                <span class="stat-value" id="timer-display">30</span>
+                <span class="stat-label">Turn</span>
+                <span class="stat-value" id="turn-display">1</span>
             </div>
             
             <div class="stat-box">
-                <span id="phase-display">PLACEMENT</span>
+                <span id="phase-display">YOUR TURN</span>
             </div>
             
             <div id="cost-section">
@@ -374,8 +364,7 @@
     <!-- ==================== UNIT PANEL ==================== -->
     <div id="unit-panel">
         <div id="panel-header">
-            <span id="panel-title">Deploy Units</span>
-            <span>Round <span id="round-display">1</span></span>
+            <span id="panel-title">Summon Units</span>
         </div>
         
         <!-- Unit Cards -->
@@ -384,27 +373,20 @@
                 <div class="cost">3</div>
                 <div class="icon">&#9876;</div>
                 <div class="name">Warrior</div>
-                <div class="stats">HP:100 DMG:15</div>
+                <div class="stats">HP:60 DMG:15</div>
             </div>
             
             <div class="unit-card" data-unit="archer">
                 <div class="cost">2</div>
                 <div class="icon">&#127993;</div>
                 <div class="name">Archer</div>
-                <div class="stats">HP:50 DMG:12</div>
-            </div>
-            
-            <div class="unit-card" data-unit="tank">
-                <div class="cost">4</div>
-                <div class="icon">&#128737;</div>
-                <div class="name">Tank</div>
-                <div class="stats">HP:200 DMG:8</div>
+                <div class="stats">HP:40 DMG:10 RNG:3</div>
             </div>
         </div>
         
         <!-- Buttons -->
         <div id="panel-buttons">
-            <button class="panel-btn" id="btn-start-battle">Start Battle</button>
+            <button class="panel-btn" id="btn-end-turn">End Turn</button>
         </div>
     </div>
     

@@ -8,21 +8,22 @@ const Game = {
     
     // ==================== GAME STATE ====================
     state: {
-        phase: 'placement',  // 'placement' | 'battle' | 'result'
-        round: 1,
-        timer: 30,           // Placement phase timer (seconds)
-        cost: 10,            // Current cost points
+        phase: 'prepare',    // 'prepare' | 'battle' | 'result'
+        turn: 1,             // Current turn number
+        cost: 3,             // Current cost points (starts at 3, increases each turn)
         maxCost: 10,         // Max cost points
-        battleTurn: 0,       // Current battle turn
+        battleTurn: 0,       // Battle sub-turn
         
-        // Player units on board
-        playerUnits: [],
-        // Enemy units (AI)
+        // Units on board
+        playerUnits: [],     // Includes hero + summons
         enemyUnits: [],
         
-        // Battle result
+        // HP
         playerHP: 100,
-        enemyHP: 100
+        enemyHP: 100,
+        
+        // Hero reference
+        hero: null
     },
     
     // ==================== CONTAINERS ====================
@@ -35,50 +36,66 @@ const Game = {
     },
     
     // ==================== ARENA ====================
-    // Hearthstone style: LEFT = player, RIGHT = enemy
+    // 5x3 per side (total 10x3)
     arena: {
-        width: 6,       // X: 0-5 (horizontal - left to right)
-        depth: 2,       // Z: 0-1 (2 rows - front/back)
-        playerZoneX: 3, // Player can place in X: 0-2 (left half)
-        enemyZoneX: 3   // Enemy spawns in X: 3-5 (right half)
+        width: 10,      // X: 0-9 (5 per side)
+        depth: 3,       // Z: 0-2 (3 rows)
+        playerZoneX: 5, // Player zone: X 0-4
+        enemyZoneX: 5   // Enemy zone: X 5-9
     },
     
     battleAreaSize: { width: 0, height: 0 },
     
     // ==================== UNIT DEFINITIONS ====================
     unitTypes: {
+        // Hero (player's main character)
+        hero: {
+            name: 'Hero',
+            cost: 0,
+            hp: 100,
+            damage: 20,
+            range: 1,
+            sprite: 'hero.png',
+            scale: 0.5,
+            isHero: true
+        },
+        // Summons
         warrior: {
             name: 'Warrior',
             cost: 3,
-            hp: 100,
+            hp: 60,
             damage: 15,
-            attackSpeed: 1.0,   // attacks per second
-            range: 1,           // melee
-            moveSpeed: 2,       // cells per second
+            range: 1,
             sprite: 'hero.png',
-            scale: 0.5
+            scale: 0.4
         },
         archer: {
             name: 'Archer',
             cost: 2,
-            hp: 50,
-            damage: 12,
-            attackSpeed: 1.2,
-            range: 4,           // ranged
-            moveSpeed: 2.5,
-            sprite: 'goblin.png',  // placeholder
-            scale: 0.4
+            hp: 40,
+            damage: 10,
+            range: 3,
+            sprite: 'goblin.png',
+            scale: 0.35
         },
-        tank: {
-            name: 'Tank',
-            cost: 4,
-            hp: 200,
+        // Enemies
+        goblin: {
+            name: 'Goblin',
+            cost: 0,
+            hp: 30,
             damage: 8,
-            attackSpeed: 0.6,
             range: 1,
-            moveSpeed: 1,
-            sprite: 'hero.png',
-            scale: 0.6
+            sprite: 'goblin.png',
+            scale: 0.35
+        },
+        goblinArcher: {
+            name: 'Goblin Archer',
+            cost: 0,
+            hp: 20,
+            damage: 6,
+            range: 3,
+            sprite: 'goblinarcher.png',
+            scale: 0.35
         }
     },
     
@@ -127,10 +144,22 @@ const Game = {
         // Resize handler
         window.addEventListener('resize', () => this.onResize());
         
-        // Start placement phase
-        this.startPlacementPhase();
+        // Start game
+        await this.startGame();
         
         console.log('[Game] Ready!');
+    },
+    
+    async startGame() {
+        // Place hero at starting position
+        await this.placeUnit('hero', 2, 1, 'player');
+        this.state.hero = this.state.playerUnits[0];
+        
+        // Generate initial enemies
+        this.generateEnemyUnits();
+        
+        // Start prepare phase
+        this.startPreparePhase();
     },
     
     setupContainers() {
@@ -223,16 +252,15 @@ const Game = {
     
     // ==================== UI ====================
     setupUI() {
-        this.updateTimerUI();
+        this.updateTurnUI();
         this.updateCostUI();
         this.updatePhaseUI();
     },
     
-    updateTimerUI() {
-        const timerEl = document.getElementById('timer-display');
-        if (timerEl) {
-            timerEl.textContent = Math.ceil(this.state.timer);
-            timerEl.style.color = this.state.timer <= 5 ? '#ff4444' : '#ffffff';
+    updateTurnUI() {
+        const turnEl = document.getElementById('turn-display');
+        if (turnEl) {
+            turnEl.textContent = this.state.turn;
         }
     },
     
@@ -252,7 +280,7 @@ const Game = {
         const phaseEl = document.getElementById('phase-display');
         if (phaseEl) {
             const phaseNames = {
-                placement: 'PLACEMENT',
+                prepare: 'YOUR TURN',
                 battle: 'BATTLE',
                 result: 'RESULT'
             };
@@ -260,34 +288,20 @@ const Game = {
         }
     },
     
-    // ==================== PLACEMENT PHASE ====================
-    startPlacementPhase() {
-        this.state.phase = 'placement';
-        this.state.timer = 30;
+    // ==================== PREPARE PHASE ====================
+    startPreparePhase() {
+        this.state.phase = 'prepare';
         this.updatePhaseUI();
+        this.updateTurnUI();
+        this.updateCostUI();
         
-        // Generate enemy units for this round
-        this.generateEnemyUnits();
-        
-        // Start timer
-        this.timerInterval = setInterval(() => {
-            this.state.timer -= 1;
-            this.updateTimerUI();
-            
-            if (this.state.timer <= 0) {
-                this.endPlacementPhase();
-            }
-        }, 1000);
-        
-        console.log('[Game] Placement phase started');
+        console.log(`[Game] Turn ${this.state.turn} - Prepare phase`);
     },
     
-    endPlacementPhase() {
-        if (this.timerInterval) {
-            clearInterval(this.timerInterval);
-            this.timerInterval = null;
-        }
+    endTurn() {
+        if (this.state.phase !== 'prepare') return;
         
+        console.log('[Game] End turn - starting battle');
         this.startBattlePhase();
     },
     
@@ -320,26 +334,10 @@ const Game = {
         document.addEventListener('touchmove', (e) => this.onDrag(e), { passive: false });
         document.addEventListener('touchend', (e) => this.endDrag(e));
         
-        // Start Battle button
-        const startBtn = document.getElementById('btn-start-battle');
-        if (startBtn) {
-            startBtn.addEventListener('click', () => {
-                if (this.state.phase === 'placement') {
-                    this.endPlacementPhase();
-                }
-            });
-        }
-        
-        // Reroll button (placeholder)
-        const rerollBtn = document.getElementById('btn-reroll');
-        if (rerollBtn) {
-            rerollBtn.addEventListener('click', () => {
-                if (this.state.cost >= 2) {
-                    this.state.cost -= 2;
-                    this.updateCostUI();
-                    this.showMessage('Reroll!', 500);
-                }
-            });
+        // End Turn button
+        const endTurnBtn = document.getElementById('btn-end-turn');
+        if (endTurnBtn) {
+            endTurnBtn.addEventListener('click', () => this.endTurn());
         }
     },
     
@@ -360,7 +358,7 @@ const Game = {
     },
     
     startDrag(e, card) {
-        if (this.state.phase !== 'placement') return;
+        if (this.state.phase !== 'prepare') return;
         
         e.preventDefault();
         const touch = e.touches ? e.touches[0] : e;
@@ -522,10 +520,11 @@ const Game = {
             z: gridZ + 0.5,
             hp: unitDef.hp,
             maxHp: unitDef.hp,
+            damage: unitDef.damage,
+            range: unitDef.range,
             sprite,
-            attackCooldown: 0,
-            target: null,
-            state: 'idle'  // 'idle' | 'moving' | 'attacking'
+            isHero: unitDef.isHero || false,
+            state: 'idle'
         };
         
         if (team === 'player') {
@@ -538,17 +537,22 @@ const Game = {
     },
     
     generateEnemyUnits() {
-        // Simple enemy generation based on round
-        const enemyCount = Math.min(1 + Math.floor(this.state.round / 2), 5);
-        const types = ['warrior', 'archer', 'tank'];
+        // Generate enemies based on turn
+        const turn = this.state.turn;
+        const enemyCount = Math.min(1 + Math.floor(turn / 2), 6);
+        const types = ['goblin', 'goblinArcher'];
         
         for (let i = 0; i < enemyCount; i++) {
             const type = types[Math.floor(Math.random() * types.length)];
-            // Spawn on RIGHT side (enemy zone: X >= playerZoneX)
+            // Spawn on RIGHT side (X: 5-9)
             const x = this.arena.playerZoneX + Math.floor(Math.random() * this.arena.enemyZoneX);
             const z = Math.floor(Math.random() * this.arena.depth);
             
-            this.placeUnit(type, x, z, 'enemy');
+            // Check if cell is occupied
+            const occupied = this.state.enemyUnits.some(u => u.gridX === x && u.gridZ === z);
+            if (!occupied) {
+                this.placeUnit(type, x, z, 'enemy');
+            }
         }
     },
     
@@ -610,7 +614,6 @@ const Game = {
     async unitTakeTurn(unit) {
         if (unit.hp <= 0) return;
         
-        const unitDef = this.unitTypes[unit.type];
         const enemies = unit.team === 'player' ? this.state.enemyUnits : this.state.playerUnits;
         const aliveEnemies = enemies.filter(e => e.hp > 0);
         
@@ -631,7 +634,7 @@ const Game = {
         if (!nearest) return;
         
         // In range? Attack! Otherwise move closer
-        if (nearestDist <= unitDef.range) {
+        if (nearestDist <= unit.range) {
             await this.attackUnit(unit, nearest);
         } else {
             await this.moveUnitToward(unit, nearest);
@@ -676,8 +679,7 @@ const Game = {
     },
     
     async attackUnit(attacker, target) {
-        const unitDef = this.unitTypes[attacker.type];
-        const damage = unitDef.damage;
+        const damage = attacker.damage;
         
         // Attack animation: lunge toward target
         return new Promise(resolve => {
@@ -792,58 +794,56 @@ const Game = {
     },
     
     endBattlePhase() {
-        if (this.battleLoopId) {
-            cancelAnimationFrame(this.battleLoopId);
-            this.battleLoopId = null;
-        }
-        
-        const playerAlive = this.state.playerUnits.filter(u => u.hp > 0).length;
+        const heroAlive = this.state.hero && this.state.hero.hp > 0;
         const enemyAlive = this.state.enemyUnits.filter(u => u.hp > 0).length;
         
-        if (playerAlive > 0 && enemyAlive === 0) {
-            this.showMessage('VICTORY!', 2000);
-            // Victory - no gold bonus in cost system
-        } else {
-            this.showMessage('DEFEAT!', 2000);
-            this.state.playerHP -= 10 * enemyAlive;  // Damage based on survivors
+        if (!heroAlive) {
+            // Hero died - game over
+            this.showMessage('GAME OVER', 3000);
+            this.state.phase = 'result';
+            this.updatePhaseUI();
+            return;
         }
         
-        this.state.phase = 'result';
-        this.updatePhaseUI();
+        if (enemyAlive === 0) {
+            // All enemies dead - next turn
+            this.showMessage('Turn Complete!', 1000);
+        }
         
-        // Next round after delay
+        // Next turn after delay
         setTimeout(() => {
-            if (this.state.playerHP > 0) {
-                this.nextRound();
-            } else {
-                this.gameOver();
+            this.nextTurn();
+        }, 1500);
+    },
+    
+    nextTurn() {
+        this.state.turn++;
+        
+        // Increase cost (like Hearthstone mana)
+        this.state.cost = Math.min(this.state.turn + 2, this.state.maxCost);
+        
+        // Clear dead player summons (not hero)
+        this.state.playerUnits = this.state.playerUnits.filter(u => {
+            if (u.hp <= 0 && !u.isHero) {
+                if (u.sprite) u.sprite.destroy();
+                return false;
             }
-        }, 3000);
-    },
-    
-    nextRound() {
-        this.state.round++;
-        // Reset cost for new round
-        this.state.cost = this.state.maxCost;
-        
-        // Clear units
-        this.clearAllUnits();
-        
-        // Update UI
-        this.updateCostUI();
-        
-        // Start new placement phase
-        this.startPlacementPhase();
-        
-        console.log(`[Game] Round ${this.state.round} started`);
-    },
-    
-    clearAllUnits() {
-        [...this.state.playerUnits, ...this.state.enemyUnits].forEach(unit => {
-            if (unit.sprite) unit.sprite.destroy();
+            return true;
         });
-        this.state.playerUnits = [];
+        
+        // Clear all enemy units
+        this.state.enemyUnits.forEach(u => {
+            if (u.sprite) u.sprite.destroy();
+        });
         this.state.enemyUnits = [];
+        
+        // Generate new enemies
+        this.generateEnemyUnits();
+        
+        // Start prepare phase
+        this.startPreparePhase();
+        
+        console.log(`[Game] Turn ${this.state.turn} started (Cost: ${this.state.cost})`);
     },
     
     gameOver() {
