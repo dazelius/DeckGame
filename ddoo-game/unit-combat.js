@@ -17,34 +17,53 @@ const UnitCombat = {
     
     // ==========================================
     // 통합 근접 공격 애니메이션
+    // attacker: 공격자 유닛
+    // target: 대상 유닛
+    // damage: 데미지
+    // options: { effectType, knockback, slashColor, isEnemy, onHit }
     // ==========================================
     async meleeAttack(attacker, target, damage, options = {}) {
         const {
-            effectType = 'strike',  // 'strike', 'bash', 'cleave', 'heavy'
+            effectType = 'strike',
             knockback = 0,
-            onHit = null,           // 히트 시 콜백
-            returnToStart = true    // 원위치 복귀 여부
+            slashColor = null,
+            isEnemy = false,
+            onHit = null
         } = options;
         
+        // 스프라이트 없으면 데미지만
         if (!attacker.sprite || !target.sprite) {
-            this.game.dealDamage(target, damage);
+            if (isEnemy) {
+                this.game.dealDamageToTarget(target, damage);
+            } else {
+                this.game.dealDamage(target, damage);
+            }
             if (knockback > 0 && target.hp > 0 && typeof KnockbackSystem !== 'undefined') {
                 await KnockbackSystem.knockback(target, 1, knockback);
             }
             return;
         }
         
-        // 애니메이션 중 위치 업데이트 방지
         attacker.isAnimating = true;
         
         const startX = attacker.sprite.x;
         const startY = attacker.sprite.y;
         const targetX = target.sprite.x;
-        const targetY = target.sprite.y;
-        const targetCenter = targetY - (target.sprite.height || 60) / 2;
+        const targetCenter = target.sprite.y - (target.sprite.height || 60) / 2;
         
-        // 1. 돌진 (타겟 앞까지)
-        await this.dashToTarget(attacker, targetX - 60, startY);
+        // 방향 (아군은 오른쪽으로, 적은 왼쪽으로)
+        const dashDirection = isEnemy ? -1 : 1;
+        const dashX = targetX - (dashDirection * 60);
+        
+        // 1. 윈드업 + 돌진
+        await new Promise(resolve => {
+            gsap.timeline()
+                .to(attacker.sprite, { x: startX - (dashDirection * 15), duration: 0.08 })
+                .to(attacker.sprite.scale, { x: 0.9, y: 1.1, duration: 0.08 }, '<')
+                .to(attacker.sprite, { x: dashX, duration: 0.12, ease: 'power2.in' })
+                .to(attacker.sprite.scale, { x: 1.1, y: 0.9, duration: 0.1 }, '<')
+                .add(resolve);
+        });
         
         // 2. 히트 스톱
         if (typeof CombatEffects !== 'undefined') {
@@ -52,38 +71,37 @@ const UnitCombat = {
         }
         
         // 3. 공격 이펙트
-        this.playAttackEffect(effectType, targetX, targetCenter);
+        this.playAttackEffect(effectType, targetX, targetCenter, slashColor);
         
-        // 4. 피격 처리 (데미지 + 넉백 동시)
+        // 4. 피격 처리
         if (typeof CombatEffects !== 'undefined') {
             CombatEffects.hitEffect(target.sprite);
             CombatEffects.showDamageNumber(targetX, targetCenter - 20, damage);
         }
         
-        this.game.dealDamage(target, damage);
+        if (isEnemy) {
+            this.game.dealDamageToTarget(target, damage);
+        } else {
+            this.game.dealDamage(target, damage);
+        }
         
-        // 넉백 (await 없이 병렬 실행)
+        // 넉백 (병렬)
         if (knockback > 0 && target.hp > 0 && typeof KnockbackSystem !== 'undefined') {
             KnockbackSystem.knockback(target, 1, knockback);
         }
         
-        // 커스텀 히트 콜백
         if (onHit) onHit();
         
-        // 5. 복귀 (await 없이 - 넉백과 병렬)
-        if (returnToStart) {
-            gsap.to(attacker.sprite, {
-                x: startX,
-                y: startY,
-                duration: 0.25,
-                ease: 'power2.out',
-                onComplete: () => {
-                    attacker.isAnimating = false;
-                }
-            });
-        } else {
-            attacker.isAnimating = false;
-        }
+        // 5. 복귀 (await 없이)
+        gsap.to(attacker.sprite, {
+            x: startX,
+            y: startY,
+            duration: 0.25,
+            ease: 'power2.out',
+            onComplete: () => {
+                attacker.isAnimating = false;
+            }
+        });
     },
     
     // ==========================================
@@ -93,82 +111,75 @@ const UnitCombat = {
         const {
             projectileColor = 0xffaa00,
             projectileSize = 8,
-            createZone = null,      // 'fire', 'poison' 등
+            createZone = null,
+            isEnemy = false,
             onHit = null
         } = options;
         
         if (!attacker.sprite || !target.sprite) {
-            this.game.dealDamage(target, damage);
+            if (isEnemy) {
+                this.game.dealDamageToTarget(target, damage);
+            } else {
+                this.game.dealDamage(target, damage);
+            }
             return;
         }
         
         attacker.isAnimating = true;
         
+        const originalX = attacker.sprite.x;
         const startX = attacker.sprite.x;
         const startY = attacker.sprite.y - (attacker.sprite.height || 60) / 2;
         const endX = target.sprite.x;
         const endY = target.sprite.y - (target.sprite.height || 60) / 2;
         
-        // 1. 캐스팅 모션
+        // 1. 슈팅 스탠스
+        const recoil = isEnemy ? 8 : -10;
         await new Promise(resolve => {
             gsap.timeline()
-                .to(attacker.sprite.scale, { x: 1.1, y: 0.95, duration: 0.15 })
-                .to(attacker.sprite.scale, { x: 1, y: 1, duration: 0.1 })
+                .to(attacker.sprite.scale, { x: 0.95, y: 1.05, duration: 0.1 })
+                .to(attacker.sprite, { x: originalX + recoil, duration: 0.1 }, 0)
                 .add(resolve);
         });
         
-        // 2. 투사체 발사
+        // 2. 투사체
         if (typeof CombatEffects !== 'undefined') {
             await CombatEffects.projectileEffect(startX, startY, endX, endY, projectileColor, projectileSize);
-        }
-        
-        // 3. 피격 처리
-        if (typeof CombatEffects !== 'undefined') {
             CombatEffects.hitEffect(target.sprite);
             CombatEffects.impactEffect(endX, endY, projectileColor, 0.8);
             CombatEffects.showDamageNumber(endX, endY - 20, damage);
         }
         
-        this.game.dealDamage(target, damage);
+        // 3. 데미지
+        if (isEnemy) {
+            this.game.dealDamageToTarget(target, damage);
+        } else {
+            this.game.dealDamage(target, damage);
+        }
         
-        // 4. 영역 효과 생성
+        // 4. 영역 효과
         if (createZone && typeof GridAOE !== 'undefined') {
             GridAOE.createZone(createZone, target.gridX, target.gridZ);
         }
         
         if (onHit) onHit();
         
-        attacker.isAnimating = false;
-    },
-    
-    // ==========================================
-    // 타겟까지 돌진
-    // ==========================================
-    async dashToTarget(unit, targetX, targetY) {
-        return new Promise(resolve => {
-            gsap.timeline()
-                // 준비 자세
-                .to(unit.sprite.scale, { x: 0.9, y: 1.1, duration: 0.08 })
-                // 돌진
-                .to(unit.sprite, { 
-                    x: targetX, 
-                    duration: 0.15, 
-                    ease: 'power2.in' 
-                })
-                .to(unit.sprite.scale, { x: 1.1, y: 0.9, duration: 0.1 }, '<')
-                .add(resolve);
-        });
+        // 5. 복귀
+        gsap.timeline()
+            .to(attacker.sprite.scale, { x: 1, y: 1, duration: 0.1 })
+            .to(attacker.sprite, { x: originalX, duration: 0.1 }, 0)
+            .call(() => { attacker.isAnimating = false; });
     },
     
     // ==========================================
     // 공격 이펙트 재생
     // ==========================================
-    playAttackEffect(effectType, x, y) {
+    playAttackEffect(effectType, x, y, customColor = null) {
         if (typeof CombatEffects === 'undefined') return;
         
         switch (effectType) {
             case 'bash':
-                CombatEffects.heavySlash(x, y, -30, 0xff8800);
+                CombatEffects.heavySlash(x, y, -30, customColor || 0xff8800);
                 CombatEffects.screenShake(10, 150);
                 break;
             case 'cleave':
@@ -176,31 +187,54 @@ const UnitCombat = {
                 CombatEffects.screenShake(8, 120);
                 break;
             case 'heavy':
-                CombatEffects.heavySlash(x, y, -45, 0xaaaaaa);
+                CombatEffects.heavySlash(x, y, -45, customColor || 0xaaaaaa);
                 CombatEffects.screenShake(8, 120);
                 break;
             case 'fire':
                 CombatEffects.impactEffect(x, y, 0xff4400, 1.2);
                 CombatEffects.screenFlash('#ff4400', 80, 0.2);
                 break;
+            case 'summon':
+                CombatEffects.slashEffect(x, y, -30 + Math.random() * 20, customColor || 0x44ff44, 1.0);
+                CombatEffects.screenShake(5, 100);
+                break;
+            case 'enemy':
+                CombatEffects.slashEffect(x, y, 30, customColor || 0xff4444, 1.0);
+                CombatEffects.screenShake(6, 100);
+                break;
             case 'strike':
             default:
-                CombatEffects.slashEffect(x, y, -45, 0xffffff, 1.3);
+                CombatEffects.slashEffect(x, y, -45, customColor || 0xffffff, 1.3);
                 CombatEffects.screenShake(6, 100);
                 break;
         }
     },
     
     // ==========================================
-    // 유닛 라인 이동 (Z축)
+    // 유닛 라인 이동 (Z축) - 블로킹 유닛 처리 포함
     // ==========================================
-    async moveToLine(unit, targetZ) {
+    async moveToLine(unit, targetZ, options = {}) {
         if (!unit || !unit.sprite) return;
         if (unit.gridZ === targetZ) return;
         
-        unit.isAnimating = true;
+        const { checkBlocking = true, team = 'player' } = options;
         
-        // 그리드 위치 업데이트
+        // 블로킹 유닛 체크
+        if (checkBlocking) {
+            const unitList = team === 'enemy' 
+                ? this.game.state.enemyUnits 
+                : this.game.state.playerUnits;
+            
+            const blockingUnit = unitList.find(u => 
+                u !== unit && u.hp > 0 && u.gridX === unit.gridX && u.gridZ === targetZ
+            );
+            
+            if (blockingUnit) {
+                await this.moveUnitAside(blockingUnit, targetZ, team);
+            }
+        }
+        
+        unit.isAnimating = true;
         unit.gridZ = targetZ;
         unit.z = targetZ + 0.5;
         
@@ -210,23 +244,16 @@ const UnitCombat = {
             return;
         }
         
-        // 호핑 이동
         return new Promise(resolve => {
             const startY = unit.sprite.y;
-            const midY = startY - 30;
+            const midY = Math.min(startY, newPos.y) - 25;
             
             gsap.timeline()
-                .to(unit.sprite.scale, { x: 0.9, y: 1.15, duration: 0.08 })
-                .to(unit.sprite, { y: midY, duration: 0.12, ease: 'power2.out' })
-                .to(unit.sprite.scale, { x: 1.1, y: 0.85, duration: 0.08 }, '<')
-                .to(unit.sprite, { 
-                    x: newPos.x, 
-                    y: newPos.y, 
-                    duration: 0.15, 
-                    ease: 'power2.in' 
-                })
-                .to(unit.sprite.scale, { x: 1.2, y: 0.8, duration: 0.05 })
-                .to(unit.sprite.scale, { x: 1, y: 1, duration: 0.15, ease: 'elastic.out(1, 0.5)' })
+                .to(unit.sprite.scale, { x: 1.1, y: 0.9, duration: 0.08 })
+                .to(unit.sprite, { x: newPos.x, y: midY, duration: 0.15, ease: 'power2.out' })
+                .to(unit.sprite.scale, { x: 0.95, y: 1.05, duration: 0.08 }, '<')
+                .to(unit.sprite, { y: newPos.y, duration: 0.1, ease: 'power2.in' })
+                .to(unit.sprite.scale, { x: 1, y: 1, duration: 0.1 }, '<')
                 .call(() => {
                     unit.sprite.zIndex = Math.floor(newPos.y);
                     unit.isAnimating = false;
@@ -236,16 +263,34 @@ const UnitCombat = {
     },
     
     // ==========================================
-    // 유닛 X축 이동
+    // 유닛 옆으로 이동 (블로킹 해제)
     // ==========================================
-    async moveToX(unit, targetX) {
+    async moveUnitAside(unit, avoidZ, team = 'player') {
         if (!unit || !unit.sprite) return;
-        if (unit.gridX === targetX) return;
+        
+        const unitList = team === 'enemy' 
+            ? this.game.state.enemyUnits 
+            : this.game.state.playerUnits;
+        
+        // 빈 셀 찾기
+        const possibleZ = [];
+        for (let z = 0; z < this.game.arena.depth; z++) {
+            if (z === avoidZ || z === unit.gridZ) continue;
+            const occupied = unitList.some(u => 
+                u !== unit && u.hp > 0 && u.gridX === unit.gridX && u.gridZ === z
+            );
+            if (!occupied) possibleZ.push(z);
+        }
+        
+        if (possibleZ.length === 0) return;
+        
+        // 가장 가까운 빈 셀
+        possibleZ.sort((a, b) => Math.abs(a - unit.gridZ) - Math.abs(b - unit.gridZ));
+        const newZ = possibleZ[0];
         
         unit.isAnimating = true;
-        
-        unit.gridX = targetX;
-        unit.x = targetX + 0.5;
+        unit.gridZ = newZ;
+        unit.z = newZ + 0.5;
         
         const newPos = this.game.getCellCenter(unit.gridX, unit.gridZ);
         if (!newPos) {
@@ -255,19 +300,14 @@ const UnitCombat = {
         
         return new Promise(resolve => {
             const startY = unit.sprite.y;
-            const midY = startY - 25;
+            const midY = Math.min(startY, newPos.y) - 15;
             
             gsap.timeline()
-                .to(unit.sprite.scale, { x: 0.9, y: 1.1, duration: 0.06 })
-                .to(unit.sprite, { y: midY, duration: 0.1, ease: 'power2.out' })
-                .to(unit.sprite, { 
-                    x: newPos.x, 
-                    y: newPos.y, 
-                    duration: 0.12, 
-                    ease: 'power2.in' 
-                })
-                .to(unit.sprite.scale, { x: 1.15, y: 0.85, duration: 0.05 })
-                .to(unit.sprite.scale, { x: 1, y: 1, duration: 0.12, ease: 'elastic.out(1, 0.5)' })
+                .to(unit.sprite.scale, { x: 1.1, y: 0.9, duration: 0.06 })
+                .to(unit.sprite, { x: newPos.x, y: midY, duration: 0.12, ease: 'power2.out' })
+                .to(unit.sprite.scale, { x: 0.95, y: 1.05, duration: 0.06 }, '<')
+                .to(unit.sprite, { y: newPos.y, duration: 0.08, ease: 'power2.in' })
+                .to(unit.sprite.scale, { x: 1, y: 1, duration: 0.08 }, '<')
                 .call(() => {
                     unit.sprite.zIndex = Math.floor(newPos.y);
                     unit.isAnimating = false;
@@ -277,7 +317,7 @@ const UnitCombat = {
     },
     
     // ==========================================
-    // 적 타겟 찾기 (동일 라인 우선)
+    // 타겟 찾기 (동일 라인 우선)
     // ==========================================
     findTarget(attacker, possibleTargets) {
         if (!possibleTargets || possibleTargets.length === 0) return null;
@@ -285,13 +325,11 @@ const UnitCombat = {
         const validTargets = possibleTargets.filter(t => t && t.hp > 0);
         if (validTargets.length === 0) return null;
         
-        // 같은 라인에서 가장 가까운 대상
         const sameLineTargets = validTargets.filter(t => t.gridZ === attacker.gridZ);
         if (sameLineTargets.length > 0) {
             return this.getClosestTarget(attacker, sameLineTargets);
         }
         
-        // 인접 라인에서 가장 가까운 대상
         const adjacentTargets = validTargets.filter(t => 
             Math.abs(t.gridZ - attacker.gridZ) === 1
         );
@@ -299,24 +337,18 @@ const UnitCombat = {
             return this.getClosestTarget(attacker, adjacentTargets);
         }
         
-        // 아무나
         return this.getClosestTarget(attacker, validTargets);
     },
     
     getClosestTarget(attacker, targets) {
         if (targets.length === 0) return null;
-        
-        // 적 → 플레이어 유닛이면 X가 작은 쪽이 가까움
-        // 아군 → 적 유닛이면 X가 큰 쪽이 가까움
         const isEnemy = attacker.team === 'enemy';
         
         return targets.reduce((closest, t) => {
             if (!closest) return t;
-            if (isEnemy) {
-                return t.gridX < closest.gridX ? t : closest;
-            } else {
-                return t.gridX > closest.gridX ? t : closest;
-            }
+            return isEnemy 
+                ? (t.gridX < closest.gridX ? t : closest)
+                : (t.gridX > closest.gridX ? t : closest);
         }, null);
     }
 };

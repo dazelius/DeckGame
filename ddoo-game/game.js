@@ -792,195 +792,45 @@ const Game = {
         await this.resolveAllCollisions();
     },
     
+    // ==========================================
+    // 이동/공격 함수 - UnitCombat 위임
+    // ==========================================
     async moveHeroToLine(targetZ) {
         const hero = this.state.hero;
-        if (!hero || !hero.sprite) return;
-        
-        // Check if there's a friendly unit at the target position
-        const blockingUnit = this.state.playerUnits.find(u => 
-            u !== hero && u.hp > 0 && u.gridX === hero.gridX && u.gridZ === targetZ
-        );
-        
-        if (blockingUnit) {
-            // Move the blocking unit out of the way
-            await this.moveUnitAside(blockingUnit, hero.gridZ);
+        if (!hero) return;
+        if (typeof UnitCombat !== 'undefined') {
+            await UnitCombat.moveToLine(hero, targetZ, { team: 'player' });
         }
-        
-        // Update hero position
-        hero.gridZ = targetZ;
-        hero.z = targetZ + 0.5;
-        
-        // Get new screen position
-        const newPos = this.getCellCenter(hero.gridX, hero.gridZ);
-        if (!newPos) return;
-        
-        // Animate movement with hop effect
-        return new Promise(resolve => {
-            const startY = hero.sprite.y;
-            const midY = Math.min(startY, newPos.y) - 30; // Hero hops higher
-            
-            gsap.timeline()
-                // Prepare to move
-                .to(hero.sprite.scale, { x: 1.15, y: 0.85, duration: 0.08 })
-                // Jump/dash
-                .to(hero.sprite, {
-                    x: newPos.x,
-                    y: midY,
-                    duration: 0.18,
-                    ease: 'power2.out'
-                })
-                .to(hero.sprite.scale, { x: 0.9, y: 1.1, duration: 0.1 }, '<')
-                // Land
-                .to(hero.sprite, {
-                    y: newPos.y,
-                    duration: 0.12,
-                    ease: 'power2.in'
-                })
-                .to(hero.sprite.scale, { x: 1, y: 1, duration: 0.1 }, '<')
-                .call(() => {
-                    hero.sprite.zIndex = Math.floor(newPos.y);
-                    resolve();
-                });
-        });
     },
     
     async moveUnitAside(unit, avoidZ) {
-        if (!unit || !unit.sprite) return;
-        
-        // Find a free adjacent cell to move to
-        const possibleZ = [];
-        for (let z = 0; z < this.arena.depth; z++) {
-            if (z === avoidZ) continue;
-            if (z === unit.gridZ) continue;
-            
-            // Check if cell is free
-            const occupied = this.state.playerUnits.some(u => 
-                u !== unit && u.hp > 0 && u.gridX === unit.gridX && u.gridZ === z
-            );
-            if (!occupied) {
-                possibleZ.push(z);
-            }
+        if (typeof UnitCombat !== 'undefined') {
+            await UnitCombat.moveUnitAside(unit, avoidZ, 'player');
         }
-        
-        if (possibleZ.length === 0) return; // No free space
-        
-        // Pick the closest free cell
-        possibleZ.sort((a, b) => Math.abs(a - unit.gridZ) - Math.abs(b - unit.gridZ));
-        const newZ = possibleZ[0];
-        
-        // Update unit position
-        unit.gridZ = newZ;
-        unit.z = newZ + 0.5;
-        
-        // Get new screen position
-        const newPos = this.getCellCenter(unit.gridX, unit.gridZ);
-        if (!newPos) return;
-        
-        // Animate movement with hop effect
-        return new Promise(resolve => {
-            const startY = unit.sprite.y;
-            const midY = Math.min(startY, newPos.y) - 15;
-            
-            gsap.timeline()
-                .to(unit.sprite.scale, { x: 1.1, y: 0.9, duration: 0.06 })
-                .to(unit.sprite, { x: newPos.x, y: midY, duration: 0.12, ease: 'power2.out' })
-                .to(unit.sprite.scale, { x: 0.95, y: 1.05, duration: 0.06 }, '<')
-                .to(unit.sprite, { y: newPos.y, duration: 0.08, ease: 'power2.in' })
-                .to(unit.sprite.scale, { x: 1, y: 1, duration: 0.08 }, '<')
-                .call(() => {
-                    unit.sprite.zIndex = Math.floor(newPos.y);
-                    resolve();
-                });
-        });
     },
     
     async heroAttackAnimation(hero, target, damage, cardType = 'strike', knockback = 0) {
-        if (!hero.sprite || !target.sprite) {
-            await this.dealDamage(target, damage);
-            if (knockback > 0 && target.hp > 0 && typeof KnockbackSystem !== 'undefined') {
-                await KnockbackSystem.knockback(target, 1, knockback);
-            }
-            return;
-        }
-        
-        // Use CombatEffects for full animation with knockback
-        if (typeof CombatEffects !== 'undefined') {
-            await CombatEffects.playerMeleeAttack(hero, target, damage, cardType);
-            // Deal damage and knockback simultaneously at hit moment
+        if (typeof UnitCombat !== 'undefined') {
+            await UnitCombat.meleeAttack(hero, target, damage, {
+                effectType: cardType,
+                knockback: knockback,
+                isEnemy: false
+            });
+        } else {
             this.dealDamage(target, damage);
-            if (knockback > 0 && target.hp > 0 && typeof KnockbackSystem !== 'undefined') {
-                KnockbackSystem.knockback(target, 1, knockback); // Don't await - run in parallel with return
-            }
-            return;
         }
-        
-        const originalX = hero.sprite.x;
-        const originalY = hero.sprite.y;
-        
-        // Dash toward enemy
-        const dashX = originalX + (target.sprite.x - originalX) * 0.6;
-        const dashY = originalY + (target.sprite.y - originalY) * 0.3;
-        
-        return new Promise(resolve => {
-            gsap.timeline()
-                // Dash forward
-                .to(hero.sprite, {
-                    x: dashX,
-                    y: dashY,
-                    duration: 0.15,
-                    ease: 'power2.out'
-                })
-                // Deal damage and knockback at peak
-                .call(() => {
-                    this.dealDamage(target, damage);
-                    if (knockback > 0 && target.hp > 0 && typeof KnockbackSystem !== 'undefined') {
-                        KnockbackSystem.knockback(target, 1, knockback);
-                    }
-                })
-                // Return to position
-                .to(hero.sprite, {
-                    x: originalX,
-                    y: originalY,
-                    duration: 0.25,
-                    ease: 'power2.inOut',
-                    onComplete: resolve
-                });
-        });
     },
     
-    async heroRangedAnimation(hero, target, damage) {
-        if (!hero.sprite || !target.sprite) {
-            await this.dealDamage(target, damage);
-            return;
+    async heroRangedAnimation(hero, target, damage, options = {}) {
+        if (typeof UnitCombat !== 'undefined') {
+            await UnitCombat.rangedAttack(hero, target, damage, {
+                projectileColor: options.projectileColor || 0xffaa00,
+                createZone: options.createZone || null,
+                isEnemy: false
+            });
+        } else {
+            this.dealDamage(target, damage);
         }
-        
-        // Use CombatEffects for ranged attack
-        if (typeof CombatEffects !== 'undefined') {
-            await CombatEffects.playerRangedAttack(hero, target, damage);
-            await this.dealDamage(target, damage);
-            return;
-        }
-        
-        // Fallback - simple ranged attack
-        const originalX = hero.sprite.x;
-        
-        return new Promise(resolve => {
-            gsap.timeline()
-                .to(hero.sprite, {
-                    x: originalX - 10,
-                    duration: 0.1,
-                    ease: 'power2.out'
-                })
-                .to(hero.sprite, {
-                    x: originalX,
-                    duration: 0.1,
-                    ease: 'power2.in'
-                })
-                .call(() => {
-                    this.dealDamage(target, damage);
-                }, null, '-=0.05')
-                .call(resolve, null, '+=0.1');
-        });
     },
     
     async heroAoeAnimation(hero, targets, damage) {
@@ -2202,147 +2052,33 @@ const Game = {
     },
     
     async moveSummonToLine(unit, targetZ) {
-        if (!unit || !unit.sprite) return;
-        
-        // Check if there's a friendly unit at the target position
-        const blockingUnit = this.state.playerUnits.find(u => 
-            u !== unit && !u.isHero && u.hp > 0 && u.gridX === unit.gridX && u.gridZ === targetZ
-        );
-        
-        if (blockingUnit) {
-            await this.moveUnitAside(blockingUnit, targetZ);
+        if (typeof UnitCombat !== 'undefined') {
+            await UnitCombat.moveToLine(unit, targetZ, { team: 'player' });
         }
-        
-        // Update unit position
-        unit.gridZ = targetZ;
-        unit.z = targetZ + 0.5;
-        
-        // Get new screen position
-        const newPos = this.getCellCenter(unit.gridX, unit.gridZ);
-        if (!newPos) return;
-        
-        // Animate movement with hop effect
-        return new Promise(resolve => {
-            const startY = unit.sprite.y;
-            const midY = Math.min(startY, newPos.y) - 20; // Hop up
-            
-            gsap.timeline()
-                // Prepare to move
-                .to(unit.sprite.scale, { x: 1.1, y: 0.9, duration: 0.08 })
-                // Jump/dash
-                .to(unit.sprite, {
-                    x: newPos.x,
-                    y: midY,
-                    duration: 0.15,
-                    ease: 'power2.out'
-                })
-                .to(unit.sprite.scale, { x: 0.95, y: 1.05, duration: 0.08 }, '<')
-                // Land
-                .to(unit.sprite, {
-                    y: newPos.y,
-                    duration: 0.1,
-                    ease: 'power2.in'
-                })
-                .to(unit.sprite.scale, { x: 1, y: 1, duration: 0.1 }, '<')
-                .call(() => {
-                    // Update zIndex after movement
-                    unit.sprite.zIndex = Math.floor(newPos.y);
-                    resolve();
-                });
-        });
     },
     
     async summonMeleeAttack(summon, target) {
-        if (!summon.sprite || !target.sprite) {
+        if (typeof UnitCombat !== 'undefined') {
+            await UnitCombat.meleeAttack(summon, target, summon.damage, {
+                effectType: 'summon',
+                slashColor: 0x44ff44,
+                isEnemy: false
+            });
+        } else {
             this.dealDamage(target, summon.damage);
-            return;
         }
-        
-        const originalX = summon.sprite.x;
-        const originalY = summon.sprite.y;
-        const targetX = target.sprite.x;
-        const targetY = target.sprite.y - (target.sprite.height || 60) / 2;
-        
-        // Dash toward enemy
-        const dashX = originalX + (targetX - originalX) * 0.7;
-        const dashY = originalY + (target.sprite.y - originalY) * 0.3;
-        
-        return new Promise(resolve => {
-            gsap.timeline()
-                // Prepare (slight wind-up)
-                .to(summon.sprite, {
-                    x: originalX - 15,
-                    duration: 0.1,
-                    ease: 'power2.in'
-                })
-                // Dash forward fast
-                .to(summon.sprite, {
-                    x: dashX,
-                    y: dashY,
-                    duration: 0.12,
-                    ease: 'power2.out'
-                })
-                // Hit effect
-                .call(() => {
-                    // Combat effects
-                    if (typeof CombatEffects !== 'undefined') {
-                        CombatEffects.slashEffect(targetX, targetY, -30 + Math.random() * 20, 0x44ff44, 1.0);
-                        CombatEffects.hitEffect(target.sprite);
-                        CombatEffects.showDamageNumber(targetX, targetY - 20, summon.damage);
-                        CombatEffects.screenShake(5, 100);
-                    }
-                    this.dealDamage(target, summon.damage);
-                })
-                // Hold briefly
-                .to({}, { duration: 0.1 })
-                // Return to position
-                .to(summon.sprite, {
-                    x: originalX,
-                    y: originalY,
-                    duration: 0.25,
-                    ease: 'power2.inOut',
-                    onComplete: resolve
-                });
-        });
     },
     
     async summonRangedAttack(summon, target) {
-        if (!summon.sprite || !target.sprite) {
-            this.dealDamage(target, summon.damage);
-            return;
-        }
-        
-        const originalX = summon.sprite.x;
-        const startX = summon.sprite.x;
-        const startY = summon.sprite.y - (summon.sprite.height || 60) / 2;
-        const endX = target.sprite.x;
-        const endY = target.sprite.y - (target.sprite.height || 60) / 2;
-        
-        return new Promise(async resolve => {
-            // Shooting stance animation
-            await new Promise(r => {
-                gsap.timeline()
-                    .to(summon.sprite.scale, { x: 0.95, y: 1.05, duration: 0.1 })
-                    .to(summon.sprite, { x: originalX - 10, duration: 0.1 }, 0)
-                    .add(r);
+        if (typeof UnitCombat !== 'undefined') {
+            await UnitCombat.rangedAttack(summon, target, summon.damage, {
+                projectileColor: 0x88ff44,
+                projectileSize: 8,
+                isEnemy: false
             });
-            
-            // Fire projectile
-            if (typeof CombatEffects !== 'undefined') {
-                await CombatEffects.projectileEffect(startX, startY, endX, endY, 0x88ff44, 8);
-                CombatEffects.hitEffect(target.sprite);
-                CombatEffects.showDamageNumber(endX, endY - 20, summon.damage);
-            }
-            
-            // Deal damage
+        } else {
             this.dealDamage(target, summon.damage);
-            
-            // Return to normal
-            gsap.timeline()
-                .to(summon.sprite.scale, { x: 1, y: 1, duration: 0.1 })
-                .to(summon.sprite, { x: originalX, duration: 0.1 }, 0)
-                .add(resolve);
-        });
+        }
     },
     
     // Find target for enemy attack
@@ -2427,150 +2163,33 @@ const Game = {
     },
     
     async moveEnemyToLine(enemy, targetZ) {
-        if (!enemy || !enemy.sprite) return;
-        
-        // Check if there's another enemy at the target position
-        const blockingEnemy = this.state.enemyUnits.find(u => 
-            u !== enemy && u.hp > 0 && u.gridX === enemy.gridX && u.gridZ === targetZ
-        );
-        
-        if (blockingEnemy) {
-            // Find alternative Z position and animate blocking enemy
-            for (let z = 0; z < this.arena.depth; z++) {
-                if (z === targetZ) continue;
-                const occupied = this.state.enemyUnits.some(u => 
-                    u !== blockingEnemy && u.hp > 0 && u.gridX === blockingEnemy.gridX && u.gridZ === z
-                );
-                if (!occupied) {
-                    blockingEnemy.gridZ = z;
-                    blockingEnemy.z = z + 0.5;
-                    const blockNewPos = this.getCellCenter(blockingEnemy.gridX, blockingEnemy.gridZ);
-                    if (blockNewPos && blockingEnemy.sprite) {
-                        // Hop animation for blocking enemy too
-                        const blockMidY = Math.min(blockingEnemy.sprite.y, blockNewPos.y) - 15;
-                        gsap.timeline()
-                            .to(blockingEnemy.sprite.scale, { x: 1.1, y: 0.9, duration: 0.06 })
-                            .to(blockingEnemy.sprite, { x: blockNewPos.x, y: blockMidY, duration: 0.12, ease: 'power2.out' })
-                            .to(blockingEnemy.sprite.scale, { x: 0.95, y: 1.05, duration: 0.06 }, '<')
-                            .to(blockingEnemy.sprite, { y: blockNewPos.y, duration: 0.08, ease: 'power2.in' })
-                            .to(blockingEnemy.sprite.scale, { x: 1, y: 1, duration: 0.08 }, '<')
-                            .call(() => { blockingEnemy.sprite.zIndex = Math.floor(blockNewPos.y); });
-                    }
-                    break;
-                }
-            }
+        if (typeof UnitCombat !== 'undefined') {
+            await UnitCombat.moveToLine(enemy, targetZ, { team: 'enemy' });
         }
-        
-        // Update enemy position
-        enemy.gridZ = targetZ;
-        enemy.z = targetZ + 0.5;
-        
-        const newPos = this.getCellCenter(enemy.gridX, enemy.gridZ);
-        if (!newPos) return;
-        
-        // Animate movement with hop effect
-        return new Promise(resolve => {
-            const startY = enemy.sprite.y;
-            const midY = Math.min(startY, newPos.y) - 20;
-            
-            gsap.timeline()
-                // Prepare to move
-                .to(enemy.sprite.scale, { x: 1.1, y: 0.9, duration: 0.08 })
-                // Jump/dash
-                .to(enemy.sprite, {
-                    x: newPos.x,
-                    y: midY,
-                    duration: 0.15,
-                    ease: 'power2.out'
-                })
-                .to(enemy.sprite.scale, { x: 0.95, y: 1.05, duration: 0.08 }, '<')
-                // Land
-                .to(enemy.sprite, {
-                    y: newPos.y,
-                    duration: 0.1,
-                    ease: 'power2.in'
-                })
-                .to(enemy.sprite.scale, { x: 1, y: 1, duration: 0.1 }, '<')
-                .call(() => {
-                    enemy.sprite.zIndex = Math.floor(newPos.y);
-                    resolve();
-                });
-        });
     },
     
     async enemyMeleeAttack(enemy, target, intentDamage) {
-        if (!enemy.sprite || !target.sprite) {
+        if (typeof UnitCombat !== 'undefined') {
+            await UnitCombat.meleeAttack(enemy, target, intentDamage, {
+                effectType: 'enemy',
+                slashColor: 0xff4444,
+                isEnemy: true
+            });
+        } else {
             this.dealDamageToTarget(target, intentDamage);
-            return;
         }
-        
-        // Use CombatEffects for enemy attack
-        if (typeof CombatEffects !== 'undefined') {
-            await CombatEffects.enemyAttackEffect(enemy, target, intentDamage);
-            this.dealDamageToTarget(target, intentDamage);
-            return;
-        }
-        
-        const originalX = enemy.sprite.x;
-        const originalY = enemy.sprite.y;
-        
-        // Dash toward target
-        const dashX = originalX + (target.sprite.x - originalX) * 0.5;
-        const dashY = originalY + (target.sprite.y - originalY) * 0.2;
-        
-        return new Promise(resolve => {
-            gsap.timeline()
-                .to(enemy.sprite, {
-                    x: dashX,
-                    y: dashY,
-                    duration: 0.15,
-                    ease: 'power2.out'
-                })
-                .call(() => {
-                    this.dealDamageToTarget(target, intentDamage);
-                })
-                .to(enemy.sprite, {
-                    x: originalX,
-                    y: originalY,
-                    duration: 0.2,
-                    ease: 'power2.inOut',
-                    onComplete: resolve
-                });
-        });
     },
     
     async enemyRangedAttack(enemy, target, intentDamage) {
-        if (!enemy.sprite) {
+        if (typeof UnitCombat !== 'undefined') {
+            await UnitCombat.rangedAttack(enemy, target, intentDamage, {
+                projectileColor: 0xff6600,
+                projectileSize: 10,
+                isEnemy: true
+            });
+        } else {
             this.dealDamageToTarget(target, intentDamage);
-            return;
         }
-        
-        // Use CombatEffects for ranged attack
-        if (typeof CombatEffects !== 'undefined') {
-            await CombatEffects.enemyRangedAttackEffect(enemy, target, intentDamage);
-            this.dealDamageToTarget(target, intentDamage);
-            return;
-        }
-        
-        const originalX = enemy.sprite.x;
-        
-        return new Promise(resolve => {
-            gsap.timeline()
-                .to(enemy.sprite, {
-                    x: originalX + 8,
-                    duration: 0.08,
-                    ease: 'power2.out'
-                })
-                .to(enemy.sprite, {
-                    x: originalX,
-                    duration: 0.08,
-                    ease: 'power2.in'
-                })
-                .call(() => {
-                    this.dealDamageToTarget(target, intentDamage);
-                }, null, '-=0.04')
-                .call(resolve, null, '+=0.1');
-        });
     },
     
     // Deal damage to any target (hero or summon)
