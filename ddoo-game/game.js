@@ -10,8 +10,8 @@ const Game = {
     state: {
         phase: 'prepare',    // 'prepare' | 'battle' | 'result'
         turn: 1,             // Current turn number
-        cost: 3,             // Current cost points (starts at 3, increases each turn)
-        maxCost: 10,         // Max cost points
+        cost: 3,             // Current cost points
+        maxCost: 3,          // Fixed max cost (3 per turn)
         battleTurn: 0,       // Battle sub-turn
         
         // Units on board
@@ -409,16 +409,25 @@ const Game = {
     },
     
     updateCostUI() {
-        // Update top bar cost
-        const costEl = document.getElementById('cost-display');
-        if (costEl) {
-            costEl.textContent = this.state.cost;
-        }
-        // Update bottom panel cost
-        const costElBottom = document.getElementById('cost-display-bottom');
-        if (costElBottom) {
-            costElBottom.textContent = this.state.cost;
-        }
+        const currentCost = this.state.cost;
+        
+        // Update top bar cost orbs
+        const topOrbs = document.querySelectorAll('#top-cost-orbs .top-cost-orb');
+        topOrbs.forEach((orb, index) => {
+            orb.classList.toggle('active', index < currentCost);
+        });
+        
+        // Update bottom panel cost orbs
+        const bottomOrbs = document.querySelectorAll('#cost-orbs .cost-orb');
+        bottomOrbs.forEach((orb, index) => {
+            if (index < currentCost) {
+                orb.classList.add('active');
+                orb.classList.remove('spent');
+            } else {
+                orb.classList.remove('active');
+                orb.classList.add('spent');
+            }
+        });
     },
     
     updatePhaseUI() {
@@ -2568,8 +2577,8 @@ const Game = {
     nextTurn() {
         this.state.turn++;
         
-        // Increase cost (like Hearthstone mana)
-        this.state.cost = Math.min(this.state.turn + 2, this.state.maxCost);
+        // Reset cost to max (fixed 3 per turn)
+        this.state.cost = this.state.maxCost;
         
         // Clear dead units
         this.state.playerUnits = this.state.playerUnits.filter(u => {

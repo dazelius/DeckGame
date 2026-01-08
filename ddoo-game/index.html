@@ -211,12 +211,28 @@
             text-shadow: 0 0 8px var(--ds-gold-glow);
         }
         
-        #cost-display {
-            font-family: 'Cinzel', serif;
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--ds-gold);
-            text-shadow: 0 0 10px var(--ds-gold-glow);
+        .top-cost-orbs {
+            display: flex;
+            gap: 6px;
+        }
+        
+        .top-cost-orb {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid var(--ds-gold-dark);
+            background: radial-gradient(circle at 30% 30%, #1a1510 0%, #0a0805 100%);
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.8);
+            transition: all 0.3s ease;
+        }
+        
+        .top-cost-orb.active {
+            border-color: var(--ds-gold);
+            background: radial-gradient(circle at 30% 30%, 
+                #ffdd66 0%, #c9a227 40%, #8b6914 100%);
+            box-shadow: 
+                inset 0 0 8px rgba(255,220,100,0.5),
+                0 0 12px var(--ds-gold-glow);
         }
         
         /* ==================== CENTER MESSAGE ==================== */
@@ -446,38 +462,94 @@
             padding: 8px 20px;
         }
         
-        /* Cost Display (Left) */
-        .cost-display-panel {
+        /* Cost Orbs Display (Left) */
+        .cost-orbs-panel {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 16px;
         }
         
-        .cost-label {
+        .cost-orbs-label {
             font-family: 'Cinzel', serif;
-            font-size: 11px;
-            letter-spacing: 2px;
+            font-size: 12px;
+            letter-spacing: 3px;
             color: var(--ds-text-dim);
+            text-transform: uppercase;
         }
         
-        .cost-value {
+        .cost-orbs {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
         
-        .cost-icon {
-            font-size: 24px;
-            color: var(--ds-gold);
-            text-shadow: 0 0 10px var(--ds-gold-glow);
+        .cost-orb {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 3px solid var(--ds-gold-dark);
+            background: radial-gradient(circle at 30% 30%, 
+                #2a2015 0%, 
+                #15100a 50%, 
+                #0a0805 100%
+            );
+            box-shadow: 
+                inset 0 0 10px rgba(0,0,0,0.8),
+                0 0 5px rgba(0,0,0,0.5);
+            transition: all 0.3s ease;
+            position: relative;
         }
         
-        #cost-display-bottom {
-            font-family: 'Cinzel', serif;
-            font-size: 28px;
-            font-weight: 700;
-            color: var(--ds-gold);
-            text-shadow: 0 0 12px var(--ds-gold-glow);
+        .cost-orb::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .cost-orb.active {
+            border-color: var(--ds-gold);
+            background: radial-gradient(circle at 30% 30%, 
+                #ffdd66 0%, 
+                #c9a227 30%, 
+                #8b6914 70%,
+                #5a4410 100%
+            );
+            box-shadow: 
+                inset 0 0 15px rgba(255,220,100,0.5),
+                0 0 20px var(--ds-gold-glow),
+                0 0 40px rgba(201,162,39,0.3);
+            animation: orbPulse 2s ease-in-out infinite;
+        }
+        
+        .cost-orb.active::before {
+            background: radial-gradient(circle, 
+                rgba(255,255,200,0.9) 0%, 
+                rgba(255,220,100,0.4) 50%,
+                transparent 70%
+            );
+            box-shadow: 0 0 10px rgba(255,220,100,0.8);
+        }
+        
+        @keyframes orbPulse {
+            0%, 100% { 
+                box-shadow: 
+                    inset 0 0 15px rgba(255,220,100,0.5),
+                    0 0 20px var(--ds-gold-glow),
+                    0 0 40px rgba(201,162,39,0.3);
+            }
+            50% { 
+                box-shadow: 
+                    inset 0 0 20px rgba(255,220,100,0.7),
+                    0 0 30px var(--ds-gold-glow),
+                    0 0 50px rgba(201,162,39,0.5);
+            }
         }
         
         /* End Turn Button (Right) */
@@ -688,10 +760,11 @@
             </div>
             
             <div class="souls-box">
-                <span class="souls-label">ESTUS</span>
-                <div class="souls-display">
-                    <span class="souls-icon">&#9733;</span>
-                    <span id="cost-display">3</span>
+                <span class="souls-label">SOULS</span>
+                <div class="top-cost-orbs" id="top-cost-orbs">
+                    <div class="top-cost-orb active"></div>
+                    <div class="top-cost-orb active"></div>
+                    <div class="top-cost-orb active"></div>
                 </div>
             </div>
         </div>
@@ -714,11 +787,12 @@
         
         <!-- Bottom Bar: Cost (Left) + End Turn (Right) -->
         <div id="panel-bottom">
-            <div class="cost-display-panel">
-                <span class="cost-label">ESTUS</span>
-                <div class="cost-value">
-                    <span class="cost-icon">&#9733;</span>
-                    <span id="cost-display-bottom">3</span>
+            <div class="cost-orbs-panel">
+                <span class="cost-orbs-label">SOULS</span>
+                <div class="cost-orbs" id="cost-orbs">
+                    <div class="cost-orb active" data-index="0"></div>
+                    <div class="cost-orb active" data-index="1"></div>
+                    <div class="cost-orb active" data-index="2"></div>
                 </div>
             </div>
             <button id="btn-end-turn">End Turn</button>
