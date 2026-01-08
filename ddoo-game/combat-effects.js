@@ -383,27 +383,27 @@ const CombatEffects = {
         
         const styles = {
             normal: { 
-                fill: ['#ff6666', '#ff2222'],  // 그라데이션
+                fill: '#ff4444',
                 stroke: '#000000',
-                fontSize: 48,
+                fontSize: 52,
                 prefix: ''
             },
             critical: { 
-                fill: ['#ffff00', '#ffaa00'],
+                fill: '#ffff00',
                 stroke: '#cc4400',
-                fontSize: 64,
+                fontSize: 68,
                 prefix: ''
             },
             heal: { 
-                fill: ['#66ff66', '#22cc22'],
+                fill: '#44ff44',
                 stroke: '#004400',
-                fontSize: 48,
+                fontSize: 52,
                 prefix: '+'
             },
             block: { 
-                fill: ['#66aaff', '#2266ff'],
+                fill: '#44aaff',
                 stroke: '#001144',
-                fontSize: 44,
+                fontSize: 48,
                 prefix: ''
             }
         };
@@ -420,14 +420,14 @@ const CombatEffects = {
                 fontFamily: 'Impact, Arial Black, sans-serif',
                 fontWeight: 'bold',
                 fill: style.fill,
-                stroke: { color: style.stroke, width: 6 },
+                stroke: { color: style.stroke, width: 8 },
                 dropShadow: {
                     color: 0x000000,
-                    blur: 8,
-                    distance: 4,
+                    blur: 6,
+                    distance: 3,
                     angle: Math.PI / 4
                 },
-                letterSpacing: 2
+                letterSpacing: 3
             }
         });
         
