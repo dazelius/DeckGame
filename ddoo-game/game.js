@@ -1845,25 +1845,69 @@ const Game = {
         });
     },
     
+    // Find target for enemy attack
+    // Rules: 1) Same line first, 2) Closest X, 3) If no same line, check adjacent lines
+    findEnemyTarget(enemy) {
+        const allTargets = [this.state.hero, ...this.state.playerUnits]
+            .filter(u => u && u.hp > 0 && u !== enemy);
+        
+        if (allTargets.length === 0) return null;
+        
+        // Helper: find closest target in a list (lowest X = closest to enemy side)
+        const findClosest = (targets) => {
+            if (targets.length === 0) return null;
+            return targets.reduce((closest, t) => 
+                (!closest || t.gridX > closest.gridX) ? t : closest, null);
+        };
+        
+        // 1. Check same line first
+        const sameLineTargets = allTargets.filter(t => t.gridZ === enemy.gridZ);
+        if (sameLineTargets.length > 0) {
+            return findClosest(sameLineTargets);
+        }
+        
+        // 2. Check adjacent lines (above and below)
+        const adjacentLines = [enemy.gridZ - 1, enemy.gridZ + 1]
+            .filter(z => z >= 0 && z < this.arena.depth);
+        
+        let closestTarget = null;
+        let closestX = -1;
+        
+        for (const z of adjacentLines) {
+            const lineTargets = allTargets.filter(t => t.gridZ === z);
+            const closest = findClosest(lineTargets);
+            if (closest && closest.gridX > closestX) {
+                closestTarget = closest;
+                closestX = closest.gridX;
+            }
+        }
+        
+        if (closestTarget) return closestTarget;
+        
+        // 3. Fallback: any target, closest X
+        return findClosest(allTargets);
+    },
+    
     async executeEnemyIntent(enemy) {
         const intent = enemy.intent;
-        const hero = this.state.hero;
         
-        if (!hero || hero.hp <= 0) return;
+        // Find target using targeting rules
+        const target = this.findEnemyTarget(enemy);
+        if (!target) return;
         
         switch (intent.type) {
             case 'attack':
                 const isMelee = (enemy.range || 1) <= 1;
                 
                 if (isMelee) {
-                    // Melee: Move to same line as hero, then dash attack
-                    if (enemy.gridZ !== hero.gridZ) {
-                        await this.moveEnemyToLine(enemy, hero.gridZ);
+                    // Melee: Move to same line as target, then dash attack
+                    if (enemy.gridZ !== target.gridZ) {
+                        await this.moveEnemyToLine(enemy, target.gridZ);
                     }
-                    await this.enemyMeleeAttack(enemy, hero, intent.damage);
+                    await this.enemyMeleeAttack(enemy, target, intent.damage);
                 } else {
                     // Ranged: Attack from current position
-                    await this.enemyRangedAttack(enemy, hero, intent.damage);
+                    await this.enemyRangedAttack(enemy, target, intent.damage);
                 }
                 break;
                 
@@ -1933,14 +1977,14 @@ const Game = {
     
     async enemyMeleeAttack(enemy, target, intentDamage) {
         if (!enemy.sprite || !target.sprite) {
-            this.dealDamageToHero(target, intentDamage);
+            this.dealDamageToTarget(target, intentDamage);
             return;
         }
         
         const originalX = enemy.sprite.x;
         const originalY = enemy.sprite.y;
         
-        // Dash toward hero
+        // Dash toward target
         const dashX = originalX + (target.sprite.x - originalX) * 0.5;
         const dashY = originalY + (target.sprite.y - originalY) * 0.2;
         
@@ -1953,7 +1997,7 @@ const Game = {
                     ease: 'power2.out'
                 })
                 .call(() => {
-                    this.dealDamageToHero(target, intentDamage);
+                    this.dealDamageToTarget(target, intentDamage);
                 })
                 .to(enemy.sprite, {
                     x: originalX,
@@ -1967,7 +2011,7 @@ const Game = {
     
     async enemyRangedAttack(enemy, target, intentDamage) {
         if (!enemy.sprite) {
-            this.dealDamageToHero(target, intentDamage);
+            this.dealDamageToTarget(target, intentDamage);
             return;
         }
         
@@ -1986,15 +2030,16 @@ const Game = {
                     ease: 'power2.in'
                 })
                 .call(() => {
-                    this.dealDamageToHero(target, intentDamage);
+                    this.dealDamageToTarget(target, intentDamage);
                 }, null, '-=0.04')
                 .call(resolve, null, '+=0.1');
         });
     },
     
-    dealDamageToHero(hero, damage) {
-        // Damage goes through block first
-        if (this.state.heroBlock > 0) {
+    // Deal damage to any target (hero or summon)
+    dealDamageToTarget(target, damage) {
+        // If target is hero, check block first
+        if (target.isHero && this.state.heroBlock > 0) {
             const blocked = Math.min(this.state.heroBlock, damage);
             this.state.heroBlock -= blocked;
             damage -= blocked;
@@ -2005,24 +2050,37 @@ const Game = {
         }
         
         if (damage > 0) {
-            hero.hp -= damage;
-            this.showDamage(hero, damage);
+            target.hp -= damage;
+            this.showDamage(target, damage);
             
             // Update HP bar
-            this.updateUnitHPBar(hero);
+            this.updateUnitHPBar(target);
             
-            // Hero hit effect
-            if (hero.sprite) {
-                gsap.to(hero.sprite, {
+            // Hit effect
+            if (target.sprite) {
+                gsap.to(target.sprite, {
                     alpha: 0.5,
                     duration: 0.1,
                     yoyo: true,
                     repeat: 1
                 });
             }
+            
+            // Check if target died
+            if (target.hp <= 0) {
+                this.killUnit(target);
+            }
         }
         
-        this.updateHPUI();
+        // Update hero HP UI if hero
+        if (target.isHero) {
+            this.updateHPUI();
+        }
+    },
+    
+    // Legacy function for backward compatibility
+    dealDamageToHero(hero, damage) {
+        this.dealDamageToTarget(hero, damage);
     },
     
     async attackUnit(attacker, target) {
