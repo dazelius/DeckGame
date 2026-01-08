@@ -1261,9 +1261,11 @@ const Game = {
     showAoeHighlight(centerX, centerZ, aoe) {
         this.clearAoeHighlight();
         
+        // Use effects container (not grid - grid gets cleared every frame)
         if (!this.aoeHighlight) {
             this.aoeHighlight = new PIXI.Graphics();
-            this.containers.grid.addChild(this.aoeHighlight);
+            this.aoeHighlight.zIndex = 5;
+            this.containers.effects.addChild(this.aoeHighlight);
         }
         
         const graphics = this.aoeHighlight;
@@ -1286,8 +1288,8 @@ const Game = {
                 graphics.lineTo(corners[2].x, corners[2].y);
                 graphics.lineTo(corners[3].x, corners[3].y);
                 graphics.closePath();
-                graphics.fill({ color: 0xff4444, alpha: 0.3 });
-                graphics.stroke({ color: 0xff6666, width: 2, alpha: 0.8 });
+                graphics.fill({ color: 0xff4444, alpha: 0.4 });
+                graphics.stroke({ color: 0xff6666, width: 3, alpha: 0.9 });
             }
         }
     },
