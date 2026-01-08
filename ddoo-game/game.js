@@ -1613,8 +1613,13 @@ const Game = {
         this.state.discard.push(cardId);
         this.updateCostUI();
         
-        // Execute attack on specific target
-        await this.playAttackCardOnTarget(cardDef, targetEnemy);
+        // For 'all' target cards (like Cleave), attack ALL enemies
+        if (cardDef.target === 'all') {
+            await this.playAttackCard(cardDef);
+        } else {
+            // Execute attack on specific target with AOE
+            await this.playAttackCardOnTarget(cardDef, targetEnemy);
+        }
         
         this.renderHand();
         if (navigator.vibrate) navigator.vibrate([20, 30, 20]);
