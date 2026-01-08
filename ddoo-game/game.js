@@ -107,43 +107,15 @@ const Game = {
     
     // ==================== CARD DEFINITIONS ====================
     // aoe: { width: X방향, depth: Z방향 } - 공격 범위 (기본 1x1)
-    // melee: true = 근접 (라인 이동 후 공격), melee: false/없음 = 원거리 (제자리 공격)
-    cards: {
-        strike: { 
-            name: 'Strike', cost: 1, type: 'attack', damage: 6, 
-            target: 'enemy', melee: true, 
-            aoe: { width: 2, depth: 1 },  // 2칸 관통
-            desc: 'Pierce 2 cells. Deal 6 damage' 
-        },
-        defend: { name: 'Defend', cost: 1, type: 'skill', block: 5, target: 'self', desc: 'Gain 5 Block' },
-        bash: { 
-            name: 'Bash', cost: 2, type: 'attack', damage: 8, vulnerable: 2, 
-            target: 'enemy', melee: true, knockback: 1, frontOnly: true,  // 최전선만 타겟 가능
-            aoe: { width: 1, depth: 1 },
-            desc: 'Deal 8 damage. Knockback 1 cell. Targets frontline only.' 
-        },
-        cleave: { 
-            name: 'Cleave', cost: 1, type: 'attack', damage: 8, 
-            target: 'all', melee: true, 
-            aoe: { width: 3, depth: 1 },  // 3칸 가로
-            desc: 'Deal 8 damage to 3 cells wide' 
-        },
-        ironWave: { 
-            name: 'Iron Wave', cost: 1, type: 'attack', damage: 5, block: 5, 
-            target: 'enemy', melee: true, 
-            aoe: { width: 1, depth: 1 },
-            desc: 'Gain 5 Block. Deal 5 damage' 
-        },
-        fireBolt: { 
-            name: 'Fire Bolt', cost: 2, type: 'attack', damage: 5, 
-            target: 'enemy', melee: false, 
-            aoe: { width: 1, depth: 1 },
-            createZone: 'fire',  // 화염 지대 생성
-            desc: 'Ranged. Deal 5 damage. Creates burning ground (2 turns)' 
-        },
-        summonKnight: { name: 'Summon Knight', cost: 3, type: 'summon', unit: 'knight', target: 'grid', desc: 'Summon a Knight (40 HP, 12 DMG)' },
-        summonArcher: { name: 'Summon Archer', cost: 2, type: 'summon', unit: 'archer', target: 'grid', desc: 'Summon an Archer (25 HP, 8 DMG, Range 4)' },
-        heal: { name: 'Heal', cost: 2, type: 'skill', heal: 10, target: 'self', desc: 'Heal 10 HP' }
+    // 카드 정의는 CardSystem 에서 관리
+    // CardSystem.cards 참조
+    
+    // 헬퍼: 카드 정보 가져오기
+    getCard(cardId) {
+        if (typeof CardSystem !== 'undefined') {
+            return CardSystem.getCard(cardId);
+        }
+        return null;
     },
     
     // ==================== TIMERS ====================
@@ -194,6 +166,16 @@ const Game = {
             GridAOE.init(this, this.app);
         }
         
+        // Card System
+        if (typeof CardSystem !== 'undefined') {
+            CardSystem.init(this);
+        }
+        
+        // Unit Combat System
+        if (typeof UnitCombat !== 'undefined') {
+            UnitCombat.init(this, this.app);
+        }
+        
         // Draw grid
         this.drawGrid();
         
@@ -240,24 +222,12 @@ const Game = {
     },
     
     initDeck() {
-        // Create deck with multiple copies of each card
-        const cardCounts = {
-            strike: 3,
-            defend: 3,
-            bash: 2,
-            cleave: 1,
-            ironWave: 2,
-            fireBolt: 2,  // Ranged attack
-            summonKnight: 2,
-            summonArcher: 2,
-            heal: 1
-        };
-        
-        this.state.deck = [];
-        for (const [cardId, count] of Object.entries(cardCounts)) {
-            for (let i = 0; i < count; i++) {
-                this.state.deck.push(cardId);
-            }
+        // CardSystem을 통해 덱 생성
+        if (typeof CardSystem !== 'undefined') {
+            this.state.deck = CardSystem.createDeck();
+        } else {
+            // Fallback
+            this.state.deck = ['strike', 'strike', 'defend', 'defend', 'bash'];
         }
         
         // Shuffle deck
@@ -273,26 +243,31 @@ const Game = {
     },
     
     drawCards(count = 5) {
-        for (let i = 0; i < count; i++) {
-            if (this.state.deck.length === 0) {
-                // Shuffle discard into deck
-                this.state.deck = [...this.state.discard];
-                this.state.discard = [];
-                this.shuffleDeck();
-            }
-            
-            if (this.state.deck.length > 0) {
-                const cardId = this.state.deck.pop();
-                this.state.hand.push(cardId);
+        if (typeof CardSystem !== 'undefined') {
+            CardSystem.drawCards(this.state, count);
+        } else {
+            // Fallback
+            for (let i = 0; i < count; i++) {
+                if (this.state.deck.length === 0) {
+                    this.state.deck = [...this.state.discard];
+                    this.state.discard = [];
+                    this.shuffleDeck();
+                }
+                if (this.state.deck.length > 0) {
+                    this.state.hand.push(this.state.deck.pop());
+                }
             }
         }
-        
         this.renderHand();
     },
     
     discardHand() {
-        this.state.discard.push(...this.state.hand);
-        this.state.hand = [];
+        if (typeof CardSystem !== 'undefined') {
+            CardSystem.discardHand(this.state);
+        } else {
+            this.state.discard.push(...this.state.hand);
+            this.state.hand = [];
+        }
         this.renderHand();
     },
     
@@ -736,7 +711,7 @@ const Game = {
         handEl.innerHTML = '';
         
         this.state.hand.forEach((cardId, index) => {
-            const cardDef = this.cards[cardId];
+            const cardDef = this.getCard(cardId);
             if (!cardDef) return;
             
             const cardEl = document.createElement('div');
@@ -1173,7 +1148,7 @@ const Game = {
         e.preventDefault();
         e.stopPropagation();
         
-        const cardDef = this.cards[cardId];
+        const cardDef = this.getCard(cardId);
         if (!cardDef) return;
         
         // Check if this is a summon card
@@ -1226,7 +1201,7 @@ const Game = {
         ghost.style.left = (touch.clientX - 45) + 'px';
         ghost.style.top = (touch.clientY - 60) + 'px';
         
-        const cardDef = this.cards[this.dragState.cardId];
+        const cardDef = this.getCard(this.dragState.cardId);
         
         if (this.dragState.isSummon) {
             // Check grid position for summons
@@ -1640,7 +1615,7 @@ const Game = {
         const touch = e.changedTouches ? e.changedTouches[0] : e;
         const cardId = this.dragState.cardId;
         const handIndex = this.dragState.handIndex;
-        const cardDef = this.cards[cardId];
+        const cardDef = this.getCard(cardId);
         
         let success = false;
         
@@ -1709,7 +1684,7 @@ const Game = {
     },
     
     async executeCardOnTarget(cardId, handIndex, targetEnemy) {
-        const cardDef = this.cards[cardId];
+        const cardDef = this.getCard(cardId);
         if (!cardDef || this.state.cost < cardDef.cost) return;
         
         // Deduct cost
@@ -1813,7 +1788,7 @@ const Game = {
     },
     
     async executeCard(cardId, handIndex) {
-        const cardDef = this.cards[cardId];
+        const cardDef = this.getCard(cardId);
         if (!cardDef || this.state.cost < cardDef.cost) return;
         
         // Deduct cost
