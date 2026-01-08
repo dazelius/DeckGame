@@ -823,15 +823,33 @@ const Game = {
         const newPos = this.getCellCenter(hero.gridX, hero.gridZ);
         if (!newPos) return;
         
-        // Animate movement
+        // Animate movement with hop effect
         return new Promise(resolve => {
-            gsap.to(hero.sprite, {
-                x: newPos.x,
-                y: newPos.y,
-                duration: 0.25,
-                ease: 'power2.out',
-                onComplete: resolve
-            });
+            const startY = hero.sprite.y;
+            const midY = Math.min(startY, newPos.y) - 30; // Hero hops higher
+            
+            gsap.timeline()
+                // Prepare to move
+                .to(hero.sprite.scale, { x: 1.15, y: 0.85, duration: 0.08 })
+                // Jump/dash
+                .to(hero.sprite, {
+                    x: newPos.x,
+                    y: midY,
+                    duration: 0.18,
+                    ease: 'power2.out'
+                })
+                .to(hero.sprite.scale, { x: 0.9, y: 1.1, duration: 0.1 }, '<')
+                // Land
+                .to(hero.sprite, {
+                    y: newPos.y,
+                    duration: 0.12,
+                    ease: 'power2.in'
+                })
+                .to(hero.sprite.scale, { x: 1, y: 1, duration: 0.1 }, '<')
+                .call(() => {
+                    hero.sprite.zIndex = Math.floor(newPos.y);
+                    resolve();
+                });
         });
     },
     
@@ -867,15 +885,21 @@ const Game = {
         const newPos = this.getCellCenter(unit.gridX, unit.gridZ);
         if (!newPos) return;
         
-        // Animate movement
+        // Animate movement with hop effect
         return new Promise(resolve => {
-            gsap.to(unit.sprite, {
-                x: newPos.x,
-                y: newPos.y,
-                duration: 0.2,
-                ease: 'power2.out',
-                onComplete: resolve
-            });
+            const startY = unit.sprite.y;
+            const midY = Math.min(startY, newPos.y) - 15;
+            
+            gsap.timeline()
+                .to(unit.sprite.scale, { x: 1.1, y: 0.9, duration: 0.06 })
+                .to(unit.sprite, { x: newPos.x, y: midY, duration: 0.12, ease: 'power2.out' })
+                .to(unit.sprite.scale, { x: 0.95, y: 1.05, duration: 0.06 }, '<')
+                .to(unit.sprite, { y: newPos.y, duration: 0.08, ease: 'power2.in' })
+                .to(unit.sprite.scale, { x: 1, y: 1, duration: 0.08 }, '<')
+                .call(() => {
+                    unit.sprite.zIndex = Math.floor(newPos.y);
+                    resolve();
+                });
         });
     },
     
@@ -2340,7 +2364,7 @@ const Game = {
         );
         
         if (blockingEnemy) {
-            // Find alternative Z position
+            // Find alternative Z position and animate blocking enemy
             for (let z = 0; z < this.arena.depth; z++) {
                 if (z === targetZ) continue;
                 const occupied = this.state.enemyUnits.some(u => 
@@ -2349,13 +2373,17 @@ const Game = {
                 if (!occupied) {
                     blockingEnemy.gridZ = z;
                     blockingEnemy.z = z + 0.5;
-                    const newPos = this.getCellCenter(blockingEnemy.gridX, blockingEnemy.gridZ);
-                    if (newPos) {
-                        gsap.to(blockingEnemy.sprite, {
-                            x: newPos.x,
-                            y: newPos.y,
-                            duration: 0.15
-                        });
+                    const blockNewPos = this.getCellCenter(blockingEnemy.gridX, blockingEnemy.gridZ);
+                    if (blockNewPos && blockingEnemy.sprite) {
+                        // Hop animation for blocking enemy too
+                        const blockMidY = Math.min(blockingEnemy.sprite.y, blockNewPos.y) - 15;
+                        gsap.timeline()
+                            .to(blockingEnemy.sprite.scale, { x: 1.1, y: 0.9, duration: 0.06 })
+                            .to(blockingEnemy.sprite, { x: blockNewPos.x, y: blockMidY, duration: 0.12, ease: 'power2.out' })
+                            .to(blockingEnemy.sprite.scale, { x: 0.95, y: 1.05, duration: 0.06 }, '<')
+                            .to(blockingEnemy.sprite, { y: blockNewPos.y, duration: 0.08, ease: 'power2.in' })
+                            .to(blockingEnemy.sprite.scale, { x: 1, y: 1, duration: 0.08 }, '<')
+                            .call(() => { blockingEnemy.sprite.zIndex = Math.floor(blockNewPos.y); });
                     }
                     break;
                 }
@@ -2369,14 +2397,33 @@ const Game = {
         const newPos = this.getCellCenter(enemy.gridX, enemy.gridZ);
         if (!newPos) return;
         
+        // Animate movement with hop effect
         return new Promise(resolve => {
-            gsap.to(enemy.sprite, {
-                x: newPos.x,
-                y: newPos.y,
-                duration: 0.2,
-                ease: 'power2.out',
-                onComplete: resolve
-            });
+            const startY = enemy.sprite.y;
+            const midY = Math.min(startY, newPos.y) - 20;
+            
+            gsap.timeline()
+                // Prepare to move
+                .to(enemy.sprite.scale, { x: 1.1, y: 0.9, duration: 0.08 })
+                // Jump/dash
+                .to(enemy.sprite, {
+                    x: newPos.x,
+                    y: midY,
+                    duration: 0.15,
+                    ease: 'power2.out'
+                })
+                .to(enemy.sprite.scale, { x: 0.95, y: 1.05, duration: 0.08 }, '<')
+                // Land
+                .to(enemy.sprite, {
+                    y: newPos.y,
+                    duration: 0.1,
+                    ease: 'power2.in'
+                })
+                .to(enemy.sprite.scale, { x: 1, y: 1, duration: 0.1 }, '<')
+                .call(() => {
+                    enemy.sprite.zIndex = Math.floor(newPos.y);
+                    resolve();
+                });
         });
     },
     
