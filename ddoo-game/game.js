@@ -1143,17 +1143,8 @@ const Game = {
             const cursorX = touch.clientX - rect.left;
             const cursorY = touch.clientY - rect.top;
             
-            // Always show targeting bezier curve from hero
-            const hero = this.state.hero;
-            if (hero && hero.sprite) {
-                if (targetEnemy) {
-                    // Draw curve to target enemy
-                    this.drawTargetingCurve(hero.sprite.x, hero.sprite.y - 40, targetEnemy.sprite.x, targetEnemy.sprite.y - 40, true);
-                } else {
-                    // Draw curve to cursor
-                    this.drawTargetingCurve(hero.sprite.x, hero.sprite.y - 40, cursorX, cursorY, false);
-                }
-            }
+            // Draw bezier curves from card to ALL targetable enemies
+            this.drawTargetingCurvesToEnemies(cursorX, cursorY, targetEnemy);
             
             if (targetEnemy) {
                 // Get AOE pattern from card
@@ -1322,8 +1313,8 @@ const Game = {
         }
     },
     
-    // FGO-style bezier curve targeting line
-    drawTargetingCurve(startX, startY, endX, endY, hasTarget) {
+    // FGO-style bezier curves from card to ALL targetable enemies
+    drawTargetingCurvesToEnemies(cardX, cardY, hoveredEnemy) {
         if (!this.targetingCurve) {
             this.targetingCurve = new PIXI.Graphics();
             this.targetingCurve.zIndex = 15;
@@ -1333,50 +1324,59 @@ const Game = {
         const g = this.targetingCurve;
         g.clear();
         
-        // Calculate control point for bezier curve (arc upward)
-        const midX = (startX + endX) / 2;
-        const midY = Math.min(startY, endY) - 80; // Arc upward
-        
-        // Line color based on target
-        const color = hasTarget ? 0xff4444 : 0xffaa44;
-        const alpha = hasTarget ? 0.9 : 0.6;
-        
-        // Draw bezier curve
-        g.moveTo(startX, startY);
-        g.quadraticCurveTo(midX, midY, endX, endY);
-        g.stroke({ color: color, width: 4, alpha: alpha });
-        
-        // Draw inner glow line
-        g.moveTo(startX, startY);
-        g.quadraticCurveTo(midX, midY, endX, endY);
-        g.stroke({ color: 0xffffff, width: 2, alpha: alpha * 0.5 });
-        
-        // Draw arrow/indicator at end point
-        if (hasTarget) {
-            // Draw target reticle
-            g.circle(endX, endY, 15);
-            g.stroke({ color: color, width: 3, alpha: 0.8 });
-            g.circle(endX, endY, 8);
-            g.fill({ color: color, alpha: 0.4 });
+        // Draw curves to all living enemies
+        for (const enemy of this.state.enemyUnits) {
+            if (enemy.hp <= 0 || !enemy.sprite) continue;
             
-            // Crosshair lines
-            g.moveTo(endX - 20, endY);
-            g.lineTo(endX - 10, endY);
-            g.moveTo(endX + 10, endY);
-            g.lineTo(endX + 20, endY);
-            g.moveTo(endX, endY - 20);
-            g.lineTo(endX, endY - 10);
-            g.moveTo(endX, endY + 10);
-            g.lineTo(endX, endY + 20);
-            g.stroke({ color: color, width: 2, alpha: 0.8 });
-        } else {
-            // Draw small circle at cursor
-            g.circle(endX, endY, 6);
-            g.fill({ color: color, alpha: 0.6 });
+            const isHovered = (enemy === hoveredEnemy);
+            const endX = enemy.sprite.x;
+            const endY = enemy.sprite.y - (enemy.sprite.height || 60) / 2;
+            
+            // Calculate control point for bezier curve (arc upward)
+            const midX = (cardX + endX) / 2;
+            const midY = Math.min(cardY, endY) - 60;
+            
+            // Colors: hovered = bright red, others = dim orange
+            const color = isHovered ? 0xff4444 : 0xffaa44;
+            const alpha = isHovered ? 0.9 : 0.3;
+            const lineWidth = isHovered ? 4 : 2;
+            
+            // Draw bezier curve
+            g.moveTo(cardX, cardY);
+            g.quadraticCurveTo(midX, midY, endX, endY);
+            g.stroke({ color: color, width: lineWidth, alpha: alpha });
+            
+            // Draw inner glow for hovered
+            if (isHovered) {
+                g.moveTo(cardX, cardY);
+                g.quadraticCurveTo(midX, midY, endX, endY);
+                g.stroke({ color: 0xffffff, width: 2, alpha: 0.4 });
+                
+                // Draw target reticle on hovered enemy
+                g.circle(endX, endY, 18);
+                g.stroke({ color: color, width: 3, alpha: 0.9 });
+                g.circle(endX, endY, 10);
+                g.fill({ color: color, alpha: 0.5 });
+                
+                // Crosshair
+                g.moveTo(endX - 25, endY);
+                g.lineTo(endX - 12, endY);
+                g.moveTo(endX + 12, endY);
+                g.lineTo(endX + 25, endY);
+                g.moveTo(endX, endY - 25);
+                g.lineTo(endX, endY - 12);
+                g.moveTo(endX, endY + 12);
+                g.lineTo(endX, endY + 25);
+                g.stroke({ color: color, width: 2, alpha: 0.9 });
+            } else {
+                // Small indicator for non-hovered targets
+                g.circle(endX, endY, 8);
+                g.stroke({ color: color, width: 2, alpha: 0.4 });
+            }
         }
         
-        // Draw start point indicator
-        g.circle(startX, startY, 5);
+        // Draw start point at card position
+        g.circle(cardX, cardY, 6);
         g.fill({ color: 0x44aaff, alpha: 0.8 });
     },
     
