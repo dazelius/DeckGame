@@ -158,6 +158,12 @@ const KnockbackSystem = {
                 .call(() => {
                     unit.sprite.zIndex = Math.floor(newPos.y);
                     unit.isAnimating = false; // Allow ticker to update position again
+                    
+                    // 넉백으로 불구덩이 등에 진입 시 대미지!
+                    if (typeof GridAOE !== 'undefined') {
+                        GridAOE.onUnitEnterCell(unit, newGridX, unit.gridZ);
+                    }
+                    
                     resolve();
                 });
         });
