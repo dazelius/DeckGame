@@ -320,13 +320,14 @@ const Game = {
         ];
     },
     
-    getCellCenter(x, z) {
-        const corners = this.getCellCorners(x, z);
-        if (!corners) return null;
+    getCellCenter(gridX, gridZ) {
+        // Project the actual center point of the cell (x + 0.5, z + 0.5)
+        const centerWorld = DDOOBackground.project3DToScreen(gridX + 0.5, 0, gridZ + 0.5);
+        if (!centerWorld) return null;
         
         return {
-            x: (corners[0].x + corners[1].x + corners[2].x + corners[3].x) / 4,
-            y: (corners[0].y + corners[1].y + corners[2].y + corners[3].y) / 4
+            x: centerWorld.screenX,
+            y: centerWorld.screenY
         };
     },
     
