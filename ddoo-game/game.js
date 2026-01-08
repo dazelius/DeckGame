@@ -2528,14 +2528,13 @@ const Game = {
             return true;
         });
         
-        // Check victory - all enemies dead
+        // Check victory - all enemies dead (handled by checkVictory)
         if (this.state.enemyUnits.length === 0) {
-            this.showMessage('VICTORY!', 2000);
-            // Generate new wave of enemies for next combat
+            // Victory already shown by checkVictory, generate new wave
             setTimeout(async () => {
                 await this.generateEnemyUnits();
                 this.startPreparePhase();
-            }, 2000);
+            }, 3500); // Wait for victory animation
             return;
         }
         
