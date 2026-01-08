@@ -22,21 +22,21 @@ const DDOOBackground = {
         smoothing: 0.05
     },
     
-    // Camera defaults
+    // Camera defaults - fit grid tightly
     cameraDefaults: {
         posX: 5,       // Center of arena (X axis)
-        posY: 2.8,     // Height
-        posZ: 5.2,     // Distance
+        posY: 2.5,     // Height
+        posZ: 4.5,     // Closer to zoom in
         lookAtX: 5,    // Look at arena center
-        lookAtY: 0.5,  // Look at floor level
+        lookAtY: 0.3,  // Look at floor level
         lookAtZ: 1.5   // Look at grid center
     },
     
     // Auto zoom settings
     autoZoom: {
         enabled: true,
-        targetZ: 5.2,
-        currentZ: 5.2,
+        targetZ: 4.5,
+        currentZ: 4.5,
         targetX: 0,
         currentX: 0,
         targetLookAtX: 0,
@@ -271,9 +271,9 @@ const DDOOBackground = {
         const self = this;
         const { width, depth, centerX, centerZ } = this.gridConfig;
         
-        // Floor size - match grid with small margin
-        const floorWidth = width + 1;
-        const floorDepth = depth + 1;
+        // Floor size - EXACT match to grid (no margin)
+        const floorWidth = width;
+        const floorDepth = depth;
         
         // 기본 바닥 (텍스처 로딩 전 폴백)
         const baseFloor = new THREE.Mesh(
@@ -334,8 +334,8 @@ const DDOOBackground = {
             tex.magFilter = THREE.NearestFilter;
             tex.minFilter = THREE.NearestFilter;
             
-            // Wall dimensions
-            const wallWidth = width + 2;
+            // Wall dimensions - match grid
+            const wallWidth = width;
             const wallHeight = 7;
             
             const wallMat = new THREE.MeshBasicMaterial({ 
@@ -392,7 +392,7 @@ const DDOOBackground = {
             
             const fallbackWallHeight = 7;
             // Fallback walls
-            const backWall = new THREE.Mesh(new THREE.PlaneGeometry(width + 2, fallbackWallHeight), fallbackMat);
+            const backWall = new THREE.Mesh(new THREE.PlaneGeometry(width, fallbackWallHeight), fallbackMat);
             backWall.position.set(centerX, fallbackWallHeight / 2 - 0.5, -0.5);
             self.dungeonGroup.add(backWall);
             
