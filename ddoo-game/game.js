@@ -446,130 +446,180 @@ const Game = {
         this.renderEnemyIntents();
     },
     
+    // ==================== PIXI-based Enemy Intents ====================
     renderEnemyIntents() {
-        // Clear existing intent UI
-        document.querySelectorAll('.enemy-intent').forEach(el => el.remove());
-        
         this.state.enemyUnits.forEach(enemy => {
-            if (!enemy.sprite || !enemy.intent) return;
-            
-            const intentEl = document.createElement('div');
-            intentEl.className = `enemy-intent ${enemy.intent.type}`;
-            
-            let icon = '';
-            let value = '';
-            switch (enemy.intent.type) {
-                case 'attack':
-                    icon = '⚔'; // Crossed swords
-                    value = enemy.intent.damage;
-                    break;
-                case 'defend':
-                    icon = '🛡'; // Shield
-                    value = '';
-                    break;
-                case 'buff':
-                    icon = '⬆'; // Up arrow
-                    value = '';
-                    break;
+            this.createEnemyIntent(enemy);
+        });
+    },
+    
+    createEnemyIntent(enemy) {
+        if (!enemy.sprite || !enemy.intent) return;
+        
+        // Remove existing intent
+        if (enemy.intentContainer) {
+            enemy.intentContainer.destroy();
+        }
+        
+        const container = new PIXI.Container();
+        
+        // Intent background
+        const bg = new PIXI.Graphics();
+        bg.roundRect(-22, -28, 44, 36, 4);
+        bg.fill({ color: 0x0a0806, alpha: 0.9 });
+        
+        // Border color based on type
+        let borderColor = 0x8b2020; // Attack - red
+        let textColor = 0xff4444;
+        if (enemy.intent.type === 'defend') {
+            borderColor = 0x1a4a7a;
+            textColor = 0x4488ff;
+        } else if (enemy.intent.type === 'buff') {
+            borderColor = 0x6a4a0a;
+            textColor = 0xffaa44;
+        }
+        
+        bg.stroke({ color: borderColor, width: 2 });
+        container.addChild(bg);
+        
+        // Icon
+        let iconText = '⚔';
+        if (enemy.intent.type === 'defend') iconText = '🛡';
+        else if (enemy.intent.type === 'buff') iconText = '↑';
+        
+        const icon = new PIXI.Text({
+            text: iconText,
+            style: { fontSize: 16, fill: textColor }
+        });
+        icon.anchor.set(0.5);
+        icon.y = -16;
+        container.addChild(icon);
+        
+        // Damage value (for attack)
+        if (enemy.intent.type === 'attack' && enemy.intent.damage) {
+            const dmgText = new PIXI.Text({
+                text: enemy.intent.damage.toString(),
+                style: { 
+                    fontSize: 14, 
+                    fill: textColor,
+                    fontFamily: 'Cinzel, serif',
+                    fontWeight: 'bold'
+                }
+            });
+            dmgText.anchor.set(0.5);
+            dmgText.y = 0;
+            container.addChild(dmgText);
+        }
+        
+        // Arrow pointing down
+        const arrow = new PIXI.Graphics();
+        arrow.moveTo(0, 8);
+        arrow.lineTo(-5, 2);
+        arrow.lineTo(5, 2);
+        arrow.closePath();
+        arrow.fill({ color: borderColor });
+        arrow.y = 0;
+        container.addChild(arrow);
+        
+        // Position above sprite
+        const spriteHeight = enemy.sprite.height || 60;
+        container.y = -spriteHeight * 0.5 - 25;
+        
+        // Add to sprite
+        enemy.sprite.addChild(container);
+        enemy.intentContainer = container;
+    },
+    
+    clearEnemyIntents() {
+        this.state.enemyUnits.forEach(enemy => {
+            if (enemy.intentContainer) {
+                enemy.intentContainer.destroy();
+                enemy.intentContainer = null;
             }
-            
-            intentEl.innerHTML = `
-                <div class="intent-container">
-                    <span class="intent-icon">${icon}</span>
-                    ${value ? `<span class="intent-value">${value}</span>` : ''}
-                </div>
-            `;
-            
-            // Position above enemy sprite
-            const rect = document.getElementById('battle-area').getBoundingClientRect();
-            const spriteHeight = enemy.sprite.height || 80;
-            intentEl.style.left = (enemy.sprite.x + rect.left) + 'px';
-            intentEl.style.top = (enemy.sprite.y + rect.top - spriteHeight * 0.5 - 50) + 'px';
-            
-            document.body.appendChild(intentEl);
         });
     },
     
     // ==================== CHARACTER HP BARS ====================
+    // ==================== PIXI-based HP Bars ====================
     renderAllHPBars() {
-        // Clear existing HP bars
-        document.querySelectorAll('.char-hp-bar').forEach(el => el.remove());
-        
-        // Render HP bars for all units
         [...this.state.playerUnits, ...this.state.enemyUnits].forEach(unit => {
             if (unit.hp > 0 && unit.sprite) {
-                this.renderUnitHPBar(unit);
+                this.createUnitHPBar(unit);
             }
         });
     },
     
-    renderUnitHPBar(unit) {
+    createUnitHPBar(unit) {
         if (!unit.sprite) return;
         
-        // Remove existing HP bar for this unit
-        if (unit.hpBarEl) {
-            unit.hpBarEl.remove();
+        // Remove existing HP bar
+        if (unit.hpBar) {
+            unit.hpBar.destroy();
         }
         
-        const hpPercent = Math.max(0, (unit.hp / unit.maxHp) * 100);
-        const isLow = hpPercent < 30;
+        // Create HP bar container
+        const hpBar = new PIXI.Container();
         
-        let hpClass = 'enemy';
-        if (unit.isHero) hpClass = 'player';
-        else if (unit.team === 'player') hpClass = 'summon';
+        // HP bar dimensions
+        const barWidth = 50;
+        const barHeight = 6;
         
-        const hpBarEl = document.createElement('div');
-        hpBarEl.className = `char-hp-bar ${hpClass}${isLow ? ' low' : ''}`;
-        hpBarEl.innerHTML = `
-            <div class="char-hp-container">
-                <div class="char-hp-fill" style="width: ${hpPercent}%"></div>
-            </div>
-            <span class="char-hp-text">${unit.hp}/${unit.maxHp}</span>
-        `;
+        // Background
+        const bg = new PIXI.Graphics();
+        bg.rect(-barWidth/2, 0, barWidth, barHeight);
+        bg.fill({ color: 0x111111 });
+        bg.stroke({ color: 0x333333, width: 1 });
+        hpBar.addChild(bg);
         
-        // Position below unit sprite
-        const rect = document.getElementById('battle-area').getBoundingClientRect();
+        // HP fill
+        const hpPercent = Math.max(0, unit.hp / unit.maxHp);
+        const fill = new PIXI.Graphics();
+        
+        // Color based on team
+        let fillColor = 0xaa3333; // Enemy - red
+        if (unit.isHero) fillColor = 0xc9a227; // Hero - gold
+        else if (unit.team === 'player') fillColor = 0x888888; // Summon - gray
+        
+        fill.rect(-barWidth/2 + 1, 1, (barWidth - 2) * hpPercent, barHeight - 2);
+        fill.fill({ color: fillColor });
+        hpBar.addChild(fill);
+        unit.hpFill = fill;
+        unit.hpFillColor = fillColor;
+        unit.hpBarWidth = barWidth;
+        unit.hpBarHeight = barHeight;
+        
+        // Position below sprite
         const spriteHeight = unit.sprite.height || 60;
-        hpBarEl.style.position = 'absolute';
-        hpBarEl.style.left = (unit.sprite.x + rect.left) + 'px';
-        hpBarEl.style.top = (unit.sprite.y + rect.top + spriteHeight * 0.3) + 'px';
-        hpBarEl.style.zIndex = '500';
+        hpBar.y = spriteHeight * 0.35;
         
-        document.body.appendChild(hpBarEl);
-        unit.hpBarEl = hpBarEl;
+        // Add to sprite (so it moves together)
+        unit.sprite.addChild(hpBar);
+        unit.hpBar = hpBar;
     },
     
     updateUnitHPBar(unit) {
-        if (!unit.hpBarEl || !unit.sprite) {
-            this.renderUnitHPBar(unit);
+        if (!unit.hpBar || !unit.hpFill) {
+            this.createUnitHPBar(unit);
             return;
         }
         
-        const hpPercent = Math.max(0, (unit.hp / unit.maxHp) * 100);
-        const isLow = hpPercent < 30;
+        const hpPercent = Math.max(0, unit.hp / unit.maxHp);
+        const barWidth = unit.hpBarWidth || 50;
+        const barHeight = unit.hpBarHeight || 6;
         
-        const fillEl = unit.hpBarEl.querySelector('.char-hp-fill');
-        const textEl = unit.hpBarEl.querySelector('.char-hp-text');
-        
-        if (fillEl) fillEl.style.width = `${hpPercent}%`;
-        if (textEl) textEl.textContent = `${Math.max(0, unit.hp)}/${unit.maxHp}`;
-        
-        unit.hpBarEl.classList.toggle('low', isLow);
-        
-        // Update position
-        const rect = document.getElementById('battle-area').getBoundingClientRect();
-        const spriteHeight = unit.sprite.height || 60;
-        unit.hpBarEl.style.left = (unit.sprite.x + rect.left) + 'px';
-        unit.hpBarEl.style.top = (unit.sprite.y + rect.top + spriteHeight * 0.3) + 'px';
+        // Redraw fill
+        unit.hpFill.clear();
+        unit.hpFill.rect(-barWidth/2 + 1, 1, (barWidth - 2) * hpPercent, barHeight - 2);
+        unit.hpFill.fill({ color: unit.hpFillColor || 0xaa3333 });
     },
     
     updateAllHPBars() {
         [...this.state.playerUnits, ...this.state.enemyUnits].forEach(unit => {
             if (unit.hp > 0 && unit.sprite) {
                 this.updateUnitHPBar(unit);
-            } else if (unit.hpBarEl) {
-                unit.hpBarEl.remove();
-                unit.hpBarEl = null;
+            } else if (unit.hpBar) {
+                unit.hpBar.destroy();
+                unit.hpBar = null;
             }
         });
     },
@@ -589,7 +639,7 @@ const Game = {
         this.discardHand();
         
         // Clear intent UI
-        document.querySelectorAll('.enemy-intent').forEach(el => el.remove());
+        this.clearEnemyIntents();
         
         console.log('[Game] End turn - starting battle');
         this.startBattlePhase();
@@ -1964,10 +2014,14 @@ const Game = {
     killUnit(unit) {
         console.log(`[Game] ${unit.type} died!`);
         
-        // Remove HP bar
-        if (unit.hpBarEl) {
-            unit.hpBarEl.remove();
-            unit.hpBarEl = null;
+        // Remove HP bar (PixiJS - child of sprite, will be destroyed with sprite)
+        if (unit.hpBar) {
+            unit.hpBar = null;
+        }
+        
+        // Remove intent container (PixiJS - child of sprite)
+        if (unit.intentContainer) {
+            unit.intentContainer = null;
         }
         
         // Death animation
@@ -1977,7 +2031,7 @@ const Game = {
                 scale: 0.5,
                 duration: 0.3,
                 onComplete: () => {
-                    unit.sprite.destroy();
+                    unit.sprite.destroy({ children: true }); // Destroy children too
                     unit.sprite = null;
                 }
             });
@@ -2067,9 +2121,8 @@ const Game = {
         DDOOBackground.handleResize();
         this.drawGrid();
         
-        // Update UI positions
-        this.updateAllHPBars();
-        this.renderEnemyIntents();
+        // Note: HP bars and intents are now children of sprites,
+        // so they move automatically - no position update needed
     }
 };
 
