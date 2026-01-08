@@ -44,6 +44,12 @@ const UnitCombat = {
             return;
         }
         
+        // 배쉬는 별도 처리 (묵직한 타격)
+        if (effectType === 'bash') {
+            await this.bashAttack(attacker, target, damage, { knockback, isEnemy, onHit });
+            return;
+        }
+        
         attacker.isAnimating = true;
         
         const startX = attacker.sprite.x;
@@ -102,6 +108,96 @@ const UnitCombat = {
                 attacker.isAnimating = false;
             }
         });
+    },
+    
+    // ==========================================
+    // 배쉬 전용 공격 (묵직한 내려치기)
+    // ==========================================
+    async bashAttack(attacker, target, damage, options = {}) {
+        const { knockback = 0, isEnemy = false, onHit = null } = options;
+        
+        attacker.isAnimating = true;
+        
+        const startX = attacker.sprite.x;
+        const startY = attacker.sprite.y;
+        const targetX = target.sprite.x;
+        const targetCenter = target.sprite.y - (target.sprite.height || 60) / 2;
+        
+        const dashDirection = isEnemy ? -1 : 1;
+        // 배쉬는 더 가깝게 접근 (80 대신 40)
+        const bashX = targetX - (dashDirection * 40);
+        
+        // 1. 큰 윈드업 (무기 들어올림)
+        await new Promise(resolve => {
+            gsap.timeline()
+                // 뒤로 살짝 물러나며 몸 움츠리기
+                .to(attacker.sprite, { x: startX - (dashDirection * 25), duration: 0.12 })
+                .to(attacker.sprite.scale, { x: 0.85, y: 1.2, duration: 0.12 }, '<')
+                // 점프하며 전진
+                .to(attacker.sprite, { 
+                    x: bashX, 
+                    y: startY - 30,  // 점프
+                    duration: 0.15, 
+                    ease: 'power2.out' 
+                })
+                .to(attacker.sprite.scale, { x: 1.3, y: 0.75, duration: 0.1 }, '<')
+                // 내려찍기
+                .to(attacker.sprite, { 
+                    y: startY + 5,  // 착지 + 약간 찌그러짐
+                    duration: 0.08, 
+                    ease: 'power3.in' 
+                })
+                .to(attacker.sprite.scale, { x: 1.4, y: 0.65, duration: 0.08 }, '<')
+                .add(resolve);
+        });
+        
+        // 2. 긴 히트스톱 (묵직한 임팩트)
+        if (typeof CombatEffects !== 'undefined') {
+            await CombatEffects.hitStop(80);  // 2배
+        }
+        
+        // 3. 강력한 이펙트
+        if (typeof CombatEffects !== 'undefined') {
+            CombatEffects.heavySlash(targetX, targetCenter, -30, 0xff8800);
+            CombatEffects.screenShake(15, 200);  // 강한 흔들림
+            CombatEffects.screenFlash('#ff6600', 100, 0.3);
+            CombatEffects.burstParticles(targetX, targetCenter, 0xff8800, 12);
+        }
+        
+        // 4. 피격
+        if (typeof CombatEffects !== 'undefined') {
+            CombatEffects.hitEffect(target.sprite);
+            CombatEffects.showDamageNumber(targetX, targetCenter - 20, damage, 'bash');
+        }
+        
+        if (isEnemy) {
+            this.game.dealDamageToTarget(target, damage);
+        } else {
+            this.game.dealDamage(target, damage);
+        }
+        
+        // 5. 넉백 (바로 실행)
+        if (knockback > 0 && target.hp > 0 && typeof KnockbackSystem !== 'undefined') {
+            KnockbackSystem.knockback(target, 1, knockback);
+        }
+        
+        if (onHit) onHit();
+        
+        // 6. 느린 복귀 (여운)
+        gsap.timeline()
+            // 잠시 멈춤 (여운)
+            .to({}, { duration: 0.15 })
+            // 스케일 복구하면서 천천히 복귀
+            .to(attacker.sprite.scale, { x: 1, y: 1, duration: 0.2, ease: 'power2.out' })
+            .to(attacker.sprite, {
+                x: startX,
+                y: startY,
+                duration: 0.35,
+                ease: 'power2.out',
+                onComplete: () => {
+                    attacker.isAnimating = false;
+                }
+            }, '<');
     },
     
     // ==========================================

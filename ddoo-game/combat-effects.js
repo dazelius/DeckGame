@@ -423,12 +423,19 @@ const CombatEffects = {
                 stroke: '#003300',
                 fontSize: 48,
                 prefix: '🧪'
+            },
+            bash: { 
+                fill: '#ff8800',
+                stroke: '#441100',
+                fontSize: 72,
+                prefix: '💥'
             }
         };
         
         const style = styles[type] || styles.normal;
         const isCritical = type === 'critical';
         const isHeal = type === 'heal';
+        const isBash = type === 'bash';
         
         // 메인 텍스트
         const text = new PIXI.Text({
@@ -438,11 +445,11 @@ const CombatEffects = {
                 fontFamily: 'Impact, Arial Black, sans-serif',
                 fontWeight: 'bold',
                 fill: style.fill,
-                stroke: { color: style.stroke, width: 8 },
+                stroke: { color: style.stroke, width: isBash ? 10 : 8 },
                 dropShadow: {
                     color: 0x000000,
-                    blur: 6,
-                    distance: 3,
+                    blur: isBash ? 10 : 6,
+                    distance: isBash ? 5 : 3,
                     angle: Math.PI / 4
                 },
                 letterSpacing: 3
@@ -459,7 +466,27 @@ const CombatEffects = {
         this.container.addChild(text);
         
         // 애니메이션
-        if (isCritical) {
+        if (isBash) {
+            // 배쉬: 위에서 쿵! 내려찍듯이
+            text.y = y - 100;
+            text.scale.set(2);
+            text.alpha = 0;
+            
+            gsap.timeline()
+                .to(text, { alpha: 1, duration: 0.05 })
+                .to(text, { y: y, duration: 0.12, ease: 'power3.in' })  // 쿵 내려옴
+                .to(text.scale, { x: 1.8, y: 0.6, duration: 0.08 }, '-=0.02')  // 찌그러짐
+                .to(text.scale, { x: 1.3, y: 1.3, duration: 0.15, ease: 'elastic.out(1, 0.5)' })  // 탄성 복구
+                .to(text, { 
+                    y: y - 40, 
+                    alpha: 0, 
+                    duration: 1.5,
+                    delay: 0.5,  // 오래 머무름
+                    ease: 'power2.out',
+                    onComplete: () => text.destroy()
+                });
+                
+        } else if (isCritical) {
             // 크리티컬: 크게 펑! 터지며 나타남
             text.scale.set(0.2);
             text.alpha = 0;
