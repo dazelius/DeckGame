@@ -118,8 +118,8 @@ const CardDrag = {
                 <div class="card-desc">${cardDef.desc}</div>
             </div>
         `;
-        ghost.style.left = (touch.clientX - 70) + 'px';
-        ghost.style.top = (touch.clientY - 95) + 'px';
+        ghost.style.left = (touch.clientX - 80) + 'px';
+        ghost.style.top = (touch.clientY - 110) + 'px';
         ghost.style.opacity = '1';
         ghost.style.transform = 'scale(1.2) rotate(-5deg)';
         
@@ -143,8 +143,8 @@ const CardDrag = {
         const touch = e.touches ? e.touches[0] : e;
         
         const ghost = this.dragState.ghost;
-        ghost.style.left = (touch.clientX - 70) + 'px';
-        ghost.style.top = (touch.clientY - 95) + 'px';
+        ghost.style.left = (touch.clientX - 80) + 'px';
+        ghost.style.top = (touch.clientY - 110) + 'px';
         
         const cardDef = this.game.getCard(this.dragState.cardId);
         
