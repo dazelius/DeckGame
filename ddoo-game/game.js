@@ -516,6 +516,15 @@ const Game = {
         this.state.enemyUnits.forEach(enemy => {
             this.createEnemyIntent(enemy);
         });
+        
+        // ★ 스폰 애니메이션 완료 후 위치 재계산 (600ms = 스폰 애니메이션 시간)
+        setTimeout(() => {
+            this.state.enemyUnits.forEach(enemy => {
+                if (enemy.hp > 0) {
+                    this.createEnemyIntent(enemy);
+                }
+            });
+        }, 700);
     },
     
     createEnemyIntent(enemy) {
@@ -757,23 +766,35 @@ const Game = {
         // ★ 위치 자동 피팅 (스프라이트 머리 바로 위)
         // ========================================
         const sprite = enemy.sprite;
-        let spriteTopY = -60; // 기본값 (스프라이트 맨 위)
+        let spriteTopY = -80; // 기본값 (스프라이트 맨 위)
         
         if (sprite) {
-            // 스프라이트의 실제 렌더링 높이 계산
-            const bounds = sprite.getLocalBounds();
-            const scaleY = sprite.scale?.y || 1;
-            const actualHeight = Math.abs(bounds.height) * scaleY;
+            // ★ baseScale 사용 (스폰 애니메이션 중에도 정확한 값)
+            const baseScale = enemy.baseScale || sprite.scale?.y || 1;
+            
+            // 스프라이트 내부의 실제 이미지 bounds 가져오기
+            let bounds = sprite.getLocalBounds();
+            
+            // bounds가 너무 작으면 (스폰 중일 수 있음) 기본값 사용
+            // 일반적인 캐릭터 스프라이트 높이: 약 100-150px
+            const minExpectedHeight = 80;
+            if (Math.abs(bounds.height) < minExpectedHeight) {
+                bounds = { height: -150, y: -150 }; // 기본 추정값
+            }
+            
+            // baseScale로 최종 높이 계산
+            const actualHeight = Math.abs(bounds.height) * baseScale;
             
             // anchor.y가 1이면 발밑이 (0,0), 머리가 -height
-            // anchor.y가 0.5면 중심이 (0,0), 머리가 -height/2
             const anchorY = sprite.anchor?.y ?? 1;
             spriteTopY = -actualHeight * anchorY;
+            
+            // 최소 높이 보장 (너무 낮으면 스프라이트와 겹침)
+            spriteTopY = Math.min(spriteTopY, -70);
         }
         
         // 인텐트를 스프라이트 머리 바로 위에 배치
-        // frameHeight가 32이므로 인텐트 하단(arrow)이 스프라이트 머리 위에 오도록
-        const margin = 5;
+        const margin = 10;
         container.y = spriteTopY - margin;
         
         // ★ 새 구조: enemy.container에 추가
