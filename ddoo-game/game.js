@@ -663,27 +663,21 @@ const Game = {
         enemy.intentContainer = container;
     },
     
-    // 브레이크 레시피 렌더링 (크게!)
+    // 브레이크 레시피 렌더링 (LOL 스타일 토막 게이지!)
     renderBreakRecipe(container, enemy, bgHeight = 85) {
         const recipe = enemy.intent.breakRecipe;
         const progress = enemy.breakProgress || [];
         
         const recipeContainer = new PIXI.Container();
-        recipeContainer.y = -bgHeight + 90;
+        recipeContainer.y = -bgHeight + 95;
+        recipeContainer.isBreakGauge = true;
         
-        const circleSize = 14;
-        const spacing = 32;
-        const totalWidth = recipe.length * spacing;
-        const ElementIcons = {
-            physical: '⚔️',
-            fire: '🔥',
-            ice: '❄️',
-            lightning: '⚡',
-            bleed: '🩸',
-            poison: '☠️',
-            magic: '✨',
-            dark: '🌑'
-        };
+        // ★ LOL 스타일 토막 게이지 설정
+        const segmentWidth = 22;   // 각 토막 너비
+        const segmentHeight = 10;  // 토막 높이
+        const gap = 4;             // 토막 사이 간격
+        const totalWidth = recipe.length * segmentWidth + (recipe.length - 1) * gap;
+        
         const ElementColors = {
             physical: 0xf59e0b,
             fire: 0xef4444,
@@ -695,52 +689,92 @@ const Game = {
             dark: 0x6366f1
         };
         
+        // 게이지 배경 (전체)
+        const gaugeBg = new PIXI.Graphics();
+        gaugeBg.roundRect(-totalWidth/2 - 4, -segmentHeight/2 - 4, totalWidth + 8, segmentHeight + 8, 4);
+        gaugeBg.fill({ color: 0x000000, alpha: 0.8 });
+        gaugeBg.stroke({ width: 2, color: 0x444444 });
+        recipeContainer.addChild(gaugeBg);
+        
+        // 각 토막 그리기
         recipe.forEach((element, i) => {
             const isCompleted = i < progress.length;
+            const isCurrent = i === progress.length;
             const elementColor = ElementColors[element] || 0xf59e0b;
             
-            // 원형 배경 (크게)
-            const circle = new PIXI.Graphics();
-            circle.circle(0, 0, circleSize);
+            const x = -totalWidth/2 + i * (segmentWidth + gap);
+            
+            // 토막 배경 (어두운 색)
+            const segmentBg = new PIXI.Graphics();
+            segmentBg.rect(x, -segmentHeight/2, segmentWidth, segmentHeight);
+            segmentBg.fill({ color: 0x111111 });
+            recipeContainer.addChild(segmentBg);
             
             if (isCompleted) {
-                circle.fill({ color: 0x22c55e });
-                circle.stroke({ width: 3, color: 0x4ade80 });
+                // ★ 완료된 칸: 밝은 초록색 채움
+                const fill = new PIXI.Graphics();
+                fill.rect(x, -segmentHeight/2, segmentWidth, segmentHeight);
+                fill.fill({ color: 0x22c55e });
+                recipeContainer.addChild(fill);
+                
+                // 하이라이트
+                const shine = new PIXI.Graphics();
+                shine.rect(x, -segmentHeight/2, segmentWidth, 3);
+                shine.fill({ color: 0xffffff, alpha: 0.35 });
+                recipeContainer.addChild(shine);
             } else {
-                circle.fill({ color: 0x1a1a1a });
-                circle.stroke({ width: 3, color: elementColor });
+                // ★ 미완료 칸: 속성 색상 테두리 + 어두운 채움
+                const dim = new PIXI.Graphics();
+                dim.rect(x + 1, -segmentHeight/2 + 1, segmentWidth - 2, segmentHeight - 2);
+                dim.fill({ color: elementColor, alpha: 0.15 });
+                recipeContainer.addChild(dim);
             }
             
-            circle.x = -totalWidth / 2 + i * spacing + spacing / 2;
-            recipeContainer.addChild(circle);
-            
-            // 속성 아이콘 (크게)
-            const iconText = new PIXI.Text({
-                text: isCompleted ? '✓' : (ElementIcons[element] || '?'),
-                style: { 
-                    fontSize: isCompleted ? 14 : 16,
-                    fill: isCompleted ? '#ffffff' : '#ffffff'
-                }
-            });
-            iconText.anchor.set(0.5);
-            iconText.x = circle.x;
-            iconText.y = 0;
-            recipeContainer.addChild(iconText);
+            // 토막 테두리
+            const border = new PIXI.Graphics();
+            border.rect(x, -segmentHeight/2, segmentWidth, segmentHeight);
+            if (isCompleted) {
+                border.stroke({ width: 2, color: 0x16a34a });
+            } else if (isCurrent) {
+                border.stroke({ width: 2, color: elementColor });
+            } else {
+                border.stroke({ width: 1, color: 0x555555 });
+            }
+            recipeContainer.addChild(border);
         });
         
-        // "BREAK" 라벨 (위에)
+        // "BREAK" 라벨 (위에, 번개 아이콘 포함)
         const breakLabel = new PIXI.Text({
-            text: '⚡BREAK',
+            text: '⚡ BREAK',
             style: { 
-                fontSize: 10, 
+                fontSize: 11, 
                 fill: '#ffd700',
                 fontWeight: 'bold',
-                letterSpacing: 1
+                letterSpacing: 2,
+                dropShadow: {
+                    color: '#000000',
+                    blur: 2,
+                    distance: 1
+                }
             }
         });
         breakLabel.anchor.set(0.5);
-        breakLabel.y = -20;
+        breakLabel.y = -18;
         recipeContainer.addChild(breakLabel);
+        
+        // 진행도 텍스트 (아래)
+        const progressText = new PIXI.Text({
+            text: `${progress.length}/${recipe.length}`,
+            style: {
+                fontSize: 9,
+                fontFamily: 'Arial Black',
+                fill: progress.length > 0 ? 0x22c55e : 0x666666,
+                fontWeight: 'bold'
+            }
+        });
+        progressText.anchor.set(0.5);
+        progressText.y = segmentHeight + 6;
+        recipeContainer.addChild(progressText);
         
         container.addChild(recipeContainer);
     },

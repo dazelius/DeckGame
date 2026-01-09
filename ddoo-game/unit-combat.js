@@ -323,17 +323,28 @@ const UnitCombat = {
         // ★ 타겟 방향 쳐다보기 (스프라이트 뒤집기)
         const shouldFaceRight = endX > startX;
         const baseScale = Math.abs(originalScaleX);
-        if (isEnemy) {
-            // 적: 기본적으로 왼쪽을 봄, 오른쪽 타겟이면 뒤집기
-            attacker.sprite.scale.x = shouldFaceRight ? -baseScale : baseScale;
-        } else {
-            // 아군: 기본적으로 오른쪽을 봄, 왼쪽 타겟이면 뒤집기
-            attacker.sprite.scale.x = shouldFaceRight ? baseScale : -baseScale;
+        if (attacker.sprite && attacker.sprite.scale) {
+            if (isEnemy) {
+                // 적: 기본적으로 왼쪽을 봄, 오른쪽 타겟이면 뒤집기
+                attacker.sprite.scale.x = shouldFaceRight ? -baseScale : baseScale;
+            } else {
+                // 아군: 기본적으로 오른쪽을 봄, 왼쪽 타겟이면 뒤집기
+                attacker.sprite.scale.x = shouldFaceRight ? baseScale : -baseScale;
+            }
         }
         
         // 1. 슈팅 스탠스
         const recoil = isEnemy ? 8 : -10;
+        if (!attacker.sprite || attacker.sprite.destroyed) {
+            attacker.isAnimating = false;
+            return;
+        }
+        
         await new Promise(resolve => {
+            if (!attacker.sprite || attacker.sprite.destroyed) {
+                resolve();
+                return;
+            }
             gsap.timeline()
                 .to(attacker.sprite.scale, { y: 1.05, duration: 0.1 })
                 .to(attacker.sprite, { x: originalX + recoil, duration: 0.1 }, 0)
