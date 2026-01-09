@@ -1098,21 +1098,38 @@ const CombatEffects = {
     },
     
     // ==========================================
+    // 헬퍼: 유닛 위치/스케일 타겟 가져오기
+    // ==========================================
+    getPositionTarget(unit) {
+        return unit?.container || unit?.sprite || null;
+    },
+    
+    getScaleTarget(unit) {
+        return unit?.sprite || null;
+    },
+    
+    // ==========================================
     // 적 공격 인텐트 실행 연출
     // ==========================================
     async enemyAttackEffect(enemy, target, damage) {
-        if (!enemy?.sprite || !target?.sprite) return;
+        const enemyPos = this.getPositionTarget(enemy);
+        const targetPos = this.getPositionTarget(target);
+        const enemyScale = this.getScaleTarget(enemy);
+        if (!enemyPos || !targetPos) return;
         
-        const startX = enemy.sprite.x;
-        const startY = enemy.sprite.y - (enemy.sprite.height || 60) / 2;
-        const endX = target.sprite.x;
-        const endY = target.sprite.y - (target.sprite.height || 60) / 2;
+        const baseScale = enemy.baseScale || enemyScale?.baseScale || 1;
+        const startX = enemyPos.x;
+        const startY = enemyPos.y - (enemy.sprite?.height || 60) / 2;
+        const endX = targetPos.x;
+        const endY = targetPos.y - (target.sprite?.height || 60) / 2;
         
         // 적 준비 동작
         await new Promise(resolve => {
             gsap.timeline()
-                .to(enemy.sprite, { x: startX - 20, duration: 0.15, ease: 'power2.in' })
-                .to(enemy.sprite.scale, { x: 1.1, y: 0.9, duration: 0.15 }, 0)
+                .to(enemyPos, { x: startX - 20, duration: 0.15, ease: 'power2.in' })
+                .call(() => {
+                    if (enemyScale) gsap.to(enemyScale.scale, { x: baseScale * 1.1, y: baseScale * 0.9, duration: 0.15 });
+                }, null, 0)
                 .add(resolve);
         });
         
@@ -1124,8 +1141,10 @@ const CombatEffects = {
             const attackX = endX - 50;
             
             gsap.timeline()
-                .to(enemy.sprite, { x: attackX, duration: 0.1, ease: 'power2.in' })
-                .to(enemy.sprite.scale, { x: 1, y: 1, duration: 0.1 }, 0)
+                .to(enemyPos, { x: attackX, duration: 0.1, ease: 'power2.in' })
+                .call(() => {
+                    if (enemyScale) gsap.to(enemyScale.scale, { x: baseScale, y: baseScale, duration: 0.1 });
+                }, null, 0)
                 .add(() => {
                     this.slashEffect(endX, endY, -45 + Math.random() * 30, 0xff4444, 1.2);
                     this.hitEffect(target.sprite);
@@ -1133,7 +1152,7 @@ const CombatEffects = {
                     this.screenShake(8, 150);
                     this.screenFlash('#ff0000', 80, 0.2);
                 })
-                .to(enemy.sprite, { x: startX, duration: 0.2, ease: 'power2.out', delay: 0.1 })
+                .to(enemyPos, { x: startX, duration: 0.2, ease: 'power2.out', delay: 0.1 })
                 .add(resolve);
         });
     },
@@ -1142,19 +1161,27 @@ const CombatEffects = {
     // 적 원거리 공격 연출
     // ==========================================
     async enemyRangedAttackEffect(enemy, target, damage) {
-        if (!enemy?.sprite || !target?.sprite) return;
+        const enemyPos = this.getPositionTarget(enemy);
+        const targetPos = this.getPositionTarget(target);
+        const enemyScale = this.getScaleTarget(enemy);
+        if (!enemyPos || !targetPos) return;
         
-        const startX = enemy.sprite.x;
-        const startY = enemy.sprite.y - (enemy.sprite.height || 60) / 2;
-        const endX = target.sprite.x;
-        const endY = target.sprite.y - (target.sprite.height || 60) / 2;
+        const baseScale = enemy.baseScale || enemyScale?.baseScale || 1;
+        const startX = enemyPos.x;
+        const startY = enemyPos.y - (enemy.sprite?.height || 60) / 2;
+        const endX = targetPos.x;
+        const endY = targetPos.y - (target.sprite?.height || 60) / 2;
         
         // 차징 모션
         await new Promise(resolve => {
-            gsap.timeline()
-                .to(enemy.sprite.scale, { x: 0.9, y: 1.1, duration: 0.2 })
-                .to(enemy.sprite.scale, { x: 1, y: 1, duration: 0.1 })
-                .add(resolve);
+            if (enemyScale) {
+                gsap.timeline()
+                    .to(enemyScale.scale, { x: baseScale * 0.9, y: baseScale * 1.1, duration: 0.2 })
+                    .to(enemyScale.scale, { x: baseScale, y: baseScale, duration: 0.1 })
+                    .add(resolve);
+            } else {
+                resolve();
+            }
         });
         
         // 투사체 발사
@@ -1169,16 +1196,18 @@ const CombatEffects = {
     // 플레이어 근접 공격 연출 (카드)
     // ==========================================
     async playerMeleeAttack(hero, target, damage, cardType = 'strike') {
-        if (!hero?.sprite || !target?.sprite) return;
+        const heroPos = this.getPositionTarget(hero);
+        const targetPos = this.getPositionTarget(target);
+        if (!heroPos || !targetPos) return;
         
-        const startX = hero.sprite.x;
-        const endX = target.sprite.x;
-        const endY = target.sprite.y - (target.sprite.height || 60) / 2;
+        const startX = heroPos.x;
+        const endX = targetPos.x;
+        const endY = targetPos.y - (target.sprite?.height || 60) / 2;
         
         // 영웅 돌진
         await new Promise(resolve => {
             gsap.timeline()
-                .to(hero.sprite, { x: endX - 60, duration: 0.15, ease: 'power2.in' })
+                .to(heroPos, { x: endX - 60, duration: 0.15, ease: 'power2.in' })
                 .add(resolve);
         });
         
@@ -1206,7 +1235,7 @@ const CombatEffects = {
         this.showDamageNumber(endX, endY - 20, damage);
         
         // 복귀 (await 없이 - 넉백과 동시에 실행되도록)
-        gsap.to(hero.sprite, {
+        gsap.to(heroPos, {
             x: startX,
             duration: 0.25,
             ease: 'power2.out'
@@ -1219,19 +1248,27 @@ const CombatEffects = {
     // 플레이어 원거리 공격 연출 (카드)
     // ==========================================
     async playerRangedAttack(hero, target, damage) {
-        if (!hero?.sprite || !target?.sprite) return;
+        const heroPos = this.getPositionTarget(hero);
+        const targetPos = this.getPositionTarget(target);
+        const heroScale = this.getScaleTarget(hero);
+        if (!heroPos || !targetPos) return;
         
-        const startX = hero.sprite.x;
-        const startY = hero.sprite.y - (hero.sprite.height || 60) / 2;
-        const endX = target.sprite.x;
-        const endY = target.sprite.y - (target.sprite.height || 60) / 2;
+        const baseScale = hero.baseScale || heroScale?.baseScale || 1;
+        const startX = heroPos.x;
+        const startY = heroPos.y - (hero.sprite?.height || 60) / 2;
+        const endX = targetPos.x;
+        const endY = targetPos.y - (target.sprite?.height || 60) / 2;
         
         // 캐스팅 모션
         await new Promise(resolve => {
-            gsap.timeline()
-                .to(hero.sprite.scale, { x: 1.1, y: 0.95, duration: 0.15 })
-                .to(hero.sprite.scale, { x: 1, y: 1, duration: 0.1 })
-                .add(resolve);
+            if (heroScale) {
+                gsap.timeline()
+                    .to(heroScale.scale, { x: baseScale * 1.1, y: baseScale * 0.95, duration: 0.15 })
+                    .to(heroScale.scale, { x: baseScale, y: baseScale, duration: 0.1 })
+                    .add(resolve);
+            } else {
+                resolve();
+            }
         });
         
         // 마법 투사체
@@ -1246,15 +1283,17 @@ const CombatEffects = {
     // AOE 공격 연출
     // ==========================================
     async aoeAttackEffect(hero, targets, damage) {
-        if (!hero?.sprite || targets.length === 0) return;
+        const heroPos = this.getPositionTarget(hero);
+        if (!heroPos || targets.length === 0) return;
         
-        const startX = hero.sprite.x;
+        const startX = heroPos.x;
+        const startY = heroPos.y;
         
         // 점프
         await new Promise(resolve => {
             gsap.timeline()
-                .to(hero.sprite, { y: hero.sprite.y - 50, duration: 0.15, ease: 'power2.out' })
-                .to(hero.sprite, { y: hero.sprite.y, duration: 0.15, ease: 'power2.in' })
+                .to(heroPos, { y: startY - 50, duration: 0.15, ease: 'power2.out' })
+                .to(heroPos, { y: startY, duration: 0.15, ease: 'power2.in' })
                 .add(resolve);
         });
         
@@ -1262,19 +1301,26 @@ const CombatEffects = {
         await this.hitStop(60);
         
         // 모든 타겟에 이펙트
-        const centerX = targets.reduce((sum, t) => sum + (t.sprite?.x || 0), 0) / targets.length;
-        const centerY = targets.reduce((sum, t) => sum + (t.sprite?.y || 0), 0) / targets.length - 30;
+        const centerX = targets.reduce((sum, t) => {
+            const pos = this.getPositionTarget(t);
+            return sum + (pos?.x || 0);
+        }, 0) / targets.length;
+        const centerY = targets.reduce((sum, t) => {
+            const pos = this.getPositionTarget(t);
+            return sum + (pos?.y || 0);
+        }, 0) / targets.length - 30;
         
         this.cleaveEffect(centerX, centerY, 250);
         
         targets.forEach((target, i) => {
-            if (!target.sprite) return;
+            const targetPos = this.getPositionTarget(target);
+            if (!targetPos) return;
             
             setTimeout(() => {
                 this.hitEffect(target.sprite);
                 this.showDamageNumber(
-                    target.sprite.x,
-                    target.sprite.y - (target.sprite.height || 60) / 2 - 20,
+                    targetPos.x,
+                    targetPos.y - (target.sprite?.height || 60) / 2 - 20,
                     damage
                 );
             }, i * 50);

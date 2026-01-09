@@ -828,14 +828,19 @@ const GridAOE = {
         // Show effect
         this.showHitEffect(zone, unit);
         
+        // ★ 새 구조: container 우선 사용
+        const posTarget = unit.container || unit.sprite;
+        const posX = posTarget?.x || 0;
+        const posY = posTarget?.y || 0;
+        
         // Damage
         if (options.damage > 0) {
             this.game.dealDamage(unit, options.damage);
             
             if (typeof CombatEffects !== 'undefined') {
                 CombatEffects.showDamageNumber(
-                    unit.sprite.x, 
-                    unit.sprite.y - 50, 
+                    posX, 
+                    posY - 50, 
                     options.damage, 
                     zone.type === 'fire' ? 'burn' : 'dot'
                 );
@@ -849,8 +854,8 @@ const GridAOE = {
             
             if (typeof CombatEffects !== 'undefined') {
                 CombatEffects.showDamageNumber(
-                    unit.sprite.x, 
-                    unit.sprite.y - 50, 
+                    posX, 
+                    posY - 50, 
                     options.heal, 
                     'heal'
                 );
@@ -954,7 +959,12 @@ const GridAOE = {
     // 시각 효과들
     // ==========================================
     showHitEffect(zone, unit) {
-        if (!unit.sprite) return;
+        // ★ 새 구조: container 우선 사용
+        const posTarget = unit.container || unit.sprite;
+        if (!posTarget) return;
+        
+        const posX = posTarget.x;
+        const posY = posTarget.y;
         
         // Flash unit with zone color
         const flashColor = zone.options.color;
@@ -964,8 +974,8 @@ const GridAOE = {
         flash.beginFill(flashColor, 0.5);
         flash.drawCircle(0, 0, 30);
         flash.endFill();
-        flash.x = unit.sprite.x;
-        flash.y = unit.sprite.y - 30;
+        flash.x = posX;
+        flash.y = posY - 30;
         this.app.stage.addChild(flash);
         
         gsap.to(flash, {
@@ -981,10 +991,10 @@ const GridAOE = {
         // Type-specific effects
         if (zone.type === 'fire') {
             // Fire burst
-            this.createFireBurst(unit.sprite.x, unit.sprite.y - 20);
+            this.createFireBurst(posX, posY - 20);
         } else if (zone.type === 'poison') {
             // Poison bubbles
-            this.createPoisonBubbles(unit.sprite.x, unit.sprite.y - 20);
+            this.createPoisonBubbles(posX, posY - 20);
         }
     },
     

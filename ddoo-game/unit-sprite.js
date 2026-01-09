@@ -316,6 +316,46 @@ const UnitSprite = {
         container.addChild(intent);
     },
     
+    // ==================== 전역 헬퍼 함수 (모든 파일에서 사용) ====================
+    /**
+     * 유닛의 화면 위치 가져오기 (container 우선)
+     * ★ 모든 파일에서 unit.sprite.x 대신 이 함수 사용!
+     * @param {Object} unit - 유닛 객체
+     * @returns {{ x: number, y: number }} 화면 위치
+     */
+    getPosition(unit) {
+        if (!unit) return { x: 0, y: 0 };
+        const target = unit.container || unit.sprite;
+        return target ? { x: target.x, y: target.y } : { x: 0, y: 0 };
+    },
+    
+    /**
+     * 유닛의 위치용 타겟 가져오기 (container 또는 sprite)
+     * @param {Object} unit - 유닛 객체
+     * @returns {PIXI.Container|null} 위치 타겟
+     */
+    getPosTarget(unit) {
+        return unit?.container || unit?.sprite || null;
+    },
+    
+    /**
+     * 유닛의 스프라이트 높이 가져오기
+     * @param {Object} unit - 유닛 객체
+     * @returns {number} 높이
+     */
+    getHeight(unit) {
+        return unit?.sprite?.height || 60;
+    },
+    
+    /**
+     * 유닛의 스프라이트 너비 가져오기
+     * @param {Object} unit - 유닛 객체
+     * @returns {number} 너비
+     */
+    getWidth(unit) {
+        return unit?.sprite?.width || 80;
+    },
+    
     // ==================== 레거시 역보정 (호환용) ====================
     /**
      * @deprecated 새 구조에서는 불필요

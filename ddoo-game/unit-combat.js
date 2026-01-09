@@ -174,34 +174,40 @@ const UnitCombat = {
         
         attacker.isAnimating = true;
         
-        const startX = attacker.sprite.x;
-        const startY = attacker.sprite.y;
-        const targetX = target.sprite.x;
-        const targetCenter = target.sprite.y - (target.sprite.height || 60) / 2;
+        // ★ 새 구조: 위치는 posTarget, 스케일은 scaleTarget
+        const posTarget = this.getPositionTarget(attacker);
+        const scaleTarget = this.getScaleTarget(attacker);
+        const targetPosTarget = this.getPositionTarget(target);
+        const baseScale = attacker.baseScale || scaleTarget?.baseScale || 1;
+        
+        const startX = posTarget.x;
+        const startY = posTarget.y;
+        const targetX = targetPosTarget.x;
+        const targetCenter = targetPosTarget.y - (target.sprite?.height || 60) / 2;
         
         const dashDirection = isEnemy ? -1 : 1;
         const bashX = targetX - (dashDirection * 40);
         
         // 1. 큰 윈드업 (무기 들어올림)
         await new Promise(resolve => {
-            if (!attacker.sprite) { resolve(); return; }
+            if (!posTarget || !scaleTarget) { resolve(); return; }
             
             gsap.timeline()
-                .to(attacker.sprite, { x: startX - (dashDirection * 25), duration: 0.12 })
-                .to(attacker.sprite.scale, { x: 0.85, y: 1.2, duration: 0.12 }, '<')
-                .to(attacker.sprite, { 
+                .to(posTarget, { x: startX - (dashDirection * 25), duration: 0.12 })
+                .to(scaleTarget.scale, { x: baseScale * 0.85, y: baseScale * 1.2, duration: 0.12 }, '<')
+                .to(posTarget, { 
                     x: bashX, 
                     y: startY - 30,
                     duration: 0.15, 
                     ease: 'power2.out' 
                 })
-                .to(attacker.sprite.scale, { x: 1.3, y: 0.75, duration: 0.1 }, '<')
-                .to(attacker.sprite, { 
+                .to(scaleTarget.scale, { x: baseScale * 1.3, y: baseScale * 0.75, duration: 0.1 }, '<')
+                .to(posTarget, { 
                     y: startY + 5,
                     duration: 0.08, 
                     ease: 'power3.in' 
                 })
-                .to(attacker.sprite.scale, { x: 1.4, y: 0.65, duration: 0.08 }, '<')
+                .to(scaleTarget.scale, { x: baseScale * 1.4, y: baseScale * 0.65, duration: 0.08 }, '<')
                 .add(resolve);
         });
         
@@ -238,12 +244,11 @@ const UnitCombat = {
         if (onHit) onHit();
         
         // 6. 느린 복귀 + 스케일 복원!
-        if (attacker.sprite && !attacker.sprite.destroyed) {
-            const baseScale = attacker.baseScale || attacker.sprite.baseScale || 1;
+        if (posTarget && scaleTarget && !scaleTarget.destroyed) {
             gsap.timeline()
                 .to({}, { duration: 0.15 })
-                .to(attacker.sprite.scale, { x: baseScale, y: baseScale, duration: 0.2, ease: 'power2.out' })
-                .to(attacker.sprite, {
+                .to(scaleTarget.scale, { x: baseScale, y: baseScale, duration: 0.2, ease: 'power2.out' })
+                .to(posTarget, {
                     x: startX,
                     y: startY,
                     duration: 0.35,
@@ -265,18 +270,24 @@ const UnitCombat = {
         
         attacker.isAnimating = true;
         
-        const startX = attacker.sprite.x;
-        const startY = attacker.sprite.y;
-        const targetX = target.sprite.x;
-        const targetCenter = target.sprite.y - (target.sprite.height || 60) / 2;
+        // ★ 새 구조: 위치는 posTarget, 스케일은 scaleTarget
+        const posTarget = this.getPositionTarget(attacker);
+        const scaleTarget = this.getScaleTarget(attacker);
+        const targetPosTarget = this.getPositionTarget(target);
+        const baseScale = attacker.baseScale || scaleTarget?.baseScale || 1;
+        
+        const startX = posTarget.x;
+        const startY = posTarget.y;
+        const targetX = targetPosTarget.x;
+        const targetCenter = targetPosTarget.y - (target.sprite?.height || 60) / 2;
         const dashDirection = isEnemy ? -1 : 1;
         const dashX = targetX - (dashDirection * 50);
         
         // 1. 빠른 돌진
         await new Promise(resolve => {
             gsap.timeline()
-                .to(attacker.sprite, { x: dashX, duration: 0.08, ease: 'power3.in' })
-                .to(attacker.sprite.scale, { x: 1.05, y: 0.95, duration: 0.06 }, '<')
+                .to(posTarget, { x: dashX, duration: 0.08, ease: 'power3.in' })
+                .to(scaleTarget.scale, { x: baseScale * 1.05, y: baseScale * 0.95, duration: 0.06 }, '<')
                 .add(resolve);
         });
         
@@ -307,11 +318,10 @@ const UnitCombat = {
         if (onHit) onHit();
         
         // 5. 빠른 복귀 (바로 다음 타격 준비) + 스케일 복원!
-        const baseScale = attacker.baseScale || attacker.sprite.baseScale || 1;
         await new Promise(resolve => {
             gsap.timeline()
-                .to(attacker.sprite.scale, { x: baseScale, y: baseScale, duration: 0.06 })
-                .to(attacker.sprite, {
+                .to(scaleTarget.scale, { x: baseScale, y: baseScale, duration: 0.06 })
+                .to(posTarget, {
                     x: startX,
                     y: startY,
                     duration: 0.1,
@@ -337,7 +347,12 @@ const UnitCombat = {
             onHit = null
         } = options;
         
-        if (!attacker.sprite || !target.sprite) {
+        // ★ 새 구조: 위치는 posTarget, 스케일은 scaleTarget
+        const posTarget = this.getPositionTarget(attacker);
+        const scaleTarget = this.getScaleTarget(attacker);
+        const targetPosTarget = this.getPositionTarget(target);
+        
+        if (!posTarget || !targetPosTarget) {
             if (isEnemy) {
                 this.game.dealDamageToTarget(target, damage);
             } else {
@@ -348,41 +363,40 @@ const UnitCombat = {
         
         attacker.isAnimating = true;
         
-        const originalX = attacker.sprite.x;
-        const originalScaleX = attacker.sprite.scale.x;
-        const startX = attacker.sprite.x;
-        const startY = attacker.sprite.y - (attacker.sprite.height || 60) / 2;
-        const endX = target.sprite.x;
-        const endY = target.sprite.y - (target.sprite.height || 60) / 2;
+        const baseScale = attacker.baseScale || scaleTarget?.baseScale || 1;
+        const originalX = posTarget.x;
+        const startX = posTarget.x;
+        const startY = posTarget.y - (attacker.sprite?.height || 60) / 2;
+        const endX = targetPosTarget.x;
+        const endY = targetPosTarget.y - (target.sprite?.height || 60) / 2;
         
         // ★ 타겟 방향 쳐다보기 (스프라이트 뒤집기)
         const shouldFaceRight = endX > startX;
-        const baseScale = Math.abs(originalScaleX);
-        if (attacker.sprite && attacker.sprite.scale) {
+        if (scaleTarget && scaleTarget.scale) {
             if (isEnemy) {
                 // 적: 기본적으로 왼쪽을 봄, 오른쪽 타겟이면 뒤집기
-                attacker.sprite.scale.x = shouldFaceRight ? -baseScale : baseScale;
+                scaleTarget.scale.x = shouldFaceRight ? -baseScale : baseScale;
             } else {
                 // 아군: 기본적으로 오른쪽을 봄, 왼쪽 타겟이면 뒤집기
-                attacker.sprite.scale.x = shouldFaceRight ? baseScale : -baseScale;
+                scaleTarget.scale.x = shouldFaceRight ? baseScale : -baseScale;
             }
         }
         
         // 1. 슈팅 스탠스
         const recoil = isEnemy ? 8 : -10;
-        if (!attacker.sprite || attacker.sprite.destroyed) {
+        if (!scaleTarget || scaleTarget.destroyed) {
             attacker.isAnimating = false;
             return;
         }
         
         await new Promise(resolve => {
-            if (!attacker.sprite || attacker.sprite.destroyed) {
+            if (!scaleTarget || scaleTarget.destroyed) {
                 resolve();
                 return;
             }
             gsap.timeline()
-                .to(attacker.sprite.scale, { y: 1.05, duration: 0.1 })
-                .to(attacker.sprite, { x: originalX + recoil, duration: 0.1 }, 0)
+                .to(scaleTarget.scale, { y: baseScale * 1.05, duration: 0.1 })
+                .to(posTarget, { x: originalX + recoil, duration: 0.1 }, 0)
                 .add(resolve);
         });
         
@@ -425,10 +439,10 @@ const UnitCombat = {
         if (onHit) onHit();
         
         // 5. 복귀 + 스프라이트 방향 복원
-        if (attacker.sprite) {
+        if (scaleTarget && posTarget) {
             gsap.timeline()
-                .to(attacker.sprite.scale, { x: originalScaleX, y: Math.abs(originalScaleX), duration: 0.1 })
-                .to(attacker.sprite, { x: originalX, duration: 0.1 }, 0)
+                .to(scaleTarget.scale, { x: baseScale, y: baseScale, duration: 0.1 })
+                .to(posTarget, { x: originalX, duration: 0.1 }, 0)
                 .call(() => { if (attacker) attacker.isAnimating = false; });
         } else {
             if (attacker) attacker.isAnimating = false;
@@ -480,8 +494,12 @@ const UnitCombat = {
     async moveToLine(unit, targetZ, options = {}) {
         console.log(`[UnitCombat] moveToLine: unit=${unit?.type}, from Z=${unit?.gridZ} to Z=${targetZ}`);
         
-        if (!unit || !unit.sprite) {
-            console.warn('[UnitCombat] moveToLine: no unit or sprite');
+        // ★ 새 구조: 위치는 posTarget, 스케일은 scaleTarget
+        const posTarget = this.getPositionTarget(unit);
+        const scaleTarget = this.getScaleTarget(unit);
+        
+        if (!posTarget) {
+            console.warn('[UnitCombat] moveToLine: no posTarget');
             return;
         }
         if (unit.gridZ === targetZ) {
@@ -501,13 +519,13 @@ const UnitCombat = {
                 u !== unit && u.hp > 0 && u.gridX === unit.gridX && u.gridZ === targetZ
             );
             
-            if (blockingUnit && blockingUnit.sprite) {
+            if (blockingUnit) {
                 await this.moveUnitAside(blockingUnit, targetZ, team);
             }
         }
         
         // 애니메이션 시작 전 다시 체크
-        if (!unit.sprite) return;
+        if (!posTarget) return;
         
         unit.isAnimating = true;
         unit.gridZ = targetZ;
@@ -519,29 +537,29 @@ const UnitCombat = {
             return;
         }
         
-        // sprite 참조 저장
-        const sprite = unit.sprite;
-        if (!sprite) {
-            unit.isAnimating = false;
-            return;
-        }
-        
         // ★ baseScale 기준으로 스케일 애니메이션
-        const baseScale = unit.baseScale || sprite.baseScale || 1;
+        const baseScale = unit.baseScale || scaleTarget?.baseScale || 1;
         
         return new Promise(resolve => {
-            const startY = sprite.y;
+            const startY = posTarget.y;
             const midY = Math.min(startY, newPos.y) - 25;
             
-            gsap.timeline()
-                .to(sprite.scale, { x: baseScale * 1.1, y: baseScale * 0.9, duration: 0.08 })
-                .to(sprite, { x: newPos.x, y: midY, duration: 0.15, ease: 'power2.out' })
-                .to(sprite.scale, { x: baseScale * 0.95, y: baseScale * 1.05, duration: 0.08 }, '<')
-                .to(sprite, { y: newPos.y, duration: 0.1, ease: 'power2.in' })
-                .to(sprite.scale, { x: baseScale, y: baseScale, duration: 0.1 }, '<')
+            const tl = gsap.timeline()
                 .call(() => {
-                    if (sprite && !sprite.destroyed) {
-                        sprite.zIndex = Math.floor(newPos.y);
+                    // 위치는 posTarget, 스케일은 scaleTarget
+                    if (scaleTarget) gsap.to(scaleTarget.scale, { x: baseScale * 1.1, y: baseScale * 0.9, duration: 0.08 });
+                })
+                .to(posTarget, { x: newPos.x, y: midY, duration: 0.15, ease: 'power2.out' })
+                .call(() => {
+                    if (scaleTarget) gsap.to(scaleTarget.scale, { x: baseScale * 0.95, y: baseScale * 1.05, duration: 0.08 });
+                }, null, '<')
+                .to(posTarget, { y: newPos.y, duration: 0.1, ease: 'power2.in' })
+                .call(() => {
+                    if (scaleTarget) gsap.to(scaleTarget.scale, { x: baseScale, y: baseScale, duration: 0.1 });
+                }, null, '<')
+                .call(() => {
+                    if (posTarget && !posTarget.destroyed) {
+                        posTarget.zIndex = Math.floor(newPos.y);
                     }
                     unit.isAnimating = false;
                     resolve();
@@ -553,7 +571,11 @@ const UnitCombat = {
     // 유닛 옆으로 이동 (블로킹 해제)
     // ==========================================
     async moveUnitAside(unit, avoidZ, team = 'player') {
-        if (!unit || !unit.sprite) return;
+        // ★ 새 구조: 위치는 posTarget, 스케일은 scaleTarget
+        const posTarget = this.getPositionTarget(unit);
+        const scaleTarget = this.getScaleTarget(unit);
+        
+        if (!posTarget) return;
         
         const unitList = team === 'enemy' 
             ? this.game.state.enemyUnits 
@@ -576,7 +598,7 @@ const UnitCombat = {
         const newZ = possibleZ[0];
         
         // 애니메이션 시작 전 다시 체크
-        if (!unit.sprite) return;
+        if (!posTarget) return;
         
         unit.isAnimating = true;
         unit.gridZ = newZ;
@@ -588,29 +610,28 @@ const UnitCombat = {
             return;
         }
         
-        // sprite 참조 저장
-        const sprite = unit.sprite;
-        if (!sprite) {
-            unit.isAnimating = false;
-            return;
-        }
-        
         // ★ baseScale 기준으로 스케일 애니메이션
-        const baseScale = unit.baseScale || sprite.baseScale || 1;
+        const baseScale = unit.baseScale || scaleTarget?.baseScale || 1;
         
         return new Promise(resolve => {
-            const startY = sprite.y;
+            const startY = posTarget.y;
             const midY = Math.min(startY, newPos.y) - 15;
             
-            gsap.timeline()
-                .to(sprite.scale, { x: baseScale * 1.1, y: baseScale * 0.9, duration: 0.06 })
-                .to(sprite, { x: newPos.x, y: midY, duration: 0.12, ease: 'power2.out' })
-                .to(sprite.scale, { x: baseScale * 0.95, y: baseScale * 1.05, duration: 0.06 }, '<')
-                .to(sprite, { y: newPos.y, duration: 0.08, ease: 'power2.in' })
-                .to(sprite.scale, { x: baseScale, y: baseScale, duration: 0.08 }, '<')
+            const tl = gsap.timeline()
                 .call(() => {
-                    if (sprite && !sprite.destroyed) {
-                        sprite.zIndex = Math.floor(newPos.y);
+                    if (scaleTarget) gsap.to(scaleTarget.scale, { x: baseScale * 1.1, y: baseScale * 0.9, duration: 0.06 });
+                })
+                .to(posTarget, { x: newPos.x, y: midY, duration: 0.12, ease: 'power2.out' })
+                .call(() => {
+                    if (scaleTarget) gsap.to(scaleTarget.scale, { x: baseScale * 0.95, y: baseScale * 1.05, duration: 0.06 });
+                }, null, '<')
+                .to(posTarget, { y: newPos.y, duration: 0.08, ease: 'power2.in' })
+                .call(() => {
+                    if (scaleTarget) gsap.to(scaleTarget.scale, { x: baseScale, y: baseScale, duration: 0.08 });
+                }, null, '<')
+                .call(() => {
+                    if (posTarget && !posTarget.destroyed) {
+                        posTarget.zIndex = Math.floor(newPos.y);
                     }
                     unit.isAnimating = false;
                     resolve();

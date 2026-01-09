@@ -1108,21 +1108,24 @@ const Game = {
             return;
         }
         
-        const originalX = hero.sprite.x;
-        const originalY = hero.sprite.y;
+        // ★ 새 구조: container 우선 사용
+        const heroPos = this.getUnitPosition(hero);
+        const originalX = heroPos.x;
+        const originalY = heroPos.y;
         
         // Calculate center of all targets
-        const centerX = targets.reduce((sum, t) => sum + t.sprite.x, 0) / targets.length;
-        const centerY = targets.reduce((sum, t) => sum + t.sprite.y, 0) / targets.length;
+        const centerX = targets.reduce((sum, t) => sum + this.getUnitPosition(t).x, 0) / targets.length;
+        const centerY = targets.reduce((sum, t) => sum + this.getUnitPosition(t).y, 0) / targets.length;
         
         // Dash to a point between hero and targets
         const dashX = originalX + (centerX - originalX) * 0.4;
         const dashY = originalY + (centerY - originalY) * 0.2;
+        const posTarget = hero.container || hero.sprite;
         
         return new Promise(resolve => {
             gsap.timeline()
                 // Dash forward
-                .to(hero.sprite, {
+                .to(posTarget, {
                     x: dashX,
                     y: dashY,
                     duration: 0.2,
@@ -1135,7 +1138,7 @@ const Game = {
                     });
                 })
                 // Return to position
-                .to(hero.sprite, {
+                .to(posTarget, {
                     x: originalX,
                     y: originalY,
                     duration: 0.3,
@@ -1153,8 +1156,9 @@ const Game = {
             this.updateBlockUI();
             
             // Block effect
-            if (typeof CombatEffects !== 'undefined' && hero?.sprite) {
-                CombatEffects.gainBlockEffect(hero.sprite.x, hero.sprite.y - 40, cardDef.block);
+            const heroPos = this.getUnitPosition(hero);
+            if (typeof CombatEffects !== 'undefined' && heroPos) {
+                CombatEffects.gainBlockEffect(heroPos.x, heroPos.y - 40, cardDef.block);
             } else {
                 this.showMessage(`+${cardDef.block} Block`, 500);
             }
@@ -1166,12 +1170,20 @@ const Game = {
             this.updateHPUI();
             
             // Heal effect
-            if (typeof CombatEffects !== 'undefined' && hero.sprite) {
-                CombatEffects.healEffect(hero.sprite.x, hero.sprite.y - 40, cardDef.heal);
+            const heroPos = this.getUnitPosition(hero);
+            if (typeof CombatEffects !== 'undefined' && heroPos) {
+                CombatEffects.healEffect(heroPos.x, heroPos.y - 40, cardDef.heal);
             } else {
                 this.showMessage(`+${cardDef.heal} HP`, 500);
             }
         }
+    },
+    
+    // ★ 헬퍼: 유닛 화면 위치 가져오기 (container 우선)
+    getUnitPosition(unit) {
+        if (!unit) return null;
+        const target = unit.container || unit.sprite;
+        return target ? { x: target.x, y: target.y } : null;
     },
     
     async dealDamage(target, amount) {
@@ -1183,11 +1195,10 @@ const Game = {
         // Update HP bar
         this.updateUnitHPBar(target);
         
-        // Hit effect
+        // Hit effect (스프라이트 알파만 변경, 위치는 건드리지 않음)
         if (target.sprite) {
             gsap.to(target.sprite, {
                 alpha: 0.5,
-                x: target.sprite.x + 10,
                 duration: 0.1,
                 yoyo: true,
                 repeat: 1
@@ -1370,8 +1381,9 @@ const Game = {
                 for (const target of crossTargets) {
                     if (target !== targetEnemy && target.hp > 0) {
                         this.dealDamage(target, cardDef.damage);
-                        if (typeof CombatEffects !== 'undefined') {
-                            CombatEffects.showDamageNumber(target.sprite.x, target.sprite.y - 30, cardDef.damage, 'burn');
+                        const targetPos = this.getUnitPosition(target);
+                        if (typeof CombatEffects !== 'undefined' && targetPos) {
+                            CombatEffects.showDamageNumber(targetPos.x, targetPos.y - 30, cardDef.damage, 'burn');
                         }
                     }
                 }
@@ -2172,8 +2184,9 @@ const Game = {
             style: { fontSize: 20, fill: 0xff4444, fontWeight: 'bold' }
         });
         
-        text.x = unit.sprite.x;
-        text.y = unit.sprite.y - 30;
+        const pos = this.getUnitPosition(unit);
+        text.x = pos?.x || 0;
+        text.y = (pos?.y || 0) - 30;
         text.anchor.set(0.5);
         
         this.containers.effects.addChild(text);
@@ -2336,8 +2349,6 @@ const Game = {
             target.x = center.x;
             target.y = center.y;
             target.zIndex = Math.floor(center.y);
-            // Units lower on screen (higher Y) should be in front
-            unit.sprite.zIndex = Math.floor(unit.sprite.y);
         }
     },
     
