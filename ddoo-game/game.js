@@ -2823,6 +2823,11 @@ const Game = {
     },
     
     async enemyRangedAttack(enemy, target, intentDamage) {
+        // ★ 고블린 궁수: 공격 전 뒤로 물러나기
+        if (enemy.type === 'goblinArcher') {
+            await this.archerRetreatBeforeAttack(enemy);
+        }
+        
         if (typeof UnitCombat !== 'undefined') {
             // 궁수 타입이면 화살 VFX 사용
             const isArcher = enemy.type === 'goblinArcher' || enemy.type === 'archer';
@@ -2834,6 +2839,42 @@ const Game = {
             });
         } else {
             this.dealDamageToTarget(target, intentDamage);
+        }
+    },
+    
+    // ★ 고블린 궁수 후퇴 로직
+    async archerRetreatBeforeAttack(enemy) {
+        if (!enemy || !enemy.sprite) return;
+        
+        // 뒤로 이동할 수 있는지 확인 (gridX + 1)
+        const newX = enemy.gridX + 1;
+        const maxX = this.arena.width - 1;
+        
+        // 맵 범위 체크 & 해당 위치에 다른 유닛이 없는지 체크
+        const isOccupied = this.state.enemyUnits.some(e => 
+            e !== enemy && e.hp > 0 && e.gridX === newX && e.gridZ === enemy.gridZ
+        );
+        
+        if (newX <= maxX && !isOccupied) {
+            // 뒤로 한 칸 이동
+            const oldX = enemy.gridX;
+            enemy.gridX = newX;
+            
+            // 이동 애니메이션
+            const newPos = this.gridToScreen(newX, enemy.gridZ);
+            const posTarget = enemy.container || enemy.sprite;
+            
+            await new Promise(resolve => {
+                gsap.to(posTarget, {
+                    x: newPos.x,
+                    y: newPos.y,
+                    duration: 0.25,
+                    ease: 'power2.out',
+                    onComplete: resolve
+                });
+            });
+            
+            console.log(`[Archer] ${enemy.type} 후퇴: ${oldX} -> ${newX}`);
         }
     },
     
