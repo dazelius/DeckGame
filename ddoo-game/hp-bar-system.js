@@ -255,6 +255,7 @@ const HPBarSystem = {
         // ========================================
         // 2. HP 게이지 (실제 HP - 즉시 반영)
         // ========================================
+        if (!data.hpFill || data.hpFill.destroyed) return;
         data.hpFill.clear();
         if (hpRatio > 0) {
             data.hpFill
@@ -265,11 +266,13 @@ const HPBarSystem = {
         // ========================================
         // 3. HP 하이라이트 (상단 빛 효과)
         // ========================================
-        data.highlight.clear();
-        if (hpRatio > 0) {
-            data.highlight
-                .rect(-width/2, 1, width * hpRatio, 3)
-                .fill({ color: colors.bright, alpha: 0.5 });
+        if (data.highlight && !data.highlight.destroyed) {
+            data.highlight.clear();
+            if (hpRatio > 0) {
+                data.highlight
+                    .rect(-width/2, 1, width * hpRatio, 3)
+                    .fill({ color: colors.bright, alpha: 0.5 });
+            }
         }
         
         // ========================================
@@ -280,12 +283,14 @@ const HPBarSystem = {
         // ========================================
         // 5. 프레임 색상
         // ========================================
-        data.frame.clear();
-        const frameColor = shield > 0 ? cfg.colors.frame.withShield : cfg.colors.frame.normal;
-        data.frame
-            .rect(-width/2 - padding, -padding, width + padding*2, height + padding*2)
-            .fill(0x000000)
-            .stroke({ width: 3, color: frameColor });
+        if (data.frame && !data.frame.destroyed) {
+            data.frame.clear();
+            const frameColor = shield > 0 ? cfg.colors.frame.withShield : cfg.colors.frame.normal;
+            data.frame
+                .rect(-width/2 - padding, -padding, width + padding*2, height + padding*2)
+                .fill(0x000000)
+                .stroke({ width: 3, color: frameColor });
+        }
         
         // ========================================
         // 6. 쉴드 배지
@@ -305,6 +310,8 @@ const HPBarSystem = {
     // ==========================================
     updateDelayedHP(unit, data, hpRatio) {
         const { width, height, delayedFill } = data;
+        if (!delayedFill || delayedFill.destroyed) return;
+        
         const cfg = this.config;
         const previousDisplayedHp = data.displayedHp ?? unit.hp;
         const delayedRatio = Math.max(0, Math.min(1, previousDisplayedHp / unit.maxHp));
@@ -331,6 +338,8 @@ const HPBarSystem = {
                 duration: cfg.animation.drainDuration,
                 ease: cfg.animation.drainEase,
                 onUpdate: () => {
+                    // destroyed 체크 필수
+                    if (!delayedFill || delayedFill.destroyed) return;
                     const currentDelayedRatio = Math.max(0, Math.min(1, data.displayedHp / unit.maxHp));
                     delayedFill.clear();
                     if (currentDelayedRatio > hpRatio) {
@@ -356,6 +365,8 @@ const HPBarSystem = {
     // 쉴드 프레임 업데이트
     // ==========================================
     updateShieldFrame(data, shield, width, height, padding) {
+        if (!data.shieldFrame || data.shieldFrame.destroyed) return;
+        
         const cfg = this.config;
         data.shieldFrame.clear();
         

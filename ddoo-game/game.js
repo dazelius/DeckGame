@@ -1374,7 +1374,7 @@ const Game = {
         const shield = unit.block || 0;
         
         // ★ 지연 HP 잔상 (쭈욱 빠지는 효과)
-        if (unit.hpDelayedFill) {
+        if (unit.hpDelayedFill && !unit.hpDelayedFill.destroyed) {
             const previousDisplayedHp = unit.displayedHp ?? unit.hp;
             const delayedRatio = Math.max(0, Math.min(1, previousDisplayedHp / unit.maxHp));
             
@@ -1401,8 +1401,8 @@ const Game = {
                     duration: 0.6,
                     ease: 'power2.out',
                     onUpdate: () => {
-                        // 잔상 업데이트
-                        if (unit.hpDelayedFill) {
+                        // 잔상 업데이트 (destroyed 체크 필수)
+                        if (unit.hpDelayedFill && !unit.hpDelayedFill.destroyed) {
                             const currentDelayedRatio = Math.max(0, Math.min(1, unit.displayedHp / unit.maxHp));
                             unit.hpDelayedFill.clear();
                             if (currentDelayedRatio > hpRatio) {
@@ -1420,7 +1420,8 @@ const Game = {
             }
         }
         
-        // HP 게이지 (실제 HP - 즉시 반영)
+        // HP 게이지 (실제 HP - 즉시 반영) - destroyed 체크
+        if (!unit.hpFill || unit.hpFill.destroyed) return;
         unit.hpFill.clear();
         if (hpRatio > 0) {
             unit.hpFill
@@ -1429,7 +1430,7 @@ const Game = {
         }
         
         // HP 하이라이트 (상단 빛 효과)
-        if (unit.hpHighlight) {
+        if (unit.hpHighlight && !unit.hpHighlight.destroyed) {
             unit.hpHighlight.clear();
             if (hpRatio > 0) {
                 unit.hpHighlight
@@ -1441,7 +1442,7 @@ const Game = {
         // ========================================
         // 쉴드 프레임 (HP 바를 감싸는 보호막)
         // ========================================
-        if (unit.shieldFrame) {
+        if (unit.shieldFrame && !unit.shieldFrame.destroyed) {
             unit.shieldFrame.clear();
             if (shield > 0) {
                 unit.shieldFrame.visible = true;
@@ -1460,7 +1461,7 @@ const Game = {
         }
         
         // 프레임 색상 변경 (쉴드 있을 때)
-        if (unit.hpFrame) {
+        if (unit.hpFrame && !unit.hpFrame.destroyed) {
             unit.hpFrame.clear();
             const frameColor = shield > 0 ? 0x4488cc : 0x333333;
             unit.hpFrame
