@@ -1037,39 +1037,40 @@ const Game = {
         // ========================================
         const hpPerSegment = 10; // 10 HP당 1칸
         const segmentCount = Math.ceil(unit.maxHp / hpPerSegment);
-        const segmentWidth = 5;
+        const segmentWidth = 6;
         const segmentGap = 1;
         const barWidth = segmentCount * segmentWidth + (segmentCount - 1) * segmentGap;
-        const barHeight = 7;
+        const barHeight = 8;
         
         // 색상 설정
         let hpColor = 0xcc3333; // Enemy - 빨강
-        let hpColorDark = 0x881111;
+        let hpColorDark = 0x441111;
         if (unit.isHero) {
             hpColor = 0xc9a227; // Hero - 금색
-            hpColorDark = 0x8a6b1a;
+            hpColorDark = 0x5a4b1a;
         } else if (unit.team === 'player') {
             hpColor = 0x33aa33; // Summon - 초록
-            hpColorDark = 0x116611;
+            hpColorDark = 0x114411;
         }
         
-        // 배경 (검은색)
+        // 배경 (검은색 박스)
         const bg = new PIXI.Graphics();
-        bg.roundRect(-barWidth/2 - 2, -1, barWidth + 4, barHeight + 2, 2);
-        bg.fill({ color: 0x000000, alpha: 0.8 });
-        bg.stroke({ color: 0x222222, width: 1 });
+        bg.rect(-barWidth/2 - 3, -2, barWidth + 6, barHeight + 4);
+        bg.fill(0x000000);
+        bg.rect(-barWidth/2 - 2, -1, barWidth + 4, barHeight + 2);
+        bg.stroke({ width: 1, color: 0x333333 });
         hpBar.addChild(bg);
         
-        // HP 세그먼트 그리기
-        const hpSegments = new PIXI.Graphics();
+        // HP 세그먼트 컨테이너
+        const hpSegments = new PIXI.Container();
         hpBar.addChild(hpSegments);
-        unit.hpSegments = hpSegments;
+        unit.hpSegmentsContainer = hpSegments;
         
-        // 쉴드 게이지 (HP 위에 표시)
-        const shieldBar = new PIXI.Graphics();
-        shieldBar.zIndex = 10;
-        hpBar.addChild(shieldBar);
-        unit.shieldBar = shieldBar;
+        // 쉴드 컨테이너
+        const shieldContainer = new PIXI.Container();
+        shieldContainer.zIndex = 10;
+        hpBar.addChild(shieldContainer);
+        unit.shieldContainer = shieldContainer;
         
         // 단위 저장
         unit.hpBarWidth = barWidth;
@@ -1111,10 +1112,10 @@ const Game = {
     // HP 세그먼트 그리기 (LOL 스타일)
     // ========================================
     drawHPSegments(unit) {
-        if (!unit.hpSegments) return;
+        if (!unit.hpSegmentsContainer) return;
         
-        const g = unit.hpSegments;
-        g.clear();
+        // 기존 세그먼트 제거
+        unit.hpSegmentsContainer.removeChildren();
         
         const { hpPerSegment, segmentCount, segmentWidth, segmentGap, barWidth, barHeight, hpColor, hpColorDark } = unit;
         const currentHp = Math.max(0, unit.hp);
@@ -1124,92 +1125,81 @@ const Game = {
             const segmentEndHp = (i + 1) * hpPerSegment;
             const x = -barWidth/2 + i * (segmentWidth + segmentGap);
             
+            const seg = new PIXI.Graphics();
+            
             if (currentHp >= segmentEndHp) {
                 // 완전히 채워진 세그먼트
-                g.roundRect(x, 0, segmentWidth, barHeight, 1);
-                g.fill({ color: hpColor });
+                seg.rect(x, 0, segmentWidth, barHeight);
+                seg.fill(hpColor);
                 // 상단 하이라이트
-                g.rect(x + 1, 1, segmentWidth - 2, 2);
-                g.fill({ color: 0xffffff, alpha: 0.3 });
+                seg.rect(x, 0, segmentWidth, 2);
+                seg.fill({ color: 0xffffff, alpha: 0.4 });
             } else if (currentHp > segmentStartHp) {
                 // 부분적으로 채워진 세그먼트
                 const fillRatio = (currentHp - segmentStartHp) / hpPerSegment;
                 // 어두운 배경
-                g.roundRect(x, 0, segmentWidth, barHeight, 1);
-                g.fill({ color: hpColorDark });
+                seg.rect(x, 0, segmentWidth, barHeight);
+                seg.fill(hpColorDark);
                 // 채워진 부분
-                g.rect(x, 0, segmentWidth * fillRatio, barHeight);
-                g.fill({ color: hpColor });
+                seg.rect(x, 0, segmentWidth * fillRatio, barHeight);
+                seg.fill(hpColor);
             } else {
-                // 빈 세그먼트
-                g.roundRect(x, 0, segmentWidth, barHeight, 1);
-                g.fill({ color: hpColorDark, alpha: 0.3 });
+                // 빈 세그먼트 (어두운 색)
+                seg.rect(x, 0, segmentWidth, barHeight);
+                seg.fill({ color: hpColorDark, alpha: 0.4 });
             }
+            
+            unit.hpSegmentsContainer.addChild(seg);
         }
     },
     
     // ========================================
-    // 쉴드 바 그리기 (HP 위 흰색 오버레이)
+    // 쉴드 바 그리기 (HP 바 오른쪽에 표시)
     // ========================================
     drawShieldBar(unit) {
-        if (!unit.shieldBar) return;
+        if (!unit.shieldContainer) return;
         
-        const g = unit.shieldBar;
-        g.clear();
+        // 기존 쉴드 제거
+        unit.shieldContainer.removeChildren();
+        if (unit.shieldText) {
+            unit.shieldText.destroy();
+            unit.shieldText = null;
+        }
         
         const shield = unit.block || 0;
         if (shield <= 0) return;
         
-        const { barWidth, barHeight, hpPerSegment, segmentWidth, segmentGap, segmentCount } = unit;
+        const { barWidth, barHeight } = unit;
         
-        // 쉴드 양에 따른 세그먼트 수 계산
-        const shieldSegments = Math.ceil(shield / hpPerSegment);
-        const currentHp = Math.max(0, unit.hp);
-        const hpFilledSegments = Math.ceil(currentHp / hpPerSegment);
+        // 쉴드 배지 (HP 바 오른쪽에 표시)
+        const shieldBadge = new PIXI.Graphics();
+        const badgeX = barWidth / 2 + 5;
         
-        // 쉴드는 HP 바 위에 흰색/은색으로 그리기
-        for (let i = 0; i < Math.min(shieldSegments, segmentCount); i++) {
-            const segmentIndex = Math.min(hpFilledSegments + i, segmentCount - 1);
-            const x = -barWidth/2 + segmentIndex * (segmentWidth + segmentGap);
-            
-            // 쉴드 세그먼트 (은색/흰색 글로우)
-            g.roundRect(x - 1, -2, segmentWidth + 2, barHeight + 4, 2);
-            g.fill({ color: 0xaaccff, alpha: 0.3 });
-            
-            g.roundRect(x, 0, segmentWidth, barHeight, 1);
-            g.fill({ color: 0xccddff });
-            
-            // 빛나는 효과
-            g.rect(x + 1, 1, segmentWidth - 2, 2);
-            g.fill({ color: 0xffffff, alpha: 0.6 });
-        }
+        // 쉴드 배경 원
+        shieldBadge.circle(badgeX + 8, barHeight / 2, 10);
+        shieldBadge.fill(0x3388ff);
+        shieldBadge.stroke({ width: 2, color: 0x88ccff });
         
-        // 쉴드 숫자 표시
-        if (shield > 0) {
-            // 기존 쉴드 텍스트 제거
-            if (unit.shieldText) {
-                unit.shieldText.destroy();
+        unit.shieldContainer.addChild(shieldBadge);
+        
+        // 쉴드 숫자
+        const shieldText = new PIXI.Text({
+            text: `${shield}`,
+            style: {
+                fontSize: 10,
+                fill: '#ffffff',
+                fontWeight: 'bold'
             }
-            
-            const shieldText = new PIXI.Text({
-                text: `🛡${shield}`,
-                style: {
-                    fontSize: 9,
-                    fill: '#aaccff',
-                    fontWeight: 'bold',
-                    stroke: { color: '#000000', width: 2 }
-                }
-            });
-            shieldText.anchor.set(0.5);
-            shieldText.x = barWidth/2 + 15;
-            shieldText.y = barHeight/2;
-            unit.hpBar.addChild(shieldText);
-            unit.shieldText = shieldText;
-        }
+        });
+        shieldText.anchor.set(0.5);
+        shieldText.x = badgeX + 8;
+        shieldText.y = barHeight / 2;
+        unit.shieldContainer.addChild(shieldText);
+        unit.shieldText = shieldText;
     },
     
     updateUnitHPBar(unit) {
-        if (!unit.hpBar || !unit.hpSegments) {
+        if (!unit.hpBar || !unit.hpSegmentsContainer) {
             this.createUnitHPBar(unit);
             return;
         }
