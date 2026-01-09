@@ -2287,22 +2287,55 @@ const Game = {
             }
         }
         
-        // Remove HP bar (PixiJS - child of sprite, will be destroyed with sprite)
-        if (unit.hpBar) {
+        // ★ HP 바 삭제 연출 (페이드아웃 + 축소)
+        if (unit.hpBar && !unit.hpBar.destroyed) {
+            const hpBar = unit.hpBar;
+            gsap.to(hpBar, {
+                alpha: 0,
+                duration: 0.2,
+                ease: 'power2.in',
+                onComplete: () => {
+                    if (hpBar && !hpBar.destroyed) {
+                        hpBar.destroy({ children: true });
+                    }
+                }
+            });
+            gsap.to(hpBar.scale, {
+                x: 0.5, y: 0.5,
+                duration: 0.2
+            });
             unit.hpBar = null;
         }
         
-        // Remove intent container (PixiJS - child of sprite)
-        if (unit.intentContainer) {
+        // ★ 인텐트 삭제 연출 (페이드아웃 + 위로 사라짐)
+        if (unit.intentContainer && !unit.intentContainer.destroyed) {
+            const intent = unit.intentContainer;
+            gsap.to(intent, {
+                alpha: 0,
+                y: intent.y - 20,
+                duration: 0.2,
+                ease: 'power2.in',
+                onComplete: () => {
+                    if (intent && !intent.destroyed) {
+                        intent.destroy({ children: true });
+                    }
+                }
+            });
             unit.intentContainer = null;
         }
         
         // ★ 사망 연출 (화려하게!)
-        if (unit.sprite && !unit.sprite.destroyed) {
-            const sprite = unit.sprite;
-            const deathX = sprite.x;
-            const deathY = sprite.y;
+        // 새 구조: container가 최상위, sprite는 container의 자식
+        const posTarget = unit.container || unit.sprite;
+        const scaleTarget = unit.sprite;
+        
+        if (posTarget && !posTarget.destroyed) {
             const isEnemy = unit.team === 'enemy';
+            
+            // 글로벌 좌표로 사망 위치 계산
+            const globalPos = posTarget.getGlobalPosition ? posTarget.getGlobalPosition() : { x: posTarget.x, y: posTarget.y };
+            const deathX = globalPos.x;
+            const deathY = globalPos.y;
             
             // 1. 히트스톱 + 플래시
             if (typeof CombatEffects !== 'undefined') {
@@ -2314,30 +2347,46 @@ const Game = {
             this.createDeathParticles(deathX, deathY, isEnemy);
             
             // 3. 사망 애니메이션 (쓰러지면서 사라짐)
+            const baseScale = unit.baseScale || scaleTarget?.baseScale || 1;
+            const startY = posTarget.y;
+            
             gsap.timeline()
-                // 피격 경직
-                .to(sprite, { tint: 0xffffff, duration: 0.05 })
-                // 빨갛게 변하면서
-                .to(sprite, { tint: isEnemy ? 0xff0000 : 0x888888, duration: 0.1 })
-                // 위로 살짝 튀어오름
-                .to(sprite, { y: deathY - 20, duration: 0.1, ease: 'power2.out' }, '<')
-                .to(sprite.scale, { x: 1.2, y: 0.8, duration: 0.1 }, '<')
-                // 아래로 쓰러짐
-                .to(sprite, { 
-                    y: deathY + 30, 
-                    rotation: isEnemy ? 0.3 : -0.3,
+                // 피격 경직 (스프라이트 틴트)
+                .call(() => {
+                    if (scaleTarget) scaleTarget.tint = 0xffffff;
+                })
+                .to({}, { duration: 0.05 })
+                // 빨갛게 변하면서 (스프라이트 틴트)
+                .call(() => {
+                    if (scaleTarget) scaleTarget.tint = isEnemy ? 0xff0000 : 0x888888;
+                })
+                // 위로 살짝 튀어오름 (컨테이너 위치)
+                .to(posTarget, { y: startY - 20, duration: 0.1, ease: 'power2.out' })
+                .call(() => {
+                    if (scaleTarget) gsap.to(scaleTarget.scale, { x: baseScale * 1.2, y: baseScale * 0.8, duration: 0.1 });
+                }, null, '<')
+                // 아래로 쓰러짐 (컨테이너 위치)
+                .to(posTarget, { 
+                    y: startY + 30,
                     duration: 0.25, 
                     ease: 'power3.in' 
                 })
-                .to(sprite.scale, { x: 0.6, y: 1.3, duration: 0.2 }, '<')
-                // 페이드 아웃
-                .to(sprite, { 
+                .call(() => {
+                    if (scaleTarget) {
+                        gsap.to(scaleTarget.scale, { x: baseScale * 0.6, y: baseScale * 1.3, duration: 0.2 });
+                        gsap.to(scaleTarget, { rotation: isEnemy ? 0.3 : -0.3, duration: 0.2 });
+                    }
+                }, null, '<')
+                // 페이드 아웃 (전체 컨테이너)
+                .to(posTarget, { 
                     alpha: 0, 
                     duration: 0.3,
                     onComplete: () => {
-                        if (sprite && !sprite.destroyed) {
-                            sprite.destroy({ children: true });
+                        // 컨테이너 전체 삭제 (sprite, hpBar, intentContainer 포함)
+                        if (posTarget && !posTarget.destroyed) {
+                            posTarget.destroy({ children: true });
                         }
+                        unit.container = null;
                         unit.sprite = null;
                     }
                 });
