@@ -530,6 +530,40 @@
             font-weight: 600;
             color: #1e1b4b;
             background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.3), transparent);
+        }
+        
+        /* ==================== Language Selector ==================== */
+        .lang-selector {
+            display: flex;
+            gap: 4px;
+            margin-left: 15px;
+        }
+        
+        .lang-btn {
+            width: 32px;
+            height: 32px;
+            border: 1px solid rgba(180, 155, 100, 0.4);
+            border-radius: 4px;
+            background: rgba(30, 20, 10, 0.8);
+            color: rgba(180, 155, 100, 0.6);
+            font-family: 'Cinzel', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .lang-btn:hover {
+            border-color: rgba(180, 155, 100, 0.8);
+            color: rgba(180, 155, 100, 1);
+            background: rgba(50, 35, 20, 0.9);
+        }
+        
+        .lang-btn.active {
+            border-color: var(--ds-gold);
+            color: var(--ds-gold);
+            background: rgba(180, 155, 100, 0.15);
+            box-shadow: 0 0 8px rgba(180, 155, 100, 0.3);
             padding: 4px 16px;
             margin-top: 6px;
             text-transform: uppercase;
@@ -883,6 +917,13 @@
                     <div class="top-cost-orb active"></div>
                 </div>
             </div>
+            
+            <!-- Language Selector -->
+            <div class="lang-selector" id="lang-selector">
+                <button class="lang-btn active" data-lang="ko">한</button>
+                <button class="lang-btn" data-lang="en">EN</button>
+                <button class="lang-btn" data-lang="ja">日</button>
+            </div>
         </div>
         
         <!-- Center Message -->
@@ -939,6 +980,9 @@
     <script src="grid-aoe.js"></script>
     <script src="break-system.js"></script>
     <script src="monster-patterns.js"></script>
+    
+    <!-- Localization -->
+    <script src="localization.js"></script>
     
     <!-- Systems -->
     <script src="card-system.js"></script>

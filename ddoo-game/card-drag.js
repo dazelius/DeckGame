@@ -320,7 +320,7 @@ const CardDrag = {
             // Exhaust 카드면 소멸
             if (cardDef.exhaust) {
                 this.game.state.exhaust.push(cardId);
-                this.game.showExhaustEffect(cardDef);
+                this.game.showExhaustEffect(cardId, cardDef);
             } else {
                 this.game.state.discard.push(cardId);
             }

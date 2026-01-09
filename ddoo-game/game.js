@@ -812,8 +812,19 @@ const Game = {
             cardEl.dataset.cardId = cardId;
             cardEl.dataset.index = index;
             
-            // Type label
-            const typeLabels = {
+            // 로컬라이징된 카드 텍스트
+            const localCard = typeof Localization !== 'undefined' 
+                ? Localization.getCard(cardId) 
+                : null;
+            const cardName = localCard?.name || cardDef.name;
+            const cardDesc = localCard?.desc || cardDef.desc;
+            
+            // Type label (로컬라이징)
+            const typeLabels = typeof Localization !== 'undefined' ? {
+                attack: Localization.get('strike'),
+                skill: Localization.get('miracle'),
+                summon: Localization.get('summon')
+            } : {
                 attack: 'STRIKE',
                 skill: 'MIRACLE',
                 summon: 'SUMMON'
@@ -821,9 +832,9 @@ const Game = {
             
             cardEl.innerHTML = `
                 <div class="card-cost">${cardDef.cost}</div>
-                <div class="card-name">${cardDef.name}</div>
+                <div class="card-name">${cardName}</div>
                 <div class="card-type">${typeLabels[cardDef.type] || cardDef.type}</div>
-                <div class="card-desc">${cardDef.desc}</div>
+                <div class="card-desc">${cardDesc}</div>
             `;
             
             // Drag to play (only if can afford)
@@ -833,7 +844,10 @@ const Game = {
             } else {
                 // 코스트 부족 시 클릭하면 메시지
                 cardEl.addEventListener('click', () => {
-                    this.showMessage(`코스트 부족! (${cardDef.cost} 필요)`, 800);
+                    const msg = typeof Localization !== 'undefined' 
+                        ? `${Localization.get('notEnoughCost')} (${cardDef.cost})` 
+                        : `코스트 부족! (${cardDef.cost} 필요)`;
+                    this.showMessage(msg, 800);
                     if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
                 });
             }
@@ -1142,7 +1156,7 @@ const Game = {
         // Exhaust 카드면 소멸, 아니면 버린 카드 더미로
         if (cardDef.exhaust) {
             this.state.exhaust.push(cardId);
-            this.showExhaustEffect(cardDef);
+            this.showExhaustEffect(cardId, cardDef);
         } else {
             this.state.discard.push(cardId);
         }
@@ -1342,7 +1356,7 @@ const Game = {
         // Exhaust 카드면 소멸, 아니면 버린 카드 더미로
         if (cardDef.exhaust) {
             this.state.exhaust.push(cardId);
-            this.showExhaustEffect(cardDef);
+            this.showExhaustEffect(cardId, cardDef);
         } else {
             this.state.discard.push(cardId);
         }
@@ -2142,6 +2156,31 @@ const Game = {
         }
     },
     
+    // ==========================================
+    // UI 라벨 업데이트 (로컬라이징)
+    // ==========================================
+    updateUILabels() {
+        if (typeof Localization === 'undefined') return;
+        
+        // 패널 타이틀
+        const panelTitle = document.getElementById('panel-title');
+        if (panelTitle) {
+            panelTitle.textContent = Localization.get('spellInventory');
+        }
+        
+        // 턴 종료 버튼
+        const endTurnBtn = document.getElementById('end-turn-btn');
+        if (endTurnBtn) {
+            endTurnBtn.textContent = Localization.get('endTurnBtn');
+        }
+        
+        // 히어로 이름
+        const heroLabel = document.querySelector('.hp-box .label');
+        if (heroLabel) {
+            heroLabel.textContent = Localization.get('ashenOne');
+        }
+    },
+    
     // ==================== UTILS ====================
     showMessage(text, duration = 2000) {
         const msgEl = document.getElementById('center-message');
@@ -2157,16 +2196,25 @@ const Game = {
     // ==========================================
     // 카드 소멸 이펙트
     // ==========================================
-    showExhaustEffect(cardDef) {
+    showExhaustEffect(cardId, cardDef) {
         // 화면 중앙 하단에서 소멸 이펙트
         const x = window.innerWidth / 2;
         const y = window.innerHeight - 200;
         
+        // 로컬라이징된 카드 이름
+        const localCard = typeof Localization !== 'undefined' 
+            ? Localization.getCard(cardId) 
+            : null;
+        const cardName = localCard?.name || cardDef.name;
+        const exhaustLabel = typeof Localization !== 'undefined' 
+            ? Localization.get('exhausted') 
+            : 'EXHAUSTED';
+        
         // 소멸 텍스트
         const exhaustText = document.createElement('div');
         exhaustText.innerHTML = `
-            <div class="exhaust-card-name">${cardDef.name}</div>
-            <div class="exhaust-label">EXHAUSTED</div>
+            <div class="exhaust-card-name">${cardName}</div>
+            <div class="exhaust-label">${exhaustLabel}</div>
         `;
         exhaustText.style.cssText = `
             position: fixed;
@@ -2275,4 +2323,29 @@ const Game = {
 // Start game
 document.addEventListener('DOMContentLoaded', () => {
     Game.init();
+    
+    // 언어 선택 버튼 이벤트
+    const langSelector = document.getElementById('lang-selector');
+    if (langSelector) {
+        langSelector.addEventListener('click', (e) => {
+            const btn = e.target.closest('.lang-btn');
+            if (!btn) return;
+            
+            const lang = btn.dataset.lang;
+            if (typeof Localization !== 'undefined' && Localization.setLanguage(lang)) {
+                // 활성 버튼 업데이트
+                langSelector.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // 손패 다시 렌더링
+                Game.renderHand(false);
+            }
+        });
+    }
+    
+    // 언어 변경 이벤트 리스너
+    window.addEventListener('languageChanged', () => {
+        Game.renderHand(false);
+        Game.updateUILabels();
+    });
 });
