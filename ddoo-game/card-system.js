@@ -106,7 +106,7 @@ const CardSystem = {
         ironWave: 2,
         fireBolt: 1,
         fireBall: 1,
-        spearThrow: 2,  // 스피어 투척
+        spearThrow: 1,  // 스피어 투척
         summonKnight: 2,
         summonArcher: 2,
         heal: 1
