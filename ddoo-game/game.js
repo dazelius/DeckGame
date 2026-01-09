@@ -1687,13 +1687,24 @@ const Game = {
         this.containers.units.addChild(sprite);
         
         // ★ 달려오는 애니메이션
+        const targetScale = unitDef.scale;
         const runInAnimation = gsap.timeline({
             onComplete: () => {
                 // 스폰 완료 후 스케일 확정 및 숨쉬기 시작
                 if (sprite && !sprite.destroyed) {
-                    sprite.scale.set(unitDef.scale, unitDef.scale);
-                    if (typeof DDOORenderer !== 'undefined') {
-                        DDOORenderer.startBreathing(sprite, unitDef.scale);
+                    // 내부 스프라이트 찾기
+                    const innerSprite = sprite._ddooData?.sprite || sprite.children?.find(c => c.label === 'main') || sprite;
+                    innerSprite.scale.set(targetScale, targetScale);
+                    
+                    // 숨쉬기 시작 (직접 구현 - 충돌 방지)
+                    if (typeof gsap !== 'undefined') {
+                        gsap.to(innerSprite.scale, {
+                            y: targetScale * 1.025,
+                            duration: 2.5,
+                            repeat: -1,
+                            yoyo: true,
+                            ease: 'sine.inOut'
+                        });
                     }
                 }
             }
