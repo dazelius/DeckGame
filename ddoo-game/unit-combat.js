@@ -111,10 +111,9 @@ const UnitCombat = {
         // 3. 공격 이펙트
         this.playAttackEffect(effectType, targetX, targetCenter, slashColor);
         
-        // 4. 피격 처리
+        // 4. 피격 처리 (데미지 숫자는 dealDamage에서 표시)
         if (typeof CombatEffects !== 'undefined') {
             CombatEffects.hitEffect(target.sprite);
-            CombatEffects.showDamageNumber(targetX, targetCenter - 20, damage);
         }
         
         if (isEnemy) {
@@ -224,10 +223,9 @@ const UnitCombat = {
             CombatEffects.burstParticles(targetX, targetCenter, 0xff8800, 12);
         }
         
-        // 4. 피격
+        // 4. 피격 (데미지 숫자는 dealDamage에서 표시)
         if (typeof CombatEffects !== 'undefined' && target.sprite) {
             CombatEffects.hitEffect(target.sprite);
-            CombatEffects.showDamageNumber(targetX, targetCenter - 20, damage, 'bash');
         }
         
         if (isEnemy) {
@@ -303,10 +301,9 @@ const UnitCombat = {
             CombatEffects.burstParticles(targetX, targetCenter, 0x88ccff, 5);
         }
         
-        // 4. 피격
+        // 4. 피격 (데미지 숫자는 dealDamage에서 표시)
         if (typeof CombatEffects !== 'undefined' && target.sprite) {
             CombatEffects.hitEffect(target.sprite);
-            CombatEffects.showDamageNumber(targetX, targetCenter - 20, damage, 'flurry');
         }
         
         if (isEnemy) {
@@ -400,7 +397,7 @@ const UnitCombat = {
                 .add(resolve);
         });
         
-        // 2. 투사체 타입별 처리
+        // 2. 투사체 타입별 처리 (데미지 숫자는 dealDamage에서 표시)
         if (typeof CombatEffects !== 'undefined') {
             console.log('[UnitCombat] rangedAttack - projectileType:', projectileType, 'createZone:', createZone);
             
@@ -408,19 +405,16 @@ const UnitCombat = {
                 // 파이어볼 전용 이펙트
                 console.log('[UnitCombat] 🔥 파이어볼 이펙트 실행!');
                 await CombatEffects.fireballEffect(startX, startY, endX, endY);
-                CombatEffects.showDamageNumber(endX, endY - 20, damage, 'burn');
             } else if (projectileType === 'arrow') {
                 // ★ 화살 이펙트 (곡사)
                 console.log('[UnitCombat] 🏹 화살 이펙트 실행!');
                 await CombatEffects.arrowEffect(startX, startY, endX, endY, { isEnemy });
                 CombatEffects.hitEffect(target.sprite);
-                CombatEffects.showDamageNumber(endX, endY - 20, damage);
             } else {
                 // 일반 투사체
                 await CombatEffects.projectileEffect(startX, startY, endX, endY, projectileColor, projectileSize);
                 CombatEffects.hitEffect(target.sprite);
                 CombatEffects.impactEffect(endX, endY, projectileColor, 0.8);
-                CombatEffects.showDamageNumber(endX, endY - 20, damage);
             }
         }
         

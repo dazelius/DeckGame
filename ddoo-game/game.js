@@ -1732,11 +1732,8 @@ const Game = {
                 // 모든 십자가 영역의 적에게 대미지
                 for (const target of crossTargets) {
                     if (target !== targetEnemy && target.hp > 0) {
+                        // dealDamage에서 데미지 숫자 표시됨
                         this.dealDamage(target, cardDef.damage);
-                        const targetPos = this.getUnitPosition(target);
-                        if (typeof CombatEffects !== 'undefined' && targetPos) {
-                            CombatEffects.showDamageNumber(targetPos.x, targetPos.y - 30, cardDef.damage, 'burn');
-                        }
                     }
                 }
                 
@@ -2545,24 +2542,11 @@ const Game = {
     },
     
     showDamage(unit, damage) {
-        const text = new PIXI.Text({
-            text: `-${damage}`,
-            style: { fontSize: 20, fill: 0xff4444, fontWeight: 'bold' }
-        });
-        
+        // ★ CombatEffects.showDamageNumber 로 통합 (시인성 좋은 폰트 하나만 사용)
         const pos = this.getUnitPosition(unit);
-        text.x = pos?.x || 0;
-        text.y = (pos?.y || 0) - 30;
-        text.anchor.set(0.5);
-        
-        this.containers.effects.addChild(text);
-        
-        gsap.to(text, {
-            y: text.y - 40,
-            alpha: 0,
-            duration: 0.8,
-            onComplete: () => text.destroy()
-        });
+        if (typeof CombatEffects !== 'undefined' && pos) {
+            CombatEffects.showDamageNumber(pos.x, pos.y - 40, damage, 'normal');
+        }
     },
     
     killUnit(unit) {
