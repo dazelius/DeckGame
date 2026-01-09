@@ -216,32 +216,55 @@ const BreakSystem = {
             enemy.intentContainer.visible = false;
         }
         
-        // 🔥 스턴 떨림 애니메이션 (지속)
+        // 🔥 브레이크 상태 애니메이션 (무기력 + 빨간 깜빡임)
         const sprite = enemy.sprite;
         if (sprite && !sprite.destroyed && typeof gsap !== 'undefined') {
-            // 원래 위치 저장
+            // 원래 상태 저장
             sprite.originalX = sprite.x;
+            sprite.originalScaleY = sprite.scale.y;
             
-            // 히트스톱 + 흰색 번쩍
+            // 1. 초기 충격 - 흰색 번쩍 후 빨갛게
             gsap.timeline()
                 .set(sprite, { tint: 0xffffff })
-                .to({}, { duration: 0.15 }) // 히트스톱
-                .to(sprite, { 
-                    tint: 0x8888ff,
-                    duration: 0.3
-                });
+                .to({}, { duration: 0.1 }) // 히트스톱
+                .to(sprite, { tint: 0xff4444, duration: 0.15 });
             
-            // 바들바들 떨림 (지속) - 더 강하게
+            // 2. 축 늘어진 느낌 (Y 스케일 줄이기)
+            gsap.to(sprite.scale, {
+                y: sprite.originalScaleY * 0.85,
+                duration: 0.3,
+                ease: 'power2.out'
+            });
+            
+            // 3. 빨간색 깜빡깜빡 (무기력한 위험 상태)
+            enemy.breakBlinkTween = gsap.to(sprite, {
+                tint: 0x660000,  // 어두운 빨강
+                duration: 0.4,
+                yoyo: true,
+                repeat: -1,
+                ease: 'sine.inOut',
+                onUpdate: () => {
+                    if (!sprite || sprite.destroyed) return;
+                    // tint 값을 깜빡이는 중간값으로 보간
+                    const progress = enemy.breakBlinkTween?.progress() || 0;
+                    const r = Math.floor(255 - progress * 150);  // 255 → 105
+                    const g = Math.floor(68 - progress * 68);    // 68 → 0
+                    const b = Math.floor(68 - progress * 68);    // 68 → 0
+                    sprite.tint = (r << 16) | (g << 8) | b;
+                }
+            });
+            
+            // 4. 미세한 떨림 (힘없이)
             enemy.stunShakeTween = gsap.to(sprite, {
-                x: sprite.originalX + 4,
-                duration: 0.025,
+                x: sprite.originalX + 2,
+                duration: 0.08,
                 yoyo: true,
                 repeat: -1,
                 ease: 'none',
                 onUpdate: () => {
-                    // 랜덤 Y 떨림도 추가
-                    if (enemy.sprite) {
-                        enemy.sprite.rotation = (Math.random() - 0.5) * 0.03;
+                    if (enemy.sprite && !enemy.sprite.destroyed) {
+                        // 축 늘어진 채로 살짝 흔들림
+                        enemy.sprite.rotation = (Math.random() - 0.5) * 0.02;
                     }
                 }
             });
@@ -908,15 +931,34 @@ const BreakSystem = {
                 enemy.stunShakeTween = null;
             }
             
+            // ★ 빨간 깜빡임 애니메이션 중지
+            if (enemy.breakBlinkTween) {
+                enemy.breakBlinkTween.kill();
+                enemy.breakBlinkTween = null;
+            }
+            
             // ★ 3D 스턴 별 제거
             this.removeStunStars(enemy);
             
             // 스프라이트 복구
-            if (enemy.sprite) {
+            if (enemy.sprite && !enemy.sprite.destroyed) {
+                // 틴트 복구
                 enemy.sprite.tint = 0xffffff;
+                
+                // 위치 복구
                 if (enemy.sprite.originalX !== undefined) {
                     enemy.sprite.x = enemy.sprite.originalX;
                 }
+                
+                // ★ 스케일 복구 (축 늘어진 상태에서 원래대로)
+                if (enemy.sprite.originalScaleY !== undefined) {
+                    gsap.to(enemy.sprite.scale, {
+                        y: enemy.sprite.originalScaleY,
+                        duration: 0.3,
+                        ease: 'back.out(1.5)'
+                    });
+                }
+                
                 enemy.sprite.rotation = 0;
             }
             
