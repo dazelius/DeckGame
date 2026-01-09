@@ -230,7 +230,11 @@ const CardDrag = {
             this.clearEnemyHighlights();
             this.clearAoeHighlight();
             
-            if (dragDist > 100) {
+            if (cardDef.straight) {
+                // ★ 직선 카드: 타겟 없으면 항상 사용 불가 표시
+                ghost.style.transform = 'scale(1.15) rotate(-3deg)';
+                ghost.querySelector('.drag-card').style.borderColor = '#ff6666';
+            } else if (dragDist > 100) {
                 ghost.style.transform = 'scale(1.2) rotate(0deg)';
                 ghost.querySelector('.drag-card').style.borderColor = '#44ff44';
             } else {
@@ -369,8 +373,11 @@ const CardDrag = {
             if (targetEnemy) {
                 this.game.executeCardOnTarget(cardId, handIndex, targetEnemy);
                 return true;
+            } else if (cardDef.straight && dragDist > 100) {
+                // ★ 직선 카드: 같은 라인에 적이 없으면 안내 메시지
+                this.game.showMessage('같은 라인에 대상이 없습니다!', 1500);
+                return false;
             } else if (dragDist > 100 && !cardDef.straight) {
-                // 직선 카드는 타겟 없이는 사용 불가
                 this.game.executeCard(cardId, handIndex);
                 return true;
             }
@@ -638,11 +645,26 @@ const CardDrag = {
             this._distanceText = distText;
             this.game.containers.effects.addChild(distText);
         } else {
-            // 타겟 없으면 텍스트 제거
+            // 타겟 없으면 "대상 없음" 표시
             if (this._distanceText && !this._distanceText.destroyed) {
                 this._distanceText.destroy();
-                this._distanceText = null;
             }
+            
+            const noTargetText = new PIXI.Text({
+                text: '⚠ 같은 라인에 대상 없음',
+                style: {
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                    fill: '#ff6666',
+                    stroke: { color: '#000000', width: 3 }
+                }
+            });
+            noTargetText.anchor.set(0.5);
+            noTargetText.x = startX + 150;
+            noTargetText.y = startY - 20;
+            
+            this._distanceText = noTargetText;
+            this.game.containers.effects.addChild(noTargetText);
         }
     },
     
