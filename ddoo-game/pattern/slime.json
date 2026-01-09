@@ -19,7 +19,7 @@
             "type": "summon",
             "summonType": "slime_small",
             "weight": 20,
-            "breakRecipe": { "element": "fire", "count": 2 }
+            "breakRecipe": 2
         },
         { 
             "id": "goo_shield",

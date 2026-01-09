@@ -20,7 +20,7 @@
             "buffType": "strength",
             "buffValue": 1,
             "weight": 25,
-            "breakRecipe": { "element": "physical", "count": 2 }
+            "breakRecipe": 2
         },
         { 
             "id": "bone_shield",

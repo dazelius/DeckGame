@@ -11,7 +11,7 @@
             "type": "attack", 
             "damage": 15,
             "weight": 35,
-            "breakRecipe": { "element": "physical", "count": 4 }
+            "breakRecipe": 4
         },
         { 
             "id": "rage_slam",
@@ -20,7 +20,7 @@
             "type": "attack", 
             "damage": 22,
             "weight": 15,
-            "breakRecipe": { "element": "ice", "count": 3 }
+            "breakRecipe": 3
         },
         { 
             "id": "war_cry",

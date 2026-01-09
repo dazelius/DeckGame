@@ -20,7 +20,7 @@
             "damage": 4,
             "hits": 2,
             "weight": 25,
-            "breakRecipe": { "element": "physical", "count": 2 }
+            "breakRecipe": 2
         },
         { 
             "id": "poison_arrow",
@@ -30,7 +30,7 @@
             "damage": 3,
             "poison": 4,
             "weight": 20,
-            "breakRecipe": { "element": "fire", "count": 2 }
+            "breakRecipe": 2
         },
         { 
             "id": "aim",

@@ -65,38 +65,58 @@ const BreakSystem = {
     onIntentSelected(enemy, intentData) {
         // 이전 브레이크 상태 초기화
         enemy.currentBreakRecipe = null;
-        enemy.breakProgress = [];
+        enemy.breakProgress = 0;
         enemy.isBroken = false;
         
-        // 새 형식: { element, count }
+        // breakRecipe는 이제 숫자 (횟수)
         if (intentData && intentData.breakRecipe) {
             const recipe = intentData.breakRecipe;
             
-            // 새 형식 (객체)
-            if (typeof recipe === 'object' && recipe.element && recipe.count) {
+            // 새 형식: 숫자 (약점 아무거나 N회)
+            if (typeof recipe === 'number' && recipe > 0) {
+                // 몬스터 패턴에서 약점 목록 가져오기
+                const weaknesses = this.getMonsterWeaknesses(enemy);
+                
                 enemy.currentBreakRecipe = {
-                    element: recipe.element,
-                    count: recipe.count
+                    count: recipe,
+                    weaknesses: weaknesses  // 약점 목록 저장
                 };
-                enemy.breakProgress = 0;  // 숫자로 변경
+                enemy.breakProgress = 0;
+                enemy.breakShield = recipe;
+                enemy.maxBreakShield = recipe;
+                
+                const icons = weaknesses.map(w => this.ElementIcons[w] || '?').join(' ');
+                console.log(`[BreakSystem] ${enemy.name || enemy.type}: 브레이크 가능! 약점(${icons}) x${recipe}`);
+            }
+            // 레거시 형식 (객체 { element, count }) 지원
+            else if (typeof recipe === 'object' && recipe.count) {
+                const weaknesses = recipe.element ? [recipe.element] : this.getMonsterWeaknesses(enemy);
+                
+                enemy.currentBreakRecipe = {
+                    count: recipe.count,
+                    weaknesses: weaknesses
+                };
+                enemy.breakProgress = 0;
                 enemy.breakShield = recipe.count;
                 enemy.maxBreakShield = recipe.count;
                 
-                console.log(`[BreakSystem] ${enemy.name || enemy.type}: 브레이크 가능! ${this.ElementIcons[recipe.element] || '?'} x${recipe.count}`);
-            }
-            // 레거시 형식 (배열) 지원
-            else if (Array.isArray(recipe) && recipe.length > 0) {
-                enemy.currentBreakRecipe = {
-                    element: recipe[0],
-                    count: recipe.length
-                };
-                enemy.breakProgress = 0;
-                enemy.breakShield = recipe.length;
-                enemy.maxBreakShield = recipe.length;
-                
-                console.log(`[BreakSystem] ${enemy.name || enemy.type}: 브레이크 가능! (레거시) ${recipe.join(' → ')}`);
+                console.log(`[BreakSystem] ${enemy.name || enemy.type}: 브레이크 가능! (레거시) x${recipe.count}`);
             }
         }
+    },
+    
+    // ==========================================
+    // 몬스터 약점 목록 가져오기
+    // ==========================================
+    getMonsterWeaknesses(enemy) {
+        if (typeof MonsterPatterns !== 'undefined') {
+            const pattern = MonsterPatterns.getPattern(enemy.type);
+            if (pattern && pattern.weaknesses) {
+                return pattern.weaknesses;
+            }
+        }
+        // 기본값: 물리
+        return ['physical'];
     },
     
     // ==========================================
@@ -145,14 +165,13 @@ const BreakSystem = {
         const element = this.getCardElement(cardDef);
         const recipe = enemy.currentBreakRecipe;
         
-        // 새 형식: { element, count }
-        const requiredElement = recipe.element;
+        const weaknesses = recipe.weaknesses || ['physical'];
         const requiredCount = recipe.count;
         const currentProgress = enemy.breakProgress || 0;
         
-        // 약점 속성 확인
-        if (element !== requiredElement) {
-            console.log(`[BreakSystem] ${enemy.name || enemy.type}: ${element} 실패! (필요: ${requiredElement})`);
+        // 약점 목록에 포함되는지 확인
+        if (!weaknesses.includes(element)) {
+            console.log(`[BreakSystem] ${enemy.name || enemy.type}: ${element} 실패! (약점: ${weaknesses.join(', ')})`);
             return { hit: false, broken: false };
         }
         
@@ -948,18 +967,20 @@ const BreakSystem = {
     },
     
     // ==========================================
-    // 브레이크 게이지 생성 (아이콘 + 게이지바 형태)
+    // 브레이크 게이지 생성 (약점 아이콘들 + 게이지바)
     // ==========================================
     createBreakGauge(enemy) {
         if (!enemy.intentContainer || !enemy.currentBreakRecipe) return;
         
-        const recipe = enemy.currentBreakRecipe;  // { element, count }
-        const progress = enemy.breakProgress || 0; // 숫자
+        const recipe = enemy.currentBreakRecipe;  // { count, weaknesses }
+        const progress = enemy.breakProgress || 0;
         
-        const element = recipe.element;
+        const weaknesses = recipe.weaknesses || ['physical'];
         const count = recipe.count;
-        const elementColor = parseInt(this.ElementColors[element].replace('#', ''), 16);
-        const icon = this.ElementIcons[element] || '⚔️';
+        // 첫 번째 약점 색상 사용
+        const elementColor = parseInt(this.ElementColors[weaknesses[0]].replace('#', ''), 16);
+        // 모든 약점 아이콘 표시
+        const icons = weaknesses.map(w => this.ElementIcons[w] || '?').join('');
         
         // 게이지 컨테이너
         const gauge = new PIXI.Container();
@@ -973,14 +994,14 @@ const BreakSystem = {
         const totalWidth = iconSize + 6 + barWidth;
         
         // ========================================
-        // 1. 속성 아이콘 (왼쪽)
+        // 1. 약점 아이콘들 (왼쪽)
         // ========================================
         const iconText = new PIXI.Text({
-            text: icon,
-            style: { fontSize: iconSize }
+            text: icons,
+            style: { fontSize: iconSize - 2 }
         });
         iconText.anchor.set(0.5);
-        iconText.x = -totalWidth/2 + iconSize/2;
+        iconText.x = -totalWidth/2 + iconSize/2 + (weaknesses.length > 1 ? 4 : 0);
         iconText.y = 0;
         gauge.addChild(iconText);
         
