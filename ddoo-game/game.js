@@ -1085,16 +1085,27 @@ const Game = {
     },
     
     // ==================== CHARACTER HP BARS ====================
+    // ★ HPBarSystem 모듈 사용 (체계적 관리)
     // ==================== PIXI-based HP Bars ====================
     renderAllHPBars() {
-        [...this.state.playerUnits, ...this.state.enemyUnits].forEach(unit => {
-            if (unit.hp > 0 && unit.sprite) {
-                this.createUnitHPBar(unit);
-            }
-        });
+        if (typeof HPBarSystem !== 'undefined') {
+            HPBarSystem.renderAll(this.state.playerUnits, this.state.enemyUnits);
+        } else {
+            [...this.state.playerUnits, ...this.state.enemyUnits].forEach(unit => {
+                if (unit.hp > 0 && unit.sprite) {
+                    this.createUnitHPBar(unit);
+                }
+            });
+        }
     },
     
     createUnitHPBar(unit) {
+        // ★ HPBarSystem 모듈 사용 (우선)
+        if (typeof HPBarSystem !== 'undefined') {
+            HPBarSystem.create(unit);
+            return;
+        }
+        
         // ★ 새 구조: container 사용 (레거시: sprite 사용)
         const parent = unit.container || unit.sprite;
         if (!parent) return;
@@ -1247,6 +1258,12 @@ const Game = {
     // HP 게이지 업데이트 (잔상 애니메이션 포함)
     // ========================================
     updateHPFill(unit) {
+        // ★ HPBarSystem 모듈 사용 (우선)
+        if (typeof HPBarSystem !== 'undefined' && unit.hpBarData) {
+            HPBarSystem.update(unit);
+            return;
+        }
+        
         if (!unit.hpFill) return;
         
         const { hpBarWidth, hpBarHeight, hpBarPadding, hpColor, hpColorBright, hpColorDark } = unit;
@@ -1384,6 +1401,16 @@ const Game = {
     },
     
     updateUnitHPBar(unit) {
+        // ★ HPBarSystem 모듈 사용 (우선)
+        if (typeof HPBarSystem !== 'undefined') {
+            if (!unit.hpBarData && !unit.hpBar) {
+                HPBarSystem.create(unit);
+            } else {
+                HPBarSystem.update(unit);
+            }
+            return;
+        }
+        
         if (!unit.hpBar || !unit.hpFill) {
             this.createUnitHPBar(unit);
             return;
@@ -1393,6 +1420,12 @@ const Game = {
     },
     
     updateAllHPBars() {
+        // ★ HPBarSystem 모듈 사용 (우선)
+        if (typeof HPBarSystem !== 'undefined') {
+            HPBarSystem.updateAll(this.state.playerUnits, this.state.enemyUnits);
+            return;
+        }
+        
         [...this.state.playerUnits, ...this.state.enemyUnits].forEach(unit => {
             if (unit.hp > 0 && unit.sprite) {
                 this.updateUnitHPBar(unit);
