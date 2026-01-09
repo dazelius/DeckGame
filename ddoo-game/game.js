@@ -1151,7 +1151,13 @@ const Game = {
         hpBar.addChild(bgFill);
         unit.hpBgFill = bgFill;
         
-        // HP 게이지 (실제 HP)
+        // ★ 지연 HP 게이지 (잔상 - 천천히 따라오는 효과)
+        const hpDelayedFill = new PIXI.Graphics();
+        hpBar.addChild(hpDelayedFill);
+        unit.hpDelayedFill = hpDelayedFill;
+        unit.displayedHp = unit.hp; // 현재 표시 중인 HP
+        
+        // HP 게이지 (실제 HP - 즉시 반영)
         const hpFill = new PIXI.Graphics();
         hpBar.addChild(hpFill);
         unit.hpFill = hpFill;
@@ -1238,16 +1244,63 @@ const Game = {
     },
     
     // ========================================
-    // HP 게이지 업데이트
+    // HP 게이지 업데이트 (잔상 애니메이션 포함)
     // ========================================
     updateHPFill(unit) {
         if (!unit.hpFill) return;
         
-        const { hpBarWidth, hpBarHeight, hpBarPadding, hpColor, hpColorBright } = unit;
+        const { hpBarWidth, hpBarHeight, hpBarPadding, hpColor, hpColorBright, hpColorDark } = unit;
         const hpRatio = Math.max(0, Math.min(1, unit.hp / unit.maxHp));
         const shield = unit.block || 0;
         
-        // HP 게이지
+        // ★ 지연 HP 잔상 (쭈욱 빠지는 효과)
+        if (unit.hpDelayedFill) {
+            const previousDisplayedHp = unit.displayedHp ?? unit.hp;
+            const delayedRatio = Math.max(0, Math.min(1, previousDisplayedHp / unit.maxHp));
+            
+            // 잔상은 흰색/노란색으로 표시
+            unit.hpDelayedFill.clear();
+            if (delayedRatio > hpRatio) {
+                // 빠진 부분을 밝은 색으로 표시
+                unit.hpDelayedFill
+                    .rect(-hpBarWidth/2 + hpBarWidth * hpRatio, 0, 
+                          hpBarWidth * (delayedRatio - hpRatio), hpBarHeight)
+                    .fill(0xffeeaa); // 밝은 노란색 잔상
+            }
+            
+            // ★ gsap으로 displayedHp를 실제 hp로 천천히 감소
+            if (previousDisplayedHp > unit.hp && typeof gsap !== 'undefined') {
+                // 기존 애니메이션 취소
+                if (unit.hpTween) {
+                    unit.hpTween.kill();
+                }
+                
+                // 잔상이 천천히 따라오는 애니메이션
+                unit.hpTween = gsap.to(unit, {
+                    displayedHp: unit.hp,
+                    duration: 0.6,
+                    ease: 'power2.out',
+                    onUpdate: () => {
+                        // 잔상 업데이트
+                        if (unit.hpDelayedFill) {
+                            const currentDelayedRatio = Math.max(0, Math.min(1, unit.displayedHp / unit.maxHp));
+                            unit.hpDelayedFill.clear();
+                            if (currentDelayedRatio > hpRatio) {
+                                unit.hpDelayedFill
+                                    .rect(-hpBarWidth/2 + hpBarWidth * hpRatio, 0,
+                                          hpBarWidth * (currentDelayedRatio - hpRatio), hpBarHeight)
+                                    .fill(0xffeeaa);
+                            }
+                        }
+                    }
+                });
+            } else if (previousDisplayedHp < unit.hp) {
+                // HP 회복 시 즉시 반영
+                unit.displayedHp = unit.hp;
+            }
+        }
+        
+        // HP 게이지 (실제 HP - 즉시 반영)
         unit.hpFill.clear();
         if (hpRatio > 0) {
             unit.hpFill
