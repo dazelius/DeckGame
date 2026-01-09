@@ -876,47 +876,70 @@ const Game = {
         // Create HP bar container
         const hpBar = new PIXI.Container();
         
-        // HP bar dimensions
-        const barWidth = 50;
-        const barHeight = 6;
+        // ========================================
+        // ★ LOL 스타일 HP 바 설정
+        // ========================================
+        const hpPerSegment = 10; // 10 HP당 1칸
+        const segmentCount = Math.ceil(unit.maxHp / hpPerSegment);
+        const segmentWidth = 5;
+        const segmentGap = 1;
+        const barWidth = segmentCount * segmentWidth + (segmentCount - 1) * segmentGap;
+        const barHeight = 7;
         
-        // Background
+        // 색상 설정
+        let hpColor = 0xcc3333; // Enemy - 빨강
+        let hpColorDark = 0x881111;
+        if (unit.isHero) {
+            hpColor = 0xc9a227; // Hero - 금색
+            hpColorDark = 0x8a6b1a;
+        } else if (unit.team === 'player') {
+            hpColor = 0x33aa33; // Summon - 초록
+            hpColorDark = 0x116611;
+        }
+        
+        // 배경 (검은색)
         const bg = new PIXI.Graphics();
-        bg.rect(-barWidth/2, 0, barWidth, barHeight);
-        bg.fill({ color: 0x111111 });
-        bg.stroke({ color: 0x333333, width: 1 });
+        bg.roundRect(-barWidth/2 - 2, -1, barWidth + 4, barHeight + 2, 2);
+        bg.fill({ color: 0x000000, alpha: 0.8 });
+        bg.stroke({ color: 0x222222, width: 1 });
         hpBar.addChild(bg);
         
-        // HP fill
-        const hpPercent = Math.max(0, unit.hp / unit.maxHp);
-        const fill = new PIXI.Graphics();
+        // HP 세그먼트 그리기
+        const hpSegments = new PIXI.Graphics();
+        hpBar.addChild(hpSegments);
+        unit.hpSegments = hpSegments;
         
-        // Color based on team
-        let fillColor = 0xaa3333; // Enemy - red
-        if (unit.isHero) fillColor = 0xc9a227; // Hero - gold
-        else if (unit.team === 'player') fillColor = 0x888888; // Summon - gray
+        // 쉴드 게이지 (HP 위에 표시)
+        const shieldBar = new PIXI.Graphics();
+        shieldBar.zIndex = 10;
+        hpBar.addChild(shieldBar);
+        unit.shieldBar = shieldBar;
         
-        fill.rect(-barWidth/2 + 1, 1, (barWidth - 2) * hpPercent, barHeight - 2);
-        fill.fill({ color: fillColor });
-        hpBar.addChild(fill);
-        unit.hpFill = fill;
-        unit.hpFillColor = fillColor;
+        // 단위 저장
         unit.hpBarWidth = barWidth;
         unit.hpBarHeight = barHeight;
+        unit.hpPerSegment = hpPerSegment;
+        unit.segmentCount = segmentCount;
+        unit.segmentWidth = segmentWidth;
+        unit.segmentGap = segmentGap;
+        unit.hpColor = hpColor;
+        unit.hpColorDark = hpColorDark;
+        
+        // 초기 그리기
+        this.drawHPSegments(unit);
+        this.drawShieldBar(unit);
         
         // Position at sprite's feet (bottom) with small margin
         const margin = 5;
         hpBar.y = margin;
         hpBar.zIndex = 50;
+        hpBar.sortableChildren = true;
         
-        // ★ 새 구조: container에 추가 (scale=1이므로 역보정 불필요!)
-        // 레거시 구조: sprite에 추가 (역보정 필요)
+        // ★ 새 구조: container에 추가
         if (unit.container) {
-            // 새 구조: container는 scale=1이므로 역보정 불필요
             unit.container.sortableChildren = true;
             unit.container.addChild(hpBar);
         } else {
-            // 레거시 구조: sprite에 추가, 역보정 필요
             const containerScale = unit.sprite.scale?.x || unit.baseScale || 1;
             if (containerScale !== 0) {
                 hpBar.scale.set(1 / containerScale);
@@ -928,20 +951,117 @@ const Game = {
         unit.hpBar = hpBar;
     },
     
+    // ========================================
+    // HP 세그먼트 그리기 (LOL 스타일)
+    // ========================================
+    drawHPSegments(unit) {
+        if (!unit.hpSegments) return;
+        
+        const g = unit.hpSegments;
+        g.clear();
+        
+        const { hpPerSegment, segmentCount, segmentWidth, segmentGap, barWidth, barHeight, hpColor, hpColorDark } = unit;
+        const currentHp = Math.max(0, unit.hp);
+        
+        for (let i = 0; i < segmentCount; i++) {
+            const segmentStartHp = i * hpPerSegment;
+            const segmentEndHp = (i + 1) * hpPerSegment;
+            const x = -barWidth/2 + i * (segmentWidth + segmentGap);
+            
+            if (currentHp >= segmentEndHp) {
+                // 완전히 채워진 세그먼트
+                g.roundRect(x, 0, segmentWidth, barHeight, 1);
+                g.fill({ color: hpColor });
+                // 상단 하이라이트
+                g.rect(x + 1, 1, segmentWidth - 2, 2);
+                g.fill({ color: 0xffffff, alpha: 0.3 });
+            } else if (currentHp > segmentStartHp) {
+                // 부분적으로 채워진 세그먼트
+                const fillRatio = (currentHp - segmentStartHp) / hpPerSegment;
+                // 어두운 배경
+                g.roundRect(x, 0, segmentWidth, barHeight, 1);
+                g.fill({ color: hpColorDark });
+                // 채워진 부분
+                g.rect(x, 0, segmentWidth * fillRatio, barHeight);
+                g.fill({ color: hpColor });
+            } else {
+                // 빈 세그먼트
+                g.roundRect(x, 0, segmentWidth, barHeight, 1);
+                g.fill({ color: hpColorDark, alpha: 0.3 });
+            }
+        }
+    },
+    
+    // ========================================
+    // 쉴드 바 그리기 (HP 위 흰색 오버레이)
+    // ========================================
+    drawShieldBar(unit) {
+        if (!unit.shieldBar) return;
+        
+        const g = unit.shieldBar;
+        g.clear();
+        
+        const shield = unit.block || 0;
+        if (shield <= 0) return;
+        
+        const { barWidth, barHeight, hpPerSegment, segmentWidth, segmentGap, segmentCount } = unit;
+        
+        // 쉴드 양에 따른 세그먼트 수 계산
+        const shieldSegments = Math.ceil(shield / hpPerSegment);
+        const currentHp = Math.max(0, unit.hp);
+        const hpFilledSegments = Math.ceil(currentHp / hpPerSegment);
+        
+        // 쉴드는 HP 바 위에 흰색/은색으로 그리기
+        for (let i = 0; i < Math.min(shieldSegments, segmentCount); i++) {
+            const segmentIndex = Math.min(hpFilledSegments + i, segmentCount - 1);
+            const x = -barWidth/2 + segmentIndex * (segmentWidth + segmentGap);
+            
+            // 쉴드 세그먼트 (은색/흰색 글로우)
+            g.roundRect(x - 1, -2, segmentWidth + 2, barHeight + 4, 2);
+            g.fill({ color: 0xaaccff, alpha: 0.3 });
+            
+            g.roundRect(x, 0, segmentWidth, barHeight, 1);
+            g.fill({ color: 0xccddff });
+            
+            // 빛나는 효과
+            g.rect(x + 1, 1, segmentWidth - 2, 2);
+            g.fill({ color: 0xffffff, alpha: 0.6 });
+        }
+        
+        // 쉴드 숫자 표시
+        if (shield > 0) {
+            // 기존 쉴드 텍스트 제거
+            if (unit.shieldText) {
+                unit.shieldText.destroy();
+            }
+            
+            const shieldText = new PIXI.Text({
+                text: `🛡${shield}`,
+                style: {
+                    fontSize: 9,
+                    fill: '#aaccff',
+                    fontWeight: 'bold',
+                    stroke: { color: '#000000', width: 2 }
+                }
+            });
+            shieldText.anchor.set(0.5);
+            shieldText.x = barWidth/2 + 15;
+            shieldText.y = barHeight/2;
+            unit.hpBar.addChild(shieldText);
+            unit.shieldText = shieldText;
+        }
+    },
+    
     updateUnitHPBar(unit) {
-        if (!unit.hpBar || !unit.hpFill) {
+        if (!unit.hpBar || !unit.hpSegments) {
             this.createUnitHPBar(unit);
             return;
         }
         
-        const hpPercent = Math.max(0, unit.hp / unit.maxHp);
-        const barWidth = unit.hpBarWidth || 50;
-        const barHeight = unit.hpBarHeight || 6;
-        
-        // Redraw fill
-        unit.hpFill.clear();
-        unit.hpFill.rect(-barWidth/2 + 1, 1, (barWidth - 2) * hpPercent, barHeight - 2);
-        unit.hpFill.fill({ color: unit.hpFillColor || 0xaa3333 });
+        // HP 세그먼트 다시 그리기
+        this.drawHPSegments(unit);
+        // 쉴드 바 다시 그리기
+        this.drawShieldBar(unit);
     },
     
     updateAllHPBars() {
@@ -1208,7 +1328,9 @@ const Game = {
         
         if (cardDef.block) {
             this.state.heroBlock += cardDef.block;
+            hero.block = this.state.heroBlock; // ★ 유닛 객체에도 동기화
             this.updateBlockUI();
+            this.updateUnitHPBar(hero); // ★ HP 바에 쉴드 반영
             
             // Block effect
             const heroPos = this.getUnitPosition(hero);
@@ -1244,10 +1366,28 @@ const Game = {
     async dealDamage(target, amount) {
         if (!target || target.hp <= 0) return;
         
-        target.hp -= amount;
+        // ★ 쉴드(block)가 있으면 쉴드 먼저 감소
+        let remainingDamage = amount;
+        const block = target.block || 0;
+        
+        if (block > 0) {
+            if (block >= remainingDamage) {
+                target.block -= remainingDamage;
+                remainingDamage = 0;
+            } else {
+                remainingDamage -= block;
+                target.block = 0;
+            }
+        }
+        
+        // 남은 대미지로 HP 감소
+        if (remainingDamage > 0) {
+            target.hp -= remainingDamage;
+        }
+        
         this.showDamage(target, amount);
         
-        // Update HP bar
+        // Update HP bar (쉴드 변화도 반영)
         this.updateUnitHPBar(target);
         
         // Hit effect (스프라이트 알파만 변경, 위치는 건드리지 않음)
@@ -2084,6 +2224,7 @@ const Game = {
             case 'defend':
                 // Enemy gains block
                 enemy.block = (enemy.block || 0) + (intent.block || 5);
+                this.updateUnitHPBar(enemy); // ★ HP 바에 쉴드 반영
                 this.showMessage(`${enemy.name || enemy.type} defends! +${intent.block || 5}`, 500);
                 await new Promise(r => setTimeout(r, 300));
                 break;
@@ -2136,23 +2277,30 @@ const Game = {
     
     // Deal damage to any target (hero or summon)
     dealDamageToTarget(target, damage) {
-        // If target is hero, check block first
+        // ★ 쉴드(block) 처리
+        let blocked = 0;
+        
         if (target.isHero && this.state.heroBlock > 0) {
-            const blocked = Math.min(this.state.heroBlock, damage);
+            // 히어로는 state.heroBlock 사용
+            blocked = Math.min(this.state.heroBlock, damage);
             this.state.heroBlock -= blocked;
+            target.block = this.state.heroBlock; // 동기화
             damage -= blocked;
-            if (blocked > 0) {
-                this.showMessage(`Blocked ${blocked}!`, 500);
-            }
             this.updateBlockUI();
+        } else if (target.block && target.block > 0) {
+            // 일반 유닛은 target.block 사용
+            blocked = Math.min(target.block, damage);
+            target.block -= blocked;
+            damage -= blocked;
+        }
+        
+        if (blocked > 0) {
+            this.showMessage(`Blocked ${blocked}!`, 500);
         }
         
         if (damage > 0) {
             target.hp -= damage;
             this.showDamage(target, damage);
-            
-            // Update HP bar
-            this.updateUnitHPBar(target);
             
             // Hit effect
             if (target.sprite) {
@@ -2169,6 +2317,9 @@ const Game = {
                 this.killUnit(target);
             }
         }
+        
+        // Update HP bar (쉴드 변화도 반영)
+        this.updateUnitHPBar(target);
         
         // Update hero HP UI if hero
         if (target.isHero) {

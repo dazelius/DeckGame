@@ -347,6 +347,9 @@ const MonsterPatterns = {
                 
             case 'defend':
                 enemy.block = (enemy.block || 0) + (intent.block || 0);
+                if (typeof game.updateUnitHPBar === 'function') {
+                    game.updateUnitHPBar(enemy); // ★ HP 바에 쉴드 반영
+                }
                 game.showMessage(`${enemy.name || enemy.type}: +${intent.block} Block`, 800);
                 break;
                 
