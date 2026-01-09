@@ -387,6 +387,21 @@ const CardDrag = {
     },
     
     // ==========================================
+    // 유틸: 유닛의 글로벌 좌표 가져오기
+    // ==========================================
+    getUnitGlobalPosition(unit) {
+        if (!unit) return null;
+        const posTarget = unit.container || unit.sprite;
+        if (!posTarget) return null;
+        
+        // ★ 글로벌 좌표 사용 (부모 컨테이너 위치 포함)
+        if (posTarget.getGlobalPosition) {
+            return posTarget.getGlobalPosition();
+        }
+        return { x: posTarget.x, y: posTarget.y };
+    },
+    
+    // ==========================================
     // 적 감지 (스크린 좌표)
     // ==========================================
     getEnemyAtScreen(screenX, screenY, frontOnly = false) {
@@ -401,12 +416,12 @@ const CardDrag = {
             if (enemy.hp <= 0) continue;
             if (frontOnly && !validTargets.includes(enemy)) continue;
             
-            // ★ 새 구조: container에서 위치, sprite에서 크기
-            const posTarget = enemy.container || enemy.sprite;
-            if (!posTarget) continue;
+            // ★ 글로벌 좌표 사용!
+            const globalPos = this.getUnitGlobalPosition(enemy);
+            if (!globalPos) continue;
             
-            const spriteX = posTarget.x;
-            const spriteY = posTarget.y;
+            const spriteX = globalPos.x;
+            const spriteY = globalPos.y;
             const spriteWidth = enemy.sprite?.width || 80;
             const spriteHeight = enemy.sprite?.height || 100;
             
@@ -437,12 +452,12 @@ const CardDrag = {
         for (const ally of allAllies) {
             if (!ally || ally.hp <= 0) continue;
             
-            // ★ 새 구조: container에서 위치, sprite에서 크기
-            const posTarget = ally.container || ally.sprite;
-            if (!posTarget) continue;
+            // ★ 글로벌 좌표 사용!
+            const globalPos = this.getUnitGlobalPosition(ally);
+            if (!globalPos) continue;
             
-            const spriteX = posTarget.x;
-            const spriteY = posTarget.y;
+            const spriteX = globalPos.x;
+            const spriteY = globalPos.y;
             const spriteWidth = ally.sprite?.width || 80;
             const spriteHeight = ally.sprite?.height || 100;
             
@@ -672,14 +687,23 @@ const CardDrag = {
         for (const enemy of this.game.state.enemyUnits) {
             if (enemy.hp <= 0) continue;
             
-            // ★ 새 구조: container에서 위치
+            // ★ 새 구조: container에서 위치 (글로벌 좌표 사용!)
             const posTarget = enemy.container || enemy.sprite;
             if (!posTarget) continue;
             
+            // ★ 글로벌 좌표로 변환 (부모 컨테이너 위치 포함)
+            let endX, endY;
+            if (posTarget.getGlobalPosition) {
+                const globalPos = posTarget.getGlobalPosition();
+                endX = globalPos.x;
+                endY = globalPos.y - (enemy.sprite?.height || 60) / 2;
+            } else {
+                endX = posTarget.x;
+                endY = posTarget.y - (enemy.sprite?.height || 60) / 2;
+            }
+            
             const isValidTarget = validTargets.includes(enemy);
             const isHovered = (enemy === hoveredEnemy);
-            const endX = posTarget.x;
-            const endY = posTarget.y - (enemy.sprite?.height || 60) / 2;
             
             const midX = (cardX + endX) / 2;
             const midY = Math.min(cardY, endY) - 60;
