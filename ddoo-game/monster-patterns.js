@@ -1,178 +1,51 @@
 // =====================================================
 // Monster Patterns - 몬스터 패턴 및 인텐트 관리
+// JSON 기반 패턴 로딩 시스템
 // =====================================================
 
 const MonsterPatterns = {
     game: null,
+    patterns: {},  // JSON에서 로드됨
+    loaded: false,
     
     // ==========================================
-    // 몬스터별 패턴 정의
+    // 초기화 (JSON 로드)
     // ==========================================
-    patterns: {
-        // === 고블린 ===
-        goblin: {
-            name: 'Goblin',
-            intents: [
-                { 
-                    id: 'slash',
-                    name: '베기', 
-                    type: 'attack', 
-                    damage: 8,
-                    weight: 40,
-                    breakRecipe: ['physical', 'physical', 'physical'] // 3타 브레이크
-                },
-                { 
-                    id: 'wild_swing',
-                    name: '난폭한 휘두르기', 
-                    type: 'attack', 
-                    damage: 12,
-                    weight: 25,
-                    breakRecipe: ['physical', 'physical', 'physical'] // 3타 브레이크
-                },
-                { 
-                    id: 'defend',
-                    name: '방어 태세', 
-                    type: 'defend', 
-                    block: 6,
-                    weight: 20
-                    // 방어는 브레이크 불가
-                },
-                { 
-                    id: 'prepare',
-                    name: '준비', 
-                    type: 'buff', 
-                    buffType: 'strength',
-                    buffValue: 2,
-                    weight: 15
-                }
-            ]
-        },
+    async init(gameRef) {
+        this.game = gameRef;
         
-        // === 고블린 궁수 ===
-        goblinArcher: {
-            name: 'Goblin Archer',
-            intents: [
-                { 
-                    id: 'arrow',
-                    name: '화살', 
-                    type: 'attack', 
-                    damage: 6,
-                    weight: 45
-                },
-                { 
-                    id: 'double_shot',
-                    name: '연사', 
-                    type: 'attack', 
-                    damage: 4,
-                    hits: 2,
-                    weight: 25,
-                    breakRecipe: ['physical', 'physical'] // 2타 브레이크
-                },
-                { 
-                    id: 'poison_arrow',
-                    name: '독화살', 
-                    type: 'attack', 
-                    damage: 3,
-                    poison: 4, // 4턴 독
-                    weight: 20,
-                    breakRecipe: ['poison', 'poison'] // 독 2타 브레이크
-                },
-                { 
-                    id: 'aim',
-                    name: '조준', 
-                    type: 'buff', 
-                    buffType: 'accuracy',
-                    buffValue: 1,
-                    nextDamageBonus: 6, // 다음 공격 +6 대미지
-                    weight: 10
-                }
-            ]
-        },
-        
-        // === 오크 (강력한 적) ===
-        orc: {
-            name: 'Orc',
-            intents: [
-                { 
-                    id: 'heavy_strike',
-                    name: '강타', 
-                    type: 'attack', 
-                    damage: 15,
-                    weight: 35,
-                    breakRecipe: ['physical', 'physical', 'physical', 'physical'] // 4타 브레이크
-                },
-                { 
-                    id: 'rage_slam',
-                    name: '분노의 강타', 
-                    type: 'attack', 
-                    damage: 22,
-                    weight: 15,
-                    breakRecipe: ['fire', 'fire', 'fire'] // 화염 3타 브레이크
-                },
-                { 
-                    id: 'war_cry',
-                    name: '전투 함성', 
-                    type: 'buff', 
-                    buffType: 'strength',
-                    buffValue: 4,
-                    weight: 25
-                },
-                { 
-                    id: 'block',
-                    name: '방패 막기', 
-                    type: 'defend', 
-                    block: 10,
-                    weight: 25
-                }
-            ]
-        },
-        
-        // === 해골 마법사 ===
-        skeletonMage: {
-            name: 'Skeleton Mage',
-            intents: [
-                { 
-                    id: 'dark_bolt',
-                    name: '암흑 탄환', 
-                    type: 'attack', 
-                    damage: 10,
-                    element: 'dark',
-                    weight: 40
-                },
-                { 
-                    id: 'soul_drain',
-                    name: '영혼 흡수', 
-                    type: 'attack', 
-                    damage: 8,
-                    heal: 4, // 자신 회복
-                    weight: 25,
-                    breakRecipe: ['magic', 'magic'] // 마법 2타
-                },
-                { 
-                    id: 'curse',
-                    name: '저주', 
-                    type: 'debuff', 
-                    vulnerable: 2, // 취약 2턴
-                    weight: 20,
-                    breakRecipe: ['magic', 'magic'] // 마법 2타 브레이크
-                },
-                { 
-                    id: 'summon_skeleton',
-                    name: '해골 소환', 
-                    type: 'summon',
-                    summonType: 'skeleton',
-                    weight: 15
-                }
-            ]
+        // JSON 파일에서 패턴 로드
+        try {
+            const response = await fetch('pattern/monsters.json');
+            if (response.ok) {
+                this.patterns = await response.json();
+                this.loaded = true;
+                console.log(`[MonsterPatterns] JSON에서 ${Object.keys(this.patterns).length}개 패턴 로드 완료`);
+            } else {
+                console.warn('[MonsterPatterns] JSON 로드 실패, 기본 패턴 사용');
+                this.loadFallbackPatterns();
+            }
+        } catch (e) {
+            console.warn('[MonsterPatterns] JSON 로드 오류:', e.message);
+            this.loadFallbackPatterns();
         }
     },
     
     // ==========================================
-    // 초기화
+    // 폴백 패턴 (JSON 로드 실패 시)
     // ==========================================
-    init(gameRef) {
-        this.game = gameRef;
-        console.log('[MonsterPatterns] 몬스터 패턴 시스템 초기화 완료');
+    loadFallbackPatterns() {
+        this.patterns = {
+            goblin: {
+                name: 'Goblin',
+                intents: [
+                    { id: 'slash', name: '베기', type: 'attack', damage: 8, weight: 50 },
+                    { id: 'defend', name: '방어', type: 'defend', block: 6, weight: 50 }
+                ]
+            }
+        };
+        this.loaded = true;
+        console.log('[MonsterPatterns] 폴백 패턴 로드 완료');
     },
     
     // ==========================================

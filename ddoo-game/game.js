@@ -187,6 +187,11 @@ const Game = {
             BreakSystem.init(this);
         }
         
+        // Monster Patterns (JSON 로드)
+        if (typeof MonsterPatterns !== 'undefined') {
+            await MonsterPatterns.init(this);
+        }
+        
         // Draw grid
         this.drawGrid();
         
