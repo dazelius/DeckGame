@@ -165,7 +165,7 @@ const Localization = {
             },
             spearThrow: {
                 name: '스피어 투척',
-                desc: '6 피해. 직선만. 거리당 +2 피해.'
+                desc: '5 피해. 직선만. 거리당 +1 피해.'
             },
             
             // 스킬 카드
@@ -219,7 +219,7 @@ const Localization = {
             },
             spearThrow: {
                 name: 'Spear Throw',
-                desc: '6 damage. Straight line only. +2 per grid distance.'
+                desc: '5 damage. Straight line only. +1 per grid distance.'
             },
             defend: {
                 name: 'Defend',
@@ -269,7 +269,7 @@ const Localization = {
             },
             spearThrow: {
                 name: '槍投げ',
-                desc: '6ダメージ。直線のみ。距離ごとに+2。'
+                desc: '5ダメージ。直線のみ。距離ごとに+1。'
             },
             defend: {
                 name: '防御',

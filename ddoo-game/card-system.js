@@ -59,12 +59,12 @@ const CardSystem = {
             desc: 'Ranged. Cross-shaped explosion. Deal 8 damage. Creates burning ground.' 
         },
         spearThrow: {
-            name: 'Spear Throw', cost: 1, type: 'attack', damage: 6,
+            name: 'Spear Throw', cost: 1, type: 'attack', damage: 5,
             target: 'enemy', melee: false, frontOnly: false,
             straight: true,  // 직선 전용
-            distanceBonus: 2, // 거리당 +2 대미지
+            distanceBonus: 1, // 거리당 +1 대미지
             element: 'physical',
-            desc: 'Ranged. Straight line only. +2 damage per grid distance.'
+            desc: 'Ranged. Straight line only. +1 damage per grid distance.'
         },
         
         // === 스킬 카드 ===
