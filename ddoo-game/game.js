@@ -700,25 +700,27 @@ const Game = {
         container.addChild(arrow);
         
         // ========================================
-        // ★ 위치 자동 피팅 (스프라이트 실제 높이 기반)
+        // ★ 위치 자동 피팅 (스프라이트 머리 바로 위)
         // ========================================
-        // 스프라이트의 실제 렌더링 높이 계산
         const sprite = enemy.sprite;
-        let spriteHeight = 60; // 기본값
+        let spriteTopY = -60; // 기본값 (스프라이트 맨 위)
         
         if (sprite) {
-            // 스프라이트 바운드 사용
+            // 스프라이트의 실제 렌더링 높이 계산
             const bounds = sprite.getLocalBounds();
-            spriteHeight = Math.abs(bounds.height) * (sprite.scale?.y || 1);
+            const scaleY = sprite.scale?.y || 1;
+            const actualHeight = Math.abs(bounds.height) * scaleY;
             
-            // anchor가 (0.5, 1)이면 스프라이트 맨 위가 -height 위치
-            // anchor 보정
+            // anchor.y가 1이면 발밑이 (0,0), 머리가 -height
+            // anchor.y가 0.5면 중심이 (0,0), 머리가 -height/2
             const anchorY = sprite.anchor?.y ?? 1;
-            spriteHeight = spriteHeight * anchorY;
+            spriteTopY = -actualHeight * anchorY;
         }
         
-        const margin = 8;
-        container.y = -spriteHeight - margin;
+        // 인텐트를 스프라이트 머리 바로 위에 배치
+        // frameHeight가 32이므로 인텐트 하단(arrow)이 스프라이트 머리 위에 오도록
+        const margin = 5;
+        container.y = spriteTopY - margin;
         
         // ★ 새 구조: enemy.container에 추가
         const parent = enemy.container || enemy.sprite;
