@@ -698,7 +698,7 @@ const Game = {
         }
         
         // ========================================
-        // ★ 브레이크 진행 게이지 (레시피 진행 상황)
+        // ★ 브레이크 진행 게이지 (세그먼트 바 형태)
         // ========================================
         if (hasBreakRecipe) {
             const recipe = intent.breakRecipe;
@@ -712,42 +712,55 @@ const Game = {
                 poison: 0x22c55e,
                 magic: 0xc084fc
             };
-            const ElementIcons = {
-                physical: '⚔',
-                fire: '🔥',
-                ice: '❄',
-                lightning: '⚡',
-                poison: '☠',
-                magic: '✨'
-            };
             
-            // 레시피 아이콘들을 가로로 배치
-            const gaugeY = 8; // 인텐트 아래쪽
-            const iconSpacing = 18;
-            const startX = -((recipe.length - 1) * iconSpacing) / 2;
+            // 게이지 바 설정
+            const gaugeY = 8;
+            const segmentWidth = 16;
+            const segmentHeight = 6;
+            const gap = 2;
+            const totalWidth = recipe.length * segmentWidth + (recipe.length - 1) * gap;
             
+            // 게이지 배경 프레임
+            const gaugeBg = new PIXI.Graphics();
+            gaugeBg.roundRect(-totalWidth/2 - 3, gaugeY - segmentHeight/2 - 2, totalWidth + 6, segmentHeight + 4, 2);
+            gaugeBg.fill({ color: 0x000000, alpha: 0.8 });
+            gaugeBg.stroke({ width: 1, color: 0x333333 });
+            container.addChild(gaugeBg);
+            
+            // 각 세그먼트 그리기
             for (let i = 0; i < recipe.length; i++) {
                 const elem = recipe[i];
                 const filled = i < progress.length;
                 const color = ElementColors[elem] || 0xf59e0b;
-                const icon = ElementIcons[elem] || '⚔';
                 
-                // 아이콘 배경
-                const slotBg = new PIXI.Graphics();
-                slotBg.circle(startX + i * iconSpacing, gaugeY, 8);
-                slotBg.fill({ color: filled ? color : 0x222222, alpha: filled ? 1 : 0.5 });
-                slotBg.stroke({ color: filled ? 0xffffff : 0x444444, width: filled ? 2 : 1 });
-                container.addChild(slotBg);
+                const x = -totalWidth/2 + i * (segmentWidth + gap);
+                const y = gaugeY - segmentHeight/2;
                 
-                // 아이콘 텍스트
-                const slotIcon = new PIXI.Text({
-                    text: icon,
-                    style: { fontSize: 9, fill: filled ? '#ffffff' : '#666666' }
-                });
-                slotIcon.anchor.set(0.5);
-                slotIcon.x = startX + i * iconSpacing;
-                slotIcon.y = gaugeY;
-                container.addChild(slotIcon);
+                // 세그먼트 배경
+                const segBg = new PIXI.Graphics();
+                segBg.rect(x, y, segmentWidth, segmentHeight);
+                segBg.fill({ color: 0x1a1a1a });
+                container.addChild(segBg);
+                
+                if (filled) {
+                    // ★ 완료된 세그먼트: 밝은 초록 + 광택
+                    const fill = new PIXI.Graphics();
+                    fill.rect(x, y, segmentWidth, segmentHeight);
+                    fill.fill({ color: 0x22c55e });
+                    container.addChild(fill);
+                    
+                    // 상단 광택
+                    const shine = new PIXI.Graphics();
+                    shine.rect(x + 1, y + 1, segmentWidth - 2, 2);
+                    shine.fill({ color: 0xffffff, alpha: 0.4 });
+                    container.addChild(shine);
+                } else {
+                    // ★ 미완료 세그먼트: 속성 색상 힌트
+                    const dim = new PIXI.Graphics();
+                    dim.rect(x + 1, y + 1, segmentWidth - 2, segmentHeight - 2);
+                    dim.fill({ color: color, alpha: 0.25 });
+                    container.addChild(dim);
+                }
             }
         }
         
@@ -2769,7 +2782,10 @@ const Game = {
         }
         
         if (blocked > 0) {
-            this.showMessage(`Blocked ${blocked}!`, 500);
+            // ★ 쉴드 피격 연출
+            if (typeof HPBarSystem !== 'undefined') {
+                HPBarSystem.showShieldHit(target, blocked);
+            }
         }
         
         if (damage > 0) {
