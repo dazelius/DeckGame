@@ -1655,9 +1655,9 @@ const Game = {
             this.updateCostUI();
         }
         
-        // Create sprite (숨쉬기는 스폰 후에 시작)
+        // Create sprite (scale: 1로 생성, 컨테이너 스케일로 조절)
         const sprite = await DDOORenderer.createSprite(unitDef.sprite, {
-            scale: unitDef.scale,
+            scale: 1,  // 내부 스프라이트는 1:1
             outline: { enabled: false },
             shadow: { enabled: false },
             breathing: { enabled: false }  // 스폰 애니메이션 후 시작
@@ -1671,34 +1671,32 @@ const Game = {
         // ★ 스폰 연출: 화면 밖에서 달려오기
         const isEnemy = team === 'enemy';
         const spawnOffsetX = isEnemy ? 200 : -200;  // 적은 오른쪽, 아군은 왼쪽에서
+        const targetScale = unitDef.scale;
         
         sprite.x = targetX + spawnOffsetX;
         sprite.y = targetY + 50;  // 약간 아래에서 시작
         sprite.alpha = 0;
-        sprite.scale.set(unitDef.scale * 0.5);  // 작게 시작
+        sprite.scale.set(targetScale * 0.5);  // 컨테이너 스케일로 작게 시작
         sprite.zIndex = Math.floor(targetY);
         
         // No team tint - use natural sprite colors
-        sprite.tint = 0xffffff;
+        // sprite.tint은 컨테이너에 없음
         
         // baseScale 저장 (스폰 애니메이션 후 복원용)
-        sprite.baseScale = unitDef.scale;
+        sprite.baseScale = targetScale;
         
         this.containers.units.addChild(sprite);
         
-        // ★ 달려오는 애니메이션
-        const targetScale = unitDef.scale;
+        // ★ 달려오는 애니메이션 (컨테이너 스케일로 조절)
         const runInAnimation = gsap.timeline({
             onComplete: () => {
                 // 스폰 완료 후 스케일 확정 및 숨쉬기 시작
                 if (sprite && !sprite.destroyed) {
-                    // 내부 스프라이트 찾기
-                    const innerSprite = sprite._ddooData?.sprite || sprite.children?.find(c => c.label === 'main') || sprite;
-                    innerSprite.scale.set(targetScale, targetScale);
+                    sprite.scale.set(targetScale, targetScale);
                     
-                    // 숨쉬기 시작 (직접 구현 - 충돌 방지)
+                    // 숨쉬기 시작 (컨테이너 스케일로)
                     if (typeof gsap !== 'undefined') {
-                        gsap.to(innerSprite.scale, {
+                        gsap.to(sprite.scale, {
                             y: targetScale * 1.025,
                             duration: 2.5,
                             repeat: -1,
@@ -1710,12 +1708,12 @@ const Game = {
             }
         });
         
-        // 등장 (페이드 인 + 커지면서)
+        // 등장 (페이드 인 + 커지면서) - 컨테이너 스케일 사용
         runInAnimation
             .to(sprite, { alpha: 1, duration: 0.1 })
             .to(sprite.scale, { 
-                x: unitDef.scale * 1.1, 
-                y: unitDef.scale * 0.9, 
+                x: targetScale * 1.1, 
+                y: targetScale * 0.9, 
                 duration: 0.15 
             }, '<')
             // 달려오기 (빠르게!)
@@ -1727,14 +1725,14 @@ const Game = {
             }, '<')
             // 착지 (스쿼시)
             .to(sprite.scale, {
-                x: unitDef.scale * 0.9,
-                y: unitDef.scale * 1.15,
+                x: targetScale * 0.9,
+                y: targetScale * 1.15,
                 duration: 0.08
             })
             // 복구
             .to(sprite.scale, {
-                x: unitDef.scale,
-                y: unitDef.scale,
+                x: targetScale,
+                y: targetScale,
                 duration: 0.15,
                 ease: 'elastic.out(1, 0.5)'
             });
