@@ -289,7 +289,7 @@ const CombatEffects = {
     },
     
     // ==========================================
-    // 화살 이펙트 (곡사 베지어 곡선)
+    // 화살 이펙트 (곡사 베지어 곡선) - 빠른 버전
     // ==========================================
     async arrowEffect(startX, startY, endX, endY, options = {}) {
         if (!this.app) return;
@@ -298,8 +298,8 @@ const CombatEffects = {
             color = 0x8B4513,      // 갈색 화살
             arrowLength = 25,
             arrowWidth = 3,
-            arcHeight = 80,        // 곡사 높이
-            speed = 600,
+            arcHeight = 50,        // 곡사 높이 (낮게)
+            speed = 1200,          // ★ 빠르게!
             isEnemy = false
         } = options;
         
@@ -341,9 +341,9 @@ const CombatEffects = {
             const midX = (startX + endX) / 2;
             const midY = Math.min(startY, endY) - arcHeight;
             
-            // 비행시간
+            // 비행시간 (빠르게!)
             const distance = Math.hypot(endX - startX, endY - startY);
-            const duration = Math.max(0.3, distance / speed);
+            const duration = Math.max(0.15, distance / speed);  // ★ 최소 0.15초
             
             // 트레일 효과
             const createTrail = () => {
@@ -353,7 +353,7 @@ const CombatEffects = {
                 trail.rotation = arrow.rotation;
                 trail.zIndex = 99;
                 trail.rect(-arrowLength/3, -1, arrowLength/2, 2);
-                trail.fill({ color: 0xcccccc, alpha: 0.4 });
+                trail.fill({ color: 0xcccccc, alpha: 0.5 });
                 this.container.addChild(trail);
                 
                 gsap.to(trail, {
@@ -363,7 +363,7 @@ const CombatEffects = {
                 });
             };
             
-            const trailInterval = setInterval(createTrail, 25);
+            const trailInterval = setInterval(createTrail, 15);  // ★ 빠른 트레일
             
             // 베지어 애니메이션
             const bezier = { t: 0 };
