@@ -859,128 +859,133 @@ const Game = {
         // 1. 에너지 오라 (몸에서 타오르는 불꽃)
         // ========================================
         enemy.chargingFlameInterval = setInterval(() => {
-            if (!enemy.sprite || enemy.sprite.destroyed || !effectContainer || effectContainer.destroyed) {
+            try {
+                if (!enemy.sprite || enemy.sprite.destroyed || 
+                    !effectContainer || effectContainer.destroyed) {
+                    clearInterval(enemy.chargingFlameInterval);
+                    return;
+                }
+                
+                // 불꽃 파티클 3개씩 생성
+                for (let i = 0; i < 3; i++) {
+                    const flame = new PIXI.Graphics();
+                    const size = 4 + Math.random() * 6;
+                    flame.circle(0, 0, size);
+                    
+                    const colors = [0xff2200, 0xff4400, 0xff6600, 0xffaa00, 0xffcc00];
+                    flame.fill(colors[Math.floor(Math.random() * colors.length)]);
+                    
+                    const startX = (Math.random() - 0.5) * 40;
+                    const startY = -30 - Math.random() * 50;
+                    flame.x = startX;
+                    flame.y = startY;
+                    flame.alpha = 0.8;
+                    effectContainer.addChild(flame);
+                    
+                    const targetY = startY - 50;
+                    const dur = 0.5;
+                    
+                    // 위로 솟구치며 사라짐 + 크기 축소 (onUpdate로 통합)
+                    gsap.to({ progress: 0 }, {
+                        progress: 1,
+                        duration: dur,
+                        ease: 'power1.out',
+                        onUpdate: function() {
+                            if (!flame || flame.destroyed) return;
+                            const p = this.targets()[0].progress;
+                            flame.y = startY + (targetY - startY) * p;
+                            flame.alpha = 0.8 * (1 - p);
+                            flame.scale.set(1 - p * 0.8);
+                        },
+                        onComplete: () => {
+                            if (flame && !flame.destroyed) flame.destroy();
+                        }
+                    });
+                }
+            } catch (e) {
                 clearInterval(enemy.chargingFlameInterval);
-                return;
             }
-            
-            // 불꽃 파티클 3개씩 생성
-            for (let i = 0; i < 3; i++) {
-                const flame = new PIXI.Graphics();
-                const size = 4 + Math.random() * 6;
-                flame.circle(0, 0, size);
-                
-                // 빨강/주황/노랑 그라데이션 느낌
-                const colors = [0xff2200, 0xff4400, 0xff6600, 0xffaa00, 0xffcc00];
-                flame.fill(colors[Math.floor(Math.random() * colors.length)]);
-                
-                // 몸통 주변에서 시작
-                const startX = (Math.random() - 0.5) * 40;
-                const startY = -30 - Math.random() * 50;
-                flame.x = startX;
-                flame.y = startY;
-                flame.alpha = 0.8 + Math.random() * 0.2;
-                effectContainer.addChild(flame);
-                
-                const targetY = startY - 40 - Math.random() * 30;
-                const targetX = startX + (Math.random() - 0.5) * 20;
-                const dur = 0.4 + Math.random() * 0.3;
-                
-                // 위로 솟구치며 사라짐
-                gsap.to(flame, {
-                    y: targetY,
-                    x: targetX,
-                    alpha: 0,
-                    duration: dur,
-                    ease: 'power1.out',
-                    onComplete: () => {
-                        if (flame && !flame.destroyed) flame.destroy();
-                    }
-                });
-                
-                // 크기도 줄어듦
-                gsap.to(flame.scale, {
-                    x: 0.2,
-                    y: 0.2,
-                    duration: dur,
-                    ease: 'power1.out'
-                });
-            }
-        }, 50);
+        }, 60);
         
         // ========================================
         // 2. 발밑 먼지/파편 튀어오름
         // ========================================
         enemy.chargingDustInterval = setInterval(() => {
-            if (!enemy.sprite || enemy.sprite.destroyed || !effectContainer || effectContainer.destroyed) {
-                clearInterval(enemy.chargingDustInterval);
-                return;
-            }
-            
-            // 먼지 파티클
-            const dust = new PIXI.Graphics();
-            const size = 2 + Math.random() * 4;
-            dust.circle(0, 0, size);
-            dust.fill(0x888888);
-            
-            const startX = (Math.random() - 0.5) * 50;
-            dust.x = startX;
-            dust.y = 5;
-            dust.alpha = 0.6;
-            effectContainer.addChild(dust);
-            
-            const targetY = -20 - Math.random() * 30;
-            const targetX = startX + (Math.random() - 0.5) * 30;
-            
-            // 위로 튀어오름
-            gsap.to(dust, {
-                y: targetY,
-                x: targetX,
-                alpha: 0,
-                duration: 0.5 + Math.random() * 0.3,
-                ease: 'power2.out',
-                onComplete: () => {
-                    if (dust && !dust.destroyed) dust.destroy();
+            try {
+                if (!enemy.sprite || enemy.sprite.destroyed || 
+                    !effectContainer || effectContainer.destroyed) {
+                    clearInterval(enemy.chargingDustInterval);
+                    return;
                 }
-            });
-        }, 80);
+                
+                const dust = new PIXI.Graphics();
+                dust.circle(0, 0, 3);
+                dust.fill(0x888888);
+                
+                const startX = (Math.random() - 0.5) * 50;
+                dust.x = startX;
+                dust.y = 5;
+                dust.alpha = 0.5;
+                effectContainer.addChild(dust);
+                
+                const targetY = -30;
+                
+                gsap.to({ progress: 0 }, {
+                    progress: 1,
+                    duration: 0.5,
+                    ease: 'power2.out',
+                    onUpdate: function() {
+                        if (!dust || dust.destroyed) return;
+                        const p = this.targets()[0].progress;
+                        dust.y = 5 + (targetY - 5) * p;
+                        dust.alpha = 0.5 * (1 - p);
+                    },
+                    onComplete: () => {
+                        if (dust && !dust.destroyed) dust.destroy();
+                    }
+                });
+            } catch (e) {
+                clearInterval(enemy.chargingDustInterval);
+            }
+        }, 100);
         
         // ========================================
         // 3. 에너지 스파크 (전기 느낌)
         // ========================================
         enemy.chargingSparkInterval = setInterval(() => {
-            if (!enemy.sprite || enemy.sprite.destroyed || !effectContainer || effectContainer.destroyed) {
-                clearInterval(enemy.chargingSparkInterval);
-                return;
-            }
-            
-            // 스파크 파티클
-            const spark = new PIXI.Graphics();
-            spark.circle(0, 0, 2);
-            spark.fill(0xffff88);
-            
-            // 몸통 주변 랜덤 위치
-            spark.x = (Math.random() - 0.5) * 50;
-            spark.y = -20 - Math.random() * 60;
-            effectContainer.addChild(spark);
-            
-            // 빠르게 깜빡이며 사라짐
-            gsap.to(spark, {
-                alpha: 0,
-                duration: 0.1,
-                yoyo: true,
-                repeat: 2,
-                onComplete: () => {
-                    if (spark && !spark.destroyed) spark.destroy();
+            try {
+                if (!enemy.sprite || enemy.sprite.destroyed || 
+                    !effectContainer || effectContainer.destroyed) {
+                    clearInterval(enemy.chargingSparkInterval);
+                    return;
                 }
-            });
-            gsap.to(spark.scale, {
-                x: 2, y: 2,
-                duration: 0.15,
-                yoyo: true,
-                repeat: 1
-            });
-        }, 100);
+                
+                const spark = new PIXI.Graphics();
+                spark.circle(0, 0, 2);
+                spark.fill(0xffff88);
+                
+                spark.x = (Math.random() - 0.5) * 50;
+                spark.y = -20 - Math.random() * 60;
+                effectContainer.addChild(spark);
+                
+                // 깜빡임 (onUpdate로 안전하게)
+                gsap.to({ progress: 0 }, {
+                    progress: 1,
+                    duration: 0.3,
+                    onUpdate: function() {
+                        if (!spark || spark.destroyed) return;
+                        const p = this.targets()[0].progress;
+                        spark.alpha = Math.sin(p * Math.PI * 3);
+                        spark.scale.set(1 + Math.sin(p * Math.PI) * 0.5);
+                    },
+                    onComplete: () => {
+                        if (spark && !spark.destroyed) spark.destroy();
+                    }
+                });
+            } catch (e) {
+                clearInterval(enemy.chargingSparkInterval);
+            }
+        }, 120);
         
         // ========================================
         // 4. 글로우 오라 (반투명 원형)
@@ -991,20 +996,19 @@ const Game = {
         effectContainer.addChildAt(glowAura, 0);
         enemy.chargingGlowAura = glowAura;
         
-        // 오라 펄스 (안전하게 체크)
-        enemy.chargingGlowScaleTween = gsap.to(glowAura.scale, {
-            x: 1.3, y: 1.3,
-            duration: 0.5,
-            yoyo: true,
+        // 오라 펄스 (onUpdate로 안전하게)
+        enemy.chargingGlowTween = gsap.to({ val: 0 }, {
+            val: Math.PI * 2,
+            duration: 1,
             repeat: -1,
-            ease: 'sine.inOut'
-        });
-        enemy.chargingGlowAlphaTween = gsap.to(glowAura, {
-            alpha: 0.08,
-            duration: 0.3,
-            yoyo: true,
-            repeat: -1,
-            ease: 'sine.inOut'
+            ease: 'none',
+            onUpdate: function() {
+                if (!glowAura || glowAura.destroyed) return;
+                const v = this.targets()[0].val;
+                const s = 1 + Math.sin(v) * 0.3;
+                glowAura.scale.set(s);
+                glowAura.alpha = 0.1 + Math.sin(v * 2) * 0.05;
+            }
         });
         
         // ========================================
@@ -1012,26 +1016,24 @@ const Game = {
         // ========================================
         if (sprite && !sprite.destroyed) {
             const baseX = sprite.x;
-            enemy.chargingTween = gsap.to(sprite, {
-                x: baseX + 2,
-                duration: 0.03,
-                yoyo: true,
-                repeat: -1,
-                ease: 'none'
-            });
             
-            // 붉은 틴트 (힘 모으는 느낌)
-            enemy.chargingTintTween = gsap.to({ val: 0 }, {
-                val: 1,
-                duration: 0.4,
-                yoyo: true,
+            // 셰이크 + 틴트를 하나의 트윈으로 통합
+            enemy.chargingTween = gsap.to({ shake: 0, tint: 0 }, {
+                shake: Math.PI * 2,
+                tint: Math.PI * 2,
+                duration: 0.5,
                 repeat: -1,
-                ease: 'sine.inOut',
+                ease: 'none',
                 onUpdate: function() {
-                    if (sprite && !sprite.destroyed) {
-                        const v = this.targets()[0].val;
-                        sprite.tint = v > 0.5 ? 0xff6644 : 0xffaa88;
-                    }
+                    if (!sprite || sprite.destroyed) return;
+                    try {
+                        const t = this.targets()[0];
+                        // 셰이크
+                        sprite.x = baseX + Math.sin(t.shake * 20) * 2;
+                        // 틴트
+                        const tintVal = Math.sin(t.tint);
+                        sprite.tint = tintVal > 0 ? 0xff6644 : 0xffaa88;
+                    } catch(e) {}
                 }
             });
         }
@@ -1045,12 +1047,11 @@ const Game = {
         const tweens = [
             'chargingTween',
             'chargingTintTween',
-            'chargingGlowScaleTween',
-            'chargingGlowAlphaTween'
+            'chargingGlowTween'
         ];
         tweens.forEach(key => {
             if (enemy[key]) {
-                enemy[key].kill();
+                try { enemy[key].kill(); } catch(e) {}
                 enemy[key] = null;
             }
         });
@@ -1065,34 +1066,40 @@ const Game = {
         ];
         intervals.forEach(key => {
             if (enemy[key]) {
-                clearInterval(enemy[key]);
+                try { clearInterval(enemy[key]); } catch(e) {}
                 enemy[key] = null;
             }
         });
         
         // 글로우 오라 정리
-        if (enemy.chargingGlowAura && !enemy.chargingGlowAura.destroyed) {
-            gsap.killTweensOf(enemy.chargingGlowAura);
-            gsap.killTweensOf(enemy.chargingGlowAura.scale);
-        }
         enemy.chargingGlowAura = null;
         
         // 이펙트 컨테이너 정리
-        if (enemy.chargingContainer && !enemy.chargingContainer.destroyed) {
-            enemy.chargingContainer.destroy({ children: true });
+        if (enemy.chargingContainer) {
+            try {
+                if (!enemy.chargingContainer.destroyed) {
+                    enemy.chargingContainer.destroy({ children: true });
+                }
+            } catch(e) {}
         }
         enemy.chargingContainer = null;
         
         // 레거시: 오라 정리
-        if (enemy.chargingAura && !enemy.chargingAura.destroyed) {
-            enemy.chargingAura.destroy();
+        if (enemy.chargingAura) {
+            try {
+                if (!enemy.chargingAura.destroyed) {
+                    enemy.chargingAura.destroy();
+                }
+            } catch(e) {}
         }
         enemy.chargingAura = null;
         
         // 스프라이트 원상복귀
         if (enemy.sprite && !enemy.sprite.destroyed) {
-            enemy.sprite.tint = 0xffffff;
-            gsap.killTweensOf(enemy.sprite);
+            try {
+                enemy.sprite.tint = 0xffffff;
+                gsap.killTweensOf(enemy.sprite);
+            } catch(e) {}
         }
     },
     
