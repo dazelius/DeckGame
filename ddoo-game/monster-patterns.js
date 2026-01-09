@@ -75,7 +75,7 @@ const MonsterPatterns = {
                     damage: 3,
                     poison: 4, // 4턴 독
                     weight: 20,
-                    breakRecipe: ['physical', 'poison'] // 물리+독 브레이크
+                    breakRecipe: ['poison', 'poison'] // 독 2타 브레이크
                 },
                 { 
                     id: 'aim',
@@ -107,7 +107,7 @@ const MonsterPatterns = {
                     type: 'attack', 
                     damage: 22,
                     weight: 15,
-                    breakRecipe: ['fire', 'physical', 'physical'] // 화염 + 2물리
+                    breakRecipe: ['fire', 'fire', 'fire'] // 화염 3타 브레이크
                 },
                 { 
                     id: 'war_cry',
@@ -154,7 +154,7 @@ const MonsterPatterns = {
                     type: 'debuff', 
                     vulnerable: 2, // 취약 2턴
                     weight: 20,
-                    breakRecipe: ['physical', 'magic'] // 물리 + 마법
+                    breakRecipe: ['magic', 'magic'] // 마법 2타 브레이크
                 },
                 { 
                     id: 'summon_skeleton',

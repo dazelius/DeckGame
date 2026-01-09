@@ -130,9 +130,8 @@ const BreakSystem = {
         const nextRequired = recipe[progress.length];
         
         if (element !== nextRequired) {
-            // 잘못된 속성!
+            // 잘못된 속성! (플로터 없이 콘솔만)
             console.log(`[BreakSystem] ${enemy.name || enemy.type}: ${element} 실패! (필요: ${nextRequired})`);
-            this.showRecipeResult(enemy, element, false, nextRequired, hitNum);
             return { hit: false, broken: false };
         }
         
@@ -141,7 +140,6 @@ const BreakSystem = {
         enemy.breakProgress = progress;
         
         console.log(`[BreakSystem] ${enemy.name || enemy.type}: ${element} 성공! [${progress.length}/${recipe.length}]`);
-        this.showRecipeResult(enemy, element, true, null, hitNum, progress.length, recipe.length);
         
         // 레시피 완성 체크
         if (progress.length >= recipe.length) {
@@ -930,7 +928,7 @@ const BreakSystem = {
     },
     
     // ==========================================
-    // 브레이크 게이지 생성 (LOL 스타일)
+    // 브레이크 게이지 생성 (아이콘 + 게이지바 형태)
     // ==========================================
     createBreakGauge(enemy) {
         if (!enemy.intentContainer || !enemy.currentBreakRecipe) return;
@@ -938,134 +936,101 @@ const BreakSystem = {
         const recipe = enemy.currentBreakRecipe;
         const progress = enemy.breakProgress || [];
         
+        // 레시피는 단일 속성이므로 첫 번째 속성 사용
+        const element = recipe[0];
+        const elementColor = parseInt(this.ElementColors[element].replace('#', ''), 16);
+        const icon = this.ElementIcons[element] || '⚔️';
+        
         // 게이지 컨테이너
         const gauge = new PIXI.Container();
         gauge.isBreakGauge = true;
         gauge.y = 30;
         
-        // 게이지 크기 설정 (아이콘 포함하도록 확대)
-        const segmentWidth = 22;  // 각 토막 너비
-        const segmentHeight = 22; // 토막 높이 (아이콘 포함)
-        const gap = 4;            // 토막 사이 간격
-        const totalWidth = recipe.length * segmentWidth + (recipe.length - 1) * gap;
+        // 크기 설정
+        const iconSize = 16;
+        const barWidth = 50;
+        const barHeight = 8;
+        const totalWidth = iconSize + 6 + barWidth;
         
-        // 배경 (전체 게이지 영역)
-        const bg = new PIXI.Graphics();
-        bg.roundRect(-totalWidth/2 - 4, -segmentHeight/2 - 3, totalWidth + 8, segmentHeight + 6, 4);
-        bg.fill({ color: 0x0a0806, alpha: 0.9 });
-        bg.stroke({ width: 1.5, color: 0x3d3429 });
-        gauge.addChild(bg);
-        
-        // 각 토막 그리기
-        recipe.forEach((element, i) => {
-            const isCompleted = i < progress.length;
-            const isCurrent = i === progress.length;  // 현재 채워야 할 칸
-            
-            const x = -totalWidth/2 + i * (segmentWidth + gap);
-            
-            // 토막 배경 (어두운 색)
-            const segmentBg = new PIXI.Graphics();
-            segmentBg.roundRect(x, -segmentHeight/2, segmentWidth, segmentHeight, 3);
-            segmentBg.fill({ color: 0x1a1a1a });
-            gauge.addChild(segmentBg);
-            
-            // 속성 색상
-            const elementColor = parseInt(this.ElementColors[element].replace('#', ''), 16);
-            const icon = this.ElementIcons[element] || '⚔️';
-            
-            if (isCompleted) {
-                // ★ 완료된 칸: 밝은 초록색 + 체크마크
-                const fill = new PIXI.Graphics();
-                fill.roundRect(x, -segmentHeight/2, segmentWidth, segmentHeight, 3);
-                fill.fill({ color: 0x22c55e });
-                gauge.addChild(fill);
-                
-                // 체크마크
-                const checkText = new PIXI.Text({
-                    text: '✓',
-                    style: { fontSize: 14, fill: '#ffffff', fontWeight: 'bold' }
-                });
-                checkText.anchor.set(0.5);
-                checkText.x = x + segmentWidth/2;
-                checkText.y = 0;
-                gauge.addChild(checkText);
-            } else if (isCurrent) {
-                // ★ 현재 칸: 속성 색상으로 펄스 + 아이콘
-                const currentFill = new PIXI.Graphics();
-                currentFill.roundRect(x, -segmentHeight/2, segmentWidth, segmentHeight, 3);
-                currentFill.fill({ color: elementColor, alpha: 0.5 });
-                gauge.addChild(currentFill);
-                
-                // 속성 아이콘 (점멸)
-                const iconText = new PIXI.Text({
-                    text: icon,
-                    style: { fontSize: 12 }
-                });
-                iconText.anchor.set(0.5);
-                iconText.x = x + segmentWidth/2;
-                iconText.y = 0;
-                gauge.addChild(iconText);
-                
-                // 점멸 효과 (안전 체크 포함)
-                gsap.to({ val: 0 }, {
-                    val: Math.PI * 2,
-                    duration: 1,
-                    repeat: -1,
-                    ease: 'none',
-                    onUpdate: function() {
-                        if (!currentFill || currentFill.destroyed) {
-                            this.kill();
-                            return;
-                        }
-                        currentFill.alpha = 0.3 + Math.sin(this.targets()[0].val) * 0.4;
-                    }
-                });
-            } else {
-                // ★ 미완료 칸: 어둡게 + 아이콘
-                const iconText = new PIXI.Text({
-                    text: icon,
-                    style: { fontSize: 12 }
-                });
-                iconText.anchor.set(0.5);
-                iconText.x = x + segmentWidth/2;
-                iconText.y = 0;
-                iconText.alpha = 0.5;
-                gauge.addChild(iconText);
-            }
-            
-            // 토막 테두리
-            const border = new PIXI.Graphics();
-            border.roundRect(x, -segmentHeight/2, segmentWidth, segmentHeight, 3);
-            if (isCompleted) {
-                border.stroke({ width: 2, color: 0x16a34a }); // 진한 초록
-            } else if (isCurrent) {
-                border.stroke({ width: 2, color: elementColor });
-            } else {
-                border.stroke({ width: 1, color: 0x444444 });
-            }
-            gauge.addChild(border);
-            
-            // 토막 사이 구분선 (마지막 제외)
-            if (i < recipe.length - 1) {
-                const divider = new PIXI.Graphics();
-                divider.rect(x + segmentWidth, -segmentHeight/2 - 1, gap, segmentHeight + 2);
-                divider.fill({ color: 0x000000 });
-                gauge.addChild(divider);
-            }
+        // ========================================
+        // 1. 속성 아이콘 (왼쪽)
+        // ========================================
+        const iconText = new PIXI.Text({
+            text: icon,
+            style: { fontSize: iconSize }
         });
+        iconText.anchor.set(0.5);
+        iconText.x = -totalWidth/2 + iconSize/2;
+        iconText.y = 0;
+        gauge.addChild(iconText);
         
-        // 진행도 텍스트
+        // ========================================
+        // 2. 게이지 바 (오른쪽)
+        // ========================================
+        const barX = -totalWidth/2 + iconSize + 6;
+        
+        // 게이지 배경
+        const barBg = new PIXI.Graphics();
+        barBg.roundRect(barX, -barHeight/2, barWidth, barHeight, 3);
+        barBg.fill({ color: 0x1a1a1a });
+        barBg.stroke({ width: 1, color: 0x3d3429 });
+        gauge.addChild(barBg);
+        
+        // 진행률 계산
+        const progressRatio = progress.length / recipe.length;
+        const fillWidth = barWidth * progressRatio;
+        
+        // 게이지 채움 (초록색)
+        if (fillWidth > 0) {
+            const barFill = new PIXI.Graphics();
+            barFill.roundRect(barX, -barHeight/2, fillWidth, barHeight, 3);
+            barFill.fill({ color: 0x22c55e });
+            gauge.addChild(barFill);
+        }
+        
+        // 현재 칸 점멸 효과
+        if (progress.length < recipe.length) {
+            const nextSegmentX = barX + fillWidth;
+            const segmentWidth = barWidth / recipe.length;
+            
+            const pulseSegment = new PIXI.Graphics();
+            pulseSegment.rect(nextSegmentX, -barHeight/2, segmentWidth, barHeight);
+            pulseSegment.fill({ color: elementColor, alpha: 0.3 });
+            gauge.addChild(pulseSegment);
+            
+            // 점멸 애니메이션
+            gsap.to({ val: 0 }, {
+                val: Math.PI * 2,
+                duration: 0.8,
+                repeat: -1,
+                ease: 'none',
+                onUpdate: function() {
+                    if (!pulseSegment || pulseSegment.destroyed) {
+                        this.kill();
+                        return;
+                    }
+                    pulseSegment.alpha = 0.2 + Math.sin(this.targets()[0].val) * 0.3;
+                }
+            });
+        }
+        
+        // 세그먼트 구분선
+        for (let i = 1; i < recipe.length; i++) {
+            const divX = barX + (barWidth / recipe.length) * i;
+            const divider = new PIXI.Graphics();
+            divider.rect(divX - 0.5, -barHeight/2, 1, barHeight);
+            divider.fill({ color: 0x3d3429 });
+            gauge.addChild(divider);
+        }
+        
+        // 진행률 텍스트
         const progressText = new PIXI.Text({
             text: `${progress.length}/${recipe.length}`,
-            style: {
-                fontSize: 10,
-                fontFamily: 'Arial Black',
-                fill: progress.length > 0 ? 0x22c55e : 0x888888,
-                fontWeight: 'bold'
-            }
+            style: { fontSize: 8, fill: '#ffffff', fontWeight: 'bold' }
         });
         progressText.anchor.set(0.5);
-        progressText.y = segmentHeight + 8;
+        progressText.x = barX + barWidth/2;
+        progressText.y = 0;
         gauge.addChild(progressText);
         
         enemy.intentContainer.addChild(gauge);
