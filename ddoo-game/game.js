@@ -1947,8 +1947,12 @@ const Game = {
     },
     
     async moveEnemyToLine(enemy, targetZ) {
+        console.log(`[Game] moveEnemyToLine: ${enemy.name || enemy.type} from Z=${enemy.gridZ} to Z=${targetZ}`);
         if (typeof UnitCombat !== 'undefined') {
             await UnitCombat.moveToLine(enemy, targetZ, { team: 'enemy' });
+            console.log(`[Game] moveEnemyToLine complete: now at Z=${enemy.gridZ}`);
+        } else {
+            console.warn('[Game] UnitCombat not available!');
         }
     },
     

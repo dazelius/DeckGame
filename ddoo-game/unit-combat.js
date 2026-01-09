@@ -413,8 +413,16 @@ const UnitCombat = {
     // 유닛 라인 이동 (Z축) - 블로킹 유닛 처리 포함
     // ==========================================
     async moveToLine(unit, targetZ, options = {}) {
-        if (!unit || !unit.sprite) return;
-        if (unit.gridZ === targetZ) return;
+        console.log(`[UnitCombat] moveToLine: unit=${unit?.type}, from Z=${unit?.gridZ} to Z=${targetZ}`);
+        
+        if (!unit || !unit.sprite) {
+            console.warn('[UnitCombat] moveToLine: no unit or sprite');
+            return;
+        }
+        if (unit.gridZ === targetZ) {
+            console.log('[UnitCombat] moveToLine: already at target Z');
+            return;
+        }
         
         const { checkBlocking = true, team = 'player' } = options;
         
