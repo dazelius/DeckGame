@@ -106,7 +106,7 @@ const CardSystem = {
         ironWave: 2,
         fireBolt: 1,
         fireBall: 1,
-        spearThrow: 3,  // 스피어 투척
+        spearThrow: 1,  // 스피어 투척
         summonKnight: 2,
         summonArcher: 2,
         heal: 1
@@ -140,11 +140,17 @@ const CardSystem = {
         const deck = [];
         
         for (const [cardId, count] of Object.entries(config)) {
+            // 카드가 실제로 정의되어 있는지 확인
+            if (!this.cards[cardId]) {
+                console.warn(`[CardSystem] 카드 정의 없음: ${cardId}`);
+                continue;
+            }
             for (let i = 0; i < count; i++) {
                 deck.push(cardId);
             }
         }
         
+        console.log(`[CardSystem] 덱 생성 완료: ${deck.length}장`, deck);
         return this.shuffleDeck(deck);
     },
     
