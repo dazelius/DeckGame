@@ -163,6 +163,10 @@ const Localization = {
                 name: '화염구',
                 desc: '원거리. 십자 폭발. 8 피해. 불길 생성.'
             },
+            spearThrow: {
+                name: '스피어 투척',
+                desc: '원거리. 직선만. 거리당 +2 피해.'
+            },
             
             // 스킬 카드
             defend: {
@@ -213,6 +217,10 @@ const Localization = {
                 name: 'Fireball',
                 desc: 'Ranged. Cross-shaped explosion. Deal 8 damage. Creates burning ground.'
             },
+            spearThrow: {
+                name: 'Spear Throw',
+                desc: 'Ranged. Straight line only. +2 damage per grid distance.'
+            },
             defend: {
                 name: 'Defend',
                 desc: 'Gain 5 Block'
@@ -258,6 +266,10 @@ const Localization = {
             fireBall: {
                 name: '火炎球',
                 desc: '遠距離。十字爆発。8ダメージ。炎を生成。'
+            },
+            spearThrow: {
+                name: '槍投げ',
+                desc: '遠距離。直線のみ。距離ごとに+2ダメージ。'
             },
             defend: {
                 name: '防御',

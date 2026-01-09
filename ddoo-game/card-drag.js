@@ -183,7 +183,15 @@ const CardDrag = {
     // 공격 카드 드래그 처리
     // ==========================================
     handleAttackDrag(touch, ghost, cardDef) {
-        const targetEnemy = this.getEnemyAtScreen(touch.clientX, touch.clientY, cardDef.frontOnly || false);
+        let targetEnemy;
+        
+        // ★ 직선 전용 카드 (스피어 투척 등)
+        if (cardDef.straight) {
+            targetEnemy = this.getStraightLineTarget();
+        } else {
+            targetEnemy = this.getEnemyAtScreen(touch.clientX, touch.clientY, cardDef.frontOnly || false);
+        }
+        
         this.dragState.targetEnemy = targetEnemy;
         
         const canvas = this.app.canvas;
@@ -191,7 +199,12 @@ const CardDrag = {
         const cursorX = touch.clientX - rect.left;
         const cursorY = touch.clientY - rect.top;
         
-        this.drawTargetingCurvesToEnemies(cursorX, cursorY, targetEnemy, cardDef.frontOnly || false);
+        // ★ 직선 카드면 직선 타겟팅 라인만 표시
+        if (cardDef.straight) {
+            this.drawStraightTargetingLine(targetEnemy);
+        } else {
+            this.drawTargetingCurvesToEnemies(cursorX, cursorY, targetEnemy, cardDef.frontOnly || false);
+        }
         
         if (targetEnemy) {
             // 십자가 패턴 처리
@@ -199,11 +212,15 @@ const CardDrag = {
                 const crossTargets = this.game.getEnemiesInCrossAoe(targetEnemy.gridX, targetEnemy.gridZ, 1);
                 this.highlightEnemiesInAoe(crossTargets);
                 this.showCrossAoeHighlight(targetEnemy.gridX, targetEnemy.gridZ, 1);
-            } else {
+            } else if (!cardDef.straight) {
                 const aoe = cardDef.aoe || { width: 1, depth: 1 };
                 const targetsInAoe = this.game.getEnemiesInAoe(targetEnemy.gridX, targetEnemy.gridZ, aoe);
                 this.highlightEnemiesInAoe(targetsInAoe);
                 this.showAoeHighlight(targetEnemy.gridX, targetEnemy.gridZ, aoe);
+            } else {
+                // 직선 카드는 단일 타겟만 하이라이트
+                this.highlightEnemiesInAoe([targetEnemy]);
+                this.clearAoeHighlight();
             }
             
             ghost.style.transform = 'scale(1.2) rotate(0deg)';
@@ -335,15 +352,25 @@ const CardDrag = {
     // 공격 카드 드롭 처리
     // ==========================================
     handleAttackDrop(touch, cardId, handIndex, cardDef) {
-        const targetEnemy = this.dragState.targetEnemy || 
-                          this.getEnemyAtScreen(touch.clientX, touch.clientY, cardDef.frontOnly || false);
+        let targetEnemy = this.dragState.targetEnemy;
+        
+        // ★ 직선 카드면 직선 타겟만 사용
+        if (!targetEnemy) {
+            if (cardDef.straight) {
+                targetEnemy = this.getStraightLineTarget();
+            } else {
+                targetEnemy = this.getEnemyAtScreen(touch.clientX, touch.clientY, cardDef.frontOnly || false);
+            }
+        }
+        
         const dragDist = this.dragState.startY - touch.clientY;
         
         if (this.game.state.cost >= cardDef.cost) {
             if (targetEnemy) {
                 this.game.executeCardOnTarget(cardId, handIndex, targetEnemy);
                 return true;
-            } else if (dragDist > 100) {
+            } else if (dragDist > 100 && !cardDef.straight) {
+                // 직선 카드는 타겟 없이는 사용 불가
                 this.game.executeCard(cardId, handIndex);
                 return true;
             }
@@ -503,6 +530,120 @@ const CardDrag = {
         }
         
         return frontline;
+    },
+    
+    // ==========================================
+    // 직선 타겟팅 (히어로와 같은 라인의 가장 앞에 있는 적)
+    // ==========================================
+    getStraightLineTarget() {
+        const hero = this.game.state.hero;
+        if (!hero) return null;
+        
+        // 히어로와 같은 gridZ에 있는 적들 중 가장 앞(gridX가 가장 낮은)에 있는 적
+        const sameLineEnemies = this.game.state.enemyUnits.filter(e => 
+            e.hp > 0 && e.gridZ === hero.gridZ
+        );
+        
+        if (sameLineEnemies.length === 0) return null;
+        
+        // 가장 가까운 적 (gridX가 가장 작은)
+        return sameLineEnemies.reduce((closest, e) => 
+            (!closest || e.gridX < closest.gridX) ? e : closest, null
+        );
+    },
+    
+    // ==========================================
+    // 직선 타겟팅 라인 그리기
+    // ==========================================
+    drawStraightTargetingLine(target) {
+        if (!this.targetingCurve) {
+            this.targetingCurve = new PIXI.Graphics();
+            this.targetingCurve.zIndex = 100;
+            this.game.containers.effects.addChild(this.targetingCurve);
+        }
+        
+        this.targetingCurve.clear();
+        
+        const hero = this.game.state.hero;
+        if (!hero || !hero.sprite) return;
+        
+        const heroPos = hero.sprite.getGlobalPosition();
+        const startX = heroPos.x;
+        const startY = heroPos.y - 40;
+        
+        // 직선 라인 (화살표 느낌)
+        const lineLength = target ? null : 400; // 타겟이 없으면 400px 정도
+        let endX, endY;
+        
+        if (target) {
+            const targetPos = target.sprite.getGlobalPosition();
+            endX = targetPos.x;
+            endY = targetPos.y - 40;
+        } else {
+            endX = startX + lineLength;
+            endY = startY;
+        }
+        
+        // 라인 본체
+        this.targetingCurve.moveTo(startX, startY);
+        this.targetingCurve.lineTo(endX, endY);
+        
+        const lineColor = target ? 0xff4444 : 0x888888;
+        this.targetingCurve.stroke({ 
+            width: 3, 
+            color: lineColor, 
+            alpha: 0.8,
+            cap: 'round'
+        });
+        
+        // 화살표 머리
+        if (target) {
+            const arrowSize = 15;
+            const angle = Math.atan2(endY - startY, endX - startX);
+            
+            this.targetingCurve.moveTo(endX, endY);
+            this.targetingCurve.lineTo(
+                endX - arrowSize * Math.cos(angle - Math.PI / 6),
+                endY - arrowSize * Math.sin(angle - Math.PI / 6)
+            );
+            this.targetingCurve.moveTo(endX, endY);
+            this.targetingCurve.lineTo(
+                endX - arrowSize * Math.cos(angle + Math.PI / 6),
+                endY - arrowSize * Math.sin(angle + Math.PI / 6)
+            );
+            this.targetingCurve.stroke({ width: 3, color: lineColor, alpha: 0.8 });
+            
+            // 거리 표시
+            const hero = this.game.state.hero;
+            const distance = Math.abs(target.gridX - hero.gridX);
+            const bonusDamage = distance * 2; // distanceBonus: 2
+            
+            const distText = new PIXI.Text({
+                text: `+${bonusDamage} DMG`,
+                style: {
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                    fill: '#ffdd44',
+                    stroke: { color: '#000000', width: 3 }
+                }
+            });
+            distText.anchor.set(0.5);
+            distText.x = (startX + endX) / 2;
+            distText.y = startY - 20;
+            
+            // 기존 텍스트 제거 후 추가
+            if (this._distanceText && !this._distanceText.destroyed) {
+                this._distanceText.destroy();
+            }
+            this._distanceText = distText;
+            this.game.containers.effects.addChild(distText);
+        } else {
+            // 타겟 없으면 텍스트 제거
+            if (this._distanceText && !this._distanceText.destroyed) {
+                this._distanceText.destroy();
+                this._distanceText = null;
+            }
+        }
     },
     
     // ==========================================
@@ -760,6 +901,11 @@ const CardDrag = {
     clearTargetingCurve() {
         if (this.targetingCurve) {
             this.targetingCurve.clear();
+        }
+        // 거리 텍스트도 제거
+        if (this._distanceText && !this._distanceText.destroyed) {
+            this._distanceText.destroy();
+            this._distanceText = null;
         }
     },
     

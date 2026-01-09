@@ -58,6 +58,14 @@ const CardSystem = {
             createZone: 'fire',
             desc: 'Ranged. Cross-shaped explosion. Deal 8 damage. Creates burning ground.' 
         },
+        spearThrow: {
+            name: 'Spear Throw', cost: 1, type: 'attack', damage: 2,
+            target: 'enemy', melee: false, frontOnly: false,
+            straight: true,  // 직선 전용
+            distanceBonus: 2, // 거리당 +2 대미지
+            element: 'physical',
+            desc: 'Ranged. Straight line only. +2 damage per grid distance.'
+        },
         
         // === 스킬 카드 ===
         defend: { 
@@ -94,10 +102,11 @@ const CardSystem = {
         defend: 3,
         bash: 2,
         cleave: 1,
-        flurry: 2,  // 연속 찌르기 추가
+        flurry: 2,
         ironWave: 2,
         fireBolt: 1,
         fireBall: 1,
+        spearThrow: 2,  // 스피어 투척
         summonKnight: 2,
         summonArcher: 2,
         heal: 1

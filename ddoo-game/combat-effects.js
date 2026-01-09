@@ -1594,6 +1594,243 @@ const CombatEffects = {
             icon: config.icon,
             size: effectType === 'damage' ? 20 : 16
         });
+    },
+    
+    // ==========================================
+    // 스피어 투척 이펙트
+    // ==========================================
+    async spearThrowEffect(attacker, target, damage, gameRef) {
+        if (!this.app || !attacker.sprite || !target.sprite) {
+            if (gameRef) gameRef.dealDamage(target, damage);
+            return;
+        }
+        
+        // 시작/도착 위치 계산
+        const attackerPos = attacker.sprite.getGlobalPosition();
+        const targetPos = target.sprite.getGlobalPosition();
+        
+        // 투척 모션 - 살짝 뒤로 빠졌다가 던지기
+        const posTarget = attacker.container || attacker.sprite;
+        const originalX = posTarget.x;
+        
+        return new Promise(resolve => {
+            gsap.timeline()
+                // 1. 뒤로 빠지는 준비 동작
+                .to(posTarget, {
+                    x: originalX - 15,
+                    duration: 0.1,
+                    ease: 'power1.in'
+                })
+                // 2. 앞으로 던지는 동작
+                .to(posTarget, {
+                    x: originalX + 10,
+                    duration: 0.08,
+                    ease: 'power3.out',
+                    onComplete: () => {
+                        // 창 발사!
+                        this.createSpearProjectile(attackerPos, targetPos, () => {
+                            // 창 도착 - 대미지 및 VFX
+                            if (gameRef) gameRef.dealDamage(target, damage);
+                            this.screenShake(8, 150);
+                            this.spearImpactEffect(targetPos.x, targetPos.y);
+                        });
+                    }
+                })
+                // 3. 원위치
+                .to(posTarget, {
+                    x: originalX,
+                    duration: 0.2,
+                    ease: 'power2.out',
+                    onComplete: resolve
+                });
+        });
+    },
+    
+    // 스피어 발사체 생성
+    createSpearProjectile(start, end, onHit) {
+        if (!this.app) return;
+        
+        const spearContainer = new PIXI.Container();
+        spearContainer.x = start.x;
+        spearContainer.y = start.y - 30; // 히어로 손 높이
+        spearContainer.zIndex = 600;
+        this.container.addChild(spearContainer);
+        
+        // 창 모양 (그래픽으로 그리기)
+        const spear = new PIXI.Graphics();
+        
+        // 창날 (삼각형)
+        spear.poly([
+            { x: 40, y: 0 },   // 창끝
+            { x: 25, y: -5 },  // 날 위
+            { x: 25, y: 5 }    // 날 아래
+        ]);
+        spear.fill({ color: 0xcccccc }); // 은색 창날
+        
+        // 창날 테두리
+        spear.stroke({ width: 1, color: 0xffffff });
+        
+        // 창대 (막대)
+        spear.roundRect(-35, -3, 60, 6, 2);
+        spear.fill({ color: 0x8b4513 }); // 갈색 나무
+        spear.stroke({ width: 1, color: 0x5c3317 });
+        
+        // 창대 장식 (금색 띠)
+        spear.rect(15, -4, 8, 8);
+        spear.fill({ color: 0xdaa520 });
+        
+        spearContainer.addChild(spear);
+        
+        // 비행 방향에 맞게 회전
+        const angle = Math.atan2(
+            end.y - 30 - (start.y - 30),
+            end.x - start.x
+        );
+        spearContainer.rotation = angle;
+        
+        // 잔상 효과용 트레일
+        const trailInterval = setInterval(() => {
+            if (spearContainer.destroyed) {
+                clearInterval(trailInterval);
+                return;
+            }
+            this.createSpearTrail(spearContainer.x, spearContainer.y, spearContainer.rotation);
+        }, 20);
+        
+        // 비행 애니메이션
+        const flightDuration = 0.18; // 빠른 비행
+        
+        gsap.to(spearContainer, {
+            x: end.x,
+            y: end.y - 30,
+            duration: flightDuration,
+            ease: 'power2.in',
+            onComplete: () => {
+                clearInterval(trailInterval);
+                
+                // 도착 시 콜백
+                if (onHit) onHit();
+                
+                // 창 사라짐
+                gsap.to(spearContainer, {
+                    alpha: 0,
+                    duration: 0.1,
+                    onComplete: () => {
+                        if (!spearContainer.destroyed) {
+                            spearContainer.destroy({ children: true });
+                        }
+                    }
+                });
+            }
+        });
+    },
+    
+    // 창 잔상 효과
+    createSpearTrail(x, y, rotation) {
+        if (!this.app) return;
+        
+        const trail = new PIXI.Graphics();
+        trail.x = x;
+        trail.y = y;
+        trail.rotation = rotation;
+        trail.alpha = 0.4;
+        trail.zIndex = 590;
+        
+        // 잔상 (흐릿한 창 실루엣)
+        trail.roundRect(-30, -2, 50, 4, 2);
+        trail.fill({ color: 0xdddddd, alpha: 0.5 });
+        
+        this.container.addChild(trail);
+        
+        gsap.to(trail, {
+            alpha: 0,
+            scaleX: 0.8,
+            scaleY: 0.5,
+            duration: 0.15,
+            onComplete: () => {
+                if (!trail.destroyed) trail.destroy();
+            }
+        });
+    },
+    
+    // 창 충돌 이펙트
+    spearImpactEffect(x, y) {
+        if (!this.app) return;
+        
+        // 1. 충돌 스파크
+        const sparkCount = 8;
+        for (let i = 0; i < sparkCount; i++) {
+            const spark = new PIXI.Graphics();
+            spark.circle(0, 0, 3);
+            spark.fill({ color: 0xffdd66 });
+            spark.x = x;
+            spark.y = y;
+            spark.zIndex = 610;
+            this.container.addChild(spark);
+            
+            const angle = (Math.PI * 2 / sparkCount) * i + Math.random() * 0.5;
+            const distance = 30 + Math.random() * 20;
+            
+            gsap.to(spark, {
+                x: x + Math.cos(angle) * distance,
+                y: y + Math.sin(angle) * distance,
+                alpha: 0,
+                duration: 0.3,
+                ease: 'power2.out',
+                onComplete: () => {
+                    if (!spark.destroyed) spark.destroy();
+                }
+            });
+        }
+        
+        // 2. 충격파 링
+        const ring = new PIXI.Graphics();
+        ring.circle(0, 0, 10);
+        ring.stroke({ width: 3, color: 0xffffff, alpha: 0.8 });
+        ring.x = x;
+        ring.y = y;
+        ring.zIndex = 605;
+        this.container.addChild(ring);
+        
+        gsap.to(ring.scale, {
+            x: 4,
+            y: 4,
+            duration: 0.25,
+            ease: 'power2.out'
+        });
+        gsap.to(ring, {
+            alpha: 0,
+            duration: 0.25,
+            onComplete: () => {
+                if (!ring.destroyed) ring.destroy();
+            }
+        });
+        
+        // 3. 먼지/파편
+        for (let i = 0; i < 5; i++) {
+            const debris = new PIXI.Graphics();
+            debris.rect(-2, -2, 4, 4);
+            debris.fill({ color: 0x8b4513 }); // 나무 색상
+            debris.x = x;
+            debris.y = y;
+            debris.zIndex = 608;
+            this.container.addChild(debris);
+            
+            const vx = (Math.random() - 0.5) * 60;
+            const vy = -Math.random() * 40 - 20;
+            
+            gsap.to(debris, {
+                x: x + vx,
+                y: y + vy + 60, // 중력 효과
+                rotation: Math.random() * Math.PI * 4,
+                alpha: 0,
+                duration: 0.5,
+                ease: 'power1.in',
+                onComplete: () => {
+                    if (!debris.destroyed) debris.destroy();
+                }
+            });
+        }
     }
 };
 

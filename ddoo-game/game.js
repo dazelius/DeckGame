@@ -1767,6 +1767,15 @@ const Game = {
         }
     },
     
+    // ★ 스피어 투척 애니메이션
+    async heroSpearThrowAnimation(hero, target, damage) {
+        if (typeof CombatEffects !== 'undefined') {
+            await CombatEffects.spearThrowEffect(hero, target, damage, this);
+        } else {
+            this.dealDamage(target, damage);
+        }
+    },
+    
     async heroAoeAnimation(hero, targets, damage) {
         if (!hero.sprite || targets.length === 0) {
             for (const target of targets) {
@@ -2085,8 +2094,26 @@ const Game = {
         } else {
             // Ranged: Attack from current position
             
+            // ★ 스피어 투척 (직선 전용, 거리 보너스)
+            if (cardDef.straight) {
+                // 거리 계산 (히어로와 타겟 사이)
+                const distance = Math.abs(targetEnemy.gridX - hero.gridX);
+                const distanceBonus = (cardDef.distanceBonus || 0) * distance;
+                const totalDamage = cardDef.damage + distanceBonus;
+                
+                console.log(`[Game] 스피어 투척! 거리: ${distance}, 기본 대미지: ${cardDef.damage}, 거리 보너스: ${distanceBonus}, 총: ${totalDamage}`);
+                
+                // 브레이크 시스템
+                if (typeof BreakSystem !== 'undefined') {
+                    BreakSystem.onAttack(targetEnemy, cardDef, 1, 0);
+                    this.createEnemyIntent(targetEnemy);
+                }
+                
+                // 스피어 발사 애니메이션
+                await this.heroSpearThrowAnimation(hero, targetEnemy, totalDamage);
+            }
             // 십자가 패턴 처리 (Fireball 등)
-            if (cardDef.aoePattern === 'cross') {
+            else if (cardDef.aoePattern === 'cross') {
                 const crossTargets = this.getEnemiesInCrossAoe(targetEnemy.gridX, targetEnemy.gridZ, 1);
                 
                 // 파이어볼 발사
