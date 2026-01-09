@@ -428,10 +428,13 @@ const UnitCombat = {
                 u !== unit && u.hp > 0 && u.gridX === unit.gridX && u.gridZ === targetZ
             );
             
-            if (blockingUnit) {
+            if (blockingUnit && blockingUnit.sprite) {
                 await this.moveUnitAside(blockingUnit, targetZ, team);
             }
         }
+        
+        // 애니메이션 시작 전 다시 체크
+        if (!unit.sprite) return;
         
         unit.isAnimating = true;
         unit.gridZ = targetZ;
@@ -443,18 +446,27 @@ const UnitCombat = {
             return;
         }
         
+        // sprite 참조 저장
+        const sprite = unit.sprite;
+        if (!sprite) {
+            unit.isAnimating = false;
+            return;
+        }
+        
         return new Promise(resolve => {
-            const startY = unit.sprite.y;
+            const startY = sprite.y;
             const midY = Math.min(startY, newPos.y) - 25;
             
             gsap.timeline()
-                .to(unit.sprite.scale, { x: 1.1, y: 0.9, duration: 0.08 })
-                .to(unit.sprite, { x: newPos.x, y: midY, duration: 0.15, ease: 'power2.out' })
-                .to(unit.sprite.scale, { x: 0.95, y: 1.05, duration: 0.08 }, '<')
-                .to(unit.sprite, { y: newPos.y, duration: 0.1, ease: 'power2.in' })
-                .to(unit.sprite.scale, { x: 1, y: 1, duration: 0.1 }, '<')
+                .to(sprite.scale, { x: 1.1, y: 0.9, duration: 0.08 })
+                .to(sprite, { x: newPos.x, y: midY, duration: 0.15, ease: 'power2.out' })
+                .to(sprite.scale, { x: 0.95, y: 1.05, duration: 0.08 }, '<')
+                .to(sprite, { y: newPos.y, duration: 0.1, ease: 'power2.in' })
+                .to(sprite.scale, { x: 1, y: 1, duration: 0.1 }, '<')
                 .call(() => {
-                    unit.sprite.zIndex = Math.floor(newPos.y);
+                    if (sprite && !sprite.destroyed) {
+                        sprite.zIndex = Math.floor(newPos.y);
+                    }
                     unit.isAnimating = false;
                     resolve();
                 });
@@ -487,6 +499,9 @@ const UnitCombat = {
         possibleZ.sort((a, b) => Math.abs(a - unit.gridZ) - Math.abs(b - unit.gridZ));
         const newZ = possibleZ[0];
         
+        // 애니메이션 시작 전 다시 체크
+        if (!unit.sprite) return;
+        
         unit.isAnimating = true;
         unit.gridZ = newZ;
         unit.z = newZ + 0.5;
@@ -497,18 +512,27 @@ const UnitCombat = {
             return;
         }
         
+        // sprite 참조 저장
+        const sprite = unit.sprite;
+        if (!sprite) {
+            unit.isAnimating = false;
+            return;
+        }
+        
         return new Promise(resolve => {
-            const startY = unit.sprite.y;
+            const startY = sprite.y;
             const midY = Math.min(startY, newPos.y) - 15;
             
             gsap.timeline()
-                .to(unit.sprite.scale, { x: 1.1, y: 0.9, duration: 0.06 })
-                .to(unit.sprite, { x: newPos.x, y: midY, duration: 0.12, ease: 'power2.out' })
-                .to(unit.sprite.scale, { x: 0.95, y: 1.05, duration: 0.06 }, '<')
-                .to(unit.sprite, { y: newPos.y, duration: 0.08, ease: 'power2.in' })
-                .to(unit.sprite.scale, { x: 1, y: 1, duration: 0.08 }, '<')
+                .to(sprite.scale, { x: 1.1, y: 0.9, duration: 0.06 })
+                .to(sprite, { x: newPos.x, y: midY, duration: 0.12, ease: 'power2.out' })
+                .to(sprite.scale, { x: 0.95, y: 1.05, duration: 0.06 }, '<')
+                .to(sprite, { y: newPos.y, duration: 0.08, ease: 'power2.in' })
+                .to(sprite.scale, { x: 1, y: 1, duration: 0.08 }, '<')
                 .call(() => {
-                    unit.sprite.zIndex = Math.floor(newPos.y);
+                    if (sprite && !sprite.destroyed) {
+                        sprite.zIndex = Math.floor(newPos.y);
+                    }
                     unit.isAnimating = false;
                     resolve();
                 });
