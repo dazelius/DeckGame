@@ -1415,8 +1415,9 @@ const Game = {
                 }
                 
                 // Attack animation toward primary target
-                const cardType = cardDef.name?.toLowerCase().includes('bash') ? 'bash' : 
-                                 cardDef.name?.toLowerCase().includes('flurry') ? 'flurry' : 'strike';
+                // ★ cardId로 타입 판단 (로컬라이제이션 영향 없음)
+                const cardType = cardId === 'bash' ? 'bash' : 
+                                 cardId === 'flurry' ? 'flurry' : 'strike';
                 const knockback = (hitNum === hits - 1) ? (cardDef.knockback || 0) : 0; // 마지막 타격에만 넉백
                 
                 await this.heroAttackAnimation(hero, targetEnemy, cardDef.damage, cardType, knockback);
