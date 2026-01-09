@@ -266,12 +266,25 @@ const UnitCombat = {
     async flurryAttack(attacker, target, damage, options = {}) {
         const { isEnemy = false, onHit = null } = options;
         
+        // ★ 타겟이 이미 죽었으면 즉시 종료
+        if (!target || target.hp <= 0 || !target.sprite || target.sprite.destroyed) {
+            if (attacker) attacker.isAnimating = false;
+            return;
+        }
+        
         attacker.isAnimating = true;
         
         // ★ 새 구조: 위치는 posTarget, 스케일은 scaleTarget
         const posTarget = this.getPositionTarget(attacker);
         const scaleTarget = this.getScaleTarget(attacker);
         const targetPosTarget = this.getPositionTarget(target);
+        
+        // ★ 유효성 체크
+        if (!posTarget || !scaleTarget || !targetPosTarget) {
+            if (attacker) attacker.isAnimating = false;
+            return;
+        }
+        
         const baseScale = attacker.baseScale || scaleTarget?.baseScale || 1;
         
         const startX = posTarget.x;
@@ -281,13 +294,28 @@ const UnitCombat = {
         const dashDirection = isEnemy ? -1 : 1;
         const dashX = targetX - (dashDirection * 50);
         
-        // 1. 빠른 돌진
+        // 1. 빠른 돌진 (안전 체크)
         await new Promise(resolve => {
+            if (!posTarget || posTarget.destroyed || !scaleTarget || scaleTarget.destroyed) {
+                resolve();
+                return;
+            }
             gsap.timeline()
                 .to(posTarget, { x: dashX, duration: 0.08, ease: 'power3.in' })
                 .to(scaleTarget.scale, { x: baseScale * 1.05, y: baseScale * 0.95, duration: 0.06 }, '<')
                 .add(resolve);
         });
+        
+        // ★ 타겟 사망 체크
+        if (!target || target.hp <= 0 || !target.sprite || target.sprite.destroyed) {
+            // 복귀만 하고 종료
+            if (posTarget && !posTarget.destroyed && scaleTarget && !scaleTarget.destroyed) {
+                gsap.to(posTarget, { x: startX, y: startY, duration: 0.15 });
+                gsap.to(scaleTarget.scale, { x: baseScale, y: baseScale, duration: 0.1 });
+            }
+            if (attacker) attacker.isAnimating = false;
+            return;
+        }
         
         // 2. 짧은 히트스톱
         if (typeof CombatEffects !== 'undefined') {
@@ -296,13 +324,12 @@ const UnitCombat = {
         
         // 3. 빠른 찌르기 이펙트 (단일 타격용 - 작은 스파크)
         if (typeof CombatEffects !== 'undefined') {
-            // 작은 찌르기 이펙트
             CombatEffects.slashEffect(targetX, targetCenter, 25, 0x88ccff);
             CombatEffects.burstParticles(targetX, targetCenter, 0x88ccff, 5);
         }
         
         // 4. 피격 (데미지 숫자는 dealDamage에서 표시)
-        if (typeof CombatEffects !== 'undefined' && target.sprite) {
+        if (typeof CombatEffects !== 'undefined' && target.sprite && !target.sprite.destroyed) {
             CombatEffects.hitEffect(target.sprite);
         }
         
@@ -316,6 +343,11 @@ const UnitCombat = {
         
         // 5. 빠른 복귀 (바로 다음 타격 준비) + 스케일 복원!
         await new Promise(resolve => {
+            if (!scaleTarget || scaleTarget.destroyed || !posTarget || posTarget.destroyed) {
+                if (attacker) attacker.isAnimating = false;
+                resolve();
+                return;
+            }
             gsap.timeline()
                 .to(scaleTarget.scale, { x: baseScale, y: baseScale, duration: 0.06 })
                 .to(posTarget, {
