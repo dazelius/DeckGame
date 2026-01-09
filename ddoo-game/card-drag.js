@@ -398,14 +398,17 @@ const CardDrag = {
         const validTargets = frontOnly ? this.getFrontlineEnemies() : null;
         
         for (const enemy of this.game.state.enemyUnits) {
-            if (enemy.hp <= 0 || !enemy.sprite) continue;
+            if (enemy.hp <= 0) continue;
             if (frontOnly && !validTargets.includes(enemy)) continue;
             
-            const sprite = enemy.sprite;
-            const spriteX = sprite.x;
-            const spriteY = sprite.y;
-            const spriteWidth = sprite.width || 80;
-            const spriteHeight = sprite.height || 100;
+            // ★ 새 구조: container에서 위치, sprite에서 크기
+            const posTarget = enemy.container || enemy.sprite;
+            if (!posTarget) continue;
+            
+            const spriteX = posTarget.x;
+            const spriteY = posTarget.y;
+            const spriteWidth = enemy.sprite?.width || 80;
+            const spriteHeight = enemy.sprite?.height || 100;
             
             const hitPadding = 50;
             const left = spriteX - spriteWidth / 2 - hitPadding;
@@ -432,13 +435,16 @@ const CardDrag = {
         const allAllies = [this.game.state.hero, ...this.game.state.playerUnits.filter(u => u !== this.game.state.hero)];
         
         for (const ally of allAllies) {
-            if (!ally || !ally.sprite || ally.hp <= 0) continue;
+            if (!ally || ally.hp <= 0) continue;
             
-            const sprite = ally.sprite;
-            const spriteX = sprite.x;
-            const spriteY = sprite.y;
-            const spriteWidth = sprite.width || 80;
-            const spriteHeight = sprite.height || 100;
+            // ★ 새 구조: container에서 위치, sprite에서 크기
+            const posTarget = ally.container || ally.sprite;
+            if (!posTarget) continue;
+            
+            const spriteX = posTarget.x;
+            const spriteY = posTarget.y;
+            const spriteWidth = ally.sprite?.width || 80;
+            const spriteHeight = ally.sprite?.height || 100;
             
             const hitPadding = 50;
             const left = spriteX - spriteWidth / 2 - hitPadding;
@@ -664,12 +670,16 @@ const CardDrag = {
                             this.game.state.enemyUnits.filter(e => e.hp > 0);
         
         for (const enemy of this.game.state.enemyUnits) {
-            if (enemy.hp <= 0 || !enemy.sprite) continue;
+            if (enemy.hp <= 0) continue;
+            
+            // ★ 새 구조: container에서 위치
+            const posTarget = enemy.container || enemy.sprite;
+            if (!posTarget) continue;
             
             const isValidTarget = validTargets.includes(enemy);
             const isHovered = (enemy === hoveredEnemy);
-            const endX = enemy.sprite.x;
-            const endY = enemy.sprite.y - (enemy.sprite.height || 60) / 2;
+            const endX = posTarget.x;
+            const endY = posTarget.y - (enemy.sprite?.height || 60) / 2;
             
             const midX = (cardX + endX) / 2;
             const midY = Math.min(cardY, endY) - 60;
