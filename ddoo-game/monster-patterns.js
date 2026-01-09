@@ -196,12 +196,27 @@ const MonsterPatterns = {
             };
         }
         
+        // ★ 첫 턴(1턴)에는 브레이크 레시피가 있는 강력한 공격 제외
+        const currentTurn = this.game?.state?.turn || 1;
+        const isFirstTurn = currentTurn <= 1;
+        
+        // 사용 가능한 인텐트 필터링
+        let availableIntents = pattern.intents;
+        if (isFirstTurn) {
+            // 첫 턴: 브레이크 레시피가 없는 인텐트만
+            const safeIntents = pattern.intents.filter(i => !i.breakRecipe || i.breakRecipe.length === 0);
+            if (safeIntents.length > 0) {
+                availableIntents = safeIntents;
+            }
+            // 모든 인텐트가 브레이크 레시피가 있으면 어쩔 수 없이 원본 사용
+        }
+        
         // 가중치 합계
-        const totalWeight = pattern.intents.reduce((sum, intent) => sum + (intent.weight || 10), 0);
+        const totalWeight = availableIntents.reduce((sum, intent) => sum + (intent.weight || 10), 0);
         let roll = Math.random() * totalWeight;
         
         // 가중치 기반 선택
-        for (const intent of pattern.intents) {
+        for (const intent of availableIntents) {
             roll -= (intent.weight || 10);
             if (roll <= 0) {
                 // 인텐트 복사 후 반환 (원본 보호)
@@ -217,7 +232,7 @@ const MonsterPatterns = {
         }
         
         // 폴백
-        return { ...pattern.intents[0] };
+        return { ...availableIntents[0] };
     },
     
     // ==========================================
