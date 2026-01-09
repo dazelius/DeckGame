@@ -104,17 +104,25 @@ const UnitCombat = {
         
         if (onHit) onHit();
         
-        // 5. 복귀 (await 없이)
-        if (attacker.sprite) {
-            gsap.to(attacker.sprite, {
-                x: startX,
-                y: startY,
-                duration: 0.25,
-                ease: 'power2.out',
-                onComplete: () => {
+        // 5. 복귀 (await 없이) + 스케일 복원!
+        if (attacker.sprite && !attacker.sprite.destroyed) {
+            const baseScale = attacker.baseScale || attacker.sprite.baseScale || 1;
+            gsap.timeline()
+                .to(attacker.sprite, {
+                    x: startX,
+                    y: startY,
+                    duration: 0.25,
+                    ease: 'power2.out'
+                })
+                .to(attacker.sprite.scale, {
+                    x: baseScale,
+                    y: baseScale,
+                    duration: 0.15,
+                    ease: 'power2.out'
+                }, '<')
+                .call(() => {
                     if (attacker) attacker.isAnimating = false;
-                }
-            });
+                });
         } else {
             if (attacker) attacker.isAnimating = false;
         }
@@ -204,11 +212,12 @@ const UnitCombat = {
         
         if (onHit) onHit();
         
-        // 6. 느린 복귀
-        if (attacker.sprite) {
+        // 6. 느린 복귀 + 스케일 복원!
+        if (attacker.sprite && !attacker.sprite.destroyed) {
+            const baseScale = attacker.baseScale || attacker.sprite.baseScale || 1;
             gsap.timeline()
                 .to({}, { duration: 0.15 })
-                .to(attacker.sprite.scale, { x: 1, y: 1, duration: 0.2, ease: 'power2.out' })
+                .to(attacker.sprite.scale, { x: baseScale, y: baseScale, duration: 0.2, ease: 'power2.out' })
                 .to(attacker.sprite, {
                     x: startX,
                     y: startY,
@@ -272,10 +281,11 @@ const UnitCombat = {
         
         if (onHit) onHit();
         
-        // 5. 빠른 복귀 (바로 다음 타격 준비)
+        // 5. 빠른 복귀 (바로 다음 타격 준비) + 스케일 복원!
+        const baseScale = attacker.baseScale || attacker.sprite.baseScale || 1;
         await new Promise(resolve => {
             gsap.timeline()
-                .to(attacker.sprite.scale, { x: 1, y: 1, duration: 0.06 })
+                .to(attacker.sprite.scale, { x: baseScale, y: baseScale, duration: 0.06 })
                 .to(attacker.sprite, {
                     x: startX,
                     y: startY,
@@ -491,16 +501,19 @@ const UnitCombat = {
             return;
         }
         
+        // ★ baseScale 기준으로 스케일 애니메이션
+        const baseScale = unit.baseScale || sprite.baseScale || 1;
+        
         return new Promise(resolve => {
             const startY = sprite.y;
             const midY = Math.min(startY, newPos.y) - 25;
             
             gsap.timeline()
-                .to(sprite.scale, { x: 1.1, y: 0.9, duration: 0.08 })
+                .to(sprite.scale, { x: baseScale * 1.1, y: baseScale * 0.9, duration: 0.08 })
                 .to(sprite, { x: newPos.x, y: midY, duration: 0.15, ease: 'power2.out' })
-                .to(sprite.scale, { x: 0.95, y: 1.05, duration: 0.08 }, '<')
+                .to(sprite.scale, { x: baseScale * 0.95, y: baseScale * 1.05, duration: 0.08 }, '<')
                 .to(sprite, { y: newPos.y, duration: 0.1, ease: 'power2.in' })
-                .to(sprite.scale, { x: 1, y: 1, duration: 0.1 }, '<')
+                .to(sprite.scale, { x: baseScale, y: baseScale, duration: 0.1 }, '<')
                 .call(() => {
                     if (sprite && !sprite.destroyed) {
                         sprite.zIndex = Math.floor(newPos.y);
@@ -557,16 +570,19 @@ const UnitCombat = {
             return;
         }
         
+        // ★ baseScale 기준으로 스케일 애니메이션
+        const baseScale = unit.baseScale || sprite.baseScale || 1;
+        
         return new Promise(resolve => {
             const startY = sprite.y;
             const midY = Math.min(startY, newPos.y) - 15;
             
             gsap.timeline()
-                .to(sprite.scale, { x: 1.1, y: 0.9, duration: 0.06 })
+                .to(sprite.scale, { x: baseScale * 1.1, y: baseScale * 0.9, duration: 0.06 })
                 .to(sprite, { x: newPos.x, y: midY, duration: 0.12, ease: 'power2.out' })
-                .to(sprite.scale, { x: 0.95, y: 1.05, duration: 0.06 }, '<')
+                .to(sprite.scale, { x: baseScale * 0.95, y: baseScale * 1.05, duration: 0.06 }, '<')
                 .to(sprite, { y: newPos.y, duration: 0.08, ease: 'power2.in' })
-                .to(sprite.scale, { x: 1, y: 1, duration: 0.08 }, '<')
+                .to(sprite.scale, { x: baseScale, y: baseScale, duration: 0.08 }, '<')
                 .call(() => {
                     if (sprite && !sprite.destroyed) {
                         sprite.zIndex = Math.floor(newPos.y);
