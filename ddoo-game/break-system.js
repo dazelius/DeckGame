@@ -278,8 +278,8 @@ const BreakSystem = {
             CombatEffects.screenShake(25, 500);
         }
         
-        // 4. 스턴 별 VFX (적 머리 위)
-        this.createStunStars(enemyX, enemyY);
+        // 4. 스턴 별 VFX (적 머리 위 - 3D 타원 궤도)
+        this.createStunStars(enemy);
         
         // 5. 중앙 충격파
         this.createCenterShockwave(centerX, centerY);
@@ -490,40 +490,129 @@ const BreakSystem = {
     },
     
     // ==========================================
-    // 스턴 별 VFX (머리 위에서 도는 별)
+    // 스턴 별 VFX (3D 타원 궤도 - 머리 위에서 도는 별)
     // ==========================================
-    createStunStars(x, y) {
-        const starContainer = document.createElement('div');
-        starContainer.className = 'stun-stars-container';
-        starContainer.style.cssText = `
-            position: fixed;
-            left: ${x}px;
-            top: ${y}px;
-            transform: translate(-50%, -50%);
-            width: 80px;
-            height: 40px;
-            z-index: 10002;
-            pointer-events: none;
-        `;
+    createStunStars(enemy) {
+        if (!enemy || !enemy.sprite || !this.game?.app) return;
         
-        // 3개의 별 생성
-        for (let i = 0; i < 3; i++) {
-            const star = document.createElement('div');
-            star.textContent = '⭐';
-            star.style.cssText = `
-                position: absolute;
-                font-size: 24px;
-                animation: stunStarOrbit 0.8s linear infinite;
-                animation-delay: ${i * 0.27}s;
-                filter: drop-shadow(0 0 6px #ffd700);
-            `;
-            starContainer.appendChild(star);
+        const sprite = enemy.sprite;
+        const spriteHeight = sprite.height || 80;
+        
+        // 별 컨테이너 생성 (스프라이트의 자식으로)
+        const starsContainer = new PIXI.Container();
+        starsContainer.y = -spriteHeight - 15;  // 인텐트 위쪽
+        starsContainer.zIndex = 200;
+        starsContainer.isStunStars = true;
+        
+        // 3D 타원 궤도 파라미터
+        const orbitRadiusX = 35;  // 가로 반지름
+        const orbitRadiusY = 12;  // 세로 반지름 (3D 납작하게)
+        const starCount = 3;
+        const baseScale = 0.8;
+        
+        const stars = [];
+        
+        // 별 생성
+        for (let i = 0; i < starCount; i++) {
+            const star = new PIXI.Container();
+            
+            // 별 모양 그리기
+            const starGraphic = new PIXI.Graphics();
+            this.drawStar(starGraphic, 0, 0, 5, 12, 6, 0xffd700);
+            star.addChild(starGraphic);
+            
+            // 글로우 효과
+            const glow = new PIXI.Graphics();
+            glow.circle(0, 0, 8);
+            glow.fill({ color: 0xffd700, alpha: 0.3 });
+            star.addChildAt(glow, 0);
+            
+            // 초기 각도
+            star.orbitAngle = (i / starCount) * Math.PI * 2;
+            star.baseScale = baseScale;
+            
+            stars.push(star);
+            starsContainer.addChild(star);
         }
         
-        document.body.appendChild(starContainer);
+        sprite.addChild(starsContainer);
         
-        // 2초 후 제거
-        setTimeout(() => starContainer.remove(), 2000);
+        // 애니메이션 Ticker
+        const animateStar = (delta) => {
+            if (!starsContainer.parent || starsContainer.destroyed) {
+                this.game.app.ticker.remove(animateStar);
+                return;
+            }
+            
+            const time = performance.now() * 0.003;  // 회전 속도
+            
+            stars.forEach((star, i) => {
+                const angle = time + (i / starCount) * Math.PI * 2;
+                
+                // 3D 타원 좌표
+                star.x = Math.cos(angle) * orbitRadiusX;
+                star.y = Math.sin(angle) * orbitRadiusY;
+                
+                // 3D 깊이감: 뒤에 있을 때 작고 흐리게
+                const depth = (Math.sin(angle) + 1) / 2;  // 0~1
+                const scale = baseScale * (0.6 + depth * 0.5);
+                star.scale.set(scale);
+                star.alpha = 0.5 + depth * 0.5;
+                
+                // 뒤에 있는 별은 아래로 (zIndex 대신 sortChildren 사용)
+                star.zIndex = Math.floor(depth * 10);
+                
+                // 별 자체 회전
+                star.children[1].rotation += 0.05 * delta;
+            });
+            
+            starsContainer.sortChildren();
+        };
+        
+        this.game.app.ticker.add(animateStar);
+        
+        // 지속 시간 후 제거 (브레이크 해제 시까지 유지)
+        enemy.stunStarsContainer = starsContainer;
+        enemy.stunStarsAnimator = animateStar;
+    },
+    
+    // 별 모양 그리기 헬퍼
+    drawStar(graphics, cx, cy, spikes, outerRadius, innerRadius, color) {
+        let rot = Math.PI / 2 * 3;
+        const step = Math.PI / spikes;
+        
+        graphics.moveTo(cx, cy - outerRadius);
+        
+        for (let i = 0; i < spikes; i++) {
+            graphics.lineTo(
+                cx + Math.cos(rot) * outerRadius,
+                cy + Math.sin(rot) * outerRadius
+            );
+            rot += step;
+            
+            graphics.lineTo(
+                cx + Math.cos(rot) * innerRadius,
+                cy + Math.sin(rot) * innerRadius
+            );
+            rot += step;
+        }
+        
+        graphics.lineTo(cx, cy - outerRadius);
+        graphics.closePath();
+        graphics.fill({ color: color });
+        graphics.stroke({ width: 1, color: 0xffee88 });
+    },
+    
+    // 스턴 별 제거
+    removeStunStars(enemy) {
+        if (enemy.stunStarsContainer) {
+            if (enemy.stunStarsAnimator && this.game?.app?.ticker) {
+                this.game.app.ticker.remove(enemy.stunStarsAnimator);
+            }
+            enemy.stunStarsContainer.destroy();
+            enemy.stunStarsContainer = null;
+            enemy.stunStarsAnimator = null;
+        }
     },
     
     // ==========================================
@@ -818,6 +907,9 @@ const BreakSystem = {
                 enemy.stunShakeTween.kill();
                 enemy.stunShakeTween = null;
             }
+            
+            // ★ 3D 스턴 별 제거
+            this.removeStunStars(enemy);
             
             // 스프라이트 복구
             if (enemy.sprite) {
