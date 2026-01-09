@@ -1,0 +1,32 @@
+{
+    "id": "skeleton",
+    "name": "Skeleton",
+    "nameKo": "해골",
+    "intents": [
+        { 
+            "id": "bone_strike",
+            "name": "뼈 공격",
+            "nameEn": "Bone Strike",
+            "type": "attack", 
+            "damage": 6,
+            "weight": 60
+        },
+        { 
+            "id": "rattle",
+            "name": "뼈 울림",
+            "nameEn": "Rattle",
+            "type": "buff", 
+            "buffType": "strength",
+            "buffValue": 1,
+            "weight": 25
+        },
+        { 
+            "id": "bone_shield",
+            "name": "뼈 방패",
+            "nameEn": "Bone Shield",
+            "type": "defend", 
+            "block": 5,
+            "weight": 15
+        }
+    ]
+}

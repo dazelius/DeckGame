@@ -1,0 +1,31 @@
+{
+    "id": "slime",
+    "name": "Slime",
+    "nameKo": "슬라임",
+    "intents": [
+        { 
+            "id": "tackle",
+            "name": "돌진",
+            "nameEn": "Tackle",
+            "type": "attack", 
+            "damage": 5,
+            "weight": 50
+        },
+        { 
+            "id": "split",
+            "name": "분열",
+            "nameEn": "Split",
+            "type": "summon",
+            "summonType": "slime_small",
+            "weight": 20
+        },
+        { 
+            "id": "goo_shield",
+            "name": "점액 방어",
+            "nameEn": "Goo Shield",
+            "type": "defend", 
+            "block": 4,
+            "weight": 30
+        }
+    ]
+}

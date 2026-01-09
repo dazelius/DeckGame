@@ -1,6 +1,6 @@
 // =====================================================
 // Monster Patterns - 몬스터 패턴 및 인텐트 관리
-// JSON 기반 패턴 로딩 시스템
+// 개별 JSON 파일 로딩 시스템
 // =====================================================
 
 const MonsterPatterns = {
@@ -8,44 +8,59 @@ const MonsterPatterns = {
     patterns: {},  // JSON에서 로드됨
     loaded: false,
     
+    // 로드할 몬스터 목록 (파일명 = 몬스터 ID)
+    monsterList: [
+        'goblin',
+        'goblinArcher', 
+        'orc',
+        'skeletonMage',
+        'slime',
+        'skeleton'
+    ],
+    
     // ==========================================
-    // 초기화 (JSON 로드)
+    // 초기화 (개별 JSON 파일 로드)
     // ==========================================
     async init(gameRef) {
         this.game = gameRef;
+        this.patterns = {};
         
-        // JSON 파일에서 패턴 로드
+        // 각 몬스터 JSON 파일 병렬 로드
+        const loadPromises = this.monsterList.map(id => this.loadMonster(id));
+        await Promise.all(loadPromises);
+        
+        this.loaded = true;
+        console.log(`[MonsterPatterns] ${Object.keys(this.patterns).length}개 패턴 로드 완료`);
+    },
+    
+    // ==========================================
+    // 개별 몬스터 JSON 로드
+    // ==========================================
+    async loadMonster(id) {
         try {
-            const response = await fetch('pattern/monsters.json');
+            const response = await fetch(`pattern/${id}.json`);
             if (response.ok) {
-                this.patterns = await response.json();
-                this.loaded = true;
-                console.log(`[MonsterPatterns] JSON에서 ${Object.keys(this.patterns).length}개 패턴 로드 완료`);
+                const data = await response.json();
+                this.patterns[id] = data;
+                console.log(`[MonsterPatterns] ${id} 로드 완료`);
             } else {
-                console.warn('[MonsterPatterns] JSON 로드 실패, 기본 패턴 사용');
-                this.loadFallbackPatterns();
+                console.warn(`[MonsterPatterns] ${id}.json 로드 실패`);
             }
         } catch (e) {
-            console.warn('[MonsterPatterns] JSON 로드 오류:', e.message);
-            this.loadFallbackPatterns();
+            console.warn(`[MonsterPatterns] ${id}.json 오류:`, e.message);
         }
     },
     
     // ==========================================
-    // 폴백 패턴 (JSON 로드 실패 시)
+    // 동적 몬스터 추가 (런타임에 새 패턴 로드)
     // ==========================================
-    loadFallbackPatterns() {
-        this.patterns = {
-            goblin: {
-                name: 'Goblin',
-                intents: [
-                    { id: 'slash', name: '베기', type: 'attack', damage: 8, weight: 50 },
-                    { id: 'defend', name: '방어', type: 'defend', block: 6, weight: 50 }
-                ]
-            }
-        };
-        this.loaded = true;
-        console.log('[MonsterPatterns] 폴백 패턴 로드 완료');
+    async addMonster(id) {
+        if (this.patterns[id]) {
+            console.log(`[MonsterPatterns] ${id} 이미 로드됨`);
+            return true;
+        }
+        await this.loadMonster(id);
+        return !!this.patterns[id];
     },
     
     // ==========================================

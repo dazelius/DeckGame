@@ -1,0 +1,42 @@
+{
+    "id": "goblin",
+    "name": "Goblin",
+    "nameKo": "고블린",
+    "intents": [
+        { 
+            "id": "slash",
+            "name": "베기",
+            "nameEn": "Slash",
+            "type": "attack", 
+            "damage": 8,
+            "weight": 40,
+            "breakRecipe": ["physical", "physical", "physical"]
+        },
+        { 
+            "id": "wild_swing",
+            "name": "난폭한 휘두르기",
+            "nameEn": "Wild Swing",
+            "type": "attack", 
+            "damage": 12,
+            "weight": 25,
+            "breakRecipe": ["physical", "physical", "physical"]
+        },
+        { 
+            "id": "defend",
+            "name": "방어 태세",
+            "nameEn": "Defensive Stance",
+            "type": "defend", 
+            "block": 6,
+            "weight": 20
+        },
+        { 
+            "id": "prepare",
+            "name": "준비",
+            "nameEn": "Prepare",
+            "type": "buff", 
+            "buffType": "strength",
+            "buffValue": 2,
+            "weight": 15
+        }
+    ]
+}

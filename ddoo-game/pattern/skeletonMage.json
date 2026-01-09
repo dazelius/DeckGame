@@ -1,0 +1,43 @@
+{
+    "id": "skeletonMage",
+    "name": "Skeleton Mage",
+    "nameKo": "해골 마법사",
+    "intents": [
+        { 
+            "id": "dark_bolt",
+            "name": "암흑 탄환",
+            "nameEn": "Dark Bolt",
+            "type": "attack", 
+            "damage": 10,
+            "element": "dark",
+            "weight": 40
+        },
+        { 
+            "id": "soul_drain",
+            "name": "영혼 흡수",
+            "nameEn": "Soul Drain",
+            "type": "attack", 
+            "damage": 8,
+            "heal": 4,
+            "weight": 25,
+            "breakRecipe": ["magic", "magic"]
+        },
+        { 
+            "id": "curse",
+            "name": "저주",
+            "nameEn": "Curse",
+            "type": "debuff", 
+            "vulnerable": 2,
+            "weight": 20,
+            "breakRecipe": ["magic", "magic"]
+        },
+        { 
+            "id": "summon_skeleton",
+            "name": "해골 소환",
+            "nameEn": "Summon Skeleton",
+            "type": "summon",
+            "summonType": "skeleton",
+            "weight": 15
+        }
+    ]
+}
