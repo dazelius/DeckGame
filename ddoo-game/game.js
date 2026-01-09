@@ -1655,12 +1655,12 @@ const Game = {
             this.updateCostUI();
         }
         
-        // Create sprite
+        // Create sprite (숨쉬기는 스폰 후에 시작)
         const sprite = await DDOORenderer.createSprite(unitDef.sprite, {
             scale: unitDef.scale,
             outline: { enabled: false },
             shadow: { enabled: false },
-            breathing: { enabled: true, scaleAmount: 0.025, speed: 2.5 }
+            breathing: { enabled: false }  // 스폰 애니메이션 후 시작
         });
         
         // Position
@@ -1681,10 +1681,23 @@ const Game = {
         // No team tint - use natural sprite colors
         sprite.tint = 0xffffff;
         
+        // baseScale 저장 (스폰 애니메이션 후 복원용)
+        sprite.baseScale = unitDef.scale;
+        
         this.containers.units.addChild(sprite);
         
         // ★ 달려오는 애니메이션
-        const runInAnimation = gsap.timeline();
+        const runInAnimation = gsap.timeline({
+            onComplete: () => {
+                // 스폰 완료 후 스케일 확정 및 숨쉬기 시작
+                if (sprite && !sprite.destroyed) {
+                    sprite.scale.set(unitDef.scale, unitDef.scale);
+                    if (typeof DDOORenderer !== 'undefined') {
+                        DDOORenderer.startBreathing(sprite, unitDef.scale);
+                    }
+                }
+            }
+        });
         
         // 등장 (페이드 인 + 커지면서)
         runInAnimation
@@ -1738,6 +1751,7 @@ const Game = {
             damage: unitDef.damage,
             range: unitDef.range,
             sprite,
+            baseScale: unitDef.scale,  // 기본 스케일 저장
             isHero: unitDef.isHero || false,
             state: 'idle'
         };
