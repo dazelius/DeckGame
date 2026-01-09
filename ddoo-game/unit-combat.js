@@ -16,6 +16,26 @@ const UnitCombat = {
     },
     
     // ==========================================
+    // ★ 새 유닛 구조 헬퍼 함수
+    // container: 위치/이동용 (scale=1)
+    // sprite: 스케일 애니메이션용
+    // ==========================================
+    getPositionTarget(unit) {
+        // 위치 접근용: container 우선, 없으면 sprite
+        return unit?.container || unit?.sprite;
+    },
+    
+    getScaleTarget(unit) {
+        // 스케일 애니메이션용: sprite
+        return unit?.sprite;
+    },
+    
+    getUnitPosition(unit) {
+        const target = this.getPositionTarget(unit);
+        return target ? { x: target.x, y: target.y } : { x: 0, y: 0 };
+    },
+    
+    // ==========================================
     // 통합 근접 공격 애니메이션
     // attacker: 공격자 유닛
     // target: 대상 유닛
@@ -58,22 +78,28 @@ const UnitCombat = {
         
         attacker.isAnimating = true;
         
-        const startX = attacker.sprite.x;
-        const startY = attacker.sprite.y;
-        const targetX = target.sprite.x;
-        const targetCenter = target.sprite.y - (target.sprite.height || 60) / 2;
+        // ★ 새 구조: 위치는 container, 스케일은 sprite
+        const posTarget = this.getPositionTarget(attacker);
+        const scaleTarget = this.getScaleTarget(attacker);
+        const targetPosTarget = this.getPositionTarget(target);
+        const baseScale = attacker.baseScale || scaleTarget?.baseScale || 1;
+        
+        const startX = posTarget.x;
+        const startY = posTarget.y;
+        const targetX = targetPosTarget.x;
+        const targetCenter = targetPosTarget.y - (target.sprite?.height || 60) / 2;
         
         // 방향 (아군은 오른쪽으로, 적은 왼쪽으로)
         const dashDirection = isEnemy ? -1 : 1;
         const dashX = targetX - (dashDirection * 60);
         
-        // 1. 윈드업 + 돌진
+        // 1. 윈드업 + 돌진 (위치: posTarget, 스케일: scaleTarget)
         await new Promise(resolve => {
             gsap.timeline()
-                .to(attacker.sprite, { x: startX - (dashDirection * 15), duration: 0.08 })
-                .to(attacker.sprite.scale, { x: 0.9, y: 1.1, duration: 0.08 }, '<')
-                .to(attacker.sprite, { x: dashX, duration: 0.12, ease: 'power2.in' })
-                .to(attacker.sprite.scale, { x: 1.1, y: 0.9, duration: 0.1 }, '<')
+                .to(posTarget, { x: startX - (dashDirection * 15), duration: 0.08 })
+                .to(scaleTarget.scale, { x: baseScale * 0.9, y: baseScale * 1.1, duration: 0.08 }, '<')
+                .to(posTarget, { x: dashX, duration: 0.12, ease: 'power2.in' })
+                .to(scaleTarget.scale, { x: baseScale * 1.1, y: baseScale * 0.9, duration: 0.1 }, '<')
                 .add(resolve);
         });
         
@@ -105,16 +131,15 @@ const UnitCombat = {
         if (onHit) onHit();
         
         // 5. 복귀 (await 없이) + 스케일 복원!
-        if (attacker.sprite && !attacker.sprite.destroyed) {
-            const baseScale = attacker.baseScale || attacker.sprite.baseScale || 1;
+        if (posTarget && scaleTarget && !scaleTarget.destroyed) {
             gsap.timeline()
-                .to(attacker.sprite, {
+                .to(posTarget, {
                     x: startX,
                     y: startY,
                     duration: 0.25,
                     ease: 'power2.out'
                 })
-                .to(attacker.sprite.scale, {
+                .to(scaleTarget.scale, {
                     x: baseScale,
                     y: baseScale,
                     duration: 0.15,

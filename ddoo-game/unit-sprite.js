@@ -1,6 +1,13 @@
 // =====================================================
 // UnitSprite - 유닛 스프라이트 생성 및 애니메이션 관리
-// 스케일, 스폰 애니메이션, 숨쉬기 등 스프라이트 관련 로직 통합
+// 
+// ★ 유닛 컨테이너 구조:
+// unit.container (최상위, 위치 관리, scale=1 고정)
+//   ├── unit.sprite (스프라이트, 스케일 애니메이션 적용)
+//   ├── unit.hpBar (HP 바, 스케일 영향 없음)
+//   └── unit.intentContainer (인텐트, 스케일 영향 없음)
+// 
+// 이 구조로 스프라이트 스케일이 변해도 HP바/인텐트는 영향받지 않음!
 // =====================================================
 
 const UnitSprite = {
@@ -35,40 +42,70 @@ const UnitSprite = {
         }
     },
     
-    // ==================== 스프라이트 생성 ====================
+    // ==================== 유닛 컨테이너 생성 ====================
     /**
-     * 유닛 스프라이트 생성
+     * 유닛 전체 컨테이너 생성 (스프라이트 + UI)
      * @param {string} imagePath - 이미지 경로
-     * @param {number} scale - 목표 스케일
-     * @returns {Promise<PIXI.Container>} 스프라이트 컨테이너
+     * @param {number} scale - 스프라이트 목표 스케일
+     * @returns {Promise<Object>} { container, sprite, baseScale }
      * 
-     * ★ 중요: DDOORenderer.createSprite는 PIXI.Container를 반환!
-     * - 내부 스프라이트 스케일: 항상 1 (컨테이너 스케일로만 조절)
-     * - 컨테이너.scale: 실제 표시 스케일
-     * - 컨테이너.baseScale: 기본 스케일 (복원용)
+     * ★ 반환 구조:
+     * - container: 최상위 컨테이너 (위치 관리, scale=1 고정)
+     * - sprite: 스프라이트 래퍼 (스케일 애니메이션 적용)
+     * - baseScale: 기본 스케일 값
      */
-    async create(imagePath, scale = 1) {
+    async createUnit(imagePath, scale = 1) {
         if (typeof DDOORenderer === 'undefined') {
             console.error('[UnitSprite] DDOORenderer not found!');
             return null;
         }
         
-        // ★ 핵심: 내부 스프라이트는 scale: 1로 생성
-        // 컨테이너 스케일로만 크기 조절 (이중 스케일 방지)
-        const container = await DDOORenderer.createSprite(imagePath, {
+        // 1. 최상위 컨테이너 (위치만 관리, scale=1 고정!)
+        const container = new PIXI.Container();
+        container.sortableChildren = true;
+        container.label = 'unit-container';
+        
+        // 2. 스프라이트 생성 (스케일 적용될 부분)
+        const sprite = await DDOORenderer.createSprite(imagePath, {
             scale: 1,                           // 내부 스프라이트 = 1:1
             outline: { enabled: false },
             shadow: { enabled: false },
             breathing: { enabled: false }       // 수동으로 시작
         });
         
-        if (!container) return null;
+        if (!sprite) return null;
         
-        // 기본 스케일 저장 (복원, 애니메이션에 사용)
+        // 스프라이트를 컨테이너의 자식으로 추가
+        sprite.zIndex = 10;
+        sprite.label = 'sprite-wrapper';
+        container.addChild(sprite);
+        
+        // 기본 스케일 저장
+        sprite.baseScale = scale;
+        container.baseScale = scale;  // 호환성용
+        
+        // 초기 스케일 설정
+        sprite.scale.set(scale);
+        
+        console.log(`[UnitSprite] ✅ 유닛 생성: ${imagePath}, baseScale=${scale}`);
+        
+        return { container, sprite, baseScale: scale };
+    },
+    
+    // ==================== 레거시: 단일 스프라이트 생성 ====================
+    /**
+     * @deprecated createUnit() 사용 권장
+     * 기존 코드 호환용
+     */
+    async create(imagePath, scale = 1) {
+        const result = await this.createUnit(imagePath, scale);
+        if (!result) return null;
+        
+        // 레거시: container를 sprite처럼 반환
+        // 기존 코드가 unit.sprite로 접근하므로
+        const { container, sprite } = result;
+        container._spriteWrapper = sprite;
         container.baseScale = scale;
-        
-        // 초기 컨테이너 스케일 설정
-        container.scale.set(scale);
         
         return container;
     },
@@ -76,15 +113,14 @@ const UnitSprite = {
     // ==================== 스폰 애니메이션 ====================
     /**
      * 스폰 애니메이션 재생
-     * @param {PIXI.Container} container - 스프라이트 컨테이너
+     * @param {Object} unit - 유닛 객체 { container, sprite } 또는 레거시 sprite
      * @param {Object} options - 옵션
-     * @param {number} options.targetX - 목표 X 좌표
-     * @param {number} options.targetY - 목표 Y 좌표
-     * @param {string} options.direction - 'left' 또는 'right' (등장 방향)
-     * @param {boolean} options.showEffect - 소환 이펙트 표시 여부
-     * @returns {Promise} 애니메이션 완료 Promise
      */
-    playSpawnAnimation(container, options = {}) {
+    playSpawnAnimation(unit, options = {}) {
+        // 레거시 지원: unit이 container인 경우
+        const container = unit.container || unit;
+        const sprite = unit.sprite || unit._spriteWrapper || container;
+        
         if (!container || typeof gsap === 'undefined') {
             return Promise.resolve();
         }
@@ -97,37 +133,41 @@ const UnitSprite = {
         } = options;
         
         const cfg = this.config.spawn;
-        const baseScale = container.baseScale || 1;
+        const baseScale = sprite.baseScale || container.baseScale || 1;
         
-        // 시작 위치 설정
+        // 시작 위치 설정 (컨테이너 위치)
         const spawnOffsetX = direction === 'right' ? cfg.offsetX : -cfg.offsetX;
         container.x = targetX + spawnOffsetX;
         container.y = targetY + cfg.offsetY;
         container.alpha = 0;
-        container.scale.set(baseScale * cfg.initialScale);
         container.zIndex = Math.floor(targetY);
+        
+        // 스프라이트 스케일 (작게 시작)
+        sprite.scale.set(baseScale * cfg.initialScale);
         
         return new Promise(resolve => {
             const tl = gsap.timeline({
                 onComplete: () => {
                     // 스폰 완료 - 스케일 확정 및 숨쉬기 시작
-                    if (container && !container.destroyed) {
-                        container.scale.set(baseScale);
-                        this.startBreathing(container);
+                    if (sprite && !sprite.destroyed) {
+                        sprite.scale.set(baseScale);
+                        this.startBreathing(sprite);
                     }
                     resolve();
                 }
             });
             
-            // 1. 페이드 인 + 스트레치
-            tl.to(container, { alpha: 1, duration: cfg.duration.fadeIn })
-              .to(container.scale, {
-                  x: baseScale * cfg.stretch.x,
-                  y: baseScale * cfg.stretch.y,
-                  duration: cfg.duration.stretch
-              }, '<');
+            // 1. 페이드 인
+            tl.to(container, { alpha: 1, duration: cfg.duration.fadeIn });
             
-            // 2. 이동
+            // 2. 스프라이트 스트레치
+            tl.to(sprite.scale, {
+                x: baseScale * cfg.stretch.x,
+                y: baseScale * cfg.stretch.y,
+                duration: cfg.duration.stretch
+            }, '<');
+            
+            // 3. 컨테이너 이동
             tl.to(container, {
                 x: targetX,
                 y: targetY,
@@ -135,15 +175,15 @@ const UnitSprite = {
                 ease: 'power2.out'
             }, '<');
             
-            // 3. 착지 스쿼시
-            tl.to(container.scale, {
+            // 4. 착지 스쿼시
+            tl.to(sprite.scale, {
                 x: baseScale * cfg.squash.x,
                 y: baseScale * cfg.squash.y,
                 duration: cfg.duration.squash
             });
             
-            // 4. 바운스 복귀
-            tl.to(container.scale, {
+            // 5. 바운스 복귀
+            tl.to(sprite.scale, {
                 x: baseScale,
                 y: baseScale,
                 duration: cfg.duration.bounce,
@@ -161,19 +201,19 @@ const UnitSprite = {
     // ==================== 숨쉬기 애니메이션 ====================
     /**
      * 숨쉬기 애니메이션 시작
-     * @param {PIXI.Container} container - 스프라이트 컨테이너
+     * @param {PIXI.Container} sprite - 스프라이트 래퍼
      */
-    startBreathing(container) {
-        if (!container || container.destroyed || typeof gsap === 'undefined') return;
+    startBreathing(sprite) {
+        if (!sprite || sprite.destroyed || typeof gsap === 'undefined') return;
         
         // 기존 숨쉬기 중지
-        this.stopBreathing(container);
+        this.stopBreathing(sprite);
         
-        const baseScale = container.baseScale || container.scale.x || 1;
+        const baseScale = sprite.baseScale || sprite.scale?.x || 1;
         const cfg = this.config.breathing;
         
         // 숨쉬기 트윈 생성
-        container._breathingTween = gsap.to(container.scale, {
+        sprite._breathingTween = gsap.to(sprite.scale, {
             y: baseScale * (1 + cfg.scaleAmount),
             duration: cfg.duration,
             repeat: -1,
@@ -184,71 +224,101 @@ const UnitSprite = {
     
     /**
      * 숨쉬기 애니메이션 중지
-     * @param {PIXI.Container} container - 스프라이트 컨테이너
+     * @param {PIXI.Container} sprite - 스프라이트 래퍼
      */
-    stopBreathing(container) {
-        if (!container) return;
+    stopBreathing(sprite) {
+        if (!sprite) return;
         
-        if (container._breathingTween) {
-            container._breathingTween.kill();
-            container._breathingTween = null;
+        if (sprite._breathingTween) {
+            sprite._breathingTween.kill();
+            sprite._breathingTween = null;
         }
     },
     
-    // ==================== 스케일 복원 ====================
+    // ==================== 스케일 관리 ====================
     /**
      * 스케일을 기본값으로 복원
-     * @param {PIXI.Container} container - 스프라이트 컨테이너
+     * @param {PIXI.Container} sprite - 스프라이트 래퍼
      * @param {boolean} animated - 애니메이션 사용 여부
      */
-    restoreScale(container, animated = false) {
-        if (!container || container.destroyed) return;
+    restoreScale(sprite, animated = false) {
+        if (!sprite || sprite.destroyed) return;
         
-        const baseScale = container.baseScale || 1;
+        const baseScale = sprite.baseScale || 1;
         
         if (animated && typeof gsap !== 'undefined') {
-            gsap.to(container.scale, {
+            gsap.to(sprite.scale, {
                 x: baseScale,
                 y: baseScale,
                 duration: 0.2,
                 ease: 'power2.out'
             });
         } else {
-            container.scale.set(baseScale);
+            sprite.scale.set(baseScale);
         }
     },
     
-    // ==================== 유틸리티 ====================
     /**
-     * 컨테이너의 기본 스케일 가져오기
-     * @param {PIXI.Container} container - 스프라이트 컨테이너
+     * 기본 스케일 가져오기
+     * @param {Object} unit - 유닛 객체 또는 스프라이트
      * @returns {number} 기본 스케일
      */
-    getBaseScale(container) {
-        return container?.baseScale || container?.scale?.x || 1;
+    getBaseScale(unit) {
+        if (!unit) return 1;
+        // unit.sprite.baseScale > unit.baseScale > unit.scale.x
+        const sprite = unit.sprite || unit._spriteWrapper || unit;
+        return sprite?.baseScale || unit?.baseScale || sprite?.scale?.x || 1;
     },
     
     /**
      * 스프라이트 스케일 설정 (baseScale 기준)
-     * @param {PIXI.Container} container - 스프라이트 컨테이너
+     * @param {PIXI.Container} sprite - 스프라이트 래퍼
      * @param {number} multiplier - 스케일 배율 (1 = 100%)
      */
-    setScale(container, multiplier = 1) {
-        if (!container || container.destroyed) return;
+    setScale(sprite, multiplier = 1) {
+        if (!sprite || sprite.destroyed) return;
         
-        const baseScale = container.baseScale || 1;
-        container.scale.set(baseScale * multiplier);
+        const baseScale = sprite.baseScale || 1;
+        sprite.scale.set(baseScale * multiplier);
     },
     
-    // ==================== UI 스케일 역보정 ====================
+    // ==================== UI 헬퍼 (HP 바, 인텐트) ====================
     /**
-     * 컨테이너 스케일 역보정 값 가져오기
-     * HP 바, 인텐트 등 UI 요소가 컨테이너 스케일 영향 받지 않도록
-     * @param {PIXI.Container} container - 스프라이트 컨테이너
-     * @returns {number} 역보정 스케일 값
-     * 
-     * 사용예:
-     *   hpBar.scale.set(UnitSprite.getInverseScale(unit.sprite));
+     * HP 바를 유닛 컨테이너에 추가
+     * ★ container의 자식으로 추가되어 sprite 스케일 영향 없음!
+     * @param {PIXI.Container} container - 유닛 컨테이너
+     * @param {PIXI.Container} hpBar - HP 바
+     * @param {number} offsetY - Y 오프셋 (양수 = 아래)
+     */
+    addHPBar(container, hpBar, offsetY = 5) {
+        if (!container || !hpBar) return;
+        
+        hpBar.y = offsetY;
+        hpBar.zIndex = 50;
+        // ★ 스케일 역보정 불필요! container는 scale=1 고정!
+        container.addChild(hpBar);
+    },
+    
+    /**
+     * 인텐트를 유닛 컨테이너에 추가
+     * ★ container의 자식으로 추가되어 sprite 스케일 영향 없음!
+     * @param {PIXI.Container} container - 유닛 컨테이너
+     * @param {PIXI.Container} intent - 인텐트 컨테이너
+     * @param {number} spriteHeight - 스프라이트 높이
+     * @param {number} margin - 마진
+     */
+    addIntent(container, intent, spriteHeight = 60, margin = 8) {
+        if (!container || !intent) return;
+        
+        intent.y = -spriteHeight - margin;
+        intent.zIndex = 100;
+        // ★ 스케일 역보정 불필요! container는 scale=1 고정!
+        container.addChild(intent);
+    },
+    
+    // ==================== 레거시 역보정 (호환용) ====================
+    /**
+     * @deprecated 새 구조에서는 불필요
      */
     getInverseScale(container) {
         if (!container) return 1;
@@ -257,9 +327,7 @@ const UnitSprite = {
     },
     
     /**
-     * UI 요소에 역보정 스케일 적용
-     * @param {PIXI.Container} uiElement - HP 바, 인텐트 등 UI 요소
-     * @param {PIXI.Container} parentContainer - 부모 스프라이트 컨테이너
+     * @deprecated 새 구조에서는 불필요
      */
     applyInverseScale(uiElement, parentContainer) {
         if (!uiElement || !parentContainer) return;

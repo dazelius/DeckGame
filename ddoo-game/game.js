@@ -647,19 +647,29 @@ const Game = {
         container.addChild(arrow);
         
         // Position at top of sprite with margin
-        const spriteHeight = enemy.sprite.height || 60;
+        const spriteHeight = enemy.sprite?.height || 60;
         const margin = 8;
         container.y = -spriteHeight - margin;
         
-        // ★ 컨테이너 스케일 역보정 (인텐트 크기 유지)
-        const containerScale = enemy.sprite.scale?.x || enemy.baseScale || 1;
-        if (containerScale !== 0) {
-            container.scale.set(1 / containerScale);
+        // ★ 새 구조: enemy.container에 추가 (scale=1이므로 역보정 불필요!)
+        // 레거시 구조: enemy.sprite에 추가 (역보정 필요)
+        const parent = enemy.container || enemy.sprite;
+        if (!parent) return;
+        
+        if (enemy.container) {
+            // 새 구조: container는 scale=1이므로 역보정 불필요
+            enemy.container.sortableChildren = true;
+            enemy.container.addChild(container);
+        } else {
+            // 레거시 구조: sprite에 추가, 역보정 필요
+            const containerScale = enemy.sprite.scale?.x || enemy.baseScale || 1;
+            if (containerScale !== 0) {
+                container.scale.set(1 / containerScale);
+            }
+            enemy.sprite.sortableChildren = true;
+            enemy.sprite.addChild(container);
         }
         
-        // Add to sprite
-        enemy.sprite.sortableChildren = true;
-        enemy.sprite.addChild(container);
         enemy.intentContainer = container;
     },
     
@@ -799,7 +809,9 @@ const Game = {
     },
     
     createUnitHPBar(unit) {
-        if (!unit.sprite) return;
+        // ★ 새 구조: container 사용 (레거시: sprite 사용)
+        const parent = unit.container || unit.sprite;
+        if (!parent) return;
         
         // Remove existing HP bar
         if (unit.hpBar) {
@@ -838,21 +850,26 @@ const Game = {
         unit.hpBarHeight = barHeight;
         
         // Position at sprite's feet (bottom) with small margin
-        // Sprite anchor is at bottom center (0.5, 1), so y=0 is at feet
-        // Add small margin below feet
         const margin = 5;
         hpBar.y = margin;
         hpBar.zIndex = 50;
         
-        // ★ 컨테이너 스케일 역보정 (HP 바 크기 유지)
-        const containerScale = unit.sprite.scale?.x || unit.baseScale || 1;
-        if (containerScale !== 0) {
-            hpBar.scale.set(1 / containerScale);
+        // ★ 새 구조: container에 추가 (scale=1이므로 역보정 불필요!)
+        // 레거시 구조: sprite에 추가 (역보정 필요)
+        if (unit.container) {
+            // 새 구조: container는 scale=1이므로 역보정 불필요
+            unit.container.sortableChildren = true;
+            unit.container.addChild(hpBar);
+        } else {
+            // 레거시 구조: sprite에 추가, 역보정 필요
+            const containerScale = unit.sprite.scale?.x || unit.baseScale || 1;
+            if (containerScale !== 0) {
+                hpBar.scale.set(1 / containerScale);
+            }
+            unit.sprite.sortableChildren = true;
+            unit.sprite.addChild(hpBar);
         }
         
-        // Add to sprite (so it moves together, enable sortChildren for zIndex)
-        unit.sprite.sortableChildren = true;
-        unit.sprite.addChild(hpBar);
         unit.hpBar = hpBar;
     },
     
@@ -1667,26 +1684,30 @@ const Game = {
             this.updateCostUI();
         }
         
-        // ★ UnitSprite 모듈로 스프라이트 생성 (스케일 관리 통합)
-        const sprite = await UnitSprite.create(unitDef.sprite, unitDef.scale);
-        if (!sprite) {
-            console.error(`[Game] Failed to create sprite for ${unitType}`);
+        // ★ 새로운 유닛 구조로 생성
+        // container: 위치 관리용 (scale=1 고정)
+        // sprite: 스프라이트 래퍼 (스케일 애니메이션 적용)
+        const result = await UnitSprite.createUnit(unitDef.sprite, unitDef.scale);
+        if (!result) {
+            console.error(`[Game] Failed to create unit for ${unitType}`);
             return;
         }
+        
+        const { container, sprite, baseScale } = result;
         
         // Position 계산
         const center = this.getCellCenter(gridX, gridZ);
         const targetX = center?.x || 0;
         const targetY = center?.y || 0;
         
-        // 컨테이너에 추가
-        this.containers.units.addChild(sprite);
+        // 컨테이너를 게임 유닛 컨테이너에 추가
+        this.containers.units.addChild(container);
         
-        // ★ 스폰 애니메이션 재생 (UnitSprite 모듈 사용)
+        // ★ 스폰 애니메이션 재생
         const isEnemy = team === 'enemy';
         const showEffect = team === 'player' && unitType !== 'hero';
         
-        UnitSprite.playSpawnAnimation(sprite, {
+        UnitSprite.playSpawnAnimation({ container, sprite }, {
             targetX,
             targetY,
             direction: isEnemy ? 'right' : 'left',
@@ -1694,6 +1715,7 @@ const Game = {
         });
         
         // Create unit object
+        // ★ 새 구조: container는 위치, sprite는 스케일
         const unit = {
             id: Date.now() + Math.random(),
             type: unitType,
@@ -1706,8 +1728,9 @@ const Game = {
             maxHp: unitDef.hp,
             damage: unitDef.damage,
             range: unitDef.range,
-            sprite,
-            baseScale: unitDef.scale,  // unit 객체에도 저장 (호환성)
+            container,          // ★ 위치 관리용 (scale=1)
+            sprite,             // ★ 스프라이트 래퍼 (스케일 적용)
+            baseScale,          // 기본 스케일
             isHero: unitDef.isHero || false,
             state: 'idle'
         };
@@ -1718,7 +1741,7 @@ const Game = {
             this.state.enemyUnits.push(unit);
         }
         
-        // Render HP bar
+        // Render HP bar (container에 추가되므로 스케일 영향 없음!)
         this.createUnitHPBar(unit);
         
         console.log(`[Game] Placed ${unitType} at (${gridX}, ${gridZ}) for ${team}`);
@@ -2304,11 +2327,15 @@ const Game = {
     },
     
     updateUnitSprite(unit) {
-        if (!unit || !unit.sprite) return;
+        // ★ 새 구조: container 사용, 레거시: sprite 사용
+        const target = unit.container || unit.sprite;
+        if (!unit || !target) return;
+        
         const center = this.getCellCenter(unit.gridX, unit.gridZ);
         if (center) {
-            unit.sprite.x = center.x;
-            unit.sprite.y = center.y;
+            target.x = center.x;
+            target.y = center.y;
+            target.zIndex = Math.floor(center.y);
             // Units lower on screen (higher Y) should be in front
             unit.sprite.zIndex = Math.floor(unit.sprite.y);
         }
@@ -2318,7 +2345,9 @@ const Game = {
         // Update all unit positions based on current 3D projection
         const allUnits = [...this.state.playerUnits, ...this.state.enemyUnits];
         for (const unit of allUnits) {
-            if (unit.hp > 0 && unit.sprite && !unit.isAnimating) {
+            // ★ 새 구조: container 또는 sprite 체크
+            const target = unit.container || unit.sprite;
+            if (unit.hp > 0 && target && !unit.isAnimating) {
                 this.updateUnitSprite(unit);
             }
         }
