@@ -103,11 +103,21 @@ const KnockbackSystem = {
     // 넉백 이동 실행
     // ==========================================
     async executeKnockback(unit, newGridX) {
+        // ★ Sprite null 체크
+        if (!unit || !unit.sprite || unit.sprite.destroyed) {
+            unit.gridX = newGridX;
+            unit.x = newGridX + 0.5;
+            return;
+        }
+        
         const oldGridX = unit.gridX;
         
+        // sprite 참조 저장 (애니메이션 중 파괴될 수 있음)
+        const sprite = unit.sprite;
+        
         // Store current sprite position before updating grid position
-        const startX = unit.sprite.x;
-        const startY = unit.sprite.y;
+        const startX = sprite.x;
+        const startY = sprite.y;
         
         // Update grid position (for game logic)
         unit.gridX = newGridX;
@@ -129,6 +139,13 @@ const KnockbackSystem = {
         
         // Knockback animation
         return new Promise(resolve => {
+            // ★ 애니메이션 시작 전 다시 체크
+            if (!sprite || sprite.destroyed) {
+                unit.isAnimating = false;
+                resolve();
+                return;
+            }
+            
             const distance = Math.abs(newPos.x - startX);
             
             // Calculate dramatic arc - higher for longer distances
@@ -136,11 +153,11 @@ const KnockbackSystem = {
             const midY = startY - arcHeight;
             
             // Create motion blur / afterimage effect
-            this.createAfterImage(unit.sprite, startX, startY);
+            this.createAfterImage(sprite, startX, startY);
             
             gsap.timeline()
                 // Hit reaction - violent squash & flash
-                .to(unit.sprite.scale, { 
+                .to(sprite.scale, { 
                     x: 0.5, 
                     y: 1.5, 
                     duration: 0.04 
@@ -153,29 +170,31 @@ const KnockbackSystem = {
                     }
                 })
                 // Fly back in dramatic arc
-                .to(unit.sprite, {
+                .to(sprite, {
                     x: newPos.x,
                     y: midY,
                     duration: 0.18,
                     ease: 'power2.out'
                 })
-                .to(unit.sprite.scale, { 
+                .to(sprite.scale, { 
                     x: 1.4, 
                     y: 0.6, 
                     duration: 0.12 
                 }, '<')
                 // Speed lines during flight
                 .call(() => {
-                    this.createSpeedLines(unit.sprite.x, unit.sprite.y, newPos.x > startX ? 1 : -1);
+                    if (sprite && !sprite.destroyed) {
+                        this.createSpeedLines(sprite.x, sprite.y, newPos.x > startX ? 1 : -1);
+                    }
                 }, null, '<+=0.05')
                 // Land with impact
-                .to(unit.sprite, {
+                .to(sprite, {
                     y: newPos.y,
                     duration: 0.12,
                     ease: 'power3.in'
                 })
                 // Squash on landing
-                .to(unit.sprite.scale, { 
+                .to(sprite.scale, { 
                     x: 1.3, 
                     y: 0.7, 
                     duration: 0.05
@@ -188,12 +207,12 @@ const KnockbackSystem = {
                     }
                 })
                 // Bounce recovery
-                .to(unit.sprite.scale, { 
+                .to(sprite.scale, { 
                     x: 0.9, 
                     y: 1.1, 
                     duration: 0.08
                 })
-                .to(unit.sprite.scale, { 
+                .to(sprite.scale, { 
                     x: 1, 
                     y: 1, 
                     duration: 0.2,
@@ -201,7 +220,9 @@ const KnockbackSystem = {
                 })
                 // Update zIndex and resolve
                 .call(() => {
-                    unit.sprite.zIndex = Math.floor(newPos.y);
+                    if (sprite && !sprite.destroyed) {
+                        sprite.zIndex = Math.floor(newPos.y);
+                    }
                     unit.isAnimating = false; // Allow ticker to update position again
                     
                     // 넉백으로 불구덩이 등에 진입 시 대미지!
@@ -313,43 +334,49 @@ const KnockbackSystem = {
     // 벽 충돌 이펙트
     // ==========================================
     async wallImpact(unit) {
-        if (!unit.sprite) return;
+        if (!unit || !unit.sprite || unit.sprite.destroyed) return;
         
         unit.isAnimating = true;
+        const sprite = unit.sprite;  // 로컬 참조 저장
+        const originalX = sprite.x;
+        
+        // Screen shake
+        if (typeof CombatEffects !== 'undefined') {
+            CombatEffects.screenShake(8, 150);
+            CombatEffects.screenFlash('#ff6600', 100, 0.2);
+        }
         
         return new Promise(resolve => {
-            const originalX = unit.sprite.x;
-            
-            // Screen shake
-            if (typeof CombatEffects !== 'undefined') {
-                CombatEffects.screenShake(8, 150);
-                CombatEffects.screenFlash('#ff6600', 100, 0.2);
+            if (!sprite || sprite.destroyed) {
+                unit.isAnimating = false;
+                resolve();
+                return;
             }
             
             gsap.timeline()
                 // Squash against wall
-                .to(unit.sprite.scale, { 
+                .to(sprite.scale, { 
                     x: 0.6, 
                     y: 1.4, 
                     duration: 0.08 
                 })
-                .to(unit.sprite, { 
+                .to(sprite, { 
                     x: originalX + 15, // Slight push toward wall
                     duration: 0.08 
                 }, '<')
                 // Bounce back
-                .to(unit.sprite.scale, { 
+                .to(sprite.scale, { 
                     x: 1.1, 
                     y: 0.9, 
                     duration: 0.1 
                 })
-                .to(unit.sprite, { 
+                .to(sprite, { 
                     x: originalX, 
                     duration: 0.15,
                     ease: 'power2.out'
                 }, '<')
                 // Settle
-                .to(unit.sprite.scale, { 
+                .to(sprite.scale, { 
                     x: 1, 
                     y: 1, 
                     duration: 0.1 
@@ -365,7 +392,10 @@ const KnockbackSystem = {
     // 유닛 충돌 이펙트
     // ==========================================
     async collisionImpact(unit, blockingUnit) {
-        if (!unit.sprite || !blockingUnit.sprite) return;
+        const sprite1 = unit?.sprite;
+        const sprite2 = blockingUnit?.sprite;
+        
+        if (!sprite1 || sprite1.destroyed || !sprite2 || sprite2.destroyed) return;
         
         // Both units take minor stun effect
         const stunBoth = async () => {
@@ -373,22 +403,26 @@ const KnockbackSystem = {
             if (typeof CombatEffects !== 'undefined') {
                 CombatEffects.screenShake(6, 120);
                 CombatEffects.impactEffect(
-                    (unit.sprite.x + blockingUnit.sprite.x) / 2,
-                    (unit.sprite.y + blockingUnit.sprite.y) / 2 - 30,
+                    (sprite1.x + sprite2.x) / 2,
+                    (sprite1.y + sprite2.y) / 2 - 30,
                     0xffaa00,
                     0.8
                 );
             }
             
             // Unit 1 reaction
-            gsap.timeline()
-                .to(unit.sprite.scale, { x: 0.8, y: 1.2, duration: 0.08 })
-                .to(unit.sprite.scale, { x: 1, y: 1, duration: 0.15, ease: 'elastic.out(1, 0.5)' });
+            if (sprite1 && !sprite1.destroyed) {
+                gsap.timeline()
+                    .to(sprite1.scale, { x: 0.8, y: 1.2, duration: 0.08 })
+                    .to(sprite1.scale, { x: 1, y: 1, duration: 0.15, ease: 'elastic.out(1, 0.5)' });
+            }
             
             // Unit 2 reaction
-            gsap.timeline()
-                .to(blockingUnit.sprite.scale, { x: 0.8, y: 1.2, duration: 0.08 })
-                .to(blockingUnit.sprite.scale, { x: 1, y: 1, duration: 0.15, ease: 'elastic.out(1, 0.5)' });
+            if (sprite2 && !sprite2.destroyed) {
+                gsap.timeline()
+                    .to(sprite2.scale, { x: 0.8, y: 1.2, duration: 0.08 })
+                    .to(sprite2.scale, { x: 1, y: 1, duration: 0.15, ease: 'elastic.out(1, 0.5)' });
+            }
         };
         
         await stunBoth();
@@ -399,8 +433,10 @@ const KnockbackSystem = {
     // 강제 밀어내기 (특정 방향으로)
     // ==========================================
     async push(unit, targetX, targetZ) {
-        if (!unit || !unit.sprite || unit.hp <= 0) return false;
+        if (!unit || !unit.sprite || unit.sprite.destroyed || unit.hp <= 0) return false;
         if (!this.game) return false;
+        
+        const sprite = unit.sprite;  // 로컬 참조
         
         // Check bounds
         if (targetX < 0 || targetX >= this.game.arena.width) return false;
@@ -426,13 +462,19 @@ const KnockbackSystem = {
         
         // Animate
         return new Promise(resolve => {
-            gsap.to(unit.sprite, {
+            if (!sprite || sprite.destroyed) {
+                resolve(false);
+                return;
+            }
+            gsap.to(sprite, {
                 x: newPos.x,
                 y: newPos.y,
                 duration: 0.2,
                 ease: 'power2.out',
                 onComplete: () => {
-                    unit.sprite.zIndex = Math.floor(newPos.y);
+                    if (sprite && !sprite.destroyed) {
+                        sprite.zIndex = Math.floor(newPos.y);
+                    }
                     resolve(true);
                 }
             });
@@ -443,8 +485,10 @@ const KnockbackSystem = {
     // 끌어당기기
     // ==========================================
     async pull(unit, towardUnit, cells = 1) {
-        if (!unit || !unit.sprite || unit.hp <= 0) return false;
+        if (!unit || !unit.sprite || unit.sprite.destroyed || unit.hp <= 0) return false;
         if (!towardUnit) return false;
+        
+        const sprite = unit.sprite;  // 로컬 참조
         
         // Calculate direction toward the pulling unit
         const dx = Math.sign(towardUnit.gridX - unit.gridX);
@@ -475,18 +519,25 @@ const KnockbackSystem = {
         
         // Pull animation (different from knockback - more dragging feel)
         return new Promise(resolve => {
+            if (!sprite || sprite.destroyed) {
+                resolve(false);
+                return;
+            }
+            
             gsap.timeline()
-                .to(unit.sprite.scale, { x: 1.2, y: 0.85, duration: 0.1 })
-                .to(unit.sprite, {
+                .to(sprite.scale, { x: 1.2, y: 0.85, duration: 0.1 })
+                .to(sprite, {
                     x: newPos.x,
                     y: newPos.y,
                     duration: 0.25,
                     ease: 'power3.in'
                 }, '<')
-                .to(unit.sprite.scale, { x: 0.9, y: 1.1, duration: 0.1 })
-                .to(unit.sprite.scale, { x: 1, y: 1, duration: 0.15, ease: 'elastic.out(1, 0.5)' })
+                .to(sprite.scale, { x: 0.9, y: 1.1, duration: 0.1 })
+                .to(sprite.scale, { x: 1, y: 1, duration: 0.15, ease: 'elastic.out(1, 0.5)' })
                 .call(() => {
-                    unit.sprite.zIndex = Math.floor(newPos.y);
+                    if (sprite && !sprite.destroyed) {
+                        sprite.zIndex = Math.floor(newPos.y);
+                    }
                     resolve(true);
                 });
         });

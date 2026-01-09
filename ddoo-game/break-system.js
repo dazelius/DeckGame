@@ -217,22 +217,23 @@ const BreakSystem = {
         }
         
         // 🔥 스턴 떨림 애니메이션 (지속)
-        if (enemy.sprite && typeof gsap !== 'undefined') {
+        const sprite = enemy.sprite;
+        if (sprite && !sprite.destroyed && typeof gsap !== 'undefined') {
             // 원래 위치 저장
-            enemy.sprite.originalX = enemy.sprite.x;
+            sprite.originalX = sprite.x;
             
             // 히트스톱 + 흰색 번쩍
             gsap.timeline()
-                .set(enemy.sprite, { tint: 0xffffff })
+                .set(sprite, { tint: 0xffffff })
                 .to({}, { duration: 0.15 }) // 히트스톱
-                .to(enemy.sprite, { 
+                .to(sprite, { 
                     tint: 0x8888ff,
                     duration: 0.3
                 });
             
             // 바들바들 떨림 (지속) - 더 강하게
-            enemy.stunShakeTween = gsap.to(enemy.sprite, {
-                x: enemy.sprite.originalX + 4,
+            enemy.stunShakeTween = gsap.to(sprite, {
+                x: sprite.originalX + 4,
                 duration: 0.025,
                 yoyo: true,
                 repeat: -1,
