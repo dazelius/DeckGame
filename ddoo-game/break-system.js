@@ -250,36 +250,41 @@ const BreakSystem = {
                 ease: 'power2.out'
             });
             
-            // 3. 빨간색 깜빡깜빡 (무기력한 위험 상태)
-            enemy.breakBlinkTween = gsap.to(sprite, {
-                tint: 0x660000,  // 어두운 빨강
+            // 3. 빨간색 깜빡깜빡 (무기력한 위험 상태) - 안전 체크 포함
+            enemy.breakBlinkTween = gsap.to({ progress: 0 }, {
+                progress: 1,
                 duration: 0.4,
                 yoyo: true,
                 repeat: -1,
                 ease: 'sine.inOut',
-                onUpdate: () => {
-                    if (!sprite || sprite.destroyed) return;
-                    // tint 값을 깜빡이는 중간값으로 보간
-                    const progress = enemy.breakBlinkTween?.progress() || 0;
-                    const r = Math.floor(255 - progress * 150);  // 255 → 105
-                    const g = Math.floor(68 - progress * 68);    // 68 → 0
-                    const b = Math.floor(68 - progress * 68);    // 68 → 0
+                onUpdate: function() {
+                    if (!sprite || sprite.destroyed) {
+                        this.kill();
+                        return;
+                    }
+                    const p = this.targets()[0].progress;
+                    const r = Math.floor(255 - p * 150);
+                    const g = Math.floor(68 - p * 68);
+                    const b = Math.floor(68 - p * 68);
                     sprite.tint = (r << 16) | (g << 8) | b;
                 }
             });
             
-            // 4. 미세한 떨림 (힘없이)
-            enemy.stunShakeTween = gsap.to(sprite, {
-                x: sprite.originalX + 2,
-                duration: 0.08,
-                yoyo: true,
+            // 4. 미세한 떨림 (힘없이) - 안전 체크 포함
+            const baseX = sprite.originalX || sprite.x || 0;
+            enemy.stunShakeTween = gsap.to({ shake: 0 }, {
+                shake: Math.PI * 2,
+                duration: 0.16,
                 repeat: -1,
                 ease: 'none',
-                onUpdate: () => {
-                    if (enemy.sprite && !enemy.sprite.destroyed) {
-                        // 축 늘어진 채로 살짝 흔들림
-                        enemy.sprite.rotation = (Math.random() - 0.5) * 0.02;
+                onUpdate: function() {
+                    if (!sprite || sprite.destroyed) {
+                        this.kill();
+                        return;
                     }
+                    const s = this.targets()[0].shake;
+                    sprite.x = baseX + Math.sin(s * 10) * 2;
+                    sprite.rotation = (Math.random() - 0.5) * 0.02;
                 }
             });
         }
@@ -951,13 +956,19 @@ const BreakSystem = {
                 currentFill.fill({ color: elementColor, alpha: 0.4 });
                 gauge.addChild(currentFill);
                 
-                // 점멸 효과
-                gsap.to(currentFill, {
-                    alpha: 0.8,
-                    duration: 0.5,
-                    yoyo: true,
+                // 점멸 효과 (안전 체크 포함)
+                gsap.to({ val: 0 }, {
+                    val: Math.PI * 2,
+                    duration: 1,
                     repeat: -1,
-                    ease: 'sine.inOut'
+                    ease: 'none',
+                    onUpdate: function() {
+                        if (!currentFill || currentFill.destroyed) {
+                            this.kill();
+                            return;
+                        }
+                        currentFill.alpha = 0.4 + Math.sin(this.targets()[0].val) * 0.4;
+                    }
                 });
             }
             

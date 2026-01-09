@@ -494,21 +494,35 @@ const CombatEffects = {
             hotCore.fill({ color: 0xffffcc, alpha: 1 });
             fireball.addChild(hotCore);
             
-            // === 코어 펄스 (빠르고 미세하게) ===
-            gsap.to(core.scale, {
-                x: 1.15, y: 1.15,
-                duration: 0.04,
+            // === 코어 펄스 (빠르고 미세하게) - 안전 체크 포함 ===
+            const corePulse = gsap.to({ val: 0 }, {
+                val: Math.PI * 2,
+                duration: 0.08,
                 repeat: -1,
-                yoyo: true,
-                ease: 'sine.inOut'
+                ease: 'none',
+                onUpdate: function() {
+                    if (!core || core.destroyed) {
+                        this.kill();
+                        return;
+                    }
+                    const s = 1 + Math.sin(this.targets()[0].val) * 0.15;
+                    core.scale.set(s);
+                }
             });
             
-            gsap.to(midFlame.scale, {
-                x: 1.1, y: 1.1,
-                duration: 0.05,
+            const flamePulse = gsap.to({ val: 0 }, {
+                val: Math.PI * 2,
+                duration: 0.1,
                 repeat: -1,
-                yoyo: true,
-                ease: 'sine.inOut'
+                ease: 'none',
+                onUpdate: function() {
+                    if (!midFlame || midFlame.destroyed) {
+                        this.kill();
+                        return;
+                    }
+                    const s = 1 + Math.sin(this.targets()[0].val) * 0.1;
+                    midFlame.scale.set(s);
+                }
             });
             
             // === 베지어 곡선 계산 (낮은 아치 - 더 직선적) ===

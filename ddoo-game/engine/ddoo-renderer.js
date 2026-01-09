@@ -378,14 +378,23 @@ const DDOORenderer = {
         // 기준 Y 위치 저장
         const baseY = container.y;
         
-        // 숨쉬기 트윈 (스케일만, Y 위치는 건드리지 않음)
-        const breathTween = gsap.timeline({ repeat: -1, yoyo: true, delay })
-            .to(sprite.scale, {
-                x: baseScale * (1 - config.scaleAmount * 0.3),
-                y: baseScale * (1 + config.scaleAmount),
-                duration: config.speed,
-                ease: 'sine.inOut'
-            });
+        // 숨쉬기 트윈 (스케일만, Y 위치는 건드리지 않음) - 안전 체크 포함
+        const breathTween = gsap.to({ val: 0 }, {
+            val: Math.PI * 2,
+            duration: config.speed * 2,
+            repeat: -1,
+            delay: delay,
+            ease: 'none',
+            onUpdate: function() {
+                if (!sprite || sprite.destroyed || !sprite.scale) {
+                    this.kill();
+                    return;
+                }
+                const breath = Math.sin(this.targets()[0].val);
+                sprite.scale.x = baseScale * (1 - breath * config.scaleAmount * 0.3);
+                sprite.scale.y = baseScale * (1 + breath * config.scaleAmount);
+            }
+        });
         
         // Y축 움직임 제거 (3D 좌표 시스템과 충돌 방지)
         // 스케일 변화만으로도 충분한 숨쉬기 효과
@@ -611,26 +620,41 @@ const DDOORenderer = {
             sprite.filters = filters;
             data.glowFilter = glow;
             
-            // 강한 강도일 때만 펄스 애니메이션
+            // 강한 강도일 때만 펄스 애니메이션 (안전 체크 포함)
             if (intensity > 0.5) {
-                data.targetTween = gsap.timeline({ repeat: -1, yoyo: true })
-                    .to(glow, {
-                        alpha: intensity * 0.4,
-                        blur: 2,
-                        duration: 0.4,
-                        ease: 'sine.inOut'
-                    });
+                data.targetTween = gsap.to({ val: 0 }, {
+                    val: Math.PI * 2,
+                    duration: 0.8,
+                    repeat: -1,
+                    ease: 'none',
+                    onUpdate: function() {
+                        if (!glow || !sprite || sprite.destroyed) {
+                            this.kill();
+                            return;
+                        }
+                        const v = Math.sin(this.targets()[0].val);
+                        glow.alpha = intensity * (0.7 + v * 0.3);
+                        glow.blur = 2 + v;
+                    }
+                });
             }
                 
         } catch (e) {
             console.warn('[DDOORenderer] 글로우 필터 실패, 알파 펄스로 대체:', e);
-            // 폴백: 스프라이트 알파 펄스
-            data.targetTween = gsap.timeline({ repeat: -1, yoyo: true })
-                .to(sprite, {
-                    alpha: 0.7,
-                    duration: 0.4,
-                    ease: 'sine.inOut'
-                });
+            // 폴백: 스프라이트 알파 펄스 (안전 체크 포함)
+            data.targetTween = gsap.to({ val: 0 }, {
+                val: Math.PI * 2,
+                duration: 0.8,
+                repeat: -1,
+                ease: 'none',
+                onUpdate: function() {
+                    if (!sprite || sprite.destroyed) {
+                        this.kill();
+                        return;
+                    }
+                    sprite.alpha = 0.85 + Math.sin(this.targets()[0].val) * 0.15;
+                }
+            });
         }
     },
     
