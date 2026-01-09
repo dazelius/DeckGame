@@ -2,7 +2,25 @@
     "id": "skeletonMage",
     "name": "Skeleton Mage",
     "nameKo": "해골 마법사",
+    
+    "stats": {
+        "hp": 20,
+        "damage": 10,
+        "range": 4,
+        "sprite": "skeletonmage.png",
+        "scale": 0.35
+    },
+    
+    "ai": {
+        "attackType": "ranged",
+        "preferredDistance": 3,
+        "retreatBeforeAttack": false,
+        "keepDistance": true,
+        "summonPriority": true
+    },
+    
     "weaknesses": ["physical", "fire", "lightning"],
+    
     "intents": [
         { 
             "id": "dark_bolt",

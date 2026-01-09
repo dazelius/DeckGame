@@ -79,6 +79,53 @@ const MonsterPatterns = {
     },
     
     // ==========================================
+    // 스탯 가져오기
+    // ==========================================
+    getStats(monsterType) {
+        const pattern = this.getPattern(monsterType);
+        return pattern?.stats || {
+            hp: 20,
+            damage: 5,
+            range: 1,
+            sprite: 'goblin.png',
+            scale: 0.35
+        };
+    },
+    
+    // ==========================================
+    // AI 설정 가져오기
+    // ==========================================
+    getAI(monsterType) {
+        const pattern = this.getPattern(monsterType);
+        return pattern?.ai || {
+            attackType: 'melee',
+            preferredDistance: 1,
+            retreatBeforeAttack: false
+        };
+    },
+    
+    // ==========================================
+    // 유닛 타입 정보 생성 (game.js unitTypes 대체용)
+    // ==========================================
+    getUnitType(monsterType) {
+        const pattern = this.getPattern(monsterType);
+        if (!pattern) return null;
+        
+        const stats = pattern.stats || {};
+        return {
+            name: pattern.name || monsterType,
+            nameKo: pattern.nameKo || pattern.name,
+            cost: 0,
+            hp: stats.hp || 20,
+            damage: stats.damage || 5,
+            range: stats.range || 1,
+            sprite: stats.sprite || `${monsterType}.png`,
+            scale: stats.scale || 0.35,
+            ai: pattern.ai || {}
+        };
+    },
+    
+    // ==========================================
     // 약점 아이콘 매핑
     // ==========================================
     WeaknessIcons: {

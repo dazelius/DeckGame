@@ -2,7 +2,25 @@
     "id": "slime",
     "name": "Slime",
     "nameKo": "슬라임",
+    
+    "stats": {
+        "hp": 12,
+        "damage": 5,
+        "range": 1,
+        "sprite": "slime.png",
+        "scale": 0.3
+    },
+    
+    "ai": {
+        "attackType": "melee",
+        "preferredDistance": 1,
+        "retreatBeforeAttack": false,
+        "splitOnLowHP": true,
+        "splitThreshold": 0.5
+    },
+    
     "weaknesses": ["fire", "ice"],
+    
     "intents": [
         { 
             "id": "tackle",

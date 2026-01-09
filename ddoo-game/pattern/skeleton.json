@@ -2,7 +2,24 @@
     "id": "skeleton",
     "name": "Skeleton",
     "nameKo": "해골",
+    
+    "stats": {
+        "hp": 15,
+        "damage": 6,
+        "range": 1,
+        "sprite": "skeleton.png",
+        "scale": 0.35
+    },
+    
+    "ai": {
+        "attackType": "melee",
+        "preferredDistance": 1,
+        "retreatBeforeAttack": false,
+        "aggressive": false
+    },
+    
     "weaknesses": ["physical", "fire"],
+    
     "intents": [
         { 
             "id": "bone_strike",

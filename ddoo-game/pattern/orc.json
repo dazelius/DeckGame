@@ -2,7 +2,25 @@
     "id": "orc",
     "name": "Orc",
     "nameKo": "오크",
+    
+    "stats": {
+        "hp": 40,
+        "damage": 15,
+        "range": 1,
+        "sprite": "orc.png",
+        "scale": 0.4
+    },
+    
+    "ai": {
+        "attackType": "melee",
+        "preferredDistance": 1,
+        "retreatBeforeAttack": false,
+        "aggressive": true,
+        "chargeWhenFar": true
+    },
+    
     "weaknesses": ["physical", "ice", "magic"],
+    
     "intents": [
         { 
             "id": "heavy_strike",

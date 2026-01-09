@@ -2823,14 +2823,15 @@ const Game = {
     },
     
     async enemyRangedAttack(enemy, target, intentDamage) {
-        // ★ 고블린 궁수: 공격 전 뒤로 물러나기
-        if (enemy.type === 'goblinArcher') {
-            await this.archerRetreatBeforeAttack(enemy);
+        // ★ AI 설정에 따른 후퇴 처리
+        const ai = this.getEnemyAI(enemy);
+        if (ai.retreatBeforeAttack) {
+            await this.enemyRetreatBeforeAttack(enemy, ai.retreatDistance || 1);
         }
         
         if (typeof UnitCombat !== 'undefined') {
             // 궁수 타입이면 화살 VFX 사용
-            const isArcher = enemy.type === 'goblinArcher' || enemy.type === 'archer';
+            const isArcher = ai.attackType === 'ranged';
             await UnitCombat.rangedAttack(enemy, target, intentDamage, {
                 projectileType: isArcher ? 'arrow' : 'default',
                 projectileColor: 0xff6600,
@@ -2842,12 +2843,25 @@ const Game = {
         }
     },
     
-    // ★ 고블린 궁수 후퇴 로직
-    async archerRetreatBeforeAttack(enemy) {
+    // ★ 적 AI 설정 가져오기
+    getEnemyAI(enemy) {
+        if (typeof MonsterPatterns !== 'undefined' && MonsterPatterns.loaded) {
+            return MonsterPatterns.getAI(enemy.type);
+        }
+        // 폴백 기본값
+        return {
+            attackType: enemy.range > 1 ? 'ranged' : 'melee',
+            preferredDistance: 1,
+            retreatBeforeAttack: false
+        };
+    },
+    
+    // ★ 적 후퇴 로직 (AI 기반)
+    async enemyRetreatBeforeAttack(enemy, distance = 1) {
         if (!enemy || !enemy.sprite) return;
         
-        // 뒤로 이동할 수 있는지 확인 (gridX + 1)
-        const newX = enemy.gridX + 1;
+        // 뒤로 이동할 수 있는지 확인 (gridX + distance)
+        const newX = enemy.gridX + distance;
         const maxX = this.arena.width - 1;
         
         // 맵 범위 체크 & 해당 위치에 다른 유닛이 없는지 체크
@@ -2856,7 +2870,7 @@ const Game = {
         );
         
         if (newX <= maxX && !isOccupied) {
-            // 뒤로 한 칸 이동
+            // 뒤로 이동
             const oldX = enemy.gridX;
             enemy.gridX = newX;
             
@@ -2874,7 +2888,7 @@ const Game = {
                 });
             });
             
-            console.log(`[Archer] ${enemy.type} 후퇴: ${oldX} -> ${newX}`);
+            console.log(`[AI] ${enemy.type} 후퇴: ${oldX} -> ${newX}`);
         }
     },
     

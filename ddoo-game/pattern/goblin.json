@@ -2,7 +2,24 @@
     "id": "goblin",
     "name": "Goblin",
     "nameKo": "고블린",
+    
+    "stats": {
+        "hp": 25,
+        "damage": 8,
+        "range": 1,
+        "sprite": "goblin.png",
+        "scale": 0.35
+    },
+    
+    "ai": {
+        "attackType": "melee",
+        "preferredDistance": 1,
+        "retreatBeforeAttack": false,
+        "aggressive": true
+    },
+    
     "weaknesses": ["physical", "fire"],
+    
     "intents": [
         { 
             "id": "slash",
