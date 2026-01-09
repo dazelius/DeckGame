@@ -651,6 +651,12 @@ const Game = {
         const margin = 8;
         container.y = -spriteHeight - margin;
         
+        // ★ 컨테이너 스케일 역보정 (인텐트 크기 유지)
+        const containerScale = enemy.sprite.scale?.x || enemy.baseScale || 1;
+        if (containerScale !== 0) {
+            container.scale.set(1 / containerScale);
+        }
+        
         // Add to sprite
         enemy.sprite.sortableChildren = true;
         enemy.sprite.addChild(container);
@@ -837,6 +843,12 @@ const Game = {
         const margin = 5;
         hpBar.y = margin;
         hpBar.zIndex = 50;
+        
+        // ★ 컨테이너 스케일 역보정 (HP 바 크기 유지)
+        const containerScale = unit.sprite.scale?.x || unit.baseScale || 1;
+        if (containerScale !== 0) {
+            hpBar.scale.set(1 / containerScale);
+        }
         
         // Add to sprite (so it moves together, enable sortChildren for zIndex)
         unit.sprite.sortableChildren = true;

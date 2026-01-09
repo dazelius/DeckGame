@@ -238,6 +238,33 @@ const UnitSprite = {
         
         const baseScale = container.baseScale || 1;
         container.scale.set(baseScale * multiplier);
+    },
+    
+    // ==================== UI 스케일 역보정 ====================
+    /**
+     * 컨테이너 스케일 역보정 값 가져오기
+     * HP 바, 인텐트 등 UI 요소가 컨테이너 스케일 영향 받지 않도록
+     * @param {PIXI.Container} container - 스프라이트 컨테이너
+     * @returns {number} 역보정 스케일 값
+     * 
+     * 사용예:
+     *   hpBar.scale.set(UnitSprite.getInverseScale(unit.sprite));
+     */
+    getInverseScale(container) {
+        if (!container) return 1;
+        const containerScale = container.scale?.x || container.baseScale || 1;
+        return containerScale !== 0 ? (1 / containerScale) : 1;
+    },
+    
+    /**
+     * UI 요소에 역보정 스케일 적용
+     * @param {PIXI.Container} uiElement - HP 바, 인텐트 등 UI 요소
+     * @param {PIXI.Container} parentContainer - 부모 스프라이트 컨테이너
+     */
+    applyInverseScale(uiElement, parentContainer) {
+        if (!uiElement || !parentContainer) return;
+        const inverseScale = this.getInverseScale(parentContainer);
+        uiElement.scale.set(inverseScale);
     }
 };
 
