@@ -1033,21 +1033,24 @@ const Game = {
         const hpBar = new PIXI.Container();
         
         // ========================================
-        // ★ HP 바 설정 (더 큰 사이즈)
+        // ★ HP 바 설정 (가독성 향상)
         // ========================================
-        const barWidth = 70;
-        const barHeight = 10;
-        const padding = 3;
+        const barWidth = 80;
+        const barHeight = 12;
+        const padding = 4;
         
-        // 색상 설정
-        let hpColor = 0xcc3333; // Enemy - 빨강
-        let hpColorBright = 0xff4444;
+        // 색상 설정 (더 선명한 색상)
+        let hpColor = 0xe63333; // Enemy - 선명한 빨강
+        let hpColorBright = 0xff6666;
+        let hpColorDark = 0x330000;
         if (unit.isHero) {
-            hpColor = 0xc9a227; // Hero - 금색
-            hpColorBright = 0xffd700;
+            hpColor = 0xf0c020; // Hero - 밝은 금색
+            hpColorBright = 0xffdd55;
+            hpColorDark = 0x332200;
         } else if (unit.team === 'player') {
-            hpColor = 0x33aa33; // Summon - 초록
-            hpColorBright = 0x44dd44;
+            hpColor = 0x44cc44; // Summon - 밝은 초록
+            hpColorBright = 0x66ff66;
+            hpColorDark = 0x003300;
         }
         
         // ========================================
@@ -1058,19 +1061,20 @@ const Game = {
         hpBar.addChild(shieldFrame);
         unit.shieldFrame = shieldFrame;
         
-        // 배경 프레임
+        // 배경 프레임 (더 굵은 테두리)
         const frame = new PIXI.Graphics()
             .rect(-barWidth/2 - padding, -padding, barWidth + padding*2, barHeight + padding*2)
-            .fill(0x111111)
-            .stroke({ width: 2, color: 0x333333 });
+            .fill(0x000000)
+            .stroke({ width: 3, color: 0x444444 });
         hpBar.addChild(frame);
         unit.hpFrame = frame;
         
-        // HP 배경 (빈 부분)
+        // HP 배경 (빈 부분 - 더 어두운 색)
         const bgFill = new PIXI.Graphics()
             .rect(-barWidth/2, 0, barWidth, barHeight)
-            .fill(0x220000);
+            .fill(hpColorDark);
         hpBar.addChild(bgFill);
+        unit.hpBgFill = bgFill;
         
         // HP 게이지 (실제 HP)
         const hpFill = new PIXI.Graphics();
@@ -1082,18 +1086,14 @@ const Game = {
         hpBar.addChild(highlight);
         unit.hpHighlight = highlight;
         
-        // HP 텍스트
+        // HP 텍스트 (더 큰 폰트, 더 굵은 외곽선)
         const hpText = new PIXI.Text({
             text: `${unit.hp}`,
             style: {
-                fontSize: 11,
+                fontSize: 13,
                 fill: '#ffffff',
                 fontWeight: 'bold',
-                dropShadow: {
-                    color: '#000000',
-                    blur: 2,
-                    distance: 1
-                }
+                stroke: { color: '#000000', width: 4 }
             }
         });
         hpText.anchor.set(0.5);
@@ -1101,29 +1101,30 @@ const Game = {
         hpBar.addChild(hpText);
         unit.hpText = hpText;
         
-        // 쉴드 배지 (HP 바 오른쪽 상단)
+        // 쉴드 배지 (HP 바 오른쪽 - 더 크게)
         const shieldBadge = new PIXI.Container();
         shieldBadge.visible = false;
-        shieldBadge.x = barWidth / 2 + 8;
-        shieldBadge.y = -2;
+        shieldBadge.x = barWidth / 2 + 12;
+        shieldBadge.y = barHeight / 2;
         hpBar.addChild(shieldBadge);
         unit.shieldBadge = shieldBadge;
         
-        // 쉴드 아이콘 배경
+        // 쉴드 아이콘 배경 (더 크게)
         const shieldIcon = new PIXI.Graphics()
-            .circle(0, 0, 10)
+            .circle(0, 0, 13)
             .fill(0x2266cc)
-            .stroke({ width: 2, color: 0x66aaff });
+            .stroke({ width: 3, color: 0x88ccff });
         shieldBadge.addChild(shieldIcon);
         unit.shieldIcon = shieldIcon;
         
-        // 쉴드 숫자
+        // 쉴드 숫자 (더 큰 폰트)
         const shieldText = new PIXI.Text({
             text: '0',
             style: {
-                fontSize: 10,
+                fontSize: 12,
                 fill: '#ffffff',
-                fontWeight: 'bold'
+                fontWeight: 'bold',
+                stroke: { color: '#000000', width: 3 }
             }
         });
         shieldText.anchor.set(0.5);
@@ -1136,6 +1137,7 @@ const Game = {
         unit.hpBarPadding = padding;
         unit.hpColor = hpColor;
         unit.hpColorBright = hpColorBright;
+        unit.hpColorDark = hpColorDark;
         
         // 초기 그리기
         this.updateHPFill(unit);
