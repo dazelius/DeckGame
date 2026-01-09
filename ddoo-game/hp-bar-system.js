@@ -695,15 +695,22 @@ const HPBarSystem = {
                 this.showShieldGain(unit, shield);
             }
             
-            // 펄스 애니메이션
+            // 펄스 애니메이션 (안전 체크 포함)
             if (!data.shieldPulse && typeof gsap !== 'undefined') {
                 data.shieldPulse = true;
-                gsap.to(badge.icon, {
-                    alpha: 0.7,
-                    duration: 0.5,
-                    yoyo: true,
+                const icon = badge.icon;
+                gsap.to({ val: 0 }, {
+                    val: Math.PI * 2,
+                    duration: 1,
                     repeat: -1,
-                    ease: 'sine.inOut'
+                    ease: 'none',
+                    onUpdate: function() {
+                        if (!icon || icon.destroyed) {
+                            this.kill();
+                            return;
+                        }
+                        icon.alpha = 0.85 + Math.sin(this.targets()[0].val) * 0.15;
+                    }
                 });
             }
         } else {

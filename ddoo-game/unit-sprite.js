@@ -212,13 +212,20 @@ const UnitSprite = {
         const baseScale = sprite.baseScale || sprite.scale?.x || 1;
         const cfg = this.config.breathing;
         
-        // 숨쉬기 트윈 생성
-        sprite._breathingTween = gsap.to(sprite.scale, {
-            y: baseScale * (1 + cfg.scaleAmount),
-            duration: cfg.duration,
+        // 숨쉬기 트윈 생성 (안전 체크 포함)
+        sprite._breathingTween = gsap.to({ val: 0 }, {
+            val: Math.PI * 2,
+            duration: cfg.duration * 2,
             repeat: -1,
-            yoyo: true,
-            ease: 'sine.inOut'
+            ease: 'none',
+            onUpdate: function() {
+                if (!sprite || sprite.destroyed || !sprite.scale) {
+                    this.kill();
+                    return;
+                }
+                const breath = Math.sin(this.targets()[0].val);
+                sprite.scale.y = baseScale * (1 + breath * cfg.scaleAmount);
+            }
         });
     },
     

@@ -530,8 +530,18 @@ const Game = {
     createEnemyIntent(enemy) {
         if (!enemy.sprite || !enemy.intent) return;
         
-        // Remove existing intent
-        if (enemy.intentContainer) {
+        // ★ 기존 인텐트 관련 gsap 애니메이션 모두 정리
+        if (enemy.intentContainer && !enemy.intentContainer.destroyed) {
+            // 인텐트 컨테이너와 모든 자식의 트윈 정리
+            try {
+                gsap.killTweensOf(enemy.intentContainer);
+                enemy.intentContainer.children?.forEach(child => {
+                    if (child && !child.destroyed) {
+                        gsap.killTweensOf(child);
+                        if (child.scale) gsap.killTweensOf(child.scale);
+                    }
+                });
+            } catch(e) {}
             enemy.intentContainer.destroy();
         }
         
@@ -572,14 +582,21 @@ const Game = {
             dangerGlow.fill({ color: 0xff0000, alpha: 0.3 });
             container.addChild(dangerGlow);
             
-            // 펄스 애니메이션
+            // 펄스 애니메이션 (안전 체크 포함)
             if (typeof gsap !== 'undefined') {
-                gsap.to(dangerGlow, {
-                    alpha: 0.1,
+                gsap.to({ val: 0 }, {
+                    val: 1,
                     duration: 0.5,
                     yoyo: true,
                     repeat: -1,
-                    ease: 'sine.inOut'
+                    ease: 'sine.inOut',
+                    onUpdate: function() {
+                        if (!dangerGlow || dangerGlow.destroyed) {
+                            this.kill();
+                            return;
+                        }
+                        dangerGlow.alpha = 0.3 - this.targets()[0].val * 0.2;
+                    }
                 });
             }
         }
@@ -678,21 +695,25 @@ const Game = {
             warningIcon.y = -frameHeight/2;
             container.addChild(warningIcon);
             
-            // 느낌표 흔들림 애니메이션
+            // 느낌표 흔들림 애니메이션 (안전 체크 포함)
             if (typeof gsap !== 'undefined') {
-                gsap.to(warningIcon, {
-                    x: warningIcon.x + 2,
-                    duration: 0.1,
-                    yoyo: true,
-                    repeat: -1,
-                    ease: 'sine.inOut'
-                });
-                gsap.to(warningIcon.scale, {
-                    x: 1.2, y: 1.2,
+                const baseX = warningIcon.x;
+                gsap.to({ shake: 0, scale: 0 }, {
+                    shake: Math.PI * 2,
+                    scale: Math.PI * 2,
                     duration: 0.3,
-                    yoyo: true,
                     repeat: -1,
-                    ease: 'power2.inOut'
+                    ease: 'none',
+                    onUpdate: function() {
+                        if (!warningIcon || warningIcon.destroyed) {
+                            this.kill();
+                            return;
+                        }
+                        const t = this.targets()[0];
+                        warningIcon.x = baseX + Math.sin(t.shake * 3) * 2;
+                        const s = 1 + Math.sin(t.scale) * 0.2;
+                        warningIcon.scale.set(s);
+                    }
                 });
             }
         }
@@ -1477,15 +1498,22 @@ const Game = {
                 if (unit.shieldText) {
                     unit.shieldText.text = `${shield}`;
                 }
-                // 쉴드 아이콘 펄스 애니메이션
+                // 쉴드 아이콘 펄스 애니메이션 (안전 체크 포함)
                 if (unit.shieldIcon && !unit.shieldPulse) {
                     unit.shieldPulse = true;
-                    gsap.to(unit.shieldIcon, {
-                        alpha: 0.7,
-                        duration: 0.5,
-                        yoyo: true,
+                    const icon = unit.shieldIcon;
+                    gsap.to({ val: 0 }, {
+                        val: Math.PI * 2,
+                        duration: 1,
                         repeat: -1,
-                        ease: "sine.inOut"
+                        ease: 'none',
+                        onUpdate: function() {
+                            if (!icon || icon.destroyed) {
+                                this.kill();
+                                return;
+                            }
+                            icon.alpha = 0.85 + Math.sin(this.targets()[0].val) * 0.15;
+                        }
                     });
                 }
             } else {
