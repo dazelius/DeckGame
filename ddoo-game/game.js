@@ -2886,6 +2886,25 @@ const Game = {
     killUnit(unit) {
         console.log(`[Game] ${unit.type} died!`);
         
+        // ★★★ 모든 gsap 애니메이션 먼저 정리 ★★★
+        try {
+            // 스프라이트 관련 애니메이션 정리
+            if (unit.sprite && !unit.sprite.destroyed) {
+                gsap.killTweensOf(unit.sprite);
+                if (unit.sprite.scale) gsap.killTweensOf(unit.sprite.scale);
+            }
+            // 컨테이너 관련 애니메이션 정리
+            if (unit.container && !unit.container.destroyed) {
+                gsap.killTweensOf(unit.container);
+                if (unit.container.scale) gsap.killTweensOf(unit.container.scale);
+            }
+            // 브리딩 애니메이션 정리
+            if (unit.breathingTween) {
+                unit.breathingTween.kill();
+                unit.breathingTween = null;
+            }
+        } catch(e) {}
+        
         // ★ 차징 이펙트 정리
         this.clearChargingEffect(unit);
         
@@ -2905,14 +2924,22 @@ const Game = {
         // ★ HP 바 삭제 연출 (페이드아웃 + 축소)
         if (unit.hpBar && !unit.hpBar.destroyed) {
             const hpBar = unit.hpBar;
+            // 기존 HP 바 애니메이션 정리
+            try {
+                gsap.killTweensOf(hpBar);
+                if (hpBar.scale) gsap.killTweensOf(hpBar.scale);
+            } catch(e) {}
+            
             gsap.to(hpBar, {
                 alpha: 0,
                 duration: 0.2,
                 ease: 'power2.in',
                 onComplete: () => {
-                    if (hpBar && !hpBar.destroyed) {
-                        hpBar.destroy({ children: true });
-                    }
+                    try {
+                        if (hpBar && !hpBar.destroyed) {
+                            hpBar.destroy({ children: true });
+                        }
+                    } catch(e) {}
                 }
             });
             gsap.to(hpBar.scale, {
@@ -2925,15 +2952,23 @@ const Game = {
         // ★ 인텐트 삭제 연출 (페이드아웃 + 위로 사라짐)
         if (unit.intentContainer && !unit.intentContainer.destroyed) {
             const intent = unit.intentContainer;
+            // 기존 인텐트 애니메이션 정리
+            try {
+                gsap.killTweensOf(intent);
+                if (intent.scale) gsap.killTweensOf(intent.scale);
+            } catch(e) {}
+            
             gsap.to(intent, {
                 alpha: 0,
                 y: intent.y - 20,
                 duration: 0.2,
                 ease: 'power2.in',
                 onComplete: () => {
-                    if (intent && !intent.destroyed) {
-                        intent.destroy({ children: true });
-                    }
+                    try {
+                        if (intent && !intent.destroyed) {
+                            intent.destroy({ children: true });
+                        }
+                    } catch(e) {}
                 }
             });
             unit.intentContainer = null;
@@ -2965,20 +3000,25 @@ const Game = {
             const baseScale = unit.baseScale || scaleTarget?.baseScale || 1;
             const startY = posTarget.y;
             
+            // 사망 플래그 설정 (중복 애니메이션 방지)
+            unit.isDying = true;
+            
             gsap.timeline()
                 // 피격 경직 (스프라이트 틴트)
                 .call(() => {
-                    if (scaleTarget) scaleTarget.tint = 0xffffff;
+                    if (scaleTarget && !scaleTarget.destroyed) scaleTarget.tint = 0xffffff;
                 })
                 .to({}, { duration: 0.05 })
                 // 빨갛게 변하면서 (스프라이트 틴트)
                 .call(() => {
-                    if (scaleTarget) scaleTarget.tint = isEnemy ? 0xff0000 : 0x888888;
+                    if (scaleTarget && !scaleTarget.destroyed) scaleTarget.tint = isEnemy ? 0xff0000 : 0x888888;
                 })
                 // 위로 살짝 튀어오름 (컨테이너 위치)
                 .to(posTarget, { y: startY - 20, duration: 0.1, ease: 'power2.out' })
                 .call(() => {
-                    if (scaleTarget) gsap.to(scaleTarget.scale, { x: baseScale * 1.2, y: baseScale * 0.8, duration: 0.1 });
+                    if (scaleTarget && !scaleTarget.destroyed && scaleTarget.scale) {
+                        gsap.to(scaleTarget.scale, { x: baseScale * 1.2, y: baseScale * 0.8, duration: 0.1 });
+                    }
                 }, null, '<')
                 // 아래로 쓰러짐 (컨테이너 위치)
                 .to(posTarget, { 
@@ -2987,8 +3027,8 @@ const Game = {
                     ease: 'power3.in' 
                 })
                 .call(() => {
-                    if (scaleTarget) {
-                        gsap.to(scaleTarget.scale, { x: baseScale * 0.6, y: baseScale * 1.3, duration: 0.2 });
+                    if (scaleTarget && !scaleTarget.destroyed) {
+                        if (scaleTarget.scale) gsap.to(scaleTarget.scale, { x: baseScale * 0.6, y: baseScale * 1.3, duration: 0.2 });
                         gsap.to(scaleTarget, { rotation: isEnemy ? 0.3 : -0.3, duration: 0.2 });
                     }
                 }, null, '<')
@@ -2997,10 +3037,13 @@ const Game = {
                     alpha: 0, 
                     duration: 0.3,
                     onComplete: () => {
-                        // 컨테이너 전체 삭제 (sprite, hpBar, intentContainer 포함)
-                        if (posTarget && !posTarget.destroyed) {
-                            posTarget.destroy({ children: true });
-                        }
+                        try {
+                            // 컨테이너 전체 삭제 (sprite, hpBar, intentContainer 포함)
+                            if (posTarget && !posTarget.destroyed) {
+                                gsap.killTweensOf(posTarget);
+                                posTarget.destroy({ children: true });
+                            }
+                        } catch(e) {}
                         unit.container = null;
                         unit.sprite = null;
                     }
