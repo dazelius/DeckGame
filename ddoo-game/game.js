@@ -1378,14 +1378,14 @@ const Game = {
             await this.playAttackCard(cardDef);
         } else {
             // Execute attack on specific target with AOE
-            await this.playAttackCardOnTarget(cardDef, targetEnemy);
+            await this.playAttackCardOnTarget(cardId, cardDef, targetEnemy);
         }
         
         this.renderHand(false);
         this.vibrate([20, 30, 20]);
     },
     
-    async playAttackCardOnTarget(cardDef, targetEnemy) {
+    async playAttackCardOnTarget(cardId, cardDef, targetEnemy) {
         const hero = this.state.hero;
         if (!hero || !hero.sprite) return;
         
