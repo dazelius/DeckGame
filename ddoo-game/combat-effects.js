@@ -1408,6 +1408,178 @@ const CombatEffects = {
         
         this.blockEffect(x, y);
         this.showDamageNumber(x, y - 30, amount, 'block');
+    },
+    
+    // ==========================================
+    // ★ 유닛 플로터 시스템 (상태효과 표시)
+    // ==========================================
+    
+    /**
+     * 유닛 위에 플로터 표시
+     * @param {Object} unit - 유닛 객체
+     * @param {string} text - 표시할 텍스트
+     * @param {Object} options - 옵션 { color, icon, size, duration }
+     */
+    showUnitFloater(unit, text, options = {}) {
+        if (!this.app) return;
+        
+        const {
+            color = '#ffffff',
+            icon = '',
+            size = 16,
+            duration = 1.2,
+            offsetY = -60
+        } = options;
+        
+        // 유닛 위치 가져오기
+        const pos = this.getUnitPosition(unit);
+        if (!pos) return;
+        
+        // 플로터 컨테이너
+        const floater = new PIXI.Container();
+        floater.x = pos.x;
+        floater.y = pos.y + offsetY;
+        floater.zIndex = 1000;
+        
+        // 텍스트 생성
+        const displayText = icon ? `${icon} ${text}` : text;
+        const textObj = new PIXI.Text({
+            text: displayText,
+            style: {
+                fontSize: size,
+                fill: color,
+                fontWeight: 'bold',
+                fontFamily: 'Noto Sans KR, sans-serif',
+                stroke: { color: '#000000', width: 4 },
+                dropShadow: {
+                    color: '#000000',
+                    blur: 4,
+                    angle: Math.PI / 4,
+                    distance: 2
+                }
+            }
+        });
+        textObj.anchor.set(0.5);
+        floater.addChild(textObj);
+        
+        this.app.stage.addChild(floater);
+        
+        // 애니메이션: 위로 떠오르며 사라짐
+        if (typeof gsap !== 'undefined') {
+            gsap.fromTo(floater, 
+                { alpha: 0, y: pos.y + offsetY + 20 },
+                { 
+                    alpha: 1, 
+                    y: pos.y + offsetY,
+                    duration: 0.2,
+                    ease: 'power2.out'
+                }
+            );
+            gsap.to(floater, {
+                y: pos.y + offsetY - 30,
+                alpha: 0,
+                duration: duration,
+                delay: 0.3,
+                ease: 'power2.in',
+                onComplete: () => {
+                    if (floater && !floater.destroyed) floater.destroy();
+                }
+            });
+        } else {
+            setTimeout(() => {
+                if (floater && !floater.destroyed) floater.destroy();
+            }, duration * 1000);
+        }
+    },
+    
+    /**
+     * 블록 획득 플로터 (유닛 기반)
+     * @param {Object} unit - 유닛 객체
+     * @param {number} amount - 획득량
+     */
+    showBlockGain(unit, amount) {
+        this.showUnitFloater(unit, `+${amount}`, {
+            color: '#66ccff',
+            icon: '🛡',
+            size: 18
+        });
+        
+        // 이펙트도 추가
+        const pos = this.getUnitPosition(unit);
+        if (pos) this.blockEffect(pos.x, pos.y);
+    },
+    
+    /**
+     * 힐 플로터 (유닛 기반)
+     * @param {Object} unit - 유닛 객체
+     * @param {number} amount - 회복량
+     */
+    showHeal(unit, amount) {
+        this.showUnitFloater(unit, `+${amount}`, {
+            color: '#44ff44',
+            icon: '❤',
+            size: 18
+        });
+    },
+    
+    /**
+     * 버프 플로터 (유닛 기반)
+     * @param {Object} unit - 유닛 객체
+     * @param {string} buffName - 버프 이름
+     * @param {number} amount - 수치 (옵션)
+     */
+    showBuff(unit, buffName, amount = null) {
+        const text = amount !== null ? `${buffName} +${amount}` : buffName;
+        this.showUnitFloater(unit, text, {
+            color: '#ffaa00',
+            icon: '⬆',
+            size: 14
+        });
+    },
+    
+    /**
+     * 디버프 플로터 (유닛 기반)
+     * @param {Object} unit - 유닛 객체
+     * @param {string} debuffName - 디버프 이름
+     * @param {number} amount - 수치 (옵션)
+     */
+    showDebuff(unit, debuffName, amount = null) {
+        const text = amount !== null ? `${debuffName} +${amount}` : debuffName;
+        this.showUnitFloater(unit, text, {
+            color: '#aa66ff',
+            icon: '⬇',
+            size: 14
+        });
+    },
+    
+    /**
+     * 상태효과 플로터 (범용)
+     * @param {Object} unit - 유닛 객체
+     * @param {string} effectType - 효과 타입 ('block', 'heal', 'buff', 'debuff', 'damage', 'poison', 'bleed')
+     * @param {string|number} value - 값 또는 텍스트
+     */
+    showStatusEffect(unit, effectType, value) {
+        const effectConfig = {
+            block: { color: '#66ccff', icon: '🛡', prefix: '+' },
+            heal: { color: '#44ff44', icon: '❤', prefix: '+' },
+            buff: { color: '#ffaa00', icon: '⬆', prefix: '' },
+            debuff: { color: '#aa66ff', icon: '⬇', prefix: '' },
+            damage: { color: '#ff4444', icon: '', prefix: '-' },
+            poison: { color: '#88ff44', icon: '☠', prefix: '' },
+            bleed: { color: '#ff6666', icon: '🩸', prefix: '' },
+            strength: { color: '#ff6600', icon: '💪', prefix: '+' },
+            weak: { color: '#8888ff', icon: '💫', prefix: '' },
+            vulnerable: { color: '#ff88ff', icon: '💔', prefix: '' }
+        };
+        
+        const config = effectConfig[effectType] || { color: '#ffffff', icon: '', prefix: '' };
+        const text = typeof value === 'number' ? `${config.prefix}${value}` : value;
+        
+        this.showUnitFloater(unit, text, {
+            color: config.color,
+            icon: config.icon,
+            size: effectType === 'damage' ? 20 : 16
+        });
     }
 };
 

@@ -1709,7 +1709,10 @@ const Game = {
         if (cardDef.block) {
             this.state.heroBlock += cardDef.block;
             this.updateBlockUI();
-            this.showMessage(`+${cardDef.block} Block`, 500);
+            // ★ 플로터로 변경 (중앙 토스트 대신)
+            if (typeof CombatEffects !== 'undefined') {
+                CombatEffects.showBlockGain(this.state.hero, cardDef.block);
+            }
         }
         
         // Check collisions after attack
@@ -1825,12 +1828,9 @@ const Game = {
             this.updateBlockUI();
             this.updateUnitHPBar(hero); // ★ HP 바에 쉴드 반영
             
-            // Block effect
-            const heroPos = this.getUnitPosition(hero);
-            if (typeof CombatEffects !== 'undefined' && heroPos) {
-                CombatEffects.gainBlockEffect(heroPos.x, heroPos.y - 40, cardDef.block);
-            } else {
-                this.showMessage(`+${cardDef.block} Block`, 500);
+            // ★ 플로터로 변경 (중앙 토스트 대신)
+            if (typeof CombatEffects !== 'undefined') {
+                CombatEffects.showBlockGain(hero, cardDef.block);
             }
         }
         
@@ -2129,7 +2129,10 @@ const Game = {
         if (cardDef.block) {
             this.state.heroBlock += cardDef.block;
             this.updateBlockUI();
-            this.showMessage(`+${cardDef.block} Block`, 500);
+            // ★ 플로터로 변경 (중앙 토스트 대신)
+            if (typeof CombatEffects !== 'undefined') {
+                CombatEffects.showBlockGain(this.state.hero, cardDef.block);
+            }
         }
         
         // Check collisions after attack

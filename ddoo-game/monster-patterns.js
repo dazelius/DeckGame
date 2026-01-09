@@ -350,7 +350,10 @@ const MonsterPatterns = {
                 if (typeof game.updateUnitHPBar === 'function') {
                     game.updateUnitHPBar(enemy); // ★ HP 바에 쉴드 반영
                 }
-                game.showMessage(`${enemy.name || enemy.type}: +${intent.block} Block`, 800);
+                // ★ 플로터로 변경 (중앙 토스트 대신)
+                if (typeof CombatEffects !== 'undefined') {
+                    CombatEffects.showBlockGain(enemy, intent.block || 0);
+                }
                 break;
                 
             case 'buff':
@@ -358,19 +361,27 @@ const MonsterPatterns = {
                     enemy.strength = (enemy.strength || 0) + (intent.buffValue || 0);
                     enemy.damage += (intent.buffValue || 0);
                 }
-                game.showMessage(`${enemy.name || enemy.type}: ${intent.name || 'Buff'}!`, 800);
+                // ★ 플로터로 변경
+                if (typeof CombatEffects !== 'undefined') {
+                    CombatEffects.showBuff(enemy, intent.name || 'Buff', intent.buffValue);
+                }
                 break;
                 
             case 'debuff':
                 if (intent.vulnerable && target) {
                     target.vulnerable = (target.vulnerable || 0) + intent.vulnerable;
-                    game.showMessage(`${target.name || 'Target'}: Vulnerable ${intent.vulnerable}!`, 800);
+                    // ★ 플로터로 변경
+                    if (typeof CombatEffects !== 'undefined') {
+                        CombatEffects.showDebuff(target, 'Vulnerable', intent.vulnerable);
+                    }
                 }
                 break;
                 
             case 'summon':
                 // TODO: 소환 구현
-                game.showMessage(`${enemy.name || enemy.type}: Summons!`, 800);
+                if (typeof CombatEffects !== 'undefined') {
+                    CombatEffects.showBuff(enemy, 'Summon!');
+                }
                 break;
         }
     }
