@@ -126,7 +126,7 @@ const CardDrag = {
         cardEl.style.opacity = '0.3';
         cardEl.style.transform = 'scale(0.9)';
         
-        if (navigator.vibrate) navigator.vibrate(20);
+        if (typeof Game !== 'undefined') Game.vibrate(20);
         
         if (isSummon) {
             this.game.showSummonZones();
@@ -325,7 +325,7 @@ const CardDrag = {
                 this.game.state.discard.push(cardId);
             }
             this.game.updateCostUI();
-            if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+            if (typeof Game !== 'undefined') Game.vibrate([30, 50, 30]);
             return true;
         }
         return false;

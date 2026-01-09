@@ -182,6 +182,11 @@ const Game = {
             CardDrag.init(this, this.app);
         }
         
+        // Break System
+        if (typeof BreakSystem !== 'undefined') {
+            BreakSystem.init(this);
+        }
+        
         // Draw grid
         this.drawGrid();
         
@@ -914,7 +919,7 @@ const Game = {
                         ? `${Localization.get('notEnoughCost')} (${cardDef.cost})` 
                         : `코스트 부족! (${cardDef.cost} 필요)`;
                     this.showMessage(msg, 800);
-                    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+                    this.vibrate([50, 30, 50]);
                 });
             }
             
@@ -925,7 +930,7 @@ const Game = {
                 setTimeout(() => {
                     cardEl.classList.add('dealt');
                     // 카드 딜링 사운드 (옵션)
-                    if (navigator.vibrate) navigator.vibrate(10);
+                    Game.vibrate(10);
                 }, index * 80); // 카드마다 80ms 간격
             } else {
                 cardEl.classList.add('dealt');
@@ -1237,7 +1242,7 @@ const Game = {
         }
         
         this.renderHand(false);
-        if (navigator.vibrate) navigator.vibrate([20, 30, 20]);
+        this.vibrate([20, 30, 20]);
     },
     
     async playAttackCardOnTarget(cardDef, targetEnemy) {
@@ -1436,7 +1441,7 @@ const Game = {
         }
         
         this.renderHand(false);
-        if (navigator.vibrate) navigator.vibrate([20, 30, 20]);
+        this.vibrate([20, 30, 20]);
     },
     
     showSummonZones() {
@@ -2248,6 +2253,20 @@ const Game = {
     },
     
     // ==================== UTILS ====================
+    
+    // 안전한 진동 호출 (사용자 상호작용 필요)
+    hasUserInteracted: false,
+    
+    vibrate(pattern) {
+        if (!this.hasUserInteracted) return;
+        if (!navigator.vibrate) return;
+        try {
+            navigator.vibrate(pattern);
+        } catch (e) {
+            // 진동 API 차단됨 - 무시
+        }
+    },
+    
     showMessage(text, duration = 2000) {
         const msgEl = document.getElementById('center-message');
         if (msgEl) {
@@ -2389,6 +2408,15 @@ const Game = {
 // Start game
 document.addEventListener('DOMContentLoaded', () => {
     Game.init();
+    
+    // 사용자 상호작용 감지 (진동 API 활성화용)
+    const enableVibrate = () => {
+        Game.hasUserInteracted = true;
+        document.removeEventListener('click', enableVibrate);
+        document.removeEventListener('touchstart', enableVibrate);
+    };
+    document.addEventListener('click', enableVibrate);
+    document.addEventListener('touchstart', enableVibrate);
     
     // 언어 선택 버튼 이벤트
     const langSelector = document.getElementById('lang-selector');
