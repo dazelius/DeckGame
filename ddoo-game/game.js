@@ -2941,7 +2941,7 @@ const Game = {
         };
     },
     
-    // ★ 적 후퇴 로직 (AI 기반)
+    // ★ 적 후퇴 로직 (AI 기반) - 점프 애니메이션 포함
     async enemyRetreatBeforeAttack(enemy, distance = 1) {
         if (!enemy || !enemy.sprite) return;
         
@@ -2955,25 +2955,87 @@ const Game = {
         );
         
         if (newX <= maxX && !isOccupied) {
-            // 뒤로 이동
             const oldX = enemy.gridX;
             enemy.gridX = newX;
             
-            // 이동 애니메이션
             const newPos = this.gridToScreen(newX, enemy.gridZ);
             const posTarget = enemy.container || enemy.sprite;
+            const scaleTarget = enemy.sprite;
+            const baseScale = enemy.baseScale || scaleTarget.scale.x;
+            const startY = posTarget.y;
             
             await new Promise(resolve => {
-                gsap.to(posTarget, {
-                    x: newPos.x,
-                    y: newPos.y,
-                    duration: 0.25,
-                    ease: 'power2.out',
-                    onComplete: resolve
+                const tl = gsap.timeline({ onComplete: resolve });
+                
+                // 1. 준비 자세 (살짝 움츠림)
+                tl.to(scaleTarget.scale, {
+                    x: baseScale * 0.9,
+                    y: baseScale * 1.1,
+                    duration: 0.08,
+                    ease: 'power1.in'
                 });
+                
+                // 2. 점프하면서 뒤로 이동
+                tl.to(posTarget, {
+                    x: newPos.x,
+                    y: startY - 40,  // 위로 점프
+                    duration: 0.15,
+                    ease: 'power2.out'
+                }, '<0.05');
+                
+                tl.to(scaleTarget.scale, {
+                    x: baseScale * 1.05,
+                    y: baseScale * 0.95,
+                    duration: 0.15
+                }, '<');
+                
+                // 3. 착지
+                tl.to(posTarget, {
+                    y: newPos.y,
+                    duration: 0.12,
+                    ease: 'bounce.out'
+                });
+                
+                tl.to(scaleTarget.scale, {
+                    x: baseScale,
+                    y: baseScale,
+                    duration: 0.1,
+                    ease: 'power2.out'
+                }, '<0.05');
+                
+                // 4. 먼지 이펙트 (착지 시)
+                tl.call(() => {
+                    this.createLandingDust(newPos.x, newPos.y);
+                }, null, '-=0.05');
             });
             
-            console.log(`[AI] ${enemy.type} 후퇴: ${oldX} -> ${newX}`);
+            console.log(`[AI] ${enemy.type} 백스텝: ${oldX} -> ${newX}`);
+        }
+    },
+    
+    // 착지 먼지 이펙트
+    createLandingDust(x, y) {
+        if (!this.app) return;
+        
+        for (let i = 0; i < 5; i++) {
+            const dust = new PIXI.Graphics();
+            dust.circle(0, 0, 3 + Math.random() * 3);
+            dust.fill({ color: 0xccbbaa, alpha: 0.6 });
+            dust.x = x + (Math.random() - 0.5) * 30;
+            dust.y = y;
+            dust.zIndex = 50;
+            this.containers.effects.addChild(dust);
+            
+            gsap.to(dust, {
+                x: dust.x + (Math.random() - 0.5) * 40,
+                y: y - 20 - Math.random() * 20,
+                alpha: 0,
+                duration: 0.4 + Math.random() * 0.2,
+                ease: 'power2.out',
+                onComplete: () => {
+                    if (!dust.destroyed) dust.destroy();
+                }
+            });
         }
     },
     
