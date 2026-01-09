@@ -1665,71 +1665,57 @@ const CombatEffects = {
         });
     },
     
-    // ★ 분리된 대미지 플로터 (기본 대미지 + 거리 보너스)
+    // ★ 분리된 대미지 플로터 (기본 대미지 + 거리 보너스 → 두 개의 숫자)
     showSplitDamageFloater(pos, baseDamage, bonusDamage) {
         if (!this.app) return;
         
-        const container = new PIXI.Container();
-        container.x = pos.x;
-        container.y = pos.y - 50;
-        container.zIndex = 1000;
-        this.container.addChild(container);
+        // 1. 기본 대미지 플로터 (흰색)
+        this.showSingleDamageFloater(pos.x, pos.y - 50, baseDamage, '#ffffff', '#000000', 0);
         
-        // 기본 대미지 (흰색, 큰 글씨)
-        const baseText = new PIXI.Text({
-            text: `-${baseDamage}`,
+        // 2. 거리 보너스 플로터 (황금색, 약간 딜레이)
+        if (bonusDamage > 0) {
+            setTimeout(() => {
+                this.showSingleDamageFloater(pos.x + 25, pos.y - 70, bonusDamage, '#ffd700', '#8b4513', 0);
+            }, 100);
+        }
+    },
+    
+    // 단일 대미지 플로터
+    showSingleDamageFloater(x, y, damage, fillColor, strokeColor, delay = 0) {
+        if (!this.app) return;
+        
+        const text = new PIXI.Text({
+            text: `-${damage}`,
             style: {
                 fontSize: 32,
                 fontWeight: 'bold',
-                fill: '#ffffff',
-                stroke: { color: '#000000', width: 5 }
+                fill: fillColor,
+                stroke: { color: strokeColor, width: 5 }
             }
         });
-        baseText.anchor.set(1, 0.5);  // 오른쪽 정렬
-        baseText.x = -5;
-        container.addChild(baseText);
-        
-        // 거리 보너스 대미지 (황금색, 약간 작은 글씨)
-        if (bonusDamage > 0) {
-            const bonusText = new PIXI.Text({
-                text: `+${bonusDamage}`,
-                style: {
-                    fontSize: 26,
-                    fontWeight: 'bold',
-                    fill: '#ffd700',  // 황금색
-                    stroke: { color: '#8b4513', width: 4 }
-                }
-            });
-            bonusText.anchor.set(0, 0.5);  // 왼쪽 정렬
-            bonusText.x = 5;
-            container.addChild(bonusText);
-            
-            // 거리 아이콘
-            const distIcon = new PIXI.Text({
-                text: '📏',
-                style: { fontSize: 18 }
-            });
-            distIcon.anchor.set(0, 0.5);
-            distIcon.x = bonusText.x + bonusText.width + 3;
-            container.addChild(distIcon);
-        }
+        text.anchor.set(0.5);
+        text.x = x;
+        text.y = y;
+        text.zIndex = 1000;
+        this.container.addChild(text);
         
         // 애니메이션
-        gsap.timeline()
-            .from(container, {
-                y: container.y + 20,
+        gsap.timeline({ delay })
+            .from(text, {
+                y: text.y + 20,
                 alpha: 0,
+                scale: 1.3,
                 duration: 0.15,
                 ease: 'back.out(2)'
             })
-            .to(container, {
-                y: container.y - 40,
+            .to(text, {
+                y: text.y - 40,
                 alpha: 0,
-                duration: 0.8,
-                delay: 0.3,
+                duration: 0.7,
+                delay: 0.25,
                 ease: 'power2.in',
                 onComplete: () => {
-                    if (!container.destroyed) container.destroy();
+                    if (!text.destroyed) text.destroy();
                 }
             });
     },
