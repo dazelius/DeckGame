@@ -529,29 +529,67 @@ const Game = {
         const container = new PIXI.Container();
         container.zIndex = 100;
         
-        // 브레이크 가능한 인텐트인지 확인
-        const hasBreakRecipe = enemy.intent.breakRecipe && enemy.intent.breakRecipe.length > 0;
-        const bgWidth = hasBreakRecipe ? 110 : 80;
-        const bgHeight = hasBreakRecipe ? 85 : 60;
+        // ========================================
+        // ★ 다크소울 스타일 인텐트 UI
+        // ========================================
+        const intent = enemy.intent;
+        const hasBreakRecipe = intent.breakRecipe && intent.breakRecipe.length > 0;
         
-        // 글로우 배경 (브레이크 가능 시)
+        // 색상 팔레트 (다크소울 테마)
+        const COLORS = {
+            attack: {
+                primary: 0xc41e3a,     // 진홍색
+                secondary: 0xff4444,   // 밝은 빨강
+                glow: 0x8b0000,        // 어두운 빨강
+                icon: '⚔'
+            },
+            defend: {
+                primary: 0x2563eb,     // 파랑
+                secondary: 0x60a5fa,   // 밝은 파랑
+                glow: 0x1e3a8a,        // 어두운 파랑
+                icon: '🛡'
+            },
+            buff: {
+                primary: 0xd97706,     // 주황
+                secondary: 0xfbbf24,   // 금색
+                glow: 0x92400e,        // 어두운 주황
+                icon: '⬆'
+            },
+            debuff: {
+                primary: 0x7c3aed,     // 보라
+                secondary: 0xa78bfa,   // 밝은 보라
+                glow: 0x4c1d95,        // 어두운 보라
+                icon: '⬇'
+            },
+            summon: {
+                primary: 0x059669,     // 녹색
+                secondary: 0x34d399,   // 밝은 녹색
+                glow: 0x064e3b,        // 어두운 녹색
+                icon: '👥'
+            }
+        };
+        
+        const colors = COLORS[intent.type] || COLORS.attack;
+        const breakColor = hasBreakRecipe ? 0xffd700 : colors.primary;
+        
+        // ========================================
+        // 메인 프레임 (다크소울 스타일)
+        // ========================================
+        const frameWidth = hasBreakRecipe ? 100 : 70;
+        const frameHeight = hasBreakRecipe ? 75 : 55;
+        
+        // 외부 글로우 (브레이크 가능 시)
         if (hasBreakRecipe) {
-            const outerGlow = new PIXI.Graphics();
-            outerGlow.roundRect(-bgWidth/2 - 6, -bgHeight + 4, bgWidth + 12, bgHeight + 12, 12);
-            outerGlow.fill({ color: 0xffd700, alpha: 0.15 });
-            container.addChild(outerGlow);
-            
-            // 펄스 애니메이션용 글로우
-            const pulseGlow = new PIXI.Graphics();
-            pulseGlow.roundRect(-bgWidth/2 - 4, -bgHeight + 6, bgWidth + 8, bgHeight + 8, 10);
-            pulseGlow.fill({ color: 0xffd700, alpha: 0.25 });
-            container.addChild(pulseGlow);
+            const glow = new PIXI.Graphics();
+            glow.roundRect(-frameWidth/2 - 5, -frameHeight - 5, frameWidth + 10, frameHeight + 10, 6);
+            glow.fill({ color: 0xffd700, alpha: 0.2 });
+            container.addChild(glow);
             
             // 펄스 애니메이션
             if (typeof gsap !== 'undefined') {
-                gsap.to(pulseGlow, {
-                    alpha: 0.1,
-                    duration: 0.8,
+                gsap.to(glow, {
+                    alpha: 0.08,
+                    duration: 1,
                     yoyo: true,
                     repeat: -1,
                     ease: 'sine.inOut'
@@ -559,109 +597,142 @@ const Game = {
             }
         }
         
-        // Intent background (메인)
+        // 메인 배경
         const bg = new PIXI.Graphics();
-        bg.roundRect(-bgWidth/2, -bgHeight + 10, bgWidth, bgHeight, 8);
-        bg.fill({ color: 0x0a0806, alpha: 0.95 });
         
-        // Border color based on type
-        let borderColor = 0xcc2222; // Attack - bright red
-        let textColor = 0xff4444;
-        let iconBg = 0x441111;
+        // 그라데이션 효과를 위한 다중 레이어
+        bg.roundRect(-frameWidth/2, -frameHeight, frameWidth, frameHeight, 4);
+        bg.fill({ color: 0x0c0a08, alpha: 0.95 });
         
-        if (enemy.intent.type === 'defend') {
-            borderColor = 0x2266bb;
-            textColor = 0x66aaff;
-            iconBg = 0x112244;
-        } else if (enemy.intent.type === 'buff') {
-            borderColor = 0xbb8822;
-            textColor = 0xffcc44;
-            iconBg = 0x332211;
-        }
+        // 내부 하이라이트
+        bg.roundRect(-frameWidth/2 + 2, -frameHeight + 2, frameWidth - 4, 20, 2);
+        bg.fill({ color: colors.glow, alpha: 0.3 });
         
-        // 브레이크 가능하면 금색 테두리
-        if (hasBreakRecipe) {
-            borderColor = 0xffd700;
-        }
+        // 테두리 (이중 테두리로 고급스럽게)
+        bg.roundRect(-frameWidth/2, -frameHeight, frameWidth, frameHeight, 4);
+        bg.stroke({ color: 0x1a1612, width: 3 });
+        bg.roundRect(-frameWidth/2 + 1, -frameHeight + 1, frameWidth - 2, frameHeight - 2, 3);
+        bg.stroke({ color: breakColor, width: 2 });
         
-        bg.stroke({ color: borderColor, width: 4 });
         container.addChild(bg);
         
-        // 아이콘 배경 원
-        const iconCircle = new PIXI.Graphics();
-        iconCircle.circle(0, -bgHeight + 32, 22);
-        iconCircle.fill({ color: iconBg, alpha: 0.9 });
-        iconCircle.stroke({ color: borderColor, width: 2 });
-        container.addChild(iconCircle);
+        // ========================================
+        // 아이콘 (커스텀 그래픽)
+        // ========================================
+        const iconContainer = new PIXI.Container();
+        iconContainer.y = -frameHeight + 20;
         
-        // Icon (큰 아이콘)
-        let iconText = '⚔️';
-        if (enemy.intent.type === 'defend') iconText = '🛡️';
-        else if (enemy.intent.type === 'buff') iconText = '⬆️';
-        else if (enemy.intent.type === 'debuff') iconText = '⬇️';
-        else if (enemy.intent.type === 'summon') iconText = '👥';
+        // 아이콘 배경 (다이아몬드 형태)
+        const iconBg = new PIXI.Graphics();
+        iconBg.moveTo(0, -16);
+        iconBg.lineTo(16, 0);
+        iconBg.lineTo(0, 16);
+        iconBg.lineTo(-16, 0);
+        iconBg.closePath();
+        iconBg.fill({ color: colors.glow, alpha: 0.8 });
+        iconBg.stroke({ color: breakColor, width: 1.5 });
+        iconContainer.addChild(iconBg);
         
+        // 아이콘 텍스트
         const icon = new PIXI.Text({
-            text: iconText,
-            style: { fontSize: 28 }
+            text: colors.icon,
+            style: { fontSize: 18 }
         });
         icon.anchor.set(0.5);
-        icon.y = -bgHeight + 32;
-        container.addChild(icon);
+        iconContainer.addChild(icon);
         
-        // Damage value (for attack) - 크게!
-        if (enemy.intent.type === 'attack' && enemy.intent.damage) {
-            let dmgString = enemy.intent.damage.toString();
+        container.addChild(iconContainer);
+        
+        // ========================================
+        // 데미지 숫자 (공격 타입)
+        // ========================================
+        if (intent.type === 'attack' && intent.damage) {
+            let dmgString = intent.damage.toString();
+            
             // 다중 공격 표시
-            if (enemy.intent.hits && enemy.intent.hits > 1) {
-                dmgString = `${enemy.intent.damage}×${enemy.intent.hits}`;
+            if (intent.hits && intent.hits > 1) {
+                dmgString = `${intent.damage}×${intent.hits}`;
             }
             
+            // 데미지 숫자 배경
+            const dmgBg = new PIXI.Graphics();
+            dmgBg.roundRect(-25, -frameHeight + 38, 50, 22, 3);
+            dmgBg.fill({ color: 0x1a0808, alpha: 0.9 });
+            dmgBg.stroke({ color: colors.primary, width: 1 });
+            container.addChild(dmgBg);
+            
+            // 데미지 텍스트
             const dmgText = new PIXI.Text({
                 text: dmgString,
                 style: { 
-                    fontSize: 26, 
+                    fontSize: 18, 
                     fill: '#ffffff',
                     fontFamily: 'Cinzel, serif',
                     fontWeight: 'bold',
-                    stroke: { color: textColor, width: 4 }
+                    letterSpacing: 1
                 }
             });
             dmgText.anchor.set(0.5);
-            dmgText.y = -bgHeight + 60;
+            dmgText.y = -frameHeight + 49;
             container.addChild(dmgText);
         }
         
-        // 브레이크 레시피 표시
-        if (hasBreakRecipe) {
-            this.renderBreakRecipe(container, enemy, bgHeight);
+        // ========================================
+        // 방어/버프 표시
+        // ========================================
+        if (intent.type === 'defend' || intent.type === 'buff') {
+            const valueText = new PIXI.Text({
+                text: intent.type === 'defend' ? 'BLOCK' : 'BUFF',
+                style: { 
+                    fontSize: 12, 
+                    fill: colors.secondary,
+                    fontFamily: 'Cinzel, serif',
+                    fontWeight: 'bold',
+                    letterSpacing: 2
+                }
+            });
+            valueText.anchor.set(0.5);
+            valueText.y = -frameHeight + 45;
+            container.addChild(valueText);
         }
         
-        // Arrow pointing down (더 크게)
+        // ========================================
+        // 브레이크 게이지 (LOL 스타일)
+        // ========================================
+        if (hasBreakRecipe) {
+            this.renderBreakRecipe(container, enemy, frameHeight);
+        }
+        
+        // ========================================
+        // 하단 화살표 (타겟 표시)
+        // ========================================
         const arrow = new PIXI.Graphics();
-        arrow.moveTo(0, 14);
-        arrow.lineTo(-10, 4);
-        arrow.lineTo(10, 4);
+        arrow.moveTo(0, 8);
+        arrow.lineTo(-8, 0);
+        arrow.lineTo(-4, 0);
+        arrow.lineTo(-4, -4);
+        arrow.lineTo(4, -4);
+        arrow.lineTo(4, 0);
+        arrow.lineTo(8, 0);
         arrow.closePath();
-        arrow.fill({ color: borderColor });
+        arrow.fill({ color: breakColor });
         container.addChild(arrow);
         
-        // Position at top of sprite with margin
+        // ========================================
+        // 위치 설정
+        // ========================================
         const spriteHeight = enemy.sprite?.height || 60;
-        const margin = 8;
+        const margin = 12;
         container.y = -spriteHeight - margin;
         
-        // ★ 새 구조: enemy.container에 추가 (scale=1이므로 역보정 불필요!)
-        // 레거시 구조: enemy.sprite에 추가 (역보정 필요)
+        // ★ 새 구조: enemy.container에 추가
         const parent = enemy.container || enemy.sprite;
         if (!parent) return;
         
         if (enemy.container) {
-            // 새 구조: container는 scale=1이므로 역보정 불필요
             enemy.container.sortableChildren = true;
             enemy.container.addChild(container);
         } else {
-            // 레거시 구조: sprite에 추가, 역보정 필요
             const containerScale = enemy.sprite.scale?.x || enemy.baseScale || 1;
             if (containerScale !== 0) {
                 container.scale.set(1 / containerScale);
@@ -671,119 +742,120 @@ const Game = {
         }
         
         enemy.intentContainer = container;
+        
+        // ========================================
+        // 등장 애니메이션
+        // ========================================
+        if (typeof gsap !== 'undefined') {
+            container.alpha = 0;
+            container.y -= 10;
+            gsap.to(container, {
+                alpha: 1,
+                y: container.y + 10,
+                duration: 0.3,
+                ease: 'back.out(1.5)'
+            });
+        }
     },
     
-    // 브레이크 레시피 렌더링 (LOL 스타일 토막 게이지!)
-    renderBreakRecipe(container, enemy, bgHeight = 85) {
+    // ========================================
+    // 브레이크 레시피 렌더링 (다크소울 스타일 게이지)
+    // ========================================
+    renderBreakRecipe(container, enemy, frameHeight = 75) {
         const recipe = enemy.intent.breakRecipe;
         const progress = enemy.breakProgress || [];
         
         const recipeContainer = new PIXI.Container();
-        recipeContainer.y = -bgHeight + 95;
+        recipeContainer.y = 18; // 프레임 바로 아래
         recipeContainer.isBreakGauge = true;
         
-        // ★ LOL 스타일 토막 게이지 설정
-        const segmentWidth = 22;   // 각 토막 너비
-        const segmentHeight = 10;  // 토막 높이
-        const gap = 4;             // 토막 사이 간격
-        const totalWidth = recipe.length * segmentWidth + (recipe.length - 1) * gap;
-        
+        // 속성 색상 (다크소울 테마)
         const ElementColors = {
-            physical: 0xf59e0b,
-            fire: 0xef4444,
-            ice: 0x3b82f6,
-            lightning: 0xeab308,
-            bleed: 0xdc2626,
-            poison: 0x22c55e,
-            magic: 0xa855f7,
-            dark: 0x6366f1
+            physical: { main: 0xd97706, light: 0xfbbf24, dark: 0x92400e },
+            fire: { main: 0xdc2626, light: 0xf87171, dark: 0x991b1b },
+            ice: { main: 0x2563eb, light: 0x60a5fa, dark: 0x1e40af },
+            lightning: { main: 0xca8a04, light: 0xfde047, dark: 0xa16207 },
+            bleed: { main: 0xbe123c, light: 0xfb7185, dark: 0x881337 },
+            poison: { main: 0x16a34a, light: 0x4ade80, dark: 0x15803d },
+            magic: { main: 0x7c3aed, light: 0xa78bfa, dark: 0x5b21b6 },
+            dark: { main: 0x4f46e5, light: 0x818cf8, dark: 0x3730a3 }
         };
         
-        // 게이지 배경 (전체)
+        // 게이지 설정
+        const segmentWidth = 18;
+        const segmentHeight = 8;
+        const gap = 3;
+        const totalWidth = recipe.length * segmentWidth + (recipe.length - 1) * gap;
+        
+        // 게이지 배경 프레임
         const gaugeBg = new PIXI.Graphics();
-        gaugeBg.roundRect(-totalWidth/2 - 4, -segmentHeight/2 - 4, totalWidth + 8, segmentHeight + 8, 4);
-        gaugeBg.fill({ color: 0x000000, alpha: 0.8 });
-        gaugeBg.stroke({ width: 2, color: 0x444444 });
+        gaugeBg.roundRect(-totalWidth/2 - 5, -segmentHeight/2 - 4, totalWidth + 10, segmentHeight + 8, 3);
+        gaugeBg.fill({ color: 0x0a0806, alpha: 0.95 });
+        gaugeBg.stroke({ width: 1.5, color: 0x3d3429 });
         recipeContainer.addChild(gaugeBg);
         
-        // 각 토막 그리기
+        // 각 세그먼트 그리기
         recipe.forEach((element, i) => {
             const isCompleted = i < progress.length;
-            const isCurrent = i === progress.length;
-            const elementColor = ElementColors[element] || 0xf59e0b;
+            const elementColorSet = ElementColors[element] || ElementColors.physical;
             
             const x = -totalWidth/2 + i * (segmentWidth + gap);
             
-            // 토막 배경 (어두운 색)
-            const segmentBg = new PIXI.Graphics();
-            segmentBg.rect(x, -segmentHeight/2, segmentWidth, segmentHeight);
-            segmentBg.fill({ color: 0x111111 });
-            recipeContainer.addChild(segmentBg);
+            // 세그먼트 배경
+            const segBg = new PIXI.Graphics();
+            segBg.roundRect(x, -segmentHeight/2, segmentWidth, segmentHeight, 2);
+            segBg.fill({ color: 0x151210 });
+            recipeContainer.addChild(segBg);
             
             if (isCompleted) {
-                // ★ 완료된 칸: 밝은 초록색 채움
+                // ★ 완료된 세그먼트: 밝은 초록 + 광택
                 const fill = new PIXI.Graphics();
-                fill.rect(x, -segmentHeight/2, segmentWidth, segmentHeight);
+                fill.roundRect(x, -segmentHeight/2, segmentWidth, segmentHeight, 2);
                 fill.fill({ color: 0x22c55e });
                 recipeContainer.addChild(fill);
                 
-                // 하이라이트
+                // 상단 광택
                 const shine = new PIXI.Graphics();
-                shine.rect(x, -segmentHeight/2, segmentWidth, 3);
-                shine.fill({ color: 0xffffff, alpha: 0.35 });
+                shine.roundRect(x + 1, -segmentHeight/2 + 1, segmentWidth - 2, 3, 1);
+                shine.fill({ color: 0xffffff, alpha: 0.4 });
                 recipeContainer.addChild(shine);
+                
+                // 체크마크
+                const check = new PIXI.Text({
+                    text: '✓',
+                    style: { fontSize: 8, fill: '#ffffff', fontWeight: 'bold' }
+                });
+                check.anchor.set(0.5);
+                check.x = x + segmentWidth / 2;
+                recipeContainer.addChild(check);
             } else {
-                // ★ 미완료 칸: 속성 색상 테두리 + 어두운 채움
+                // ★ 미완료 세그먼트: 속성 색상 힌트
                 const dim = new PIXI.Graphics();
-                dim.rect(x + 1, -segmentHeight/2 + 1, segmentWidth - 2, segmentHeight - 2);
-                dim.fill({ color: elementColor, alpha: 0.15 });
+                dim.roundRect(x + 1, -segmentHeight/2 + 1, segmentWidth - 2, segmentHeight - 2, 1);
+                dim.fill({ color: elementColorSet.main, alpha: 0.2 });
                 recipeContainer.addChild(dim);
-            }
-            
-            // 토막 테두리
-            const border = new PIXI.Graphics();
-            border.rect(x, -segmentHeight/2, segmentWidth, segmentHeight);
-            if (isCompleted) {
-                border.stroke({ width: 2, color: 0x16a34a });
-            } else if (isCurrent) {
-                border.stroke({ width: 2, color: elementColor });
-            } else {
-                border.stroke({ width: 1, color: 0x555555 });
-            }
-            recipeContainer.addChild(border);
-        });
-        
-        // "BREAK" 라벨 (위에, 번개 아이콘 포함)
-        const breakLabel = new PIXI.Text({
-            text: '⚡ BREAK',
-            style: { 
-                fontSize: 11, 
-                fill: '#ffd700',
-                fontWeight: 'bold',
-                letterSpacing: 2,
-                dropShadow: {
-                    color: '#000000',
-                    blur: 2,
-                    distance: 1
-                }
+                
+                // 속성 테두리 힌트
+                const hint = new PIXI.Graphics();
+                hint.roundRect(x, -segmentHeight/2, segmentWidth, segmentHeight, 2);
+                hint.stroke({ width: 1, color: elementColorSet.main, alpha: 0.5 });
+                recipeContainer.addChild(hint);
             }
         });
-        breakLabel.anchor.set(0.5);
-        breakLabel.y = -18;
-        recipeContainer.addChild(breakLabel);
         
-        // 진행도 텍스트 (아래)
+        // 진행도 표시 (현재/총)
         const progressText = new PIXI.Text({
             text: `${progress.length}/${recipe.length}`,
             style: {
                 fontSize: 9,
-                fontFamily: 'Arial Black',
-                fill: progress.length > 0 ? 0x22c55e : 0x666666,
-                fontWeight: 'bold'
+                fontFamily: 'Cinzel, serif',
+                fill: progress.length > 0 ? '#22c55e' : '#555555',
+                fontWeight: 'bold',
+                letterSpacing: 1
             }
         });
         progressText.anchor.set(0.5);
-        progressText.y = segmentHeight + 6;
+        progressText.y = segmentHeight / 2 + 8;
         recipeContainer.addChild(progressText);
         
         container.addChild(recipeContainer);
