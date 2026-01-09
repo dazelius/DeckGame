@@ -1706,14 +1706,15 @@ const CombatEffects = {
             this.createSpearTrail(spearContainer.x, spearContainer.y, spearContainer.rotation);
         }, 20);
         
-        // 비행 애니메이션
-        const flightDuration = 0.18; // 빠른 비행
+        // 비행 애니메이션 (거리에 따라 속도 조절)
+        const distance = Math.sqrt((end.x - start.x) ** 2 + (end.y - start.y) ** 2);
+        const flightDuration = Math.max(0.3, distance / 600); // 더 천천히 (0.3초 최소)
         
         gsap.to(spearContainer, {
             x: end.x,
             y: end.y - 30,
             duration: flightDuration,
-            ease: 'power2.in',
+            ease: 'power1.in',  // 완만한 가속
             onComplete: () => {
                 clearInterval(trailInterval);
                 
