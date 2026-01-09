@@ -210,10 +210,87 @@ const Game = {
             this.updateAllUnitPositions();
         });
         
+        // ★ 치트키 설정
+        this.setupCheatKeys();
+        
         // Start game
         await this.startGame();
         
         console.log('[Game] Ready!');
+    },
+    
+    // ==========================================
+    // 치트키 설정 (개발용)
+    // ==========================================
+    setupCheatKeys() {
+        window.addEventListener('keydown', (e) => {
+            // Ctrl+숫자로 카드 추가
+            if (e.ctrlKey) {
+                const cheatCards = {
+                    '1': 'strike',
+                    '2': 'defend', 
+                    '3': 'bash',
+                    '4': 'fireBolt',
+                    '5': 'fireBall',
+                    '6': 'spearThrow',
+                    '7': 'flurry',
+                    '8': 'cleave',
+                    '9': 'heal',
+                    '0': 'summonKnight'
+                };
+                
+                if (cheatCards[e.key]) {
+                    e.preventDefault();
+                    this.cheatAddCard(cheatCards[e.key]);
+                }
+            }
+            
+            // F1: 코스트 회복
+            if (e.key === 'F1') {
+                e.preventDefault();
+                this.state.cost = this.state.maxCost;
+                this.updateCostUI();
+                console.log('[Cheat] 코스트 회복!');
+            }
+            
+            // F2: 히어로 체력 회복
+            if (e.key === 'F2') {
+                e.preventDefault();
+                if (this.state.hero) {
+                    this.state.hero.hp = this.state.hero.maxHp;
+                    this.updateHPUI();
+                    console.log('[Cheat] 체력 회복!');
+                }
+            }
+            
+            // F3: 모든 적 처치
+            if (e.key === 'F3') {
+                e.preventDefault();
+                this.state.enemyUnits.forEach(e => {
+                    if (e.hp > 0) this.killUnit(e);
+                });
+                console.log('[Cheat] 모든 적 처치!');
+            }
+        });
+        
+        console.log('[Game] 치트키: Ctrl+1~0(카드추가), F1(코스트), F2(체력), F3(적처치)');
+    },
+    
+    cheatAddCard(cardId) {
+        if (this.state.phase !== 'prepare') {
+            console.log('[Cheat] 준비 페이즈에서만 카드 추가 가능');
+            return;
+        }
+        
+        const cardDef = this.getCard(cardId);
+        if (!cardDef) {
+            console.log(`[Cheat] 알 수 없는 카드: ${cardId}`);
+            return;
+        }
+        
+        this.state.hand.push(cardId);
+        this.renderHand();
+        console.log(`[Cheat] ${cardId} 추가됨! (핸드: ${this.state.hand.length}장)`);
     },
     
     async startGame() {
