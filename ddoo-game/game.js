@@ -533,7 +533,6 @@ const Game = {
         // ★ 컴팩트 1열 인텐트 UI (다크소울 스타일)
         // ========================================
         const intent = enemy.intent;
-        const hasBreakRecipe = intent.breakRecipe && intent.breakRecipe.length > 0;
         
         // 색상 팔레트
         const COLORS = {
@@ -545,26 +544,12 @@ const Game = {
         };
         
         const colors = COLORS[intent.type] || COLORS.attack;
-        const breakColor = hasBreakRecipe ? 0xffd700 : colors.primary;
         
-        // ★ 1열 컴팩트 디자인: [아이콘] [데미지] [브레이크게이지]
+        // ★ 1열 컴팩트 디자인: [아이콘] [데미지]
         const iconSize = 28;
         const dmgBoxWidth = intent.damage ? 36 : 0;
-        const breakGaugeWidth = hasBreakRecipe ? (intent.breakRecipe.length * 14 + 8) : 0;
-        const frameWidth = iconSize + dmgBoxWidth + breakGaugeWidth + 12;
+        const frameWidth = iconSize + dmgBoxWidth + 12;
         const frameHeight = 32;
-        
-        // 외부 글로우 (브레이크 가능 시)
-        if (hasBreakRecipe) {
-            const glow = new PIXI.Graphics();
-            glow.roundRect(-frameWidth/2 - 3, -frameHeight - 3, frameWidth + 6, frameHeight + 6, 5);
-            glow.fill({ color: 0xffd700, alpha: 0.2 });
-            container.addChild(glow);
-            
-            if (typeof gsap !== 'undefined') {
-                gsap.to(glow, { alpha: 0.08, duration: 1, yoyo: true, repeat: -1, ease: 'sine.inOut' });
-            }
-        }
         
         // 메인 배경
         const bg = new PIXI.Graphics();
@@ -572,7 +557,7 @@ const Game = {
         bg.fill({ color: 0x0c0a08, alpha: 0.95 });
         bg.stroke({ color: 0x1a1612, width: 2 });
         bg.roundRect(-frameWidth/2 + 1, -frameHeight + 1, frameWidth - 2, frameHeight - 2, 3);
-        bg.stroke({ color: breakColor, width: 1.5 });
+        bg.stroke({ color: colors.primary, width: 1.5 });
         container.addChild(bg);
         
         // ★ 가로 배치 시작 위치
@@ -590,7 +575,7 @@ const Game = {
         iconBg.lineTo(iconCenterX - 10, iconCenterY);
         iconBg.closePath();
         iconBg.fill({ color: colors.glow, alpha: 0.8 });
-        iconBg.stroke({ color: breakColor, width: 1 });
+        iconBg.stroke({ color: colors.primary, width: 1 });
         container.addChild(iconBg);
         
         const icon = new PIXI.Text({ text: colors.icon, style: { fontSize: 14 } });
@@ -647,13 +632,6 @@ const Game = {
         }
         
         // ========================================
-        // 브레이크 게이지 (인라인)
-        // ========================================
-        if (hasBreakRecipe) {
-            this.renderBreakRecipeInline(container, enemy, xOffset, -frameHeight/2);
-        }
-        
-        // ========================================
         // 하단 화살표
         // ========================================
         const arrow = new PIXI.Graphics();
@@ -661,7 +639,7 @@ const Game = {
         arrow.lineTo(-6, 0);
         arrow.lineTo(6, 0);
         arrow.closePath();
-        arrow.fill({ color: breakColor });
+        arrow.fill({ color: colors.primary });
         container.addChild(arrow);
         
         // ========================================
