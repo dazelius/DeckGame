@@ -2796,6 +2796,9 @@ const Game = {
     
     // Deal damage to any target (hero or summon)
     dealDamageToTarget(target, damage) {
+        // ★ 이미 죽은 타겟이면 무시
+        if (!target || target.hp <= 0) return;
+        
         // ★ 쉴드(block) 처리
         let blocked = 0;
         
