@@ -943,17 +943,17 @@ const BreakSystem = {
         gauge.isBreakGauge = true;
         gauge.y = 30;
         
-        // 게이지 크기 설정
-        const segmentWidth = 20;  // 각 토막 너비
-        const segmentHeight = 8;  // 토막 높이
-        const gap = 3;            // 토막 사이 간격
+        // 게이지 크기 설정 (아이콘 포함하도록 확대)
+        const segmentWidth = 22;  // 각 토막 너비
+        const segmentHeight = 22; // 토막 높이 (아이콘 포함)
+        const gap = 4;            // 토막 사이 간격
         const totalWidth = recipe.length * segmentWidth + (recipe.length - 1) * gap;
         
         // 배경 (전체 게이지 영역)
         const bg = new PIXI.Graphics();
-        bg.roundRect(-totalWidth/2 - 3, -segmentHeight/2 - 3, totalWidth + 6, segmentHeight + 6, 3);
-        bg.fill({ color: 0x000000, alpha: 0.7 });
-        bg.stroke({ width: 1, color: 0x333333 });
+        bg.roundRect(-totalWidth/2 - 4, -segmentHeight/2 - 3, totalWidth + 8, segmentHeight + 6, 4);
+        bg.fill({ color: 0x0a0806, alpha: 0.9 });
+        bg.stroke({ width: 1.5, color: 0x3d3429 });
         gauge.addChild(bg);
         
         // 각 토막 그리기
@@ -965,31 +965,46 @@ const BreakSystem = {
             
             // 토막 배경 (어두운 색)
             const segmentBg = new PIXI.Graphics();
-            segmentBg.rect(x, -segmentHeight/2, segmentWidth, segmentHeight);
+            segmentBg.roundRect(x, -segmentHeight/2, segmentWidth, segmentHeight, 3);
             segmentBg.fill({ color: 0x1a1a1a });
             gauge.addChild(segmentBg);
             
             // 속성 색상
             const elementColor = parseInt(this.ElementColors[element].replace('#', ''), 16);
+            const icon = this.ElementIcons[element] || '⚔️';
             
             if (isCompleted) {
-                // ★ 완료된 칸: 밝은 초록색 + 체크마크 느낌
+                // ★ 완료된 칸: 밝은 초록색 + 체크마크
                 const fill = new PIXI.Graphics();
-                fill.rect(x, -segmentHeight/2, segmentWidth, segmentHeight);
+                fill.roundRect(x, -segmentHeight/2, segmentWidth, segmentHeight, 3);
                 fill.fill({ color: 0x22c55e });
                 gauge.addChild(fill);
                 
-                // 완료 반짝임
-                const shine = new PIXI.Graphics();
-                shine.rect(x, -segmentHeight/2, segmentWidth, 2);
-                shine.fill({ color: 0xffffff, alpha: 0.4 });
-                gauge.addChild(shine);
+                // 체크마크
+                const checkText = new PIXI.Text({
+                    text: '✓',
+                    style: { fontSize: 14, fill: '#ffffff', fontWeight: 'bold' }
+                });
+                checkText.anchor.set(0.5);
+                checkText.x = x + segmentWidth/2;
+                checkText.y = 0;
+                gauge.addChild(checkText);
             } else if (isCurrent) {
-                // ★ 현재 칸: 속성 색상으로 펄스 애니메이션
+                // ★ 현재 칸: 속성 색상으로 펄스 + 아이콘
                 const currentFill = new PIXI.Graphics();
-                currentFill.rect(x, -segmentHeight/2, segmentWidth, segmentHeight);
-                currentFill.fill({ color: elementColor, alpha: 0.4 });
+                currentFill.roundRect(x, -segmentHeight/2, segmentWidth, segmentHeight, 3);
+                currentFill.fill({ color: elementColor, alpha: 0.5 });
                 gauge.addChild(currentFill);
+                
+                // 속성 아이콘 (점멸)
+                const iconText = new PIXI.Text({
+                    text: icon,
+                    style: { fontSize: 12 }
+                });
+                iconText.anchor.set(0.5);
+                iconText.x = x + segmentWidth/2;
+                iconText.y = 0;
+                gauge.addChild(iconText);
                 
                 // 점멸 효과 (안전 체크 포함)
                 gsap.to({ val: 0 }, {
@@ -1002,14 +1017,25 @@ const BreakSystem = {
                             this.kill();
                             return;
                         }
-                        currentFill.alpha = 0.4 + Math.sin(this.targets()[0].val) * 0.4;
+                        currentFill.alpha = 0.3 + Math.sin(this.targets()[0].val) * 0.4;
                     }
                 });
+            } else {
+                // ★ 미완료 칸: 어둡게 + 아이콘
+                const iconText = new PIXI.Text({
+                    text: icon,
+                    style: { fontSize: 12 }
+                });
+                iconText.anchor.set(0.5);
+                iconText.x = x + segmentWidth/2;
+                iconText.y = 0;
+                iconText.alpha = 0.5;
+                gauge.addChild(iconText);
             }
             
             // 토막 테두리
             const border = new PIXI.Graphics();
-            border.rect(x, -segmentHeight/2, segmentWidth, segmentHeight);
+            border.roundRect(x, -segmentHeight/2, segmentWidth, segmentHeight, 3);
             if (isCompleted) {
                 border.stroke({ width: 2, color: 0x16a34a }); // 진한 초록
             } else if (isCurrent) {
