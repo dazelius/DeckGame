@@ -560,7 +560,7 @@ const CardDrag = {
     },
     
     // ==========================================
-    // 직선 타겟팅 라인 그리기
+    // 직선 타겟팅 라인 그리기 (스피어 투척)
     // ==========================================
     drawStraightTargetingLine(target) {
         if (!this.targetingCurve) {
@@ -575,93 +575,134 @@ const CardDrag = {
         if (!hero || !hero.sprite) return;
         
         const heroPos = hero.sprite.getGlobalPosition();
-        const startX = heroPos.x;
-        const startY = heroPos.y - 40;
+        const startX = heroPos.x + 20;  // 손 위치
+        const startY = heroPos.y - 45;
         
-        // 직선 라인 (화살표 느낌)
-        const lineLength = target ? null : 400; // 타겟이 없으면 400px 정도
         let endX, endY;
+        const hasTarget = !!target;
         
         if (target) {
             const targetPos = target.sprite.getGlobalPosition();
             endX = targetPos.x;
             endY = targetPos.y - 40;
         } else {
-            endX = startX + lineLength;
+            endX = startX + 350;
             endY = startY;
         }
         
-        // 라인 본체
-        this.targetingCurve.moveTo(startX, startY);
-        this.targetingCurve.lineTo(endX, endY);
+        const lineColor = hasTarget ? 0xf59e0b : 0x666666;  // 황금색 / 회색
+        const glowColor = hasTarget ? 0xfbbf24 : 0x444444;
+        const angle = Math.atan2(endY - startY, endX - startX);
+        const distance = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
         
-        const lineColor = target ? 0xff4444 : 0x888888;
+        // 1. 글로우 라인 (배경)
+        this.targetingCurve.moveTo(startX, startY);
+        this.targetingCurve.lineTo(endX - 20, endY);
         this.targetingCurve.stroke({ 
-            width: 3, 
-            color: lineColor, 
-            alpha: 0.8,
+            width: 8, 
+            color: glowColor, 
+            alpha: 0.3,
             cap: 'round'
         });
         
-        // 화살표 머리
-        if (target) {
-            const arrowSize = 15;
-            const angle = Math.atan2(endY - startY, endX - startX);
+        // 2. 점선 패턴 (창 궤적)
+        const dashLength = 15;
+        const gapLength = 10;
+        let currentDist = 0;
+        
+        while (currentDist < distance - 30) {
+            const x1 = startX + Math.cos(angle) * currentDist;
+            const y1 = startY + Math.sin(angle) * currentDist;
+            const x2 = startX + Math.cos(angle) * Math.min(currentDist + dashLength, distance - 30);
+            const y2 = startY + Math.sin(angle) * Math.min(currentDist + dashLength, distance - 30);
             
-            this.targetingCurve.moveTo(endX, endY);
-            this.targetingCurve.lineTo(
-                endX - arrowSize * Math.cos(angle - Math.PI / 6),
-                endY - arrowSize * Math.sin(angle - Math.PI / 6)
-            );
-            this.targetingCurve.moveTo(endX, endY);
-            this.targetingCurve.lineTo(
-                endX - arrowSize * Math.cos(angle + Math.PI / 6),
-                endY - arrowSize * Math.sin(angle + Math.PI / 6)
-            );
-            this.targetingCurve.stroke({ width: 3, color: lineColor, alpha: 0.8 });
+            this.targetingCurve.moveTo(x1, y1);
+            this.targetingCurve.lineTo(x2, y2);
             
-            // 거리 표시
-            const hero = this.game.state.hero;
-            const distance = Math.abs(target.gridX - hero.gridX);
-            const bonusDamage = distance * 2; // distanceBonus: 2
+            currentDist += dashLength + gapLength;
+        }
+        this.targetingCurve.stroke({ 
+            width: 3, 
+            color: lineColor, 
+            alpha: 0.9,
+            cap: 'round'
+        });
+        
+        // 3. 창 모양 화살표 (삼각형)
+        if (hasTarget) {
+            const spearX = endX - 15;
+            const spearY = endY;
             
+            // 창날 (삼각형)
+            this.targetingCurve.poly([
+                { x: endX, y: endY },
+                { x: spearX - 8, y: spearY - 8 },
+                { x: spearX - 8, y: spearY + 8 }
+            ]);
+            this.targetingCurve.fill({ color: 0xffffff, alpha: 0.9 });
+            this.targetingCurve.stroke({ width: 2, color: lineColor });
+            
+            // 창대 (뒤쪽)
+            this.targetingCurve.moveTo(spearX - 8, spearY);
+            this.targetingCurve.lineTo(spearX - 35, spearY);
+            this.targetingCurve.stroke({ width: 4, color: 0x8b4513, alpha: 0.8 });
+        } else {
+            // 대상 없을 때: X 표시
+            const xSize = 12;
+            this.targetingCurve.moveTo(endX - xSize, startY - xSize);
+            this.targetingCurve.lineTo(endX + xSize, startY + xSize);
+            this.targetingCurve.moveTo(endX + xSize, startY - xSize);
+            this.targetingCurve.lineTo(endX - xSize, startY + xSize);
+            this.targetingCurve.stroke({ width: 4, color: 0xff4444, alpha: 0.8 });
+        }
+        
+        // 4. 시작점 원 (발사 위치)
+        this.targetingCurve.circle(startX, startY, 6);
+        this.targetingCurve.fill({ color: lineColor, alpha: 0.8 });
+        this.targetingCurve.stroke({ width: 2, color: 0xffffff, alpha: 0.5 });
+        
+        // 5. 텍스트 UI
+        if (this._distanceText && !this._distanceText.destroyed) {
+            this._distanceText.destroy();
+        }
+        if (this._spearLabel && !this._spearLabel.destroyed) {
+            this._spearLabel.destroy();
+        }
+        
+        if (hasTarget) {
+            const gridDistance = Math.abs(target.gridX - hero.gridX);
+            const bonusDamage = gridDistance * 1; // distanceBonus: 1
+            
+            // 거리 보너스 텍스트
             const distText = new PIXI.Text({
-                text: `+${bonusDamage} DMG`,
+                text: `🎯 ${gridDistance}칸 → +${bonusDamage} DMG`,
                 style: {
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: 'bold',
-                    fill: '#ffdd44',
-                    stroke: { color: '#000000', width: 3 }
+                    fill: '#fef3c7',
+                    stroke: { color: '#78350f', width: 3 }
                 }
             });
             distText.anchor.set(0.5);
             distText.x = (startX + endX) / 2;
-            distText.y = startY - 20;
+            distText.y = startY - 25;
             
-            // 기존 텍스트 제거 후 추가
-            if (this._distanceText && !this._distanceText.destroyed) {
-                this._distanceText.destroy();
-            }
             this._distanceText = distText;
             this.game.containers.effects.addChild(distText);
         } else {
-            // 타겟 없으면 "대상 없음" 표시
-            if (this._distanceText && !this._distanceText.destroyed) {
-                this._distanceText.destroy();
-            }
-            
+            // 대상 없음 텍스트
             const noTargetText = new PIXI.Text({
                 text: '⚠ 같은 라인에 대상 없음',
                 style: {
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: 'bold',
-                    fill: '#ff6666',
-                    stroke: { color: '#000000', width: 3 }
+                    fill: '#fca5a5',
+                    stroke: { color: '#7f1d1d', width: 3 }
                 }
             });
             noTargetText.anchor.set(0.5);
-            noTargetText.x = startX + 150;
-            noTargetText.y = startY - 20;
+            noTargetText.x = startX + 120;
+            noTargetText.y = startY - 25;
             
             this._distanceText = noTargetText;
             this.game.containers.effects.addChild(noTargetText);
@@ -924,10 +965,15 @@ const CardDrag = {
         if (this.targetingCurve) {
             this.targetingCurve.clear();
         }
-        // 거리 텍스트도 제거
+        // 거리 텍스트 제거
         if (this._distanceText && !this._distanceText.destroyed) {
             this._distanceText.destroy();
             this._distanceText = null;
+        }
+        // 스피어 라벨 제거
+        if (this._spearLabel && !this._spearLabel.destroyed) {
+            this._spearLabel.destroy();
+            this._spearLabel = null;
         }
     },
     
