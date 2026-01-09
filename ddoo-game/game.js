@@ -284,7 +284,9 @@ const Game = {
         
         // 디버그: CardSystem 확인
         if (typeof CardSystem !== 'undefined') {
-            console.log('[Cheat] CardSystem.cards 키:', Object.keys(CardSystem.cards));
+            const keys = Object.keys(CardSystem.cards);
+            console.log(`[Cheat] CardSystem.cards (${keys.length}개):`, keys.join(', '));
+            console.log(`[Cheat] spearThrow 존재: ${!!CardSystem.cards.spearThrow}`);
         }
         
         const cardDef = this.getCard(cardId);
