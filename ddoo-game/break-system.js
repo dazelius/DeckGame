@@ -272,113 +272,182 @@ const BreakSystem = {
     },
     
     // ==========================================
-    // 브레이크 이펙트 (화면 중앙에 강력하게!)
+    // 브레이크 이펙트 (적 개인 위치에서!)
     // ==========================================
     showBreakEffect(enemy) {
-        // 화면 중앙에 표시
-        const centerX = window.innerWidth / 2;
-        const centerY = window.innerHeight / 2 - 50;
+        // ★ 적 위치 기준
+        let enemyX = window.innerWidth / 2;
+        let enemyY = window.innerHeight / 2;
         
-        // 적 위치 (스턴 별용)
-        let enemyX = centerX;
-        let enemyY = centerY + 100;
         if (enemy && enemy.sprite) {
             const globalPos = enemy.sprite.getGlobalPosition();
             enemyX = globalPos.x;
-            enemyY = globalPos.y - 60;
+            enemyY = globalPos.y;
         }
         
-        // 1. 전체 화면 어둡게 + 플래시
-        this.createCinematicBreakFlash();
+        // 텍스트 위치 (적 머리 위)
+        const textY = enemyY - 80;
         
-        // 2. 히트스톱 (긴 멈춤)
+        // 1. 국소적 플래시 (적 주변만)
+        this.createLocalBreakFlash(enemyX, enemyY);
+        
+        // 2. 히트스톱 (짧게)
         if (typeof CombatEffects !== 'undefined') {
-            CombatEffects.hitStop(180);
+            CombatEffects.hitStop(100);
         }
         
-        // 3. 강력한 화면 흔들림
+        // 3. 화면 흔들림 (약하게)
         if (typeof CombatEffects !== 'undefined') {
-            CombatEffects.screenShake(25, 500);
+            CombatEffects.screenShake(15, 300);
         }
         
         // 4. 스턴 별 VFX (적 머리 위 - 3D 타원 궤도)
         this.createStunStars(enemy);
         
-        // 5. 중앙 충격파
-        this.createCenterShockwave(centerX, centerY);
+        // 5. 충격파 (적 위치에서)
+        this.createLocalShockwave(enemyX, enemyY);
         
-        // 6. 화면 가장자리 파티클
-        this.createScreenEdgeParticles();
+        // 6. 유리 파편 (적 위치)
+        this.createGlassShards(enemyX, enemyY);
         
-        // 7. 유리 파편 (적 위치)
-        this.createGlassShards(enemyX, enemyY + 50);
-        
-        // 8. 전체 화면 BREAK 텍스트 (화려하게)
-        const breakOverlay = document.createElement('div');
-        breakOverlay.className = 'break-overlay';
-        breakOverlay.innerHTML = `
-            <div class="break-text-container">
-                <div class="break-crack-left"></div>
-                <div class="break-crack-right"></div>
-                <div class="break-main-text">BREAK</div>
-                <div class="break-shine"></div>
-            </div>
-            <div class="break-vulnerable-text">💔 VULNERABLE +${enemy?.vulnerable || 1}</div>
+        // 7. ★ 개인 BREAK 텍스트 (적 위에 표시)
+        const breakPopup = document.createElement('div');
+        breakPopup.className = 'break-popup-personal';
+        breakPopup.innerHTML = `
+            <div class="break-text-personal">BREAK!</div>
+            <div class="break-sub-personal">💔 취약 +${enemy?.vulnerable || 1}</div>
         `;
-        document.body.appendChild(breakOverlay);
+        breakPopup.style.cssText = `
+            position: fixed;
+            left: ${enemyX}px;
+            top: ${textY}px;
+            transform: translate(-50%, -50%);
+            z-index: 10001;
+            pointer-events: none;
+            text-align: center;
+        `;
+        document.body.appendChild(breakPopup);
         
         // 애니메이션
         if (typeof gsap !== 'undefined') {
+            const mainText = breakPopup.querySelector('.break-text-personal');
+            const subText = breakPopup.querySelector('.break-sub-personal');
+            
             const tl = gsap.timeline();
             
-            // 메인 텍스트 등장
-            tl.fromTo(breakOverlay.querySelector('.break-main-text'), 
-                { scale: 3, opacity: 0 },
-                { scale: 1, opacity: 1, duration: 0.15, ease: 'power4.out' }
+            // 메인 텍스트 - 튀어나오면서 등장
+            tl.fromTo(mainText, 
+                { scale: 2.5, opacity: 0, y: 20 },
+                { scale: 1, opacity: 1, y: 0, duration: 0.12, ease: 'back.out(2)' }
             )
-            .fromTo(breakOverlay.querySelector('.break-main-text'),
-                { rotation: -8 },
-                { rotation: 0, duration: 0.1, ease: 'elastic.out(1, 0.5)' }
-            )
-            // 크랙 등장
-            .to(breakOverlay.querySelectorAll('.break-crack-left, .break-crack-right'), {
-                opacity: 1,
-                duration: 0.05
-            }, '<')
-            // 취약 텍스트
-            .fromTo(breakOverlay.querySelector('.break-vulnerable-text'),
-                { y: 30, opacity: 0 },
-                { y: 0, opacity: 1, duration: 0.2, ease: 'back.out(2)' },
-                '+=0.1'
-            )
-            // 빛나는 효과
-            .to(breakOverlay.querySelector('.break-shine'), {
-                opacity: 0.8,
-                duration: 0.1
-            }, '<')
-            .to(breakOverlay.querySelector('.break-shine'), {
-                opacity: 0,
-                duration: 0.3
+            // 흔들림
+            .to(mainText, {
+                x: -5,
+                duration: 0.03,
+                yoyo: true,
+                repeat: 3
             })
-            // 페이드 아웃
-            .to(breakOverlay, {
+            // 서브 텍스트
+            .fromTo(subText,
+                { opacity: 0, y: 10 },
+                { opacity: 1, y: 0, duration: 0.15, ease: 'power2.out' },
+                '-=0.05'
+            )
+            // 페이드 아웃 + 위로 떠오름
+            .to(breakPopup, {
                 opacity: 0,
-                duration: 0.4,
-                delay: 0.6,
-                onComplete: () => breakOverlay.remove()
+                y: -30,
+                duration: 0.5,
+                delay: 0.8,
+                onComplete: () => breakPopup.remove()
             });
         } else {
-            setTimeout(() => breakOverlay.remove(), 1500);
+            setTimeout(() => breakPopup.remove(), 1500);
         }
         
         // 사운드
         if (typeof SoundSystem !== 'undefined') {
-            SoundSystem.play('break', { volume: 1.0 });
+            SoundSystem.play('break', { volume: 0.8 });
         }
     },
     
     // ==========================================
-    // 시네마틱 브레이크 플래시
+    // 로컬 브레이크 플래시 (적 주변만)
+    // ==========================================
+    createLocalBreakFlash(x, y) {
+        const flash = document.createElement('div');
+        flash.style.cssText = `
+            position: fixed;
+            left: ${x}px;
+            top: ${y}px;
+            width: 200px;
+            height: 200px;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(circle, 
+                rgba(255, 255, 255, 1) 0%, 
+                rgba(255, 200, 50, 0.8) 30%,
+                rgba(255, 100, 0, 0.4) 60%,
+                transparent 80%);
+            z-index: 9999;
+            pointer-events: none;
+            border-radius: 50%;
+        `;
+        document.body.appendChild(flash);
+        
+        if (typeof gsap !== 'undefined') {
+            gsap.fromTo(flash, 
+                { scale: 0.5, opacity: 1 },
+                { 
+                    scale: 2, 
+                    opacity: 0, 
+                    duration: 0.4, 
+                    ease: 'power2.out',
+                    onComplete: () => flash.remove()
+                }
+            );
+        } else {
+            setTimeout(() => flash.remove(), 400);
+        }
+    },
+    
+    // ==========================================
+    // 로컬 충격파 (적 위치에서)
+    // ==========================================
+    createLocalShockwave(x, y) {
+        for (let i = 0; i < 2; i++) {
+            const ring = document.createElement('div');
+            ring.style.cssText = `
+                position: fixed;
+                left: ${x}px;
+                top: ${y}px;
+                width: 50px;
+                height: 50px;
+                transform: translate(-50%, -50%);
+                border: 3px solid rgba(255, 200, 100, 0.8);
+                border-radius: 50%;
+                z-index: 9998;
+                pointer-events: none;
+            `;
+            document.body.appendChild(ring);
+            
+            if (typeof gsap !== 'undefined') {
+                gsap.to(ring, {
+                    width: 150 + i * 50,
+                    height: 150 + i * 50,
+                    opacity: 0,
+                    duration: 0.4,
+                    delay: i * 0.08,
+                    ease: 'power2.out',
+                    onComplete: () => ring.remove()
+                });
+            } else {
+                setTimeout(() => ring.remove(), 500);
+            }
+        }
+    },
+    
+    // ==========================================
+    // 시네마틱 브레이크 플래시 (사용 안함 - 백업)
     // ==========================================
     createCinematicBreakFlash() {
         // 어두운 배경 + 밝은 플래시 순차
@@ -426,7 +495,7 @@ const BreakSystem = {
     },
     
     // ==========================================
-    // 중앙 충격파
+    // 중앙 충격파 (사용 안함 - 백업)
     // ==========================================
     createCenterShockwave(x, y) {
         for (let i = 0; i < 4; i++) {

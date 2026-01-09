@@ -192,3 +192,45 @@
 .unit-broken {
     filter: brightness(0.6) saturate(0.5);
 }
+
+/* ==================== 개인 브레이크 팝업 ==================== */
+.break-popup-personal {
+    animation: breakPopupPersonalIn 0.1s ease-out;
+}
+
+.break-text-personal {
+    font-family: 'Cinzel', 'Times New Roman', serif;
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #ff3333;
+    text-shadow: 
+        0 0 10px rgba(255, 50, 50, 1),
+        0 0 20px rgba(255, 50, 50, 0.8),
+        0 0 40px rgba(255, 0, 0, 0.5),
+        2px 2px 0 #000,
+        -2px -2px 0 #000,
+        2px -2px 0 #000,
+        -2px 2px 0 #000;
+    letter-spacing: 4px;
+}
+
+.break-sub-personal {
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    color: #ff6666;
+    text-shadow: 
+        0 0 8px rgba(255, 100, 100, 0.8),
+        1px 1px 0 #000;
+    margin-top: 4px;
+}
+
+@keyframes breakPopupPersonalIn {
+    0% {
+        transform: translate(-50%, -50%) scale(2);
+        opacity: 0;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+}
