@@ -2,6 +2,7 @@
     "id": "orc",
     "name": "Orc",
     "nameKo": "오크",
+    "weaknesses": ["physical", "ice", "magic"],
     "intents": [
         { 
             "id": "heavy_strike",
@@ -10,7 +11,7 @@
             "type": "attack", 
             "damage": 15,
             "weight": 35,
-            "breakRecipe": ["physical", "physical", "physical", "physical"]
+            "breakRecipe": { "element": "physical", "count": 4 }
         },
         { 
             "id": "rage_slam",
@@ -19,7 +20,7 @@
             "type": "attack", 
             "damage": 22,
             "weight": 15,
-            "breakRecipe": ["fire", "fire", "fire"]
+            "breakRecipe": { "element": "ice", "count": 3 }
         },
         { 
             "id": "war_cry",

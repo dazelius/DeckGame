@@ -2,6 +2,7 @@
     "id": "slime",
     "name": "Slime",
     "nameKo": "슬라임",
+    "weaknesses": ["fire", "ice"],
     "intents": [
         { 
             "id": "tackle",
@@ -17,7 +18,8 @@
             "nameEn": "Split",
             "type": "summon",
             "summonType": "slime_small",
-            "weight": 20
+            "weight": 20,
+            "breakRecipe": { "element": "fire", "count": 2 }
         },
         { 
             "id": "goo_shield",

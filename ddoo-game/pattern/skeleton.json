@@ -2,6 +2,7 @@
     "id": "skeleton",
     "name": "Skeleton",
     "nameKo": "해골",
+    "weaknesses": ["physical", "fire"],
     "intents": [
         { 
             "id": "bone_strike",
@@ -18,7 +19,8 @@
             "type": "buff", 
             "buffType": "strength",
             "buffValue": 1,
-            "weight": 25
+            "weight": 25,
+            "breakRecipe": { "element": "physical", "count": 2 }
         },
         { 
             "id": "bone_shield",

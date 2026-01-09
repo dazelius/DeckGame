@@ -2,6 +2,7 @@
     "id": "goblin",
     "name": "Goblin",
     "nameKo": "고블린",
+    "weaknesses": ["physical", "fire"],
     "intents": [
         { 
             "id": "slash",
@@ -10,7 +11,7 @@
             "type": "attack", 
             "damage": 8,
             "weight": 40,
-            "breakRecipe": ["physical", "physical", "physical"]
+            "breakRecipe": { "element": "physical", "count": 3 }
         },
         { 
             "id": "wild_swing",
@@ -19,7 +20,7 @@
             "type": "attack", 
             "damage": 12,
             "weight": 25,
-            "breakRecipe": ["physical", "physical", "physical"]
+            "breakRecipe": { "element": "fire", "count": 2 }
         },
         { 
             "id": "defend",

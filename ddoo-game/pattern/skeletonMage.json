@@ -2,6 +2,7 @@
     "id": "skeletonMage",
     "name": "Skeleton Mage",
     "nameKo": "해골 마법사",
+    "weaknesses": ["physical", "fire", "lightning"],
     "intents": [
         { 
             "id": "dark_bolt",
@@ -20,7 +21,7 @@
             "damage": 8,
             "heal": 4,
             "weight": 25,
-            "breakRecipe": ["magic", "magic"]
+            "breakRecipe": { "element": "fire", "count": 2 }
         },
         { 
             "id": "curse",
@@ -29,7 +30,7 @@
             "type": "debuff", 
             "vulnerable": 2,
             "weight": 20,
-            "breakRecipe": ["magic", "magic"]
+            "breakRecipe": { "element": "lightning", "count": 2 }
         },
         { 
             "id": "summon_skeleton",

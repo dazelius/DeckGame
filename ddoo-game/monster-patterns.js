@@ -71,6 +71,93 @@ const MonsterPatterns = {
     },
     
     // ==========================================
+    // 약점 가져오기
+    // ==========================================
+    getWeaknesses(monsterType) {
+        const pattern = this.getPattern(monsterType);
+        return pattern?.weaknesses || [];
+    },
+    
+    // ==========================================
+    // 약점 아이콘 매핑
+    // ==========================================
+    WeaknessIcons: {
+        physical: '⚔️',
+        fire: '🔥',
+        ice: '❄️',
+        lightning: '⚡',
+        bleed: '🩸',
+        poison: '☠️',
+        magic: '✨',
+        dark: '🌑'
+    },
+    
+    // ==========================================
+    // 약점 정보 팝업 표시
+    // ==========================================
+    showWeaknessPopup(enemy) {
+        if (!enemy) return;
+        
+        const pattern = this.getPattern(enemy.type);
+        if (!pattern) return;
+        
+        const weaknesses = pattern.weaknesses || [];
+        if (weaknesses.length === 0) {
+            console.log(`[MonsterPatterns] ${enemy.name || enemy.type}: 약점 없음`);
+            return;
+        }
+        
+        // 기존 팝업 제거
+        const existingPopup = document.querySelector('.weakness-popup');
+        if (existingPopup) existingPopup.remove();
+        
+        // 팝업 생성
+        const popup = document.createElement('div');
+        popup.className = 'weakness-popup';
+        popup.innerHTML = `
+            <div class="weakness-title">${pattern.nameKo || pattern.name} 약점</div>
+            <div class="weakness-icons">
+                ${weaknesses.map(w => `<span class="weakness-icon" title="${w}">${this.WeaknessIcons[w] || '?'}</span>`).join('')}
+            </div>
+        `;
+        
+        // 위치 설정 (캐릭터 위)
+        const pos = enemy.container ? enemy.container.getGlobalPosition() : 
+                    enemy.sprite ? enemy.sprite.getGlobalPosition() : null;
+        if (pos) {
+            popup.style.left = `${pos.x}px`;
+            popup.style.top = `${pos.y - 80}px`;
+        } else {
+            popup.style.left = '50%';
+            popup.style.top = '30%';
+        }
+        
+        document.body.appendChild(popup);
+        
+        // 애니메이션
+        if (typeof gsap !== 'undefined') {
+            gsap.fromTo(popup, 
+                { opacity: 0, y: 10, scale: 0.8 },
+                { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'back.out(1.5)' }
+            );
+        }
+        
+        // 2초 후 자동 제거
+        setTimeout(() => {
+            if (typeof gsap !== 'undefined') {
+                gsap.to(popup, { 
+                    opacity: 0, 
+                    y: -10, 
+                    duration: 0.2, 
+                    onComplete: () => popup.remove() 
+                });
+            } else {
+                popup.remove();
+            }
+        }, 2000);
+    },
+    
+    // ==========================================
     // 랜덤 인텐트 선택 (가중치 기반)
     // ==========================================
     rollIntent(enemy) {
@@ -92,7 +179,7 @@ const MonsterPatterns = {
         let availableIntents = pattern.intents;
         if (isFirstTurn) {
             // 첫 턴: 브레이크 레시피가 없는 인텐트만
-            const safeIntents = pattern.intents.filter(i => !i.breakRecipe || i.breakRecipe.length === 0);
+            const safeIntents = pattern.intents.filter(i => !i.breakRecipe);
             if (safeIntents.length > 0) {
                 availableIntents = safeIntents;
             }

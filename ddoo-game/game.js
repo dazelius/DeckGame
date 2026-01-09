@@ -557,7 +557,7 @@ const Game = {
         // ★ 컴팩트 1열 인텐트 UI (다크소울 스타일)
         // ========================================
         const intent = enemy.intent;
-        const hasBreakRecipe = intent.breakRecipe && intent.breakRecipe.length > 0;
+        const hasBreakRecipe = intent.breakRecipe && (intent.breakRecipe.count > 0 || (Array.isArray(intent.breakRecipe) && intent.breakRecipe.length > 0));
         
         // 색상 팔레트
         const COLORS = {
@@ -2468,6 +2468,17 @@ const Game = {
             this.state.playerUnits.push(unit);
         } else {
             this.state.enemyUnits.push(unit);
+            
+            // ★ 적 클릭 시 약점 정보 표시
+            if (sprite) {
+                sprite.eventMode = 'static';
+                sprite.cursor = 'pointer';
+                sprite.on('pointerdown', () => {
+                    if (typeof MonsterPatterns !== 'undefined') {
+                        MonsterPatterns.showWeaknessPopup(unit);
+                    }
+                });
+            }
         }
         
         // Render HP bar (container에 추가되므로 스케일 영향 없음!)

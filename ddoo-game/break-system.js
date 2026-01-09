@@ -68,14 +68,34 @@ const BreakSystem = {
         enemy.breakProgress = [];
         enemy.isBroken = false;
         
-        // 인텐트에 breakRecipe가 있으면 설정
-        if (intentData && intentData.breakRecipe && intentData.breakRecipe.length > 0) {
-            enemy.currentBreakRecipe = [...intentData.breakRecipe];
-            enemy.breakProgress = [];
-            enemy.breakShield = intentData.breakRecipe.length;
-            enemy.maxBreakShield = intentData.breakRecipe.length;
+        // 새 형식: { element, count }
+        if (intentData && intentData.breakRecipe) {
+            const recipe = intentData.breakRecipe;
             
-            console.log(`[BreakSystem] ${enemy.name || enemy.type}: 브레이크 가능! 레시피: ${intentData.breakRecipe.join(' → ')}`);
+            // 새 형식 (객체)
+            if (typeof recipe === 'object' && recipe.element && recipe.count) {
+                enemy.currentBreakRecipe = {
+                    element: recipe.element,
+                    count: recipe.count
+                };
+                enemy.breakProgress = 0;  // 숫자로 변경
+                enemy.breakShield = recipe.count;
+                enemy.maxBreakShield = recipe.count;
+                
+                console.log(`[BreakSystem] ${enemy.name || enemy.type}: 브레이크 가능! ${this.ElementIcons[recipe.element] || '?'} x${recipe.count}`);
+            }
+            // 레거시 형식 (배열) 지원
+            else if (Array.isArray(recipe) && recipe.length > 0) {
+                enemy.currentBreakRecipe = {
+                    element: recipe[0],
+                    count: recipe.length
+                };
+                enemy.breakProgress = 0;
+                enemy.breakShield = recipe.length;
+                enemy.maxBreakShield = recipe.length;
+                
+                console.log(`[BreakSystem] ${enemy.name || enemy.type}: 브레이크 가능! (레거시) ${recipe.join(' → ')}`);
+            }
         }
     },
     
@@ -124,25 +144,25 @@ const BreakSystem = {
         
         const element = this.getCardElement(cardDef);
         const recipe = enemy.currentBreakRecipe;
-        const progress = enemy.breakProgress || [];
         
-        // 다음에 필요한 속성 확인
-        const nextRequired = recipe[progress.length];
+        // 새 형식: { element, count }
+        const requiredElement = recipe.element;
+        const requiredCount = recipe.count;
+        const currentProgress = enemy.breakProgress || 0;
         
-        if (element !== nextRequired) {
-            // 잘못된 속성! (플로터 없이 콘솔만)
-            console.log(`[BreakSystem] ${enemy.name || enemy.type}: ${element} 실패! (필요: ${nextRequired})`);
+        // 약점 속성 확인
+        if (element !== requiredElement) {
+            console.log(`[BreakSystem] ${enemy.name || enemy.type}: ${element} 실패! (필요: ${requiredElement})`);
             return { hit: false, broken: false };
         }
         
-        // 올바른 속성!
-        progress.push(element);
-        enemy.breakProgress = progress;
+        // 약점 적중!
+        enemy.breakProgress = currentProgress + 1;
         
-        console.log(`[BreakSystem] ${enemy.name || enemy.type}: ${element} 성공! [${progress.length}/${recipe.length}]`);
+        console.log(`[BreakSystem] ${enemy.name || enemy.type}: ${element} 성공! [${enemy.breakProgress}/${requiredCount}]`);
         
         // 레시피 완성 체크
-        if (progress.length >= recipe.length) {
+        if (enemy.breakProgress >= requiredCount) {
             this.triggerBreak(enemy);
             return { hit: true, broken: true };
         }
@@ -933,11 +953,11 @@ const BreakSystem = {
     createBreakGauge(enemy) {
         if (!enemy.intentContainer || !enemy.currentBreakRecipe) return;
         
-        const recipe = enemy.currentBreakRecipe;
-        const progress = enemy.breakProgress || [];
+        const recipe = enemy.currentBreakRecipe;  // { element, count }
+        const progress = enemy.breakProgress || 0; // 숫자
         
-        // 레시피는 단일 속성이므로 첫 번째 속성 사용
-        const element = recipe[0];
+        const element = recipe.element;
+        const count = recipe.count;
         const elementColor = parseInt(this.ElementColors[element].replace('#', ''), 16);
         const icon = this.ElementIcons[element] || '⚔️';
         
@@ -977,7 +997,7 @@ const BreakSystem = {
         gauge.addChild(barBg);
         
         // 진행률 계산
-        const progressRatio = progress.length / recipe.length;
+        const progressRatio = progress / count;
         const fillWidth = barWidth * progressRatio;
         
         // 게이지 채움 (초록색)
@@ -989,9 +1009,9 @@ const BreakSystem = {
         }
         
         // 현재 칸 점멸 효과
-        if (progress.length < recipe.length) {
+        if (progress < count) {
             const nextSegmentX = barX + fillWidth;
-            const segmentWidth = barWidth / recipe.length;
+            const segmentWidth = barWidth / count;
             
             const pulseSegment = new PIXI.Graphics();
             pulseSegment.rect(nextSegmentX, -barHeight/2, segmentWidth, barHeight);
@@ -1015,8 +1035,8 @@ const BreakSystem = {
         }
         
         // 세그먼트 구분선
-        for (let i = 1; i < recipe.length; i++) {
-            const divX = barX + (barWidth / recipe.length) * i;
+        for (let i = 1; i < count; i++) {
+            const divX = barX + (barWidth / count) * i;
             const divider = new PIXI.Graphics();
             divider.rect(divX - 0.5, -barHeight/2, 1, barHeight);
             divider.fill({ color: 0x3d3429 });
@@ -1025,7 +1045,7 @@ const BreakSystem = {
         
         // 진행률 텍스트
         const progressText = new PIXI.Text({
-            text: `${progress.length}/${recipe.length}`,
+            text: `${progress}/${count}`,
             style: { fontSize: 8, fill: '#ffffff', fontWeight: 'bold' }
         });
         progressText.anchor.set(0.5);
