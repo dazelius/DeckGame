@@ -1840,9 +1840,11 @@ const Game = {
     
     async playSkillCard(cardDef) {
         const hero = this.state.hero;
+        console.log(`[Skill] playSkillCard 호출, moveBack: ${cardDef.moveBack}, hero: ${!!hero}`);
         
         // ★ 뒤로 이동 (Dodge 등)
         if (cardDef.moveBack && hero) {
+            console.log(`[Skill] heroMoveBack 호출! distance: ${cardDef.moveBack}`);
             await this.heroMoveBack(cardDef.moveBack);
         }
         
@@ -1873,8 +1875,12 @@ const Game = {
     
     // ★ 히어로 뒤로 이동 (닷지) - 백점프 애니메이션
     async heroMoveBack(distance = 1) {
+        console.log(`[Dodge] heroMoveBack 시작, distance: ${distance}`);
         const hero = this.state.hero;
-        if (!hero || !hero.sprite) return;
+        if (!hero || !hero.sprite) {
+            console.log(`[Dodge] hero 또는 sprite 없음!`);
+            return;
+        }
         
         const newX = hero.gridX - distance;
         if (newX < 0) {
@@ -1906,9 +1912,14 @@ const Game = {
     
     // ★ 닷지 애니메이션 (이동 여부와 관계없이 재생)
     async playDodgeAnimation(hero, moveBack = true, newPos = null) {
+        console.log(`[Dodge] playDodgeAnimation 시작, moveBack: ${moveBack}, newPos:`, newPos);
         const posTarget = hero.container || hero.sprite;
         const scaleTarget = hero.sprite;
-        if (!posTarget || !scaleTarget) return;
+        if (!posTarget || !scaleTarget) {
+            console.log(`[Dodge] posTarget 또는 scaleTarget 없음!`);
+            return;
+        }
+        console.log(`[Dodge] 애니메이션 실행 중... posTarget:`, posTarget.x, posTarget.y);
         
         const baseScale = hero.baseScale || scaleTarget.scale.x;
         const startX = posTarget.x;
