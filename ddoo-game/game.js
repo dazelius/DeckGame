@@ -1671,21 +1671,63 @@ const Game = {
         
         // Position
         const center = this.getCellCenter(gridX, gridZ);
-        if (center) {
-            sprite.x = center.x;
-            sprite.y = center.y;
-            // Units lower on screen (higher Y) should be in front
-            sprite.zIndex = Math.floor(center.y);
-        }
+        const targetX = center ? center.x : 0;
+        const targetY = center ? center.y : 0;
+        
+        // ★ 스폰 연출: 화면 밖에서 달려오기
+        const isEnemy = team === 'enemy';
+        const spawnOffsetX = isEnemy ? 200 : -200;  // 적은 오른쪽, 아군은 왼쪽에서
+        
+        sprite.x = targetX + spawnOffsetX;
+        sprite.y = targetY + 50;  // 약간 아래에서 시작
+        sprite.alpha = 0;
+        sprite.scale.set(unitDef.scale * 0.5);  // 작게 시작
+        sprite.zIndex = Math.floor(targetY);
         
         // No team tint - use natural sprite colors
         sprite.tint = 0xffffff;
         
         this.containers.units.addChild(sprite);
         
+        // ★ 달려오는 애니메이션
+        const runInAnimation = gsap.timeline();
+        
+        // 등장 (페이드 인 + 커지면서)
+        runInAnimation
+            .to(sprite, { alpha: 1, duration: 0.1 })
+            .to(sprite.scale, { 
+                x: unitDef.scale * 1.1, 
+                y: unitDef.scale * 0.9, 
+                duration: 0.15 
+            }, '<')
+            // 달려오기 (빠르게!)
+            .to(sprite, {
+                x: targetX,
+                y: targetY,
+                duration: 0.25,
+                ease: 'power2.out'
+            }, '<')
+            // 착지 (스쿼시)
+            .to(sprite.scale, {
+                x: unitDef.scale * 0.9,
+                y: unitDef.scale * 1.15,
+                duration: 0.08
+            })
+            // 복구
+            .to(sprite.scale, {
+                x: unitDef.scale,
+                y: unitDef.scale,
+                duration: 0.15,
+                ease: 'elastic.out(1, 0.5)'
+            });
+        
         // Summon effect (only for summon cards, not hero or enemies)
         if (team === 'player' && unitType !== 'hero' && typeof CombatEffects !== 'undefined') {
-            CombatEffects.summonEffect(sprite.x, sprite.y);
+            // 착지 시점에 이펙트
+            setTimeout(() => {
+                CombatEffects.summonEffect(targetX, targetY);
+                CombatEffects.screenShake(5, 100);
+            }, 300);
         }
         
         // Create unit object
@@ -2160,6 +2202,19 @@ const Game = {
     killUnit(unit) {
         console.log(`[Game] ${unit.type} died!`);
         
+        // ★ 브레이크 시스템 정리
+        if (typeof BreakSystem !== 'undefined') {
+            BreakSystem.removeStunStars(unit);
+            if (unit.stunShakeTween) {
+                unit.stunShakeTween.kill();
+                unit.stunShakeTween = null;
+            }
+            if (unit.breakBlinkTween) {
+                unit.breakBlinkTween.kill();
+                unit.breakBlinkTween = null;
+            }
+        }
+        
         // Remove HP bar (PixiJS - child of sprite, will be destroyed with sprite)
         if (unit.hpBar) {
             unit.hpBar = null;
@@ -2170,17 +2225,50 @@ const Game = {
             unit.intentContainer = null;
         }
         
-        // Death animation
-        if (unit.sprite) {
-            gsap.to(unit.sprite, {
-                alpha: 0,
-                scale: 0.5,
-                duration: 0.3,
-                onComplete: () => {
-                    unit.sprite.destroy({ children: true }); // Destroy children too
-                    unit.sprite = null;
-                }
-            });
+        // ★ 사망 연출 (화려하게!)
+        if (unit.sprite && !unit.sprite.destroyed) {
+            const sprite = unit.sprite;
+            const deathX = sprite.x;
+            const deathY = sprite.y;
+            const isEnemy = unit.team === 'enemy';
+            
+            // 1. 히트스톱 + 플래시
+            if (typeof CombatEffects !== 'undefined') {
+                CombatEffects.hitStop(80);
+                CombatEffects.screenFlash(isEnemy ? '#ff4444' : '#ffffff', 100, 0.3);
+            }
+            
+            // 2. 사망 파티클
+            this.createDeathParticles(deathX, deathY, isEnemy);
+            
+            // 3. 사망 애니메이션 (쓰러지면서 사라짐)
+            gsap.timeline()
+                // 피격 경직
+                .to(sprite, { tint: 0xffffff, duration: 0.05 })
+                // 빨갛게 변하면서
+                .to(sprite, { tint: isEnemy ? 0xff0000 : 0x888888, duration: 0.1 })
+                // 위로 살짝 튀어오름
+                .to(sprite, { y: deathY - 20, duration: 0.1, ease: 'power2.out' }, '<')
+                .to(sprite.scale, { x: 1.2, y: 0.8, duration: 0.1 }, '<')
+                // 아래로 쓰러짐
+                .to(sprite, { 
+                    y: deathY + 30, 
+                    rotation: isEnemy ? 0.3 : -0.3,
+                    duration: 0.25, 
+                    ease: 'power3.in' 
+                })
+                .to(sprite.scale, { x: 0.6, y: 1.3, duration: 0.2 }, '<')
+                // 페이드 아웃
+                .to(sprite, { 
+                    alpha: 0, 
+                    duration: 0.3,
+                    onComplete: () => {
+                        if (sprite && !sprite.destroyed) {
+                            sprite.destroy({ children: true });
+                        }
+                        unit.sprite = null;
+                    }
+                });
         }
         
         // Remove from arrays
@@ -2191,6 +2279,47 @@ const Game = {
         // Check for victory (all enemies dead)
         if (unit.team === 'enemy') {
             setTimeout(() => this.checkVictory(), 500);
+        }
+    },
+    
+    // ★ 사망 파티클 생성
+    createDeathParticles(x, y, isEnemy) {
+        if (!this.app) return;
+        
+        const particleCount = 15;
+        const color = isEnemy ? 0xff4444 : 0x888888;
+        
+        for (let i = 0; i < particleCount; i++) {
+            const particle = new PIXI.Graphics();
+            const size = 3 + Math.random() * 5;
+            
+            particle.circle(0, 0, size);
+            particle.fill({ color: color, alpha: 0.8 });
+            particle.x = x + (Math.random() - 0.5) * 40;
+            particle.y = y - 30 + (Math.random() - 0.5) * 40;
+            particle.zIndex = 200;
+            
+            this.containers.effects.addChild(particle);
+            
+            // 위로 흩어지면서 사라짐
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 30 + Math.random() * 50;
+            
+            gsap.to(particle, {
+                x: particle.x + Math.cos(angle) * dist,
+                y: particle.y - 20 - Math.random() * 40,
+                alpha: 0,
+                duration: 0.5 + Math.random() * 0.3,
+                ease: 'power2.out',
+                onComplete: () => particle.destroy()
+            });
+            
+            gsap.to(particle.scale, {
+                x: 0,
+                y: 0,
+                duration: 0.5 + Math.random() * 0.3,
+                ease: 'power2.in'
+            });
         }
     },
     
