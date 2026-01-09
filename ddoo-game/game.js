@@ -1871,14 +1871,16 @@ const Game = {
         }
     },
     
-    // ★ 히어로 뒤로 이동 (닷지)
+    // ★ 히어로 뒤로 이동 (닷지) - 백점프 애니메이션
     async heroMoveBack(distance = 1) {
         const hero = this.state.hero;
         if (!hero || !hero.sprite) return;
         
         const newX = hero.gridX - distance;
         if (newX < 0) {
-            console.log('[Game] 더 이상 뒤로 갈 수 없음');
+            // 뒤로 못가도 회피 모션은 보여줌
+            await this.playDodgeAnimation(hero, false);
+            this.showMessage('더 이상 뒤로 갈 수 없습니다!', 1000);
             return;
         }
         
@@ -1888,7 +1890,8 @@ const Game = {
         );
         
         if (isOccupied) {
-            console.log('[Game] 뒤에 아군이 있어서 이동 불가');
+            await this.playDodgeAnimation(hero, false);
+            this.showMessage('뒤에 아군이 있습니다!', 1000);
             return;
         }
         
@@ -1896,56 +1899,148 @@ const Game = {
         hero.gridX = newX;
         
         const newPos = this.gridToScreen(newX, hero.gridZ);
+        await this.playDodgeAnimation(hero, true, newPos);
+        
+        console.log(`[Game] 히어로 백스텝: ${oldX} -> ${newX}`);
+    },
+    
+    // ★ 닷지 애니메이션 (이동 여부와 관계없이 재생)
+    async playDodgeAnimation(hero, moveBack = true, newPos = null) {
         const posTarget = hero.container || hero.sprite;
         const scaleTarget = hero.sprite;
-        const baseScale = hero.baseScale || scaleTarget.scale.x;
-        const startY = posTarget.y;
+        if (!posTarget || !scaleTarget) return;
         
-        // 닷지 애니메이션 (백스텝 점프)
+        const baseScale = hero.baseScale || scaleTarget.scale.x;
+        const startX = posTarget.x;
+        const startY = posTarget.y;
+        const targetX = moveBack && newPos ? newPos.x : startX - 30;  // 이동 안해도 살짝 뒤로
+        const targetY = moveBack && newPos ? newPos.y : startY;
+        
+        // 회피 이펙트 (잔상)
+        this.createDodgeAfterimage(hero);
+        
         await new Promise(resolve => {
             const tl = gsap.timeline({ onComplete: resolve });
             
-            // 1. 준비 (살짝 앞으로)
+            // 1. 준비 자세 (앞으로 살짝 + 움츠림)
             tl.to(posTarget, {
-                x: posTarget.x + 10,
-                duration: 0.05,
-                ease: 'power1.in'
+                x: startX + 15,
+                duration: 0.06,
+                ease: 'power2.in'
             });
+            tl.to(scaleTarget.scale, {
+                x: baseScale * 1.1,
+                y: baseScale * 0.9,
+                duration: 0.06
+            }, '<');
             
-            // 2. 점프하면서 뒤로
+            // 2. 백점프! (위로 + 뒤로)
             tl.to(posTarget, {
-                x: newPos.x,
-                y: startY - 35,
-                duration: 0.18,
+                x: targetX,
+                y: startY - 50,  // 높이 점프
+                duration: 0.2,
                 ease: 'power2.out'
             });
-            
             tl.to(scaleTarget.scale, {
-                x: baseScale * 0.95,
-                y: baseScale * 1.05,
-                duration: 0.18
+                x: baseScale * 0.9,
+                y: baseScale * 1.15,  // 늘어남
+                duration: 0.2
+            }, '<');
+            
+            // 점프 중 회전 효과
+            tl.to(scaleTarget, {
+                rotation: -0.15,  // 살짝 뒤로 젖힘
+                duration: 0.15
             }, '<');
             
             // 3. 착지
             tl.to(posTarget, {
-                y: newPos.y,
-                duration: 0.12,
+                y: targetY,
+                duration: 0.15,
                 ease: 'bounce.out'
             });
+            tl.to(scaleTarget.scale, {
+                x: baseScale * 1.05,
+                y: baseScale * 0.95,
+                duration: 0.08
+            }, '<');
+            tl.to(scaleTarget, {
+                rotation: 0,
+                duration: 0.1
+            }, '<');
             
+            // 4. 복귀
             tl.to(scaleTarget.scale, {
                 x: baseScale,
                 y: baseScale,
-                duration: 0.1
-            }, '<0.05');
+                duration: 0.12,
+                ease: 'elastic.out(1, 0.5)'
+            });
             
-            // 먼지 이펙트
+            // 착지 먼지
             tl.call(() => {
-                this.createLandingDust(newPos.x, newPos.y);
-            }, null, '-=0.05');
+                this.createLandingDust(targetX, targetY);
+            }, null, '-=0.15');
+            
+            // 이동 안한 경우 원위치
+            if (!moveBack) {
+                tl.to(posTarget, {
+                    x: startX,
+                    duration: 0.1,
+                    ease: 'power2.out'
+                }, '-=0.1');
+            }
         });
+    },
+    
+    // 닷지 잔상 이펙트
+    createDodgeAfterimage(hero) {
+        if (!this.app || !hero.sprite) return;
         
-        console.log(`[Game] 히어로 백스텝: ${oldX} -> ${newX}`);
+        const pos = hero.sprite.getGlobalPosition();
+        
+        // 3개의 잔상
+        for (let i = 0; i < 3; i++) {
+            const afterimage = new PIXI.Graphics();
+            afterimage.rect(-20, -60, 40, 60);
+            afterimage.fill({ color: 0x44aaff, alpha: 0.4 - i * 0.1 });
+            afterimage.x = pos.x + i * 15;
+            afterimage.y = pos.y;
+            afterimage.zIndex = 90;
+            this.containers.effects.addChild(afterimage);
+            
+            gsap.to(afterimage, {
+                x: afterimage.x - 40,
+                alpha: 0,
+                duration: 0.3,
+                delay: i * 0.03,
+                ease: 'power2.out',
+                onComplete: () => {
+                    if (!afterimage.destroyed) afterimage.destroy();
+                }
+            });
+        }
+        
+        // 스피드 라인
+        for (let i = 0; i < 5; i++) {
+            const line = new PIXI.Graphics();
+            const lineY = pos.y - 50 + Math.random() * 40;
+            line.moveTo(pos.x - 10, lineY);
+            line.lineTo(pos.x + 60 + Math.random() * 30, lineY);
+            line.stroke({ width: 2, color: 0xffffff, alpha: 0.6 });
+            line.zIndex = 95;
+            this.containers.effects.addChild(line);
+            
+            gsap.to(line, {
+                x: -80,
+                alpha: 0,
+                duration: 0.2,
+                ease: 'power2.out',
+                onComplete: () => {
+                    if (!line.destroyed) line.destroy();
+                }
+            });
+        }
     },
     
     // ★ 헬퍼: 유닛 화면 위치 가져오기 (container 우선)
