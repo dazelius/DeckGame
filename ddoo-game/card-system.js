@@ -71,16 +71,18 @@ const CardSystem = {
             desc: 'Heal 10 HP' 
         },
         
-        // === 소환 카드 ===
+        // === 소환 카드 === (사용 시 소멸)
         summonKnight: { 
             name: 'Summon Knight', cost: 3, type: 'summon', 
             unit: 'knight', target: 'grid', 
-            desc: 'Summon a Knight (40 HP, 12 DMG)' 
+            exhaust: true, // 사용 시 소멸
+            desc: 'Summon a Knight (40 HP, 12 DMG). Exhaust.' 
         },
         summonArcher: { 
             name: 'Summon Archer', cost: 2, type: 'summon', 
             unit: 'archer', target: 'grid', 
-            desc: 'Summon an Archer (25 HP, 8 DMG, Range 4)' 
+            exhaust: true, // 사용 시 소멸
+            desc: 'Summon an Archer (25 HP, 8 DMG, Range 4). Exhaust.' 
         }
     },
     

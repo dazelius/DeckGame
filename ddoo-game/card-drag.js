@@ -316,7 +316,14 @@ const CardDrag = {
             this.game.placeUnit(cardDef.unit, gridPos.x, gridPos.z, 'player');
             this.game.state.cost -= cardDef.cost;
             this.game.state.hand.splice(handIndex, 1);
-            this.game.state.discard.push(cardId);
+            
+            // Exhaust 카드면 소멸
+            if (cardDef.exhaust) {
+                this.game.state.exhaust.push(cardId);
+                this.game.showExhaustEffect(cardDef);
+            } else {
+                this.game.state.discard.push(cardId);
+            }
             this.game.updateCostUI();
             if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
             return true;

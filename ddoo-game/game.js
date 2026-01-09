@@ -27,7 +27,8 @@ const Game = {
         // Hand of cards
         hand: [],
         deck: [],
-        discard: []
+        discard: [],
+        exhaust: []  // 소멸된 카드 (전투 끝날 때까지 복귀 안함)
     },
     
     // ==================== CONTAINERS ====================
@@ -804,9 +805,10 @@ const Game = {
             
             // 코스트 부족 체크
             const canAfford = this.state.cost >= cardDef.cost;
+            const isExhaust = cardDef.exhaust === true;
             
             const cardEl = document.createElement('div');
-            cardEl.className = `card ${cardDef.type}${canAfford ? '' : ' disabled'}`;
+            cardEl.className = `card ${cardDef.type}${canAfford ? '' : ' disabled'}${isExhaust ? ' exhaust-card' : ''}`;
             cardEl.dataset.cardId = cardId;
             cardEl.dataset.index = index;
             
@@ -1136,7 +1138,14 @@ const Game = {
         // Deduct cost
         this.state.cost -= cardDef.cost;
         this.state.hand.splice(handIndex, 1);
-        this.state.discard.push(cardId);
+        
+        // Exhaust 카드면 소멸, 아니면 버린 카드 더미로
+        if (cardDef.exhaust) {
+            this.state.exhaust.push(cardId);
+            this.showExhaustEffect(cardDef);
+        } else {
+            this.state.discard.push(cardId);
+        }
         this.updateCostUI();
         
         // For 'all' target cards (like Cleave), attack ALL enemies
@@ -1329,7 +1338,14 @@ const Game = {
         // Deduct cost
         this.state.cost -= cardDef.cost;
         this.state.hand.splice(handIndex, 1);
-        this.state.discard.push(cardId);
+        
+        // Exhaust 카드면 소멸, 아니면 버린 카드 더미로
+        if (cardDef.exhaust) {
+            this.state.exhaust.push(cardId);
+            this.showExhaustEffect(cardDef);
+        } else {
+            this.state.discard.push(cardId);
+        }
         this.updateCostUI();
         
         // Execute based on type
@@ -2135,6 +2151,107 @@ const Game = {
             setTimeout(() => {
                 msgEl.style.opacity = '0';
             }, duration);
+        }
+    },
+    
+    // ==========================================
+    // 카드 소멸 이펙트
+    // ==========================================
+    showExhaustEffect(cardDef) {
+        // 화면 중앙 하단에서 소멸 이펙트
+        const x = window.innerWidth / 2;
+        const y = window.innerHeight - 200;
+        
+        // 소멸 텍스트
+        const exhaustText = document.createElement('div');
+        exhaustText.innerHTML = `
+            <div class="exhaust-card-name">${cardDef.name}</div>
+            <div class="exhaust-label">EXHAUSTED</div>
+        `;
+        exhaustText.style.cssText = `
+            position: fixed;
+            left: ${x}px;
+            top: ${y}px;
+            transform: translate(-50%, -50%) scale(0);
+            z-index: 10001;
+            pointer-events: none;
+            text-align: center;
+        `;
+        document.body.appendChild(exhaustText);
+        
+        // 소멸 파티클 (보라색 + 검은색)
+        this.createExhaustParticles(x, y);
+        
+        // 애니메이션
+        if (typeof gsap !== 'undefined') {
+            gsap.timeline()
+                .to(exhaustText, {
+                    scale: 1.2,
+                    duration: 0.15,
+                    ease: 'back.out(2)'
+                })
+                .to(exhaustText, {
+                    scale: 1,
+                    duration: 0.1
+                })
+                .to(exhaustText, {
+                    y: -60,
+                    opacity: 0,
+                    scale: 0.5,
+                    duration: 0.5,
+                    delay: 0.4,
+                    ease: 'power2.in',
+                    onComplete: () => exhaustText.remove()
+                });
+        } else {
+            exhaustText.style.transform = 'translate(-50%, -50%) scale(1)';
+            setTimeout(() => exhaustText.remove(), 1000);
+        }
+        
+        // 사운드
+        if (typeof SoundSystem !== 'undefined') {
+            SoundSystem.play('exhaust', { volume: 0.5 });
+        }
+    },
+    
+    // 소멸 파티클
+    createExhaustParticles(x, y) {
+        const colors = ['#8b5cf6', '#6366f1', '#1e1b4b', '#4c1d95', '#000000'];
+        
+        for (let i = 0; i < 15; i++) {
+            const particle = document.createElement('div');
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 40 + Math.random() * 50;
+            const size = 4 + Math.random() * 6;
+            
+            particle.style.cssText = `
+                position: fixed;
+                left: ${x}px;
+                top: ${y}px;
+                width: ${size}px;
+                height: ${size}px;
+                background: ${colors[Math.floor(Math.random() * colors.length)]};
+                border-radius: 50%;
+                transform: translate(-50%, -50%);
+                z-index: 10000;
+                pointer-events: none;
+                box-shadow: 0 0 ${size}px ${colors[0]};
+            `;
+            document.body.appendChild(particle);
+            
+            if (typeof gsap !== 'undefined') {
+                gsap.to(particle, {
+                    x: Math.cos(angle) * distance,
+                    y: Math.sin(angle) * distance - 30, // 위로 상승
+                    opacity: 0,
+                    scale: 0,
+                    duration: 0.5 + Math.random() * 0.3,
+                    ease: 'power2.out',
+                    onComplete: () => particle.remove()
+                });
+            } else {
+                setTimeout(() => particle.remove(), 600);
+            }
         }
     },
     

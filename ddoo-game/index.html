@@ -511,6 +511,46 @@
             80% { transform: translateY(-15px) scale(1.05) rotate(2deg); }
         }
         
+        /* 소멸 카드 이펙트 스타일 */
+        .exhaust-card-name {
+            font-family: 'Cinzel', serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #a78bfa;
+            text-shadow: 
+                0 0 15px rgba(139, 92, 246, 1),
+                0 0 30px rgba(139, 92, 246, 0.6),
+                2px 2px 0 #000;
+            letter-spacing: 2px;
+        }
+        
+        .exhaust-label {
+            font-family: 'Cinzel', serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #1e1b4b;
+            background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.3), transparent);
+            padding: 4px 16px;
+            margin-top: 6px;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+        }
+        
+        /* 소멸 카드 표시 (카드에 EXHAUST 라벨) */
+        .card.exhaust-card::after {
+            content: 'EXHAUST';
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.6rem;
+            font-weight: 700;
+            color: #8b5cf6;
+            text-shadow: 0 0 5px rgba(139, 92, 246, 0.8);
+            letter-spacing: 1px;
+        }
+        
         .card.disabled:hover .card-cost {
             background: radial-gradient(circle at 30% 30%, 
                 #cc4444 0%, 
