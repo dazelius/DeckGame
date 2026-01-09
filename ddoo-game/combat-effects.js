@@ -1608,9 +1608,11 @@ const CombatEffects = {
     // ==========================================
     // 스피어 투척 이펙트
     // ==========================================
-    async spearThrowEffect(attacker, target, damage, gameRef) {
+    async spearThrowEffect(attacker, target, baseDamage, distanceBonus, gameRef) {
+        const totalDamage = baseDamage + distanceBonus;
+        
         if (!this.app || !attacker.sprite || !target.sprite) {
-            if (gameRef) gameRef.dealDamage(target, damage);
+            if (gameRef) gameRef.dealDamage(target, totalDamage);
             return;
         }
         
@@ -1638,8 +1640,16 @@ const CombatEffects = {
                     onComplete: () => {
                         // 창 발사!
                         this.createSpearProjectile(attackerPos, targetPos, () => {
-                            // 창 도착 - 대미지 및 VFX
-                            if (gameRef) gameRef.dealDamage(target, damage);
+                            // 창 도착 - 대미지 처리 (플로터 비활성화 - 수동 처리)
+                            if (gameRef) {
+                                // dealDamage는 내부적으로 플로터를 띄우므로, 
+                                // 직접 HP 차감 후 분리된 플로터 표시
+                                const actualDamage = gameRef.calculateDamage(target, totalDamage);
+                                gameRef.applyDamageWithoutFloater(target, actualDamage);
+                                
+                                // 분리된 대미지 플로터 표시
+                                this.showSplitDamageFloater(targetPos, baseDamage, distanceBonus);
+                            }
                             this.screenShake(8, 150);
                             this.spearImpactEffect(targetPos.x, targetPos.y);
                         });
@@ -1653,6 +1663,75 @@ const CombatEffects = {
                     onComplete: resolve
                 });
         });
+    },
+    
+    // ★ 분리된 대미지 플로터 (기본 대미지 + 거리 보너스)
+    showSplitDamageFloater(pos, baseDamage, bonusDamage) {
+        if (!this.app) return;
+        
+        const container = new PIXI.Container();
+        container.x = pos.x;
+        container.y = pos.y - 50;
+        container.zIndex = 1000;
+        this.container.addChild(container);
+        
+        // 기본 대미지 (흰색, 큰 글씨)
+        const baseText = new PIXI.Text({
+            text: `-${baseDamage}`,
+            style: {
+                fontSize: 32,
+                fontWeight: 'bold',
+                fill: '#ffffff',
+                stroke: { color: '#000000', width: 5 }
+            }
+        });
+        baseText.anchor.set(1, 0.5);  // 오른쪽 정렬
+        baseText.x = -5;
+        container.addChild(baseText);
+        
+        // 거리 보너스 대미지 (황금색, 약간 작은 글씨)
+        if (bonusDamage > 0) {
+            const bonusText = new PIXI.Text({
+                text: `+${bonusDamage}`,
+                style: {
+                    fontSize: 26,
+                    fontWeight: 'bold',
+                    fill: '#ffd700',  // 황금색
+                    stroke: { color: '#8b4513', width: 4 }
+                }
+            });
+            bonusText.anchor.set(0, 0.5);  // 왼쪽 정렬
+            bonusText.x = 5;
+            container.addChild(bonusText);
+            
+            // 거리 아이콘
+            const distIcon = new PIXI.Text({
+                text: '📏',
+                style: { fontSize: 18 }
+            });
+            distIcon.anchor.set(0, 0.5);
+            distIcon.x = bonusText.x + bonusText.width + 3;
+            container.addChild(distIcon);
+        }
+        
+        // 애니메이션
+        gsap.timeline()
+            .from(container, {
+                y: container.y + 20,
+                alpha: 0,
+                duration: 0.15,
+                ease: 'back.out(2)'
+            })
+            .to(container, {
+                y: container.y - 40,
+                alpha: 0,
+                duration: 0.8,
+                delay: 0.3,
+                ease: 'power2.in',
+                onComplete: () => {
+                    if (!container.destroyed) container.destroy();
+                }
+            });
     },
     
     // 스피어 발사체 생성

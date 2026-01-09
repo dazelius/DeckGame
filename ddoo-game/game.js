@@ -1773,11 +1773,11 @@ const Game = {
     },
     
     // ★ 스피어 투척 애니메이션
-    async heroSpearThrowAnimation(hero, target, damage) {
+    async heroSpearThrowAnimation(hero, target, baseDamage, distanceBonus = 0) {
         if (typeof CombatEffects !== 'undefined') {
-            await CombatEffects.spearThrowEffect(hero, target, damage, this);
+            await CombatEffects.spearThrowEffect(hero, target, baseDamage, distanceBonus, this);
         } else {
-            this.dealDamage(target, damage);
+            this.dealDamage(target, baseDamage + distanceBonus);
         }
     },
     
@@ -2050,6 +2050,62 @@ const Game = {
         return target ? { x: target.x, y: target.y } : null;
     },
     
+    // ★ 대미지 계산 (쉴드 고려, HP 변경 없이)
+    calculateDamage(target, amount) {
+        if (!target) return 0;
+        const block = target.block || 0;
+        // 쉴드를 넘어서 실제 HP에 가해지는 대미지
+        return Math.max(0, amount - block);
+    },
+    
+    // ★ 플로터 없이 대미지 적용 (스피어 등 분리 플로터용)
+    async applyDamageWithoutFloater(target, amount) {
+        if (!target || target.hp <= 0) return;
+        
+        // 쉴드(block) 먼저 감소
+        let remainingDamage = amount;
+        const block = target.block || 0;
+        let absorbedByShield = 0;
+        
+        if (block > 0) {
+            if (block >= remainingDamage) {
+                absorbedByShield = remainingDamage;
+                target.block -= remainingDamage;
+                remainingDamage = 0;
+            } else {
+                absorbedByShield = block;
+                remainingDamage -= block;
+                target.block = 0;
+            }
+            
+            if (typeof HPBarSystem !== 'undefined') {
+                HPBarSystem.showShieldHit(target, absorbedByShield);
+            }
+        }
+        
+        // HP 감소
+        if (remainingDamage > 0) {
+            target.hp -= remainingDamage;
+        }
+        
+        // HP bar 업데이트
+        this.updateUnitHPBar(target);
+        
+        // 피격 이펙트
+        if (target.sprite) {
+            gsap.to(target.sprite, {
+                alpha: 0.5,
+                duration: 0.1,
+                yoyo: true,
+                repeat: 1
+            });
+        }
+        
+        if (target.hp <= 0) {
+            this.killUnit(target);
+        }
+    },
+    
     async dealDamage(target, amount) {
         if (!target || target.hp <= 0) return;
         
@@ -2279,9 +2335,9 @@ const Game = {
                 // 거리 계산 (히어로와 타겟 사이)
                 const distance = Math.abs(targetEnemy.gridX - hero.gridX);
                 const distanceBonus = (cardDef.distanceBonus || 0) * distance;
-                const totalDamage = cardDef.damage + distanceBonus;
+                const baseDamage = cardDef.damage;
                 
-                console.log(`[Game] 스피어 투척! 거리: ${distance}, 기본 대미지: ${cardDef.damage}, 거리 보너스: ${distanceBonus}, 총: ${totalDamage}`);
+                console.log(`[Game] 스피어 투척! 거리: ${distance}, 기본 대미지: ${baseDamage}, 거리 보너스: ${distanceBonus}`);
                 
                 // 브레이크 시스템
                 if (typeof BreakSystem !== 'undefined') {
@@ -2289,8 +2345,8 @@ const Game = {
                     this.createEnemyIntent(targetEnemy);
                 }
                 
-                // 스피어 발사 애니메이션
-                await this.heroSpearThrowAnimation(hero, targetEnemy, totalDamage);
+                // 스피어 발사 애니메이션 (기본 대미지 + 거리 보너스 분리 전달)
+                await this.heroSpearThrowAnimation(hero, targetEnemy, baseDamage, distanceBonus);
             }
             // 십자가 패턴 처리 (Fireball 등)
             else if (cardDef.aoePattern === 'cross') {
