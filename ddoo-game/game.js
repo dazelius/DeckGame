@@ -282,9 +282,15 @@ const Game = {
             return;
         }
         
+        // 디버그: CardSystem 확인
+        if (typeof CardSystem !== 'undefined') {
+            console.log('[Cheat] CardSystem.cards 키:', Object.keys(CardSystem.cards));
+        }
+        
         const cardDef = this.getCard(cardId);
         if (!cardDef) {
             console.log(`[Cheat] 알 수 없는 카드: ${cardId}`);
+            console.log(`[Cheat] CardSystem 존재: ${typeof CardSystem !== 'undefined'}`);
             return;
         }
         
