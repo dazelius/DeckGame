@@ -19,6 +19,15 @@ const CombatEffects = {
     },
     
     // ==========================================
+    // 유닛 위치 가져오기
+    // ==========================================
+    getUnitPosition(unit) {
+        if (!unit) return null;
+        const target = unit.container || unit.sprite;
+        return target ? { x: target.x, y: target.y } : null;
+    },
+    
+    // ==========================================
     // 화면 흔들림
     // ==========================================
     screenShake(intensity = 10, duration = 300) {
