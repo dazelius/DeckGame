@@ -1810,7 +1810,10 @@ const Game = {
     
     async summonRangedAttack(summon, target) {
         if (typeof UnitCombat !== 'undefined') {
+            // 아처면 화살 VFX 사용
+            const isArcher = summon.type === 'archer';
             await UnitCombat.rangedAttack(summon, target, summon.damage, {
+                projectileType: isArcher ? 'arrow' : 'default',
                 projectileColor: 0x88ff44,
                 projectileSize: 8,
                 isEnemy: false
@@ -1821,57 +1824,67 @@ const Game = {
     },
     
     // Find target for summon attack
-    // Rules: 1) Same lane (gridZ) first, 2) Closest X (rightmost = closest to enemy), 3) Adjacent lanes
+    // Rules: 1) Same lane (gridZ) first, 2) Closest X (lowest X = closest to summon), 3) Adjacent lanes
     findSummonTarget(summon) {
         const allTargets = this.state.enemyUnits.filter(e => e.hp > 0);
         if (allTargets.length === 0) return null;
         
-        // Helper: find closest target (highest X = closest to enemy side = rightmost)
+        // Helper: find closest target (lowest X = closest to player side)
         const findClosest = (targets) => {
             if (targets.length === 0) return null;
             return targets.reduce((closest, t) => 
-                t.gridX > closest.gridX ? t : closest
+                (!closest || t.gridX < closest.gridX) ? t : closest, null
             );
         };
         
-        // 1. Same lane targets (same gridZ)
+        // 1. ★ 같은 라인 우선 (gridZ 일치)
         const sameLine = allTargets.filter(t => t.gridZ === summon.gridZ);
         if (sameLine.length > 0) {
-            return findClosest(sameLine);
+            const target = findClosest(sameLine);
+            console.log(`[findSummonTarget] ${summon.type}(Z=${summon.gridZ}) → 같은 라인 타겟: ${target.type}(Z=${target.gridZ})`);
+            return target;
         }
         
-        // 2. Adjacent lanes (gridZ +/- 1)
+        // 2. 인접 라인 (gridZ +/- 1)
         const adjacent = allTargets.filter(t => Math.abs(t.gridZ - summon.gridZ) === 1);
         if (adjacent.length > 0) {
-            return findClosest(adjacent);
+            const target = findClosest(adjacent);
+            console.log(`[findSummonTarget] ${summon.type}(Z=${summon.gridZ}) → 인접 라인 타겟: ${target.type}(Z=${target.gridZ})`);
+            return target;
         }
         
-        // 3. Any target (fallback)
-        return findClosest(allTargets);
+        // 3. Fallback: 모든 타겟 중 가장 가까운 X
+        const target = findClosest(allTargets);
+        if (target) {
+            console.log(`[findSummonTarget] ${summon.type}(Z=${summon.gridZ}) → 폴백 타겟: ${target.type}(Z=${target.gridZ})`);
+        }
+        return target;
     },
     
     // Find target for enemy attack
-    // Rules: 1) Same line first, 2) Closest X, 3) If no same line, check adjacent lines
+    // Rules: 1) Same line first, 2) Closest X (rightmost in player zone), 3) Adjacent lines
     findEnemyTarget(enemy) {
         const allTargets = [this.state.hero, ...this.state.playerUnits]
             .filter(u => u && u.hp > 0 && u !== enemy);
         
         if (allTargets.length === 0) return null;
         
-        // Helper: find closest target in a list (lowest X = closest to enemy side)
+        // Helper: find closest target in a list (highest X = closest to enemy = rightmost)
         const findClosest = (targets) => {
             if (targets.length === 0) return null;
             return targets.reduce((closest, t) => 
                 (!closest || t.gridX > closest.gridX) ? t : closest, null);
         };
         
-        // 1. Check same line first
+        // 1. ★ 같은 라인 우선 (gridZ 일치)
         const sameLineTargets = allTargets.filter(t => t.gridZ === enemy.gridZ);
         if (sameLineTargets.length > 0) {
-            return findClosest(sameLineTargets);
+            const target = findClosest(sameLineTargets);
+            console.log(`[findEnemyTarget] ${enemy.type}(Z=${enemy.gridZ}) → 같은 라인 타겟: ${target.type || 'hero'}(Z=${target.gridZ})`);
+            return target;
         }
         
-        // 2. Check adjacent lines (above and below)
+        // 2. 인접 라인 (위/아래)
         const adjacentLines = [enemy.gridZ - 1, enemy.gridZ + 1]
             .filter(z => z >= 0 && z < this.arena.depth);
         
@@ -1887,10 +1900,17 @@ const Game = {
             }
         }
         
-        if (closestTarget) return closestTarget;
+        if (closestTarget) {
+            console.log(`[findEnemyTarget] ${enemy.type}(Z=${enemy.gridZ}) → 인접 라인 타겟: ${closestTarget.type || 'hero'}(Z=${closestTarget.gridZ})`);
+            return closestTarget;
+        }
         
-        // 3. Fallback: any target, closest X
-        return findClosest(allTargets);
+        // 3. Fallback: 모든 타겟 중 가장 가까운 X
+        const target = findClosest(allTargets);
+        if (target) {
+            console.log(`[findEnemyTarget] ${enemy.type}(Z=${enemy.gridZ}) → 폴백 타겟: ${target.type || 'hero'}(Z=${target.gridZ})`);
+        }
+        return target;
     },
     
     async executeEnemyIntent(enemy) {
@@ -1970,7 +1990,10 @@ const Game = {
     
     async enemyRangedAttack(enemy, target, intentDamage) {
         if (typeof UnitCombat !== 'undefined') {
+            // 궁수 타입이면 화살 VFX 사용
+            const isArcher = enemy.type === 'goblinArcher' || enemy.type === 'archer';
             await UnitCombat.rangedAttack(enemy, target, intentDamage, {
+                projectileType: isArcher ? 'arrow' : 'default',
                 projectileColor: 0xff6600,
                 projectileSize: 10,
                 isEnemy: true

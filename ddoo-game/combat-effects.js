@@ -289,6 +289,165 @@ const CombatEffects = {
     },
     
     // ==========================================
+    // 화살 이펙트 (곡사 베지어 곡선)
+    // ==========================================
+    async arrowEffect(startX, startY, endX, endY, options = {}) {
+        if (!this.app) return;
+        
+        const {
+            color = 0x8B4513,      // 갈색 화살
+            arrowLength = 25,
+            arrowWidth = 3,
+            arcHeight = 80,        // 곡사 높이
+            speed = 600,
+            isEnemy = false
+        } = options;
+        
+        return new Promise(resolve => {
+            // 화살 컨테이너
+            const arrow = new PIXI.Container();
+            arrow.x = startX;
+            arrow.y = startY;
+            arrow.zIndex = 100;
+            
+            // 화살대 (나무 막대)
+            const shaft = new PIXI.Graphics();
+            shaft.rect(-arrowLength/2, -arrowWidth/2, arrowLength, arrowWidth);
+            shaft.fill({ color: color });
+            arrow.addChild(shaft);
+            
+            // 화살촉 (삼각형)
+            const head = new PIXI.Graphics();
+            head.moveTo(arrowLength/2, 0);
+            head.lineTo(arrowLength/2 - 8, -5);
+            head.lineTo(arrowLength/2 - 8, 5);
+            head.closePath();
+            head.fill({ color: 0x555555 }); // 금속색
+            arrow.addChild(head);
+            
+            // 깃털 (뒤쪽)
+            const feather = new PIXI.Graphics();
+            feather.moveTo(-arrowLength/2, 0);
+            feather.lineTo(-arrowLength/2 - 5, -4);
+            feather.lineTo(-arrowLength/2 + 3, 0);
+            feather.lineTo(-arrowLength/2 - 5, 4);
+            feather.closePath();
+            feather.fill({ color: 0xffffff, alpha: 0.8 });
+            arrow.addChild(feather);
+            
+            this.container.addChild(arrow);
+            
+            // 베지어 곡선 제어점 (곡사)
+            const midX = (startX + endX) / 2;
+            const midY = Math.min(startY, endY) - arcHeight;
+            
+            // 비행시간
+            const distance = Math.hypot(endX - startX, endY - startY);
+            const duration = Math.max(0.3, distance / speed);
+            
+            // 트레일 효과
+            const createTrail = () => {
+                const trail = new PIXI.Graphics();
+                trail.x = arrow.x;
+                trail.y = arrow.y;
+                trail.rotation = arrow.rotation;
+                trail.zIndex = 99;
+                trail.rect(-arrowLength/3, -1, arrowLength/2, 2);
+                trail.fill({ color: 0xcccccc, alpha: 0.4 });
+                this.container.addChild(trail);
+                
+                gsap.to(trail, {
+                    alpha: 0,
+                    duration: 0.15,
+                    onComplete: () => trail.destroy()
+                });
+            };
+            
+            const trailInterval = setInterval(createTrail, 25);
+            
+            // 베지어 애니메이션
+            const bezier = { t: 0 };
+            
+            gsap.to(bezier, {
+                t: 1,
+                duration: duration,
+                ease: 'none',
+                onUpdate: () => {
+                    const t = bezier.t;
+                    const invT = 1 - t;
+                    
+                    // 2차 베지어 곡선
+                    const x = invT * invT * startX + 2 * invT * t * midX + t * t * endX;
+                    const y = invT * invT * startY + 2 * invT * t * midY + t * t * endY;
+                    
+                    // 이전 위치에서 현재 위치로의 방향으로 화살 회전
+                    const dx = x - arrow.x;
+                    const dy = y - arrow.y;
+                    if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
+                        arrow.rotation = Math.atan2(dy, dx);
+                    }
+                    
+                    arrow.x = x;
+                    arrow.y = y;
+                },
+                onComplete: () => {
+                    clearInterval(trailInterval);
+                    
+                    // 착탄 이펙트
+                    this.arrowImpactEffect(endX, endY);
+                    
+                    arrow.destroy();
+                    resolve();
+                }
+            });
+        });
+    },
+    
+    // 화살 착탄 이펙트
+    arrowImpactEffect(x, y) {
+        if (!this.app) return;
+        
+        // 먼지/파편 파티클
+        for (let i = 0; i < 6; i++) {
+            const particle = new PIXI.Graphics();
+            particle.circle(0, 0, 2 + Math.random() * 2);
+            particle.fill({ color: 0x8B7355, alpha: 0.7 }); // 흙색
+            particle.x = x;
+            particle.y = y;
+            particle.zIndex = 98;
+            this.container.addChild(particle);
+            
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 10 + Math.random() * 15;
+            
+            gsap.to(particle, {
+                x: x + Math.cos(angle) * dist,
+                y: y + Math.sin(angle) * dist - 10,
+                alpha: 0,
+                duration: 0.25,
+                ease: 'power2.out',
+                onComplete: () => particle.destroy()
+            });
+        }
+        
+        // 작은 임팩트 원
+        const impact = new PIXI.Graphics();
+        impact.circle(0, 0, 8);
+        impact.stroke({ width: 2, color: 0xffffff, alpha: 0.6 });
+        impact.x = x;
+        impact.y = y;
+        impact.zIndex = 97;
+        this.container.addChild(impact);
+        
+        gsap.to(impact, {
+            scale: 1.5,
+            alpha: 0,
+            duration: 0.2,
+            onComplete: () => impact.destroy()
+        });
+    },
+    
+    // ==========================================
     // 파이어볼 이펙트 (베지어 곡선 + 화염 VFX) - 진중한 버전
     // ==========================================
     async fireballEffect(startX, startY, endX, endY) {

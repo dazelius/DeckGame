@@ -296,6 +296,7 @@ const UnitCombat = {
         const {
             projectileColor = 0xffaa00,
             projectileSize = 8,
+            projectileType = 'default',  // 'default', 'arrow', 'fire'
             createZone = null,
             isEnemy = false,
             onHit = null
@@ -313,29 +314,47 @@ const UnitCombat = {
         attacker.isAnimating = true;
         
         const originalX = attacker.sprite.x;
+        const originalScaleX = attacker.sprite.scale.x;
         const startX = attacker.sprite.x;
         const startY = attacker.sprite.y - (attacker.sprite.height || 60) / 2;
         const endX = target.sprite.x;
         const endY = target.sprite.y - (target.sprite.height || 60) / 2;
         
+        // ★ 타겟 방향 쳐다보기 (스프라이트 뒤집기)
+        const shouldFaceRight = endX > startX;
+        const baseScale = Math.abs(originalScaleX);
+        if (isEnemy) {
+            // 적: 기본적으로 왼쪽을 봄, 오른쪽 타겟이면 뒤집기
+            attacker.sprite.scale.x = shouldFaceRight ? -baseScale : baseScale;
+        } else {
+            // 아군: 기본적으로 오른쪽을 봄, 왼쪽 타겟이면 뒤집기
+            attacker.sprite.scale.x = shouldFaceRight ? baseScale : -baseScale;
+        }
+        
         // 1. 슈팅 스탠스
         const recoil = isEnemy ? 8 : -10;
         await new Promise(resolve => {
             gsap.timeline()
-                .to(attacker.sprite.scale, { x: 0.95, y: 1.05, duration: 0.1 })
+                .to(attacker.sprite.scale, { y: 1.05, duration: 0.1 })
                 .to(attacker.sprite, { x: originalX + recoil, duration: 0.1 }, 0)
                 .add(resolve);
         });
         
-        // 2. 투사체 (파이어볼은 특별 처리)
+        // 2. 투사체 타입별 처리
         if (typeof CombatEffects !== 'undefined') {
-            console.log('[UnitCombat] rangedAttack - createZone:', createZone);
+            console.log('[UnitCombat] rangedAttack - projectileType:', projectileType, 'createZone:', createZone);
             
             if (createZone === 'fire') {
                 // 파이어볼 전용 이펙트
                 console.log('[UnitCombat] 🔥 파이어볼 이펙트 실행!');
                 await CombatEffects.fireballEffect(startX, startY, endX, endY);
                 CombatEffects.showDamageNumber(endX, endY - 20, damage, 'burn');
+            } else if (projectileType === 'arrow') {
+                // ★ 화살 이펙트 (곡사)
+                console.log('[UnitCombat] 🏹 화살 이펙트 실행!');
+                await CombatEffects.arrowEffect(startX, startY, endX, endY, { isEnemy });
+                CombatEffects.hitEffect(target.sprite);
+                CombatEffects.showDamageNumber(endX, endY - 20, damage);
             } else {
                 // 일반 투사체
                 await CombatEffects.projectileEffect(startX, startY, endX, endY, projectileColor, projectileSize);
@@ -359,10 +378,10 @@ const UnitCombat = {
         
         if (onHit) onHit();
         
-        // 5. 복귀
+        // 5. 복귀 + 스프라이트 방향 복원
         if (attacker.sprite) {
             gsap.timeline()
-                .to(attacker.sprite.scale, { x: 1, y: 1, duration: 0.1 })
+                .to(attacker.sprite.scale, { x: originalScaleX, y: Math.abs(originalScaleX), duration: 0.1 })
                 .to(attacker.sprite, { x: originalX, duration: 0.1 }, 0)
                 .call(() => { if (attacker) attacker.isAnimating = false; });
         } else {
