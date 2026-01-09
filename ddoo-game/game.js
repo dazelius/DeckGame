@@ -2944,7 +2944,7 @@ const Game = {
         this.clearChargingEffect(unit);
         
         // ★ 브레이크 시스템 정리 (통합 정리 함수 사용)
-        if (typeof BreakSystem !== 'undefined') {
+        if (typeof BreakSystem !== 'undefined' && typeof BreakSystem.cleanupUnit === 'function') {
             BreakSystem.cleanupUnit(unit);
         }
         
