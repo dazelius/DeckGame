@@ -838,92 +838,246 @@ const Game = {
     },
     
     // ========================================
-    // ★ 강력한 공격 준비 연출 (힘 모으기)
+    // ★ 강력한 공격 준비 연출 (위협적인 힘 모으기)
     // ========================================
     playChargingEffect(enemy) {
         if (!enemy.sprite || !this.app) return;
         
         // 기존 차징 이펙트 정리
-        if (enemy.chargingTween) {
-            enemy.chargingTween.kill();
+        this.clearChargingEffect(enemy);
+        
+        const parent = enemy.container || enemy.sprite;
+        const sprite = enemy.sprite;
+        
+        // 이펙트 컨테이너
+        const effectContainer = new PIXI.Container();
+        effectContainer.zIndex = -10;
+        parent.addChild(effectContainer);
+        enemy.chargingContainer = effectContainer;
+        
+        // ========================================
+        // 1. 바닥 마법진 (회전하는 원형 룬)
+        // ========================================
+        const magicCircle = new PIXI.Graphics();
+        // 외부 원
+        magicCircle.circle(0, 0, 60);
+        magicCircle.stroke({ width: 2, color: 0xff3333, alpha: 0.6 });
+        // 내부 원
+        magicCircle.circle(0, 0, 45);
+        magicCircle.stroke({ width: 1.5, color: 0xff6666, alpha: 0.5 });
+        // 룬 문양 (삼각형들)
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const x1 = Math.cos(angle) * 50;
+            const y1 = Math.sin(angle) * 25; // Y 압축 (3D 느낌)
+            const x2 = Math.cos(angle + 0.3) * 35;
+            const y2 = Math.sin(angle + 0.3) * 17;
+            magicCircle.moveTo(x1, y1);
+            magicCircle.lineTo(x2, y2);
+            magicCircle.stroke({ width: 1, color: 0xff4444, alpha: 0.4 });
         }
-        if (enemy.chargingAura) {
-            enemy.chargingAura.destroy();
-        }
+        magicCircle.y = 10; // 발밑
+        magicCircle.scale.y = 0.5; // 3D 원근감
+        effectContainer.addChild(magicCircle);
         
-        const posTarget = enemy.container || enemy.sprite;
-        const globalPos = posTarget.getGlobalPosition ? posTarget.getGlobalPosition() : { x: posTarget.x, y: posTarget.y };
-        
-        // 오라 이펙트 생성
-        const aura = new PIXI.Graphics();
-        aura.circle(0, 0, 40);
-        aura.fill({ color: 0xff0000, alpha: 0.2 });
-        aura.x = globalPos.x;
-        aura.y = globalPos.y - 40;
-        aura.zIndex = posTarget.zIndex - 1;
-        
-        this.containers.effects.addChild(aura);
-        enemy.chargingAura = aura;
-        
-        // 오라 펄스 애니메이션
-        gsap.to(aura.scale, {
-            x: 1.5, y: 1.5,
+        // 마법진 회전
+        gsap.to(magicCircle, {
+            rotation: Math.PI * 2,
+            duration: 4,
+            repeat: -1,
+            ease: 'none'
+        });
+        gsap.to(magicCircle, {
+            alpha: 0.3,
             duration: 0.8,
             yoyo: true,
             repeat: -1,
             ease: 'sine.inOut'
         });
-        gsap.to(aura, {
-            alpha: 0.05,
-            duration: 0.4,
+        
+        // ========================================
+        // 2. 에너지 파티클 (캐릭터로 모이는 효과)
+        // ========================================
+        enemy.chargingParticleInterval = setInterval(() => {
+            if (!enemy.sprite || enemy.sprite.destroyed) {
+                clearInterval(enemy.chargingParticleInterval);
+                return;
+            }
+            
+            const particle = new PIXI.Graphics();
+            particle.circle(0, 0, 3 + Math.random() * 3);
+            particle.fill(Math.random() > 0.5 ? 0xff4444 : 0xffaa44);
+            
+            // 랜덤 시작 위치 (원형)
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 80 + Math.random() * 40;
+            particle.x = Math.cos(angle) * dist;
+            particle.y = -40 + Math.sin(angle) * (dist * 0.5);
+            effectContainer.addChild(particle);
+            
+            // 중심으로 모이는 애니메이션
+            gsap.to(particle, {
+                x: 0,
+                y: -40,
+                alpha: 0,
+                duration: 0.6 + Math.random() * 0.3,
+                ease: 'power2.in',
+                onComplete: () => particle.destroy()
+            });
+        }, 100);
+        
+        // ========================================
+        // 3. 번개/전기 효과 (캐릭터 주변)
+        // ========================================
+        enemy.chargingLightningInterval = setInterval(() => {
+            if (!enemy.sprite || enemy.sprite.destroyed) {
+                clearInterval(enemy.chargingLightningInterval);
+                return;
+            }
+            
+            const lightning = new PIXI.Graphics();
+            lightning.moveTo(0, -80);
+            
+            // 지그재그 번개 생성
+            let x = 0;
+            let y = -80;
+            for (let i = 0; i < 5; i++) {
+                x += (Math.random() - 0.5) * 30;
+                y += 15;
+                lightning.lineTo(x, y);
+            }
+            lightning.stroke({ width: 2, color: 0xff6666, alpha: 0.8 });
+            
+            lightning.x = (Math.random() - 0.5) * 40;
+            effectContainer.addChild(lightning);
+            
+            // 번개 번쩍임
+            gsap.to(lightning, {
+                alpha: 0,
+                duration: 0.15,
+                onComplete: () => lightning.destroy()
+            });
+        }, 300);
+        
+        // ========================================
+        // 4. 위험 표시 (머리 위 느낌표)
+        // ========================================
+        const warningContainer = new PIXI.Container();
+        warningContainer.y = -100;
+        effectContainer.addChild(warningContainer);
+        
+        // 느낌표 배경 (삼각형)
+        const warningBg = new PIXI.Graphics();
+        warningBg.moveTo(0, -20);
+        warningBg.lineTo(18, 15);
+        warningBg.lineTo(-18, 15);
+        warningBg.closePath();
+        warningBg.fill(0xff3333);
+        warningBg.stroke({ width: 2, color: 0xffff00 });
+        warningContainer.addChild(warningBg);
+        
+        // 느낌표
+        const warningText = new PIXI.Text({
+            text: '!',
+            style: {
+                fontSize: 24,
+                fill: '#ffff00',
+                fontWeight: 'bold'
+            }
+        });
+        warningText.anchor.set(0.5);
+        warningText.y = 2;
+        warningContainer.addChild(warningText);
+        
+        // 경고 펄스 애니메이션
+        gsap.to(warningContainer.scale, {
+            x: 1.2, y: 1.2,
+            duration: 0.3,
             yoyo: true,
             repeat: -1,
-            ease: 'sine.inOut'
+            ease: 'power2.inOut'
+        });
+        gsap.to(warningBg, {
+            alpha: 0.6,
+            duration: 0.2,
+            yoyo: true,
+            repeat: -1
         });
         
-        // 캐릭터 스프라이트 떨림
-        const sprite = enemy.sprite;
+        // ========================================
+        // 5. 캐릭터 강한 떨림 + 붉은 틴트
+        // ========================================
         const baseX = sprite.x;
-        
         enemy.chargingTween = gsap.to(sprite, {
-            x: baseX + 2,
-            duration: 0.05,
+            x: baseX + 3,
+            duration: 0.04,
             yoyo: true,
             repeat: -1,
             ease: 'none'
         });
         
-        // 틴트 변화 (붉은 기운)
-        gsap.to({ tint: 0 }, {
+        // 틴트 변화 (강한 붉은 기운)
+        enemy.chargingTintTween = gsap.to({ tint: 0 }, {
             tint: 1,
-            duration: 1,
+            duration: 0.6,
             yoyo: true,
             repeat: -1,
             ease: 'sine.inOut',
             onUpdate: function() {
                 if (sprite && !sprite.destroyed) {
                     const t = this.targets()[0].tint;
-                    sprite.tint = t > 0.5 ? 0xff8888 : 0xffffff;
+                    sprite.tint = t > 0.5 ? 0xff6666 : 0xffaaaa;
                 }
             }
         });
+        
+        // ========================================
+        // 6. 사운드 이펙트 (옵션)
+        // ========================================
+        // TODO: 차징 사운드 재생
     },
     
     // ========================================
     // ★ 차징 이펙트 정리
     // ========================================
     clearChargingEffect(enemy) {
+        // 트윈 정리
         if (enemy.chargingTween) {
             enemy.chargingTween.kill();
             enemy.chargingTween = null;
         }
+        if (enemy.chargingTintTween) {
+            enemy.chargingTintTween.kill();
+            enemy.chargingTintTween = null;
+        }
+        
+        // 인터벌 정리
+        if (enemy.chargingParticleInterval) {
+            clearInterval(enemy.chargingParticleInterval);
+            enemy.chargingParticleInterval = null;
+        }
+        if (enemy.chargingLightningInterval) {
+            clearInterval(enemy.chargingLightningInterval);
+            enemy.chargingLightningInterval = null;
+        }
+        
+        // 이펙트 컨테이너 정리
+        if (enemy.chargingContainer) {
+            enemy.chargingContainer.destroy({ children: true });
+            enemy.chargingContainer = null;
+        }
+        
+        // 레거시: 오라 정리
         if (enemy.chargingAura) {
             enemy.chargingAura.destroy();
             enemy.chargingAura = null;
         }
+        
         // 스프라이트 원상복귀
         if (enemy.sprite && !enemy.sprite.destroyed) {
             enemy.sprite.tint = 0xffffff;
+            // 위치도 원상복귀 (셰이크 후)
+            gsap.killTweensOf(enemy.sprite);
         }
     },
     
