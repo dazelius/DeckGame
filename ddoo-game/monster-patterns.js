@@ -321,10 +321,17 @@ const MonsterPatterns = {
             case 'attack':
                 // 다중 공격 처리
                 const hits = intent.hits || 1;
+                const isMelee = (enemy.range || 1) <= 1;
+                
+                // ★ 근접 공격이면 타겟 레인으로 먼저 이동
+                if (isMelee && enemy.gridZ !== target.gridZ) {
+                    console.log(`[MonsterPatterns] ${enemy.name || enemy.type}: 레인 ${enemy.gridZ} → ${target.gridZ} 이동`);
+                    await game.moveEnemyToLine(enemy, target.gridZ);
+                }
+                
                 for (let i = 0; i < hits; i++) {
                     if (target.hp <= 0) break;
                     
-                    const isMelee = (enemy.range || 1) <= 1;
                     if (isMelee) {
                         await game.enemyMeleeAttack(enemy, target, intent.damage);
                     } else {
