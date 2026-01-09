@@ -720,10 +720,45 @@ const BreakSystem = {
             if (enemy.stunStarsAnimator && this.game?.app?.ticker) {
                 this.game.app.ticker.remove(enemy.stunStarsAnimator);
             }
-            enemy.stunStarsContainer.destroy();
+            try {
+                if (!enemy.stunStarsContainer.destroyed) {
+                    enemy.stunStarsContainer.destroy();
+                }
+            } catch(e) {}
             enemy.stunStarsContainer = null;
             enemy.stunStarsAnimator = null;
         }
+    },
+    
+    // ★★★ 유닛 사망 시 모든 브레이크 관련 정리 ★★★
+    cleanupUnit(enemy) {
+        if (!enemy) return;
+        
+        // 1. 트윈 정리 (가장 먼저!)
+        try {
+            if (enemy.stunShakeTween) {
+                enemy.stunShakeTween.kill();
+                enemy.stunShakeTween = null;
+            }
+            if (enemy.breakBlinkTween) {
+                enemy.breakBlinkTween.kill();
+                enemy.breakBlinkTween = null;
+            }
+            // 스프라이트 관련 모든 트윈 정리
+            if (enemy.sprite && !enemy.sprite.destroyed) {
+                gsap.killTweensOf(enemy.sprite);
+                if (enemy.sprite.scale) gsap.killTweensOf(enemy.sprite.scale);
+            }
+        } catch(e) {}
+        
+        // 2. 스턴 별 제거
+        this.removeStunStars(enemy);
+        
+        // 3. 브레이크 상태 초기화
+        enemy.isBroken = false;
+        enemy.breakProgress = [];
+        enemy.currentBreakRecipe = null;
+        enemy.breakTurns = 0;
     },
     
     // ==========================================

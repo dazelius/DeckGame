@@ -2940,17 +2940,9 @@ const Game = {
         // ★ 차징 이펙트 정리
         this.clearChargingEffect(unit);
         
-        // ★ 브레이크 시스템 정리
+        // ★ 브레이크 시스템 정리 (통합 정리 함수 사용)
         if (typeof BreakSystem !== 'undefined') {
-            BreakSystem.removeStunStars(unit);
-            if (unit.stunShakeTween) {
-                unit.stunShakeTween.kill();
-                unit.stunShakeTween = null;
-            }
-            if (unit.breakBlinkTween) {
-                unit.breakBlinkTween.kill();
-                unit.breakBlinkTween = null;
-            }
+            BreakSystem.cleanupUnit(unit);
         }
         
         // ★ HP 바 삭제 연출 (페이드아웃 + 축소)
