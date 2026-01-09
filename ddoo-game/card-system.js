@@ -1,123 +1,67 @@
 // =====================================================
-// Card System - 카드 시스템
+// Card System - 카드 시스템 (JSON 기반)
 // =====================================================
 
 const CardSystem = {
     game: null,
+    cards: {},  // JSON에서 로드됨
+    loaded: false,
     
-    // ==========================================
-    // 카드 정의
-    // ==========================================
-    cards: {
-        // === 공격 카드 ===
-        // 근접 공격은 모두 최전선 우선 (레인 전략)
-        strike: { 
-            name: 'Strike', cost: 1, type: 'attack', damage: 6, 
-            target: 'enemy', melee: true, frontOnly: true,
-            aoe: { width: 2, depth: 1 },
-            desc: 'Pierce 2 cells. Deal 6 damage. Melee: Frontline only.' 
-        },
-        bash: { 
-            name: 'Bash', cost: 2, type: 'attack', damage: 8, vulnerable: 2, 
-            target: 'enemy', melee: true, knockback: 1, frontOnly: true,
-            aoe: { width: 1, depth: 1 },
-            desc: 'Deal 8 damage. Knockback. Melee: Frontline only.' 
-        },
-        cleave: { 
-            name: 'Cleave', cost: 1, type: 'attack', damage: 6, 
-            target: 'enemy', melee: true, frontOnly: true,
-            aoe: { width: 1, depth: 3 },
-            desc: 'Deal 6 damage. Hits all 3 lanes. Melee: Frontline only.' 
-        },
-        ironWave: { 
-            name: 'Iron Wave', cost: 1, type: 'attack', damage: 5, block: 5, 
-            target: 'enemy', melee: true, frontOnly: true,
-            aoe: { width: 1, depth: 1 },
-            desc: 'Gain 5 Block. Deal 5 damage. Melee: Frontline only.' 
-        },
-        flurry: {
-            name: 'Flurry', cost: 1, type: 'attack', damage: 2, 
-            target: 'enemy', melee: true, frontOnly: true,
-            hits: 3, // 3연속 공격!
-            aoe: { width: 1, depth: 1 },
-            element: 'physical',
-            desc: 'Strike 3 times. Deal 2 damage each. Melee: Frontline only.'
-        },
-        // 원거리 공격은 아무나 타겟 가능
-        fireBolt: { 
-            name: 'Fire Bolt', cost: 2, type: 'attack', damage: 5, 
-            target: 'enemy', melee: false, frontOnly: false,
-            aoe: { width: 1, depth: 1 },
-            createZone: 'fire',
-            desc: 'Ranged. Deal 5 damage. Creates burning ground.' 
-        },
-        fireBall: { 
-            name: 'Fireball', cost: 3, type: 'attack', damage: 8, 
-            target: 'enemy', melee: false, frontOnly: false,
-            aoePattern: 'cross', // 십자가 형태
-            createZone: 'fire',
-            desc: 'Ranged. Cross-shaped explosion. Deal 8 damage. Creates burning ground.' 
-        },
-        spearThrow: {
-            name: 'Spear Throw', cost: 1, type: 'attack', damage: 5,
-            target: 'enemy', melee: false, frontOnly: false,
-            straight: true,  // 직선 전용
-            distanceBonus: 1, // 거리당 +1 대미지
-            element: 'physical',
-            desc: 'Ranged. Straight line only. +1 damage per grid distance.'
-        },
-        
-        // === 스킬 카드 ===
-        defend: { 
-            name: 'Defend', cost: 1, type: 'skill', block: 5, 
-            target: 'self', 
-            desc: 'Gain 5 Block' 
-        },
-        heal: { 
-            name: 'Heal', cost: 2, type: 'skill', heal: 10, 
-            target: 'self', 
-            desc: 'Heal 10 HP' 
-        },
-        
-        // === 소환 카드 === (사용 시 소멸)
-        summonKnight: { 
-            name: 'Summon Knight', cost: 3, type: 'summon', 
-            unit: 'knight', target: 'grid', 
-            exhaust: true, // 사용 시 소멸
-            desc: 'Summon a Knight (40 HP, 12 DMG). Exhaust.' 
-        },
-        summonArcher: { 
-            name: 'Summon Archer', cost: 2, type: 'summon', 
-            unit: 'archer', target: 'grid', 
-            exhaust: true, // 사용 시 소멸
-            desc: 'Summon an Archer (25 HP, 8 DMG, Range 4). Exhaust.' 
-        }
-    },
+    // JSON 파일 목록
+    cardFiles: ['attack', 'skill', 'summon'],
     
     // ==========================================
     // 기본 덱 구성
     // ==========================================
     defaultDeck: {
         strike: 2,
-        defend: 3,
+        defend: 2,
+        dodge: 2,      // ★ 닷지 추가
         bash: 2,
         cleave: 1,
         flurry: 2,
         ironWave: 2,
         fireBolt: 1,
         fireBall: 1,
-        spearThrow: 1,  // 스피어 투척
+        spearThrow: 1,
         summonKnight: 2,
         summonArcher: 2,
         heal: 1
     },
     
     // ==========================================
-    // 초기화
+    // 초기화 (JSON 로드)
     // ==========================================
-    init(gameRef) {
+    async init(gameRef) {
         this.game = gameRef;
-        console.log('[CardSystem] 카드 시스템 초기화 완료');
+        this.cards = {};
+        
+        // JSON 파일들 로드
+        for (const file of this.cardFiles) {
+            await this.loadCardFile(file);
+        }
+        
+        this.loaded = true;
+        console.log(`[CardSystem] ${Object.keys(this.cards).length}개 카드 로드 완료`);
+    },
+    
+    // ==========================================
+    // 카드 파일 로드
+    // ==========================================
+    async loadCardFile(filename) {
+        try {
+            const response = await fetch(`cards/${filename}.json`);
+            if (response.ok) {
+                const data = await response.json();
+                // 카드들을 병합
+                Object.assign(this.cards, data);
+                console.log(`[CardSystem] ${filename}.json 로드 완료`);
+            } else {
+                console.warn(`[CardSystem] ${filename}.json 로드 실패`);
+            }
+        } catch (e) {
+            console.warn(`[CardSystem] ${filename}.json 오류:`, e.message);
+        }
     },
     
     // ==========================================
@@ -140,7 +84,6 @@ const CardSystem = {
         const deck = [];
         
         for (const [cardId, count] of Object.entries(config)) {
-            // 카드가 실제로 정의되어 있는지 확인
             if (!this.cards[cardId]) {
                 console.warn(`[CardSystem] 카드 정의 없음: ${cardId}`);
                 continue;
@@ -174,7 +117,6 @@ const CardSystem = {
         
         for (let i = 0; i < count; i++) {
             if (state.deck.length === 0) {
-                // 덱이 비었으면 버린 카드를 셔플해서 덱으로
                 if (state.discard.length === 0) break;
                 state.deck = this.shuffleDeck([...state.discard]);
                 state.discard = [];

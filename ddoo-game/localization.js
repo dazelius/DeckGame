@@ -173,6 +173,10 @@ const Localization = {
                 name: '방어',
                 desc: '5 방어 획득'
             },
+            dodge: {
+                name: '회피',
+                desc: '3 방어. 1칸 후퇴.'
+            },
             heal: {
                 name: '치유',
                 desc: '10 체력 회복'
@@ -225,6 +229,10 @@ const Localization = {
                 name: 'Defend',
                 desc: 'Gain 5 Block'
             },
+            dodge: {
+                name: 'Dodge',
+                desc: 'Gain 3 Block. Move back 1.'
+            },
             heal: {
                 name: 'Heal',
                 desc: 'Heal 10 HP'
@@ -274,6 +282,10 @@ const Localization = {
             defend: {
                 name: '防御',
                 desc: '5ブロック獲得'
+            },
+            dodge: {
+                name: '回避',
+                desc: '3ブロック獲得。1マス後退。'
             },
             heal: {
                 name: '回復',

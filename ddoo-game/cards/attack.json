@@ -1,0 +1,97 @@
+{
+    "strike": {
+        "name": "Strike",
+        "cost": 1,
+        "type": "attack",
+        "damage": 6,
+        "target": "enemy",
+        "melee": true,
+        "frontOnly": true,
+        "aoe": { "width": 2, "depth": 1 },
+        "element": "physical"
+    },
+    "bash": {
+        "name": "Bash",
+        "cost": 2,
+        "type": "attack",
+        "damage": 8,
+        "vulnerable": 2,
+        "target": "enemy",
+        "melee": true,
+        "knockback": 1,
+        "frontOnly": true,
+        "aoe": { "width": 1, "depth": 1 },
+        "element": "physical"
+    },
+    "cleave": {
+        "name": "Cleave",
+        "cost": 1,
+        "type": "attack",
+        "damage": 6,
+        "target": "enemy",
+        "melee": true,
+        "frontOnly": true,
+        "aoe": { "width": 1, "depth": 3 },
+        "element": "physical"
+    },
+    "ironWave": {
+        "name": "Iron Wave",
+        "cost": 1,
+        "type": "attack",
+        "damage": 5,
+        "block": 5,
+        "target": "enemy",
+        "melee": true,
+        "frontOnly": true,
+        "aoe": { "width": 1, "depth": 1 },
+        "element": "physical"
+    },
+    "flurry": {
+        "name": "Flurry",
+        "cost": 1,
+        "type": "attack",
+        "damage": 2,
+        "target": "enemy",
+        "melee": true,
+        "frontOnly": true,
+        "hits": 3,
+        "aoe": { "width": 1, "depth": 1 },
+        "element": "physical"
+    },
+    "fireBolt": {
+        "name": "Fire Bolt",
+        "cost": 2,
+        "type": "attack",
+        "damage": 5,
+        "target": "enemy",
+        "melee": false,
+        "frontOnly": false,
+        "aoe": { "width": 1, "depth": 1 },
+        "createZone": "fire",
+        "element": "fire"
+    },
+    "fireBall": {
+        "name": "Fireball",
+        "cost": 3,
+        "type": "attack",
+        "damage": 8,
+        "target": "enemy",
+        "melee": false,
+        "frontOnly": false,
+        "aoePattern": "cross",
+        "createZone": "fire",
+        "element": "fire"
+    },
+    "spearThrow": {
+        "name": "Spear Throw",
+        "cost": 1,
+        "type": "attack",
+        "damage": 5,
+        "target": "enemy",
+        "melee": false,
+        "frontOnly": false,
+        "straight": true,
+        "distanceBonus": 1,
+        "element": "physical"
+    }
+}

@@ -1,0 +1,24 @@
+{
+    "defend": {
+        "name": "Defend",
+        "cost": 1,
+        "type": "skill",
+        "block": 5,
+        "target": "self"
+    },
+    "heal": {
+        "name": "Heal",
+        "cost": 2,
+        "type": "skill",
+        "heal": 10,
+        "target": "self"
+    },
+    "dodge": {
+        "name": "Dodge",
+        "cost": 0,
+        "type": "skill",
+        "block": 3,
+        "moveBack": 1,
+        "target": "self"
+    }
+}

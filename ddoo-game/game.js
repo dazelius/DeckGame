@@ -167,9 +167,9 @@ const Game = {
             GridAOE.init(this, this.app);
         }
         
-        // Card System
+        // Card System (JSON 로드)
         if (typeof CardSystem !== 'undefined') {
-            CardSystem.init(this);
+            await CardSystem.init(this);
         }
         
         // Unit Combat System
@@ -236,7 +236,8 @@ const Game = {
                     '7': 'flurry',
                     '8': 'cleave',
                     '9': 'heal',
-                    '0': 'summonKnight'
+                    '0': 'summonKnight',
+                    'd': 'dodge'  // ★ 닷지
                 };
                 
                 if (cheatCards[e.key]) {
@@ -1921,13 +1922,17 @@ const Game = {
     async playSkillCard(cardDef) {
         const hero = this.state.hero;
         
+        // ★ 뒤로 이동 (Dodge 등)
+        if (cardDef.moveBack && hero) {
+            await this.heroMoveBack(cardDef.moveBack);
+        }
+        
         if (cardDef.block) {
             this.state.heroBlock += cardDef.block;
-            hero.block = this.state.heroBlock; // ★ 유닛 객체에도 동기화
+            hero.block = this.state.heroBlock;
             this.updateBlockUI();
-            this.updateUnitHPBar(hero); // ★ HP 바에 쉴드 반영
+            this.updateUnitHPBar(hero);
             
-            // ★ 플로터로 변경 (중앙 토스트 대신)
             if (typeof CombatEffects !== 'undefined') {
                 CombatEffects.showBlockGain(hero, cardDef.block);
             }
@@ -1938,7 +1943,6 @@ const Game = {
             this.updateUnitHPBar(hero);
             this.updateHPUI();
             
-            // Heal effect
             const heroPos = this.getUnitPosition(hero);
             if (typeof CombatEffects !== 'undefined' && heroPos) {
                 CombatEffects.healEffect(heroPos.x, heroPos.y - 40, cardDef.heal);
@@ -1946,6 +1950,83 @@ const Game = {
                 this.showMessage(`+${cardDef.heal} HP`, 500);
             }
         }
+    },
+    
+    // ★ 히어로 뒤로 이동 (닷지)
+    async heroMoveBack(distance = 1) {
+        const hero = this.state.hero;
+        if (!hero || !hero.sprite) return;
+        
+        const newX = hero.gridX - distance;
+        if (newX < 0) {
+            console.log('[Game] 더 이상 뒤로 갈 수 없음');
+            return;
+        }
+        
+        // 해당 위치에 아군이 있는지 체크
+        const isOccupied = this.state.playerUnits.some(u => 
+            u !== hero && u.hp > 0 && u.gridX === newX && u.gridZ === hero.gridZ
+        );
+        
+        if (isOccupied) {
+            console.log('[Game] 뒤에 아군이 있어서 이동 불가');
+            return;
+        }
+        
+        const oldX = hero.gridX;
+        hero.gridX = newX;
+        
+        const newPos = this.gridToScreen(newX, hero.gridZ);
+        const posTarget = hero.container || hero.sprite;
+        const scaleTarget = hero.sprite;
+        const baseScale = hero.baseScale || scaleTarget.scale.x;
+        const startY = posTarget.y;
+        
+        // 닷지 애니메이션 (백스텝 점프)
+        await new Promise(resolve => {
+            const tl = gsap.timeline({ onComplete: resolve });
+            
+            // 1. 준비 (살짝 앞으로)
+            tl.to(posTarget, {
+                x: posTarget.x + 10,
+                duration: 0.05,
+                ease: 'power1.in'
+            });
+            
+            // 2. 점프하면서 뒤로
+            tl.to(posTarget, {
+                x: newPos.x,
+                y: startY - 35,
+                duration: 0.18,
+                ease: 'power2.out'
+            });
+            
+            tl.to(scaleTarget.scale, {
+                x: baseScale * 0.95,
+                y: baseScale * 1.05,
+                duration: 0.18
+            }, '<');
+            
+            // 3. 착지
+            tl.to(posTarget, {
+                y: newPos.y,
+                duration: 0.12,
+                ease: 'bounce.out'
+            });
+            
+            tl.to(scaleTarget.scale, {
+                x: baseScale,
+                y: baseScale,
+                duration: 0.1
+            }, '<0.05');
+            
+            // 먼지 이펙트
+            tl.call(() => {
+                this.createLandingDust(newPos.x, newPos.y);
+            }, null, '-=0.05');
+        });
+        
+        console.log(`[Game] 히어로 백스텝: ${oldX} -> ${newX}`);
     },
     
     // ★ 헬퍼: 유닛 화면 위치 가져오기 (container 우선)
