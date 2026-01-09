@@ -2135,7 +2135,7 @@ const Game = {
                 if (typeof BreakSystem !== 'undefined') {
                     console.log(`[Game] BreakSystem.onAttack 호출 (${hitNum + 1}번째)`);
                     const breakResult = BreakSystem.onAttack(targetEnemy, cardDef, 1, hitNum);
-                    console.log(`[Game] breakResult:`, breakResult, `| progress: ${targetEnemy.breakProgress?.join(',') || 'none'}`);
+                    console.log(`[Game] breakResult:`, breakResult, `| progress: ${targetEnemy.breakProgress ?? 'none'}`);
                     if (breakResult.broken) {
                         console.log(`[Game] 🔥 ${targetEnemy.name || targetEnemy.type} BROKEN!`);
                     }
