@@ -533,6 +533,7 @@ const Game = {
         // ★ 컴팩트 1열 인텐트 UI (다크소울 스타일)
         // ========================================
         const intent = enemy.intent;
+        const hasBreakRecipe = intent.breakRecipe && intent.breakRecipe.length > 0;
         
         // 색상 팔레트
         const COLORS = {
@@ -545,19 +546,42 @@ const Game = {
         
         const colors = COLORS[intent.type] || COLORS.attack;
         
-        // ★ 1열 컴팩트 디자인: [아이콘] [데미지]
+        // ★ 1열 컴팩트 디자인: [아이콘] [데미지] + 강공격 시 [!]
         const iconSize = 28;
         const dmgBoxWidth = intent.damage ? 36 : 0;
-        const frameWidth = iconSize + dmgBoxWidth + 12;
+        const warningWidth = hasBreakRecipe ? 20 : 0;
+        const frameWidth = iconSize + dmgBoxWidth + warningWidth + 12;
         const frameHeight = 32;
+        
+        // ========================================
+        // ★ 브레이크 레시피: 강력한 공격 준비 연출
+        // ========================================
+        if (hasBreakRecipe) {
+            // 외부 위험 글로우
+            const dangerGlow = new PIXI.Graphics();
+            dangerGlow.roundRect(-frameWidth/2 - 6, -frameHeight - 6, frameWidth + 12, frameHeight + 12, 6);
+            dangerGlow.fill({ color: 0xff0000, alpha: 0.3 });
+            container.addChild(dangerGlow);
+            
+            // 펄스 애니메이션
+            if (typeof gsap !== 'undefined') {
+                gsap.to(dangerGlow, {
+                    alpha: 0.1,
+                    duration: 0.5,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'sine.inOut'
+                });
+            }
+        }
         
         // 메인 배경
         const bg = new PIXI.Graphics();
         bg.roundRect(-frameWidth/2, -frameHeight, frameWidth, frameHeight, 4);
-        bg.fill({ color: 0x0c0a08, alpha: 0.95 });
+        bg.fill({ color: hasBreakRecipe ? 0x1a0808 : 0x0c0a08, alpha: 0.95 });
         bg.stroke({ color: 0x1a1612, width: 2 });
         bg.roundRect(-frameWidth/2 + 1, -frameHeight + 1, frameWidth - 2, frameHeight - 2, 3);
-        bg.stroke({ color: colors.primary, width: 1.5 });
+        bg.stroke({ color: hasBreakRecipe ? 0xff4444 : colors.primary, width: hasBreakRecipe ? 2 : 1.5 });
         container.addChild(bg);
         
         // ★ 가로 배치 시작 위치
@@ -632,6 +656,39 @@ const Game = {
         }
         
         // ========================================
+        // ★ 강력한 공격 경고 표시 (브레이크 레시피)
+        // ========================================
+        if (hasBreakRecipe) {
+            // 느낌표 경고 아이콘
+            const warningIcon = new PIXI.Text({
+                text: '❗',
+                style: { fontSize: 16 }
+            });
+            warningIcon.anchor.set(0.5);
+            warningIcon.x = frameWidth/2 - 10;
+            warningIcon.y = -frameHeight/2;
+            container.addChild(warningIcon);
+            
+            // 느낌표 흔들림 애니메이션
+            if (typeof gsap !== 'undefined') {
+                gsap.to(warningIcon, {
+                    x: warningIcon.x + 2,
+                    duration: 0.1,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'sine.inOut'
+                });
+                gsap.to(warningIcon.scale, {
+                    x: 1.2, y: 1.2,
+                    duration: 0.3,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'power2.inOut'
+                });
+            }
+        }
+        
+        // ========================================
         // 하단 화살표
         // ========================================
         const arrow = new PIXI.Graphics();
@@ -693,6 +750,103 @@ const Game = {
                 duration: 0.3,
                 ease: 'back.out(1.5)'
             });
+        }
+        
+        // ========================================
+        // ★ 브레이크 레시피: 캐릭터 힘 모으기 연출
+        // ========================================
+        if (hasBreakRecipe && enemy.sprite && typeof gsap !== 'undefined') {
+            this.playChargingEffect(enemy);
+        }
+    },
+    
+    // ========================================
+    // ★ 강력한 공격 준비 연출 (힘 모으기)
+    // ========================================
+    playChargingEffect(enemy) {
+        if (!enemy.sprite || !this.app) return;
+        
+        // 기존 차징 이펙트 정리
+        if (enemy.chargingTween) {
+            enemy.chargingTween.kill();
+        }
+        if (enemy.chargingAura) {
+            enemy.chargingAura.destroy();
+        }
+        
+        const posTarget = enemy.container || enemy.sprite;
+        const globalPos = posTarget.getGlobalPosition ? posTarget.getGlobalPosition() : { x: posTarget.x, y: posTarget.y };
+        
+        // 오라 이펙트 생성
+        const aura = new PIXI.Graphics();
+        aura.circle(0, 0, 40);
+        aura.fill({ color: 0xff0000, alpha: 0.2 });
+        aura.x = globalPos.x;
+        aura.y = globalPos.y - 40;
+        aura.zIndex = posTarget.zIndex - 1;
+        
+        this.containers.effects.addChild(aura);
+        enemy.chargingAura = aura;
+        
+        // 오라 펄스 애니메이션
+        gsap.to(aura.scale, {
+            x: 1.5, y: 1.5,
+            duration: 0.8,
+            yoyo: true,
+            repeat: -1,
+            ease: 'sine.inOut'
+        });
+        gsap.to(aura, {
+            alpha: 0.05,
+            duration: 0.4,
+            yoyo: true,
+            repeat: -1,
+            ease: 'sine.inOut'
+        });
+        
+        // 캐릭터 스프라이트 떨림
+        const sprite = enemy.sprite;
+        const baseX = sprite.x;
+        
+        enemy.chargingTween = gsap.to(sprite, {
+            x: baseX + 2,
+            duration: 0.05,
+            yoyo: true,
+            repeat: -1,
+            ease: 'none'
+        });
+        
+        // 틴트 변화 (붉은 기운)
+        gsap.to({ tint: 0 }, {
+            tint: 1,
+            duration: 1,
+            yoyo: true,
+            repeat: -1,
+            ease: 'sine.inOut',
+            onUpdate: function() {
+                if (sprite && !sprite.destroyed) {
+                    const t = this.targets()[0].tint;
+                    sprite.tint = t > 0.5 ? 0xff8888 : 0xffffff;
+                }
+            }
+        });
+    },
+    
+    // ========================================
+    // ★ 차징 이펙트 정리
+    // ========================================
+    clearChargingEffect(enemy) {
+        if (enemy.chargingTween) {
+            enemy.chargingTween.kill();
+            enemy.chargingTween = null;
+        }
+        if (enemy.chargingAura) {
+            enemy.chargingAura.destroy();
+            enemy.chargingAura = null;
+        }
+        // 스프라이트 원상복귀
+        if (enemy.sprite && !enemy.sprite.destroyed) {
+            enemy.sprite.tint = 0xffffff;
         }
     },
     
@@ -2188,6 +2342,9 @@ const Game = {
         const intent = enemy.intent;
         if (!intent) return;
         
+        // ★ 차징 이펙트 정리 (인텐트 실행 시)
+        this.clearChargingEffect(enemy);
+        
         // 브레이크 상태면 행동 불가
         if (typeof BreakSystem !== 'undefined' && !BreakSystem.canAct(enemy)) {
             console.log(`[Game] ${enemy.name || enemy.type} is BROKEN - skipping action`);
@@ -2408,6 +2565,9 @@ const Game = {
     
     killUnit(unit) {
         console.log(`[Game] ${unit.type} died!`);
+        
+        // ★ 차징 이펙트 정리
+        this.clearChargingEffect(unit);
         
         // ★ 브레이크 시스템 정리
         if (typeof BreakSystem !== 'undefined') {
