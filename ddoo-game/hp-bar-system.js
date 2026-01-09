@@ -374,16 +374,315 @@ const HPBarSystem = {
             data.shieldFrame.visible = false;
         }
     },
+    
+    // ==========================================
+    // ★ 쉴드 획득 연출
+    // ==========================================
+    showShieldGain(unit, amount) {
+        const data = unit.hpBarData;
+        if (!data || typeof gsap === 'undefined') return;
+        
+        const { container, shieldBadge, shieldFrame, width, height, padding } = data;
+        
+        // 1. 쉴드 프레임 플래시
+        if (shieldFrame) {
+            gsap.fromTo(shieldFrame, 
+                { alpha: 0 },
+                { 
+                    alpha: 1, 
+                    duration: 0.3, 
+                    ease: 'power2.out',
+                    onStart: () => shieldFrame.visible = true
+                }
+            );
+        }
+        
+        // 2. 쉴드 배지 팝업 애니메이션
+        if (shieldBadge?.container) {
+            gsap.fromTo(shieldBadge.container.scale,
+                { x: 0, y: 0 },
+                { 
+                    x: 1.3, y: 1.3, 
+                    duration: 0.2, 
+                    ease: 'back.out(2)',
+                    onComplete: () => {
+                        gsap.to(shieldBadge.container.scale, {
+                            x: 1, y: 1,
+                            duration: 0.15,
+                            ease: 'power2.out'
+                        });
+                    }
+                }
+            );
+        }
+        
+        // 3. 쉴드 숫자 팝업 (화면에 표시)
+        this.showShieldPopup(unit, amount);
+        
+        // 4. 쉴드 획득 파티클 효과
+        this.showShieldParticles(unit);
+    },
+    
+    // ==========================================
+    // ★ 쉴드 팝업 텍스트
+    // ==========================================
+    showShieldPopup(unit, amount) {
+        const parent = unit.container || unit.sprite;
+        if (!parent) return;
+        
+        const popup = new PIXI.Text({
+            text: `+${amount} 🛡`,
+            style: {
+                fontSize: 18,
+                fill: '#88ccff',
+                fontWeight: 'bold',
+                stroke: { color: '#000000', width: 4 }
+            }
+        });
+        popup.anchor.set(0.5);
+        popup.x = 0;
+        popup.y = -50;
+        parent.addChild(popup);
+        
+        if (typeof gsap !== 'undefined') {
+            gsap.to(popup, {
+                y: -90,
+                alpha: 0,
+                duration: 1,
+                ease: 'power2.out',
+                onComplete: () => popup.destroy()
+            });
+            gsap.to(popup.scale, {
+                x: 1.2, y: 1.2,
+                duration: 0.2,
+                yoyo: true,
+                repeat: 1
+            });
+        } else {
+            setTimeout(() => popup.destroy(), 1000);
+        }
+    },
+    
+    // ==========================================
+    // ★ 쉴드 파티클 효과
+    // ==========================================
+    showShieldParticles(unit) {
+        const parent = unit.container || unit.sprite;
+        if (!parent || typeof gsap === 'undefined') return;
+        
+        const particleCount = 8;
+        for (let i = 0; i < particleCount; i++) {
+            const particle = new PIXI.Graphics()
+                .circle(0, 0, 3)
+                .fill(0x88ccff);
+            
+            const angle = (i / particleCount) * Math.PI * 2;
+            particle.x = Math.cos(angle) * 20;
+            particle.y = -20 + Math.sin(angle) * 15;
+            parent.addChild(particle);
+            
+            gsap.to(particle, {
+                x: particle.x + Math.cos(angle) * 30,
+                y: particle.y + Math.sin(angle) * 20,
+                alpha: 0,
+                duration: 0.6,
+                ease: 'power2.out',
+                onComplete: () => particle.destroy()
+            });
+        }
+    },
+    
+    // ==========================================
+    // ★ 쉴드 피격 연출 (쉴드로 데미지 흡수)
+    // ==========================================
+    showShieldHit(unit, absorbedDamage) {
+        const data = unit.hpBarData;
+        const parent = unit.container || unit.sprite;
+        if (!data || !parent || typeof gsap === 'undefined') return;
+        
+        const { shieldFrame, shieldBadge } = data;
+        
+        // 1. 쉴드 프레임 플래시 (밝은 파란색)
+        if (shieldFrame) {
+            gsap.to(shieldFrame, {
+                alpha: 1.5,
+                duration: 0.05,
+                yoyo: true,
+                repeat: 3,
+                ease: 'power2.inOut'
+            });
+        }
+        
+        // 2. 쉴드 배지 흔들림
+        if (shieldBadge?.container) {
+            gsap.to(shieldBadge.container, {
+                x: shieldBadge.container.x + 3,
+                duration: 0.05,
+                yoyo: true,
+                repeat: 5,
+                ease: 'power2.inOut'
+            });
+        }
+        
+        // 3. "Blocked!" 텍스트
+        const blockedText = new PIXI.Text({
+            text: `Blocked! -${absorbedDamage}`,
+            style: {
+                fontSize: 14,
+                fill: '#66aaff',
+                fontWeight: 'bold',
+                stroke: { color: '#000000', width: 3 }
+            }
+        });
+        blockedText.anchor.set(0.5);
+        blockedText.x = 0;
+        blockedText.y = -70;
+        parent.addChild(blockedText);
+        
+        gsap.to(blockedText, {
+            y: -100,
+            alpha: 0,
+            duration: 0.8,
+            ease: 'power2.out',
+            onComplete: () => blockedText.destroy()
+        });
+        
+        // 4. 쉴드 파편 효과
+        this.showShieldShards(unit);
+    },
+    
+    // ==========================================
+    // ★ 쉴드 파편 효과
+    // ==========================================
+    showShieldShards(unit) {
+        const parent = unit.container || unit.sprite;
+        if (!parent || typeof gsap === 'undefined') return;
+        
+        const shardCount = 5;
+        for (let i = 0; i < shardCount; i++) {
+            const shard = new PIXI.Graphics();
+            // 삼각형 파편
+            shard.moveTo(0, -4);
+            shard.lineTo(3, 4);
+            shard.lineTo(-3, 4);
+            shard.closePath();
+            shard.fill(0x88ccff);
+            
+            shard.x = (Math.random() - 0.5) * 40;
+            shard.y = -20;
+            shard.rotation = Math.random() * Math.PI;
+            parent.addChild(shard);
+            
+            gsap.to(shard, {
+                x: shard.x + (Math.random() - 0.5) * 60,
+                y: shard.y + 40 + Math.random() * 30,
+                rotation: shard.rotation + Math.PI * 2,
+                alpha: 0,
+                duration: 0.5,
+                ease: 'power2.out',
+                onComplete: () => shard.destroy()
+            });
+        }
+    },
+    
+    // ==========================================
+    // ★ 쉴드 파괴 연출
+    // ==========================================
+    showShieldBreak(unit) {
+        const data = unit.hpBarData;
+        const parent = unit.container || unit.sprite;
+        if (!parent || typeof gsap === 'undefined') return;
+        
+        // 1. 쉴드 프레임 페이드아웃
+        if (data?.shieldFrame) {
+            gsap.to(data.shieldFrame, {
+                alpha: 0,
+                duration: 0.3,
+                ease: 'power2.out'
+            });
+        }
+        
+        // 2. 쉴드 배지 축소 + 사라짐
+        if (data?.shieldBadge?.container) {
+            gsap.to(data.shieldBadge.container.scale, {
+                x: 0, y: 0,
+                duration: 0.3,
+                ease: 'back.in(2)'
+            });
+        }
+        
+        // 3. "Shield Broken!" 텍스트
+        const breakText = new PIXI.Text({
+            text: '💔 Shield Broken!',
+            style: {
+                fontSize: 16,
+                fill: '#ff6666',
+                fontWeight: 'bold',
+                stroke: { color: '#000000', width: 3 }
+            }
+        });
+        breakText.anchor.set(0.5);
+        breakText.x = 0;
+        breakText.y = -60;
+        parent.addChild(breakText);
+        
+        gsap.fromTo(breakText.scale,
+            { x: 0.5, y: 0.5 },
+            { x: 1.2, y: 1.2, duration: 0.2, ease: 'back.out(2)' }
+        );
+        gsap.to(breakText, {
+            y: -90,
+            alpha: 0,
+            duration: 1,
+            delay: 0.3,
+            ease: 'power2.out',
+            onComplete: () => breakText.destroy()
+        });
+        
+        // 4. 대량 파편 효과
+        for (let i = 0; i < 12; i++) {
+            const shard = new PIXI.Graphics();
+            shard.moveTo(0, -5);
+            shard.lineTo(4, 5);
+            shard.lineTo(-4, 5);
+            shard.closePath();
+            shard.fill(i % 2 === 0 ? 0x88ccff : 0xffffff);
+            
+            shard.x = (Math.random() - 0.5) * 60;
+            shard.y = -15;
+            shard.rotation = Math.random() * Math.PI;
+            parent.addChild(shard);
+            
+            const targetX = shard.x + (Math.random() - 0.5) * 100;
+            const targetY = shard.y + 50 + Math.random() * 40;
+            
+            gsap.to(shard, {
+                x: targetX,
+                y: targetY,
+                rotation: shard.rotation + Math.PI * 3,
+                alpha: 0,
+                duration: 0.7 + Math.random() * 0.3,
+                ease: 'power2.out',
+                onComplete: () => shard.destroy()
+            });
+        }
+    },
 
     // ==========================================
     // 쉴드 배지 업데이트
     // ==========================================
     updateShieldBadge(unit, data, shield) {
         const badge = data.shieldBadge;
+        const prevShield = data.previousShield || 0;
         
         if (shield > 0) {
             badge.container.visible = true;
             badge.text.text = `${shield}`;
+            
+            // ★ 쉴드 획득 연출 (이전보다 증가했을 때)
+            if (shield > prevShield && prevShield === 0) {
+                this.showShieldGain(unit, shield);
+            }
             
             // 펄스 애니메이션
             if (!data.shieldPulse && typeof gsap !== 'undefined') {
@@ -397,6 +696,11 @@ const HPBarSystem = {
                 });
             }
         } else {
+            // ★ 쉴드 파괴 연출 (이전에 쉴드가 있었을 때)
+            if (prevShield > 0) {
+                this.showShieldBreak(unit);
+            }
+            
             badge.container.visible = false;
             if (data.shieldPulse && typeof gsap !== 'undefined') {
                 gsap.killTweensOf(badge.icon);
@@ -404,6 +708,9 @@ const HPBarSystem = {
                 data.shieldPulse = false;
             }
         }
+        
+        // 이전 쉴드값 저장
+        data.previousShield = shield;
         
         // 레거시 동기화
         unit.shieldPulse = data.shieldPulse;

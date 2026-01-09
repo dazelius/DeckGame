@@ -1730,14 +1730,22 @@ const Game = {
         // ★ 쉴드(block)가 있으면 쉴드 먼저 감소
         let remainingDamage = amount;
         const block = target.block || 0;
+        let absorbedByShield = 0;
         
         if (block > 0) {
             if (block >= remainingDamage) {
+                absorbedByShield = remainingDamage;
                 target.block -= remainingDamage;
                 remainingDamage = 0;
             } else {
+                absorbedByShield = block;
                 remainingDamage -= block;
                 target.block = 0;
+            }
+            
+            // ★ 쉴드 피격 연출
+            if (typeof HPBarSystem !== 'undefined') {
+                HPBarSystem.showShieldHit(target, absorbedByShield);
             }
         }
         
@@ -1746,7 +1754,10 @@ const Game = {
             target.hp -= remainingDamage;
         }
         
-        this.showDamage(target, amount);
+        // 실제 HP 피해가 있을 때만 데미지 표시
+        if (remainingDamage > 0) {
+            this.showDamage(target, remainingDamage);
+        }
         
         // Update HP bar (쉴드 변화도 반영)
         this.updateUnitHPBar(target);
