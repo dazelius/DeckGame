@@ -1,0 +1,51 @@
+{
+    "id": "slime",
+    "name": "Slime",
+    "nameKo": "슬라임",
+    
+    "stats": {
+        "hp": 12,
+        "damage": 5,
+        "range": 1,
+        "sprite": "slime.png",
+        "scale": 0.3
+    },
+    
+    "ai": {
+        "attackType": "melee",
+        "preferredDistance": 1,
+        "retreatBeforeAttack": false,
+        "splitOnLowHP": true,
+        "splitThreshold": 0.5
+    },
+    
+    "weaknesses": ["fire", "ice"],
+    
+    "intents": [
+        { 
+            "id": "tackle",
+            "name": "돌진",
+            "nameEn": "Tackle",
+            "type": "attack", 
+            "damage": 5,
+            "weight": 50
+        },
+        { 
+            "id": "split",
+            "name": "분열",
+            "nameEn": "Split",
+            "type": "summon",
+            "summonType": "slime_small",
+            "weight": 20,
+            "breakRecipe": 2
+        },
+        { 
+            "id": "goo_shield",
+            "name": "점액 방어",
+            "nameEn": "Goo Shield",
+            "type": "defend", 
+            "block": 4,
+            "weight": 30
+        }
+    ]
+}

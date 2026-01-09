@@ -1,0 +1,64 @@
+{
+    "id": "goblinArcher",
+    "name": "Goblin Archer",
+    "nameKo": "고블린 궁수",
+    
+    "stats": {
+        "hp": 18,
+        "damage": 6,
+        "range": 4,
+        "sprite": "goblinarcher.png",
+        "scale": 0.35
+    },
+    
+    "ai": {
+        "attackType": "ranged",
+        "preferredDistance": 3,
+        "retreatBeforeAttack": true,
+        "retreatDistance": 1,
+        "keepDistance": true
+    },
+    
+    "weaknesses": ["physical", "fire"],
+    
+    "intents": [
+        { 
+            "id": "arrow",
+            "name": "화살",
+            "nameEn": "Arrow",
+            "type": "attack", 
+            "damage": 6,
+            "weight": 45
+        },
+        { 
+            "id": "double_shot",
+            "name": "연사",
+            "nameEn": "Double Shot",
+            "type": "attack", 
+            "damage": 4,
+            "hits": 2,
+            "weight": 25,
+            "breakRecipe": 2
+        },
+        { 
+            "id": "poison_arrow",
+            "name": "독화살",
+            "nameEn": "Poison Arrow",
+            "type": "attack", 
+            "damage": 3,
+            "poison": 4,
+            "weight": 20,
+            "breakRecipe": 2
+        },
+        { 
+            "id": "aim",
+            "name": "조준",
+            "nameEn": "Aim",
+            "type": "buff", 
+            "buffType": "accuracy",
+            "buffValue": 1,
+            "nextDamageBonus": 6,
+            "weight": 10
+        }
+    ]
+}

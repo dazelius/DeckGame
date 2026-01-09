@@ -1,26 +1,26 @@
-# 🎮 DDOO Game 개발 가이드
+# DDOO Game 개발 가이드
 
 > **다크소울풍 덱빌딩 로그라이크 게임**  
 > DDOO Engine 기반 모듈화된 아키텍처
 
 ---
 
-## 📋 목차
+## 목차
 
-1. [프로젝트 개요](#-프로젝트-개요)
-2. [디렉토리 구조](#-디렉토리-구조)
-3. [핵심 모듈](#-핵심-모듈)
-4. [게임 디자인 철학](#-게임-디자인-철학)
-5. [코딩 컨벤션](#-코딩-컨벤션)
-6. [모듈 개발 가이드](#-모듈-개발-가이드)
-7. [전투 시스템](#-전투-시스템)
-8. [이펙트 & 연출](#-이펙트--연출)
-9. [사운드 시스템](#-사운드-시스템)
-10. [세이브 & 로드](#-세이브--로드)
+1. [프로젝트 개요](#프로젝트-개요)
+2. [디렉토리 구조](#디렉토리-구조)
+3. [핵심 모듈](#핵심-모듈)
+4. [게임 디자인 철학](#게임-디자인-철학)
+5. [코딩 컨벤션](#코딩-컨벤션)
+6. [모듈 개발 가이드](#모듈-개발-가이드)
+7. [전투 시스템](#전투-시스템)
+8. [이펙트 & 연출](#이펙트--연출)
+9. [사운드 시스템](#사운드-시스템)
+10. [세이브 & 로드](#세이브--로드)
 
 ---
 
-## 🎯 프로젝트 개요
+## 프로젝트 개요
 
 ### 컨셉
 - **장르**: 덱빌딩 로그라이크 + 턴제 전투
@@ -30,11 +30,11 @@
 ### 핵심 특징
 | 특징 | 설명 |
 |------|------|
-| ⚔️ 묵직한 전투 | 한 방 한 방이 중요한 전투 |
-| 💀 높은 난이도 | 죽음에서 배우는 시스템 |
-| 🃏 덱빌딩 | 카드 조합으로 전략 구성 |
-| 🏰 던전 탐험 | 절차적 생성 던전 |
-| 🔥 화려한 연출 | 타격감 있는 이펙트 |
+| 묵직한 전투 | 한 방 한 방이 중요한 전투 |
+| 높은 난이도 | 죽음에서 배우는 시스템 |
+| 덱빌딩 | 카드 조합으로 전략 구성 |
+| 던전 탐험 | 절차적 생성 던전 |
+| 화려한 연출 | 타격감 있는 이펙트 |
 
 ### 기술 스택
 ```
@@ -46,64 +46,64 @@
 
 ---
 
-## 📁 디렉토리 구조
+## 디렉토리 구조
 
 ```
 ddoo-game/
-├── 📁 engine/              # 🔧 DDOO 엔진 (코어 모듈)
-│   ├── ddoo-config.js      # 전역 설정
-│   ├── ddoo-background.js  # 3D 배경 시스템
-│   ├── ddoo-renderer.js    # 스프라이트 렌더링
-│   ├── ddoo-floater.js     # 플로팅 텍스트
-│   ├── ddoo-action.js      # 애니메이션 시스템
-│   └── ddoo-chakram.js     # 특수 VFX
-│
-├── 📁 modules/             # 🎮 게임 모듈 (추가 예정)
-│   ├── combat.js           # 전투 시스템
-│   ├── deck.js             # 덱/카드 관리
-│   ├── dungeon.js          # 던전 생성
-│   ├── enemy-ai.js         # 적 AI
-│   ├── player.js           # 플레이어 상태
-│   ├── progression.js      # 진행/업그레이드
-│   ├── audio.js            # 사운드 매니저
-│   └── save.js             # 저장/불러오기
-│
-├── 📁 data/                # 📊 게임 데이터 (JSON)
-│   ├── cards/              # 카드 정의
-│   ├── enemies/            # 적 정의
-│   ├── dungeons/           # 던전 구성
-│   └── events/             # 이벤트 정의
-│
-├── 📁 anim/                # 🎬 애니메이션 JSON
-│   ├── player.*.json       # 플레이어 애니메이션
-│   ├── enemy.*.json        # 적 애니메이션
-│   └── card.*.json         # 카드 사용 애니메이션
-│
-├── 📁 image/               # 🖼️ 이미지 에셋
-│   ├── characters/         # 캐릭터 스프라이트
-│   ├── cards/              # 카드 아이콘
-│   ├── ui/                 # UI 요소
-│   └── effects/            # 이펙트 스프라이트
-│
-├── 📁 sound/               # 🔊 사운드 에셋
-│   ├── bgm/                # 배경음악
-│   ├── sfx/                # 효과음
-│   └── voice/              # 보이스 (선택)
-│
-├── index.html              # 메인 게임 HTML
-├── studio.html             # 🛠️ DDOO Action Studio
-├── game.js                 # 게임 엔트리포인트
-└── styles.css              # 스타일시트
+|-- engine/              # DDOO 엔진 (코어 모듈)
+|   |-- ddoo-config.js      # 전역 설정
+|   |-- ddoo-background.js  # 3D 배경 시스템
+|   |-- ddoo-renderer.js    # 스프라이트 렌더링
+|   |-- ddoo-floater.js     # 플로팅 텍스트
+|   |-- ddoo-action.js      # 애니메이션 시스템
+|   +-- ddoo-chakram.js     # 특수 VFX
+|
+|-- modules/             # 게임 모듈 (추가 예정)
+|   |-- combat.js           # 전투 시스템
+|   |-- deck.js             # 덱/카드 관리
+|   |-- dungeon.js          # 던전 생성
+|   |-- enemy-ai.js         # 적 AI
+|   |-- player.js           # 플레이어 상태
+|   |-- progression.js      # 진행/업그레이드
+|   |-- audio.js            # 사운드 매니저
+|   +-- save.js             # 저장/불러오기
+|
+|-- data/                # 게임 데이터 (JSON)
+|   |-- cards/              # 카드 정의
+|   |-- enemies/            # 적 정의
+|   |-- dungeons/           # 던전 구성
+|   +-- events/             # 이벤트 정의
+|
+|-- anim/                # 애니메이션 JSON
+|   |-- player.*.json       # 플레이어 애니메이션
+|   |-- enemy.*.json        # 적 애니메이션
+|   +-- card.*.json         # 카드 사용 애니메이션
+|
+|-- image/               # 이미지 에셋
+|   |-- characters/         # 캐릭터 스프라이트
+|   |-- cards/              # 카드 아이콘
+|   |-- ui/                 # UI 요소
+|   +-- effects/            # 이펙트 스프라이트
+|
+|-- sound/               # 사운드 에셋
+|   |-- bgm/                # 배경음악
+|   |-- sfx/                # 효과음
+|   +-- voice/              # 보이스 (선택)
+|
+|-- index.html              # 메인 게임 HTML
+|-- studio.html             # DDOO Action Studio
+|-- game.js                 # 게임 엔트리포인트
++-- styles.css              # 스타일시트
 ```
 
 ---
 
-## 🔧 핵심 모듈
+## 핵심 모듈
 
 ### 1. DDOOConfig (전역 설정)
 ```javascript
 // 이미지 경로 관리
-DDOOConfig.getImagePath('hero.png')  // → 'image/hero.png'
+DDOOConfig.getImagePath('hero.png')  // -> 'image/hero.png'
 DDOOConfig.setImagePath('assets/')   // 경로 변경
 ```
 
@@ -174,19 +174,19 @@ await DDOOAction.playSequence('card.strike', {
 
 ---
 
-## 🗡️ 게임 디자인 철학
+## 게임 디자인 철학
 
 ### 다크소울 DNA
 ```
-┌─────────────────────────────────────────────────────┐
-│  "어려움 속에서 성취감을 찾는다"                        │
-├─────────────────────────────────────────────────────┤
-│  ✓ 적은 무시할 수 없다 - 잡몹도 위협                   │
-│  ✓ 패턴을 읽어라 - 예측 가능한 적 행동                  │
-│  ✓ 리소스 관리 - 에너지/카드 신중히 사용                │
-│  ✓ 죽음은 교훈 - 실패해도 배움이 있다                   │
-│  ✓ 성장의 보람 - 플레이어 스킬 + 캐릭터 성장            │
-└─────────────────────────────────────────────────────┘
++-----------------------------------------------------+
+|  "어려움 속에서 성취감을 찾는다"                        |
++-----------------------------------------------------+
+|  - 적은 무시할 수 없다 - 잡몹도 위협                   |
+|  - 패턴을 읽어라 - 예측 가능한 적 행동                  |
+|  - 리소스 관리 - 에너지/카드 신중히 사용                |
+|  - 죽음은 교훈 - 실패해도 배움이 있다                   |
+|  - 성장의 보람 - 플레이어 스킬 + 캐릭터 성장            |
++-----------------------------------------------------+
 ```
 
 ### 전투 느낌
@@ -200,19 +200,19 @@ await DDOOAction.playSequence('card.strike', {
 
 ### 피드백 레이어
 ```
-1️⃣ 시각적 피드백
+[1] 시각적 피드백
    - 스프라이트 흔들림/깜빡임
    - 화면 플래시/흔들림
    - 파티클 이펙트
    - 데미지 숫자
 
-2️⃣ 청각적 피드백
+[2] 청각적 피드백
    - 타격음 (묵직)
    - 피격음 (고통)
    - 환경음 (긴장감)
    - BGM (분위기)
 
-3️⃣ 게임플레이 피드백
+[3] 게임플레이 피드백
    - 히트스탑 (순간 정지)
    - 슬로우모션
    - 넉백/밀림
@@ -220,7 +220,14 @@ await DDOOAction.playSequence('card.strike', {
 
 ---
 
-## 📝 코딩 컨벤션
+## 코딩 컨벤션
+
+### 중요 규칙
+
+**[!] 이모지 사용 금지**
+- 코드, 주석, 문서에 이모지 사용하지 않음
+- console.log에도 이모지 사용 금지
+- 마크다운 문서에도 이모지 사용 금지
 
 ### 모듈 구조
 ```javascript
@@ -245,7 +252,7 @@ const ModuleName = {
         if (this.state.initialized) return;
         // 초기화 로직...
         this.state.initialized = true;
-        console.log('[ModuleName] ✅ 초기화 완료');
+        console.log('[ModuleName] 초기화 완료');
     },
     
     // ========== 공개 API ==========
@@ -315,9 +322,161 @@ function applyDamage(damage, isCrit) {
 // HACK: 임시 해결책
 ```
 
+### 로그 메시지 형식
+```javascript
+// 성공
+console.log('[ModuleName] 초기화 완료');
+console.log('[ModuleName] 저장 완료');
+
+// 경고
+console.warn('[ModuleName] 이미 초기화됨');
+
+// 오류
+console.error('[ModuleName] 초기화 실패:', error);
+
+// 디버그 (필요시)
+console.log('[ModuleName] DEBUG:', data);
+```
+
 ---
 
-## 🛠️ 모듈 개발 가이드
+## CSS 스타일 가이드
+
+### 파일 구조
+```
+css/
+|-- base.css        # Reset, CSS Variables, Typography
+|-- layout.css      # Battle/Card area structure
+|-- battle-ui.css   # HP, Energy, Messages
+|-- card.css        # Card styling and states
+|-- controls.css    # Buttons and deck info
+|-- responsive.css  # Media queries (tablet, mobile, landscape)
++-- utils.css       # Loading, Animations, Utilities
+
+styles.css          # Main file (@import all)
+```
+
+### CSS Variables (base.css)
+```css
+:root {
+    /* Colors - Primary */
+    --color-bg: #0a0a12;
+    --color-bg-dark: #030202;
+    --color-bg-card: #1a1a2e;
+    
+    /* Colors - Accent */
+    --color-accent: #fbbf24;
+    --color-accent-dark: #d97706;
+    
+    /* Colors - Status */
+    --color-hp: #ef4444;
+    --color-energy: #fbbf24;
+    --color-block: #3b82f6;
+    
+    /* Colors - Card Types */
+    --color-attack: #ef4444;
+    --color-skill: #3b82f6;
+    --color-power: #a855f7;
+    
+    /* Spacing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 12px;
+    --spacing-lg: 16px;
+    --spacing-xl: 20px;
+    
+    /* Border Radius */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 10px;
+    
+    /* Transitions */
+    --transition-fast: 0.2s ease;
+    --transition-normal: 0.3s ease;
+    
+    /* Z-Index Layers */
+    --z-bg: 0;
+    --z-game: 1;
+    --z-ui: 10;
+    --z-modal: 100;
+    --z-loading: 1000;
+}
+```
+
+### 네이밍 규칙
+```css
+/* ID: kebab-case, semantic names */
+#battle-area { }
+#card-hand { }
+#btn-end-turn { }
+
+/* Class: kebab-case */
+.card-cost { }
+.hp-fill { }
+.action-btn { }
+
+/* State classes: adjective */
+.selected { }
+.disabled { }
+.hidden { }
+
+/* Modifier: -- prefix */
+.card--attack { }
+.btn--primary { }
+```
+
+### 반응형 브레이크포인트
+```css
+/* Tablet */
+@media (max-width: 1024px) { }
+
+/* Mobile */
+@media (max-width: 768px) { }
+
+/* Small Mobile */
+@media (max-width: 480px) { }
+
+/* Landscape */
+@media (max-height: 500px) and (orientation: landscape) { }
+
+/* Touch Device */
+@media (hover: none) and (pointer: coarse) { }
+```
+
+### 성능 최적화
+```css
+/* GPU Acceleration */
+.animated-element {
+    transform: translateZ(0);
+    will-change: transform;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
+/* Avoid */
+* { box-shadow: ...; }  /* Heavy repaints */
+.element { filter: blur(...); }  /* GPU intensive */
+```
+
+### 주석 스타일
+```css
+/* =====================================================
+   파일명.css - 파일 설명
+   ===================================================== */
+
+/* ==================== Section Name ==================== */
+
+/* Single line comment */
+
+/*
+ * Multi-line comment
+ * for complex explanations
+ */
+```
+
+---
+
+## 모듈 개발 가이드
 
 ### 새 모듈 생성 템플릿
 
@@ -354,7 +513,7 @@ const Example = {
         this._setup();
         
         this.state.initialized = true;
-        console.log('[Example] ✅ 초기화 완료');
+        console.log('[Example] 초기화 완료');
         return this;
     },
     
@@ -391,7 +550,7 @@ const Example = {
     dispose() {
         this.state.data = null;
         this.state.initialized = false;
-        console.log('[Example] 🗑️ 정리 완료');
+        console.log('[Example] 정리 완료');
     }
 };
 
@@ -431,50 +590,120 @@ console.log('[Example] 스크립트 로드됨');
 
 ---
 
-## ⚔️ 전투 시스템
+## 전투 시스템
 
 ### 전투 플로우
 ```
-┌─────────────────────────────────────────────────────┐
-│                    전투 시작                         │
-│  - 적 등장 연출                                      │
-│  - 손패 드로우                                       │
-└─────────────────┬───────────────────────────────────┘
-                  ▼
-┌─────────────────────────────────────────────────────┐
-│                  플레이어 턴                         │
-│  ┌────────────────────────────────────────────────┐ │
-│  │ 1. 카드 선택                                    │ │
-│  │ 2. 타겟 선택 (필요시)                           │ │
-│  │ 3. 카드 사용 애니메이션                         │ │
-│  │ 4. 효과 적용                                    │ │
-│  │ 5. 반복 or 턴 종료                              │ │
-│  └────────────────────────────────────────────────┘ │
-└─────────────────┬───────────────────────────────────┘
-                  ▼
-┌─────────────────────────────────────────────────────┐
-│                    적 턴                            │
-│  ┌────────────────────────────────────────────────┐ │
-│  │ 1. 적 인텐트 표시                               │ │
-│  │ 2. 적 행동 실행                                 │ │
-│  │ 3. 데미지/효과 적용                             │ │
-│  │ 4. 다음 적 반복                                 │ │
-│  └────────────────────────────────────────────────┘ │
-└─────────────────┬───────────────────────────────────┘
-                  ▼
-┌─────────────────────────────────────────────────────┐
-│                   턴 종료                           │
-│  - 상태이상 틱 (독, 화상 등)                        │
-│  - 블록 소멸                                        │
-│  - 다음 턴 드로우                                   │
-└─────────────────┬───────────────────────────────────┘
-                  ▼
-          ┌───────┴───────┐
-          ▼               ▼
-      [승리 체크]     [사망 체크]
-          │               │
-          ▼               ▼
-       보상 획득      게임 오버
++-----------------------------------------------------+
+|                    전투 시작                         |
+|  - 적 등장 연출                                      |
+|  - 손패 드로우                                       |
++-----------------------+-----------------------------+
+                        |
+                        v
++-----------------------------------------------------+
+|                  플레이어 턴                         |
+|  +------------------------------------------------+ |
+|  | 1. 카드 선택                                    | |
+|  | 2. 타겟 선택 (필요시)                           | |
+|  | 3. 카드 사용 애니메이션                         | |
+|  | 4. 효과 적용                                    | |
+|  | 5. 반복 or 턴 종료                              | |
+|  +------------------------------------------------+ |
++-----------------------+-----------------------------+
+                        |
+                        v
++-----------------------------------------------------+
+|                    적 턴                            |
+|  +------------------------------------------------+ |
+|  | 1. 적 인텐트 표시                               | |
+|  | 2. 적 행동 실행                                 | |
+|  | 3. 데미지/효과 적용                             | |
+|  | 4. 다음 적 반복                                 | |
+|  +------------------------------------------------+ |
++-----------------------+-----------------------------+
+                        |
+                        v
++-----------------------------------------------------+
+|                   턴 종료                           |
+|  - 상태이상 틱 (독, 화상 등)                        |
+|  - 블록 소멸                                        |
+|  - 다음 턴 드로우                                   |
++-----------------------+-----------------------------+
+                        |
+                        v
+          +-------------+-------------+
+          |                           |
+          v                           v
+      [승리 체크]                 [사망 체크]
+          |                           |
+          v                           v
+       보상 획득                  게임 오버
+```
+
+### 실시간 전투 시스템
+
+기본 전투는 **실시간**으로 진행됩니다. 적은 인텐트(의도)를 보여주며 게이지가 차면 행동을 실행합니다.
+
+#### 핵심 개념
+```
++----------------------------------------------------------+
+|  적 인텐트 시스템                                          |
+|  +-----------------------------------------------------+  |
+|  |  [공격] 게이지: ████████░░░░░ 80%   데미지: 12      |  |
+|  +-----------------------------------------------------+  |
+|                                                          |
+|  - 게이지가 100%가 되면 해당 행동 실행                    |
+|  - 플레이어는 그 전에 카드로 대응해야 함                   |
+|  - 공격 카드로 적 게이지를 일부 줄일 수 있음 (인터럽트)   |
++----------------------------------------------------------+
+```
+
+#### Combat 모듈 API
+```javascript
+// 전투 시작/정지
+Combat.init();           // 초기화
+Combat.start();          // 실시간 전투 시작
+Combat.stop();           // 전투 정지
+Combat.pause();          // 일시정지
+Combat.resume();         // 재개
+
+// 인텐트 관리
+Combat.setEnemyIntent(enemyId, {
+    type: 'ATTACK',      // ATTACK, HEAVY_ATTACK, MOVE, DEFEND, BUFF
+    damage: 10,
+    chargeTime: 3000     // ms
+});
+
+// 카드 사용
+Combat.useCard(cardData, gridX, gridZ);
+
+// 적 인터럽트 (게이지 감소)
+Combat.interruptEnemy(enemyId, amount);
+```
+
+#### 인텐트 타입
+| 타입 | 아이콘 | 색상 | 설명 |
+|------|--------|------|------|
+| ATTACK | 검 | 빨강 | 플레이어에게 데미지 |
+| HEAVY_ATTACK | 망치 | 주황 | 강력한 공격 (긴 충전) |
+| MOVE | 화살표 | 파랑 | 플레이어에게 접근 |
+| DEFEND | 방패 | 초록 | 블록 획득 |
+| BUFF | 별 | 보라 | 자신 버프 |
+
+#### 카드 드래그 앤 드롭
+```javascript
+// 10x10 그리드에 카드 배치
+// X: 0-4 = 플레이어 영역
+// X: 5   = 전장 중앙선
+// X: 6-10 = 적 영역
+
+Game.useCardAtPosition('strike', 7, 5);  // (7,5) 위치에 공격
+
+// 카드 타입별 드롭 영역
+// - attack: 적 영역 (X >= 5) 권장
+// - move: 플레이어 영역 (X <= 4) 필수
+// - skill: 제한 없음
 ```
 
 ### 데미지 계산
@@ -521,28 +750,24 @@ const STATUS_EFFECTS = {
     // 디버프
     vulnerable: {
         name: '취약',
-        icon: '💔',
         description: '받는 피해 50% 증가',
         stackable: true,
         duration: true  // 턴 기반
     },
     weak: {
         name: '약화',
-        icon: '😰',
         description: '주는 피해 25% 감소',
         stackable: true,
         duration: true
     },
     poison: {
         name: '독',
-        icon: '🧪',
         description: '턴 종료 시 독 스택만큼 피해',
         stackable: true,
         duration: false  // 스택 기반
     },
     burn: {
         name: '화상',
-        icon: '🔥',
         description: '턴 종료 시 화상 스택만큼 피해 후 절반 감소',
         stackable: true,
         duration: false
@@ -551,7 +776,6 @@ const STATUS_EFFECTS = {
     // 버프
     strength: {
         name: '힘',
-        icon: '💪',
         description: '스택당 공격력 +10%',
         stackable: true,
         duration: false,
@@ -559,7 +783,6 @@ const STATUS_EFFECTS = {
     },
     block: {
         name: '방어',
-        icon: '🛡️',
         description: '데미지 흡수',
         stackable: true,
         duration: false,
@@ -567,7 +790,6 @@ const STATUS_EFFECTS = {
     },
     regen: {
         name: '재생',
-        icon: '💚',
         description: '턴 종료 시 회복',
         stackable: true,
         duration: true,
@@ -578,33 +800,33 @@ const STATUS_EFFECTS = {
 
 ---
 
-## ✨ 이펙트 & 연출
+## 이펙트 & 연출
 
 ### 타격 연출 체크리스트
 ```javascript
 async function performAttack(attacker, defender, damage, options = {}) {
     const { isCrit, isHeavy } = options;
     
-    // 1️⃣ 공격자 애니메이션
+    // [1] 공격자 애니메이션
     await DDOOAction.play('player.attack', attacker);
     
-    // 2️⃣ 타겟 하이라이트
+    // [2] 타겟 하이라이트
     DDOORenderer.setTargeted(defender, true, 0xff4444);
     
-    // 3️⃣ 히트스탑 (순간 정지)
+    // [3] 히트스탑 (순간 정지)
     await delay(isCrit ? 100 : 50);
     
-    // 4️⃣ 피격 이펙트
+    // [4] 피격 이펙트
     DDOORenderer.rapidFlash(defender);
     DDOORenderer.damageShake(defender, isCrit ? 15 : 8, 300);
     
-    // 5️⃣ 화면 이펙트
+    // [5] 화면 이펙트
     DDOOBackground.screenFlash(isCrit ? '#ffaa00' : '#ffffff', 80);
     if (isCrit) {
         DDOOBackground.shake(0.6, 150);
     }
     
-    // 6️⃣ 3D 조명
+    // [6] 3D 조명
     DDOOBackground.hitFlash(
         defender.x / 50,  // 3D 좌표 변환
         4, 5,
@@ -613,21 +835,21 @@ async function performAttack(attacker, defender, damage, options = {}) {
         200
     );
     
-    // 7️⃣ 데미지 숫자
+    // [7] 데미지 숫자
     DDOOFloater.showOnCharacter(
         defender, 
         damage, 
         isCrit ? 'critical' : 'damage'
     );
     
-    // 8️⃣ 사운드
+    // [8] 사운드
     Audio.play(isHeavy ? 'hit_heavy' : 'hit');
     if (isCrit) Audio.play('critical');
     
-    // 9️⃣ 피격 애니메이션
+    // [9] 피격 애니메이션
     await DDOOAction.play('enemy.hit', defender);
     
-    // 🔟 타겟 해제
+    // [10] 타겟 해제
     DDOORenderer.setTargeted(defender, false);
 }
 ```
@@ -651,7 +873,7 @@ async function performDeath(enemy, app) {
 
 ---
 
-## 🔊 사운드 시스템
+## 사운드 시스템
 
 ### Audio 모듈 구조
 ```javascript
@@ -703,29 +925,29 @@ const Audio = {
 ### 필수 사운드 목록
 ```
 sound/
-├── sfx/
-│   ├── hit.mp3           # 기본 타격
-│   ├── hit_heavy.mp3     # 강타격
-│   ├── hit_critical.mp3  # 크리티컬
-│   ├── block.mp3         # 방어
-│   ├── card_draw.mp3     # 카드 드로우
-│   ├── card_use.mp3      # 카드 사용
-│   ├── heal.mp3          # 회복
-│   ├── buff.mp3          # 버프
-│   ├── debuff.mp3        # 디버프
-│   ├── enemy_death.mp3   # 적 사망
-│   └── player_damage.mp3 # 플레이어 피격
-│
-└── bgm/
-    ├── dungeon.mp3       # 던전 탐험
-    ├── battle.mp3        # 일반 전투
-    ├── boss.mp3          # 보스 전투
-    └── victory.mp3       # 승리
+|-- sfx/
+|   |-- hit.mp3           # 기본 타격
+|   |-- hit_heavy.mp3     # 강타격
+|   |-- hit_critical.mp3  # 크리티컬
+|   |-- block.mp3         # 방어
+|   |-- card_draw.mp3     # 카드 드로우
+|   |-- card_use.mp3      # 카드 사용
+|   |-- heal.mp3          # 회복
+|   |-- buff.mp3          # 버프
+|   |-- debuff.mp3        # 디버프
+|   |-- enemy_death.mp3   # 적 사망
+|   +-- player_damage.mp3 # 플레이어 피격
+|
++-- bgm/
+    |-- dungeon.mp3       # 던전 탐험
+    |-- battle.mp3        # 일반 전투
+    |-- boss.mp3          # 보스 전투
+    +-- victory.mp3       # 승리
 ```
 
 ---
 
-## 💾 세이브 & 로드
+## 세이브 & 로드
 
 ### 저장 데이터 구조
 ```javascript
@@ -783,10 +1005,10 @@ const Save = {
         try {
             const json = JSON.stringify(data);
             localStorage.setItem(this.STORAGE_KEY, json);
-            console.log('[Save] ✅ 저장 완료');
+            console.log('[Save] 저장 완료');
             return true;
         } catch (e) {
-            console.error('[Save] ❌ 저장 실패:', e);
+            console.error('[Save] 저장 실패:', e);
             return false;
         }
     },
@@ -798,7 +1020,7 @@ const Save = {
             if (!json) return null;
             return JSON.parse(json);
         } catch (e) {
-            console.error('[Save] ❌ 로드 실패:', e);
+            console.error('[Save] 로드 실패:', e);
             return null;
         }
     },
@@ -806,7 +1028,7 @@ const Save = {
     // 삭제
     clear() {
         localStorage.removeItem(this.STORAGE_KEY);
-        console.log('[Save] 🗑️ 데이터 삭제됨');
+        console.log('[Save] 데이터 삭제됨');
     },
     
     // 존재 여부
@@ -818,7 +1040,7 @@ const Save = {
 
 ---
 
-## 🚀 개발 순서 권장
+## 개발 순서 권장
 
 ### Phase 1: 기반 시스템
 ```
@@ -862,7 +1084,7 @@ const Save = {
 
 ---
 
-## 🛠️ 개발 도구
+## 개발 도구
 
 ### DDOO Action Studio
 ```
@@ -879,12 +1101,12 @@ studio.html - 애니메이션 테스트 & 편집 도구
 **사용법:**
 ```bash
 # 로컬 서버 실행 후
-http://localhost:8080/studio.html
+http://localhost:3000/studio.html
 ```
 
 ---
 
-## 📞 문의 & 참고
+## 문의 & 참고
 
 - **엔진 문서**: `/engine/` 폴더 내 각 모듈 주석 참고
 - **애니메이션 편집**: `/studio.html` 사용

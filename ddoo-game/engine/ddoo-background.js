@@ -22,18 +22,21 @@ const DDOOBackground = {
         smoothing: 0.05
     },
     
-    // 카메라 기본값
+    // Camera defaults - fit grid exactly, hide back edge
     cameraDefaults: {
-        posY: 4,
-        posZ: 15,
-        lookAtY: 3
+        posX: 5,       // Center of arena (X axis)
+        posY: 3.2,     // Slightly lower for better view
+        posZ: 4.8,     // Closer for better visibility
+        lookAtX: 5,    // Look at arena center
+        lookAtY: 0,    // Look at floor level
+        lookAtZ: 1.2   // Look slightly forward to hide back edge
     },
     
-    // 자동 줌 설정
+    // Auto zoom settings
     autoZoom: {
         enabled: true,
-        targetZ: 15,
-        currentZ: 15,
+        targetZ: 5.5,
+        currentZ: 5.5,
         targetX: 0,
         currentX: 0,
         targetLookAtX: 0,
@@ -115,19 +118,33 @@ const DDOOBackground = {
         
         this.container = document.createElement('div');
         this.container.id = 'ddoo-bg3d';
-        this.container.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 0;
-            pointer-events: none;
-        `;
+        
+        // Store parent for resize handling
+        this.parentElement = parentEl;
         
         if (parentEl) {
+            // If parent element specified, use absolute positioning within it
+            this.container.style.cssText = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 0;
+                pointer-events: none;
+            `;
             parentEl.insertBefore(this.container, parentEl.firstChild);
         } else {
+            // Default: fixed fullscreen
+            this.container.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                z-index: 0;
+                pointer-events: none;
+            `;
             document.body.insertBefore(this.container, document.body.firstChild);
         }
     },
@@ -141,23 +158,53 @@ const DDOOBackground = {
     
     // Camera 설정
     setupCamera() {
+        let width, height;
+        
+        if (this.parentElement) {
+            const rect = this.parentElement.getBoundingClientRect();
+            width = rect.width;
+            height = rect.height;
+        } else {
+            width = window.innerWidth;
+            height = window.innerHeight;
+        }
+        
         this.camera = new THREE.PerspectiveCamera(
-            65,
-            window.innerWidth / window.innerHeight,
+            55,  // FOV for side view
+            width / height,
             0.1,
             100
         );
-        this.camera.position.set(0, this.cameraDefaults.posY, this.cameraDefaults.posZ);
-        this.camera.lookAt(0, this.cameraDefaults.lookAtY, 0);
+        this.camera.position.set(
+            this.cameraDefaults.posX,
+            this.cameraDefaults.posY,
+            this.cameraDefaults.posZ
+        );
+        this.camera.lookAt(
+            this.cameraDefaults.lookAtX,
+            this.cameraDefaults.lookAtY,
+            this.cameraDefaults.lookAtZ
+        );
     },
     
     // Renderer 설정
     setupRenderer() {
+        let width, height;
+        
+        if (this.parentElement) {
+            const rect = this.parentElement.getBoundingClientRect();
+            width = rect.width;
+            height = rect.height;
+        } else {
+            width = window.innerWidth;
+            height = window.innerHeight;
+        }
+        
         this.renderer = new THREE.WebGLRenderer({ 
             antialias: true,
             alpha: false
         });
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setSize(width, height);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         this.container.appendChild(this.renderer.domElement);
     },
@@ -212,62 +259,179 @@ const DDOOBackground = {
     },
     
     // 바닥 생성
+    // Grid dimensions (match game.js arena)
+    gridConfig: {
+        width: 10,   // X: 0-10
+        depth: 3,    // Z: 0-3
+        centerX: 5,  // Center of grid
+        centerZ: 1.5
+    },
+    
     createFloor() {
-        // 기본 바닥
+        const self = this;
+        const { width, depth, centerX, centerZ } = this.gridConfig;
+        
+        // Floor size - extend back to hide edge from camera
+        const floorWidth = width + 1;
+        const floorDepth = depth + 3;  // Extend back significantly
+        const floorCenterZ = centerZ - 1;  // Shift center back
+        
+        // 기본 바닥 (텍스처 로딩 전 폴백)
         const baseFloor = new THREE.Mesh(
-            new THREE.PlaneGeometry(200, 200),
+            new THREE.PlaneGeometry(floorWidth, floorDepth),
             new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 })
         );
         baseFloor.rotation.x = -Math.PI / 2;
-        baseFloor.position.set(0, -0.05, 0);
+        baseFloor.position.set(centerX, -0.05, floorCenterZ);
         this.dungeonGroup.add(baseFloor);
         
-        // 텍스처 바닥 (그리드 패턴)
-        const floorGeom = new THREE.PlaneGeometry(80, 80, 16, 16);
-        const floorMat = new THREE.MeshStandardMaterial({
-            color: 0x252530,
-            roughness: 0.85,
-            metalness: 0.1
-        });
-        const floor = new THREE.Mesh(floorGeom, floorMat);
-        floor.rotation.x = -Math.PI / 2;
-        floor.position.y = 0.01;
-        this.dungeonGroup.add(floor);
+        // bg-floor.png 텍스처 로드
+        const floorImg = new Image();
+        floorImg.src = 'image/bg/bg-floor.png';
+        floorImg.onload = function() {
+            console.log('[DDOOBackground] bg-floor.png loaded');
+            const tex = new THREE.CanvasTexture(floorImg);
+            tex.magFilter = THREE.NearestFilter;
+            tex.minFilter = THREE.NearestFilter;
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(1, 1);
+            
+            const floorMesh = new THREE.Mesh(
+                new THREE.PlaneGeometry(floorWidth, floorDepth),
+                new THREE.MeshBasicMaterial({ 
+                    map: tex, 
+                    transparent: true,
+                    fog: false
+                })
+            );
+            floorMesh.rotation.x = -Math.PI / 2;
+            floorMesh.position.set(centerX, 0.01, floorCenterZ);
+            self.dungeonGroup.add(floorMesh);
+        };
+        floorImg.onerror = function() {
+            console.warn('[DDOOBackground] bg-floor.png load failed');
+        };
     },
     
     // 벽 생성
     createWalls() {
-        const wallMat = new THREE.MeshStandardMaterial({ 
+        const self = this;
+        const { width, depth, centerX, centerZ } = this.gridConfig;
+        
+        // Wall dimensions - extended to cover floor
+        const wallWidth = width + 2;  // Wider than floor
+        const sideWallDepth = depth + 4;  // Match extended floor
+        const wallHeight = 8;
+        const floorCenterZ = centerZ - 1;  // Match floor center
+        
+        // 폴백 재질
+        const fallbackMat = new THREE.MeshStandardMaterial({ 
             color: 0x1a1a28, 
             side: THREE.DoubleSide,
             roughness: 0.9
         });
         
-        // 뒷벽
-        const backWall = new THREE.Mesh(
-            new THREE.PlaneGeometry(80, 25),
-            wallMat
-        );
-        backWall.position.set(0, 12.5, -30);
-        this.dungeonGroup.add(backWall);
+        // bg-wall.png 텍스처 로드
+        const wallImg = new Image();
+        wallImg.src = 'image/bg/bg-wall.png';
+        wallImg.onload = function() {
+            console.log('[DDOOBackground] bg-wall.png loaded');
+            const tex = new THREE.CanvasTexture(wallImg);
+            tex.magFilter = THREE.NearestFilter;
+            tex.minFilter = THREE.NearestFilter;
+            
+            const wallMat = new THREE.MeshBasicMaterial({ 
+                map: tex, 
+                transparent: true,
+                side: THREE.DoubleSide,
+                fog: false
+            });
+            
+            // Back wall (push back to hide floor edge)
+            const backWall = new THREE.Mesh(
+                new THREE.PlaneGeometry(wallWidth, wallHeight),
+                wallMat
+            );
+            backWall.position.set(centerX, wallHeight / 2, -1.5);  // Behind floor edge
+            self.dungeonGroup.add(backWall);
+            
+            // Left wall
+            const leftTex = new THREE.CanvasTexture(wallImg);
+            leftTex.magFilter = THREE.NearestFilter;
+            leftTex.minFilter = THREE.NearestFilter;
+            const leftWall = new THREE.Mesh(
+                new THREE.PlaneGeometry(sideWallDepth, wallHeight),
+                new THREE.MeshBasicMaterial({ 
+                    map: leftTex, 
+                    transparent: true,
+                    side: THREE.DoubleSide,
+                    fog: false
+                })
+            );
+            leftWall.position.set(-0.5, wallHeight / 2, floorCenterZ);
+            leftWall.rotation.y = Math.PI / 2;
+            self.dungeonGroup.add(leftWall);
+            
+            // Right wall
+            const rightTex = new THREE.CanvasTexture(wallImg);
+            rightTex.magFilter = THREE.NearestFilter;
+            rightTex.minFilter = THREE.NearestFilter;
+            const rightWall = new THREE.Mesh(
+                new THREE.PlaneGeometry(sideWallDepth, wallHeight),
+                new THREE.MeshBasicMaterial({ 
+                    map: rightTex, 
+                    transparent: true,
+                    side: THREE.DoubleSide,
+                    fog: false
+                })
+            );
+            rightWall.position.set(width + 0.5, wallHeight / 2, floorCenterZ);
+            rightWall.rotation.y = -Math.PI / 2;
+            self.dungeonGroup.add(rightWall);
+        };
+        wallImg.onerror = function() {
+            console.warn('[DDOOBackground] bg-wall.png load failed');
+            
+            // Fallback walls
+            const backWall = new THREE.Mesh(new THREE.PlaneGeometry(wallWidth, wallHeight), fallbackMat);
+            backWall.position.set(centerX, wallHeight / 2, -1.5);
+            self.dungeonGroup.add(backWall);
+            
+            const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(sideWallDepth, wallHeight), fallbackMat.clone());
+            leftWall.position.set(-0.5, wallHeight / 2, floorCenterZ);
+            leftWall.rotation.y = Math.PI / 2;
+            self.dungeonGroup.add(leftWall);
+            
+            const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(sideWallDepth, wallHeight), fallbackMat.clone());
+            rightWall.position.set(width + 0.5, wallHeight / 2, floorCenterZ);
+            rightWall.rotation.y = -Math.PI / 2;
+            self.dungeonGroup.add(rightWall);
+        };
         
-        // 좌벽
-        const leftWall = new THREE.Mesh(
-            new THREE.PlaneGeometry(60, 25),
-            wallMat.clone()
-        );
-        leftWall.position.set(-40, 12.5, 0);
-        leftWall.rotation.y = Math.PI / 2;
-        this.dungeonGroup.add(leftWall);
-        
-        // 우벽
-        const rightWall = new THREE.Mesh(
-            new THREE.PlaneGeometry(60, 25),
-            wallMat.clone()
-        );
-        rightWall.position.set(40, 12.5, 0);
-        rightWall.rotation.y = -Math.PI / 2;
-        this.dungeonGroup.add(rightWall);
+        // 🎨 bg-sky.png 배경 (뒷벽 뒤에)
+        const skyImg = new Image();
+        skyImg.src = 'image/bg/bg-sky.png';
+        skyImg.onload = function() {
+            console.log('[DDOOBackground] ✅ bg-sky.png 로드됨');
+            const tex = new THREE.CanvasTexture(skyImg);
+            tex.magFilter = THREE.NearestFilter;
+            tex.minFilter = THREE.NearestFilter;
+            
+            const aspect = skyImg.width / skyImg.height;
+            const width = 150;
+            const height = width / aspect;
+            
+            const skyMesh = new THREE.Mesh(
+                new THREE.PlaneGeometry(width, height),
+                new THREE.MeshBasicMaterial({ 
+                    map: tex, 
+                    fog: false
+                })
+            );
+            skyMesh.position.set(0, height / 2 - 5, -50);
+            self.dungeonGroup.add(skyMesh);
+        };
         
         // 천장
         const ceiling = new THREE.Mesh(
@@ -369,9 +533,22 @@ const DDOOBackground = {
     handleResize() {
         if (!this.camera || !this.renderer) return;
         
-        this.camera.aspect = window.innerWidth / window.innerHeight;
+        let width, height;
+        
+        if (this.parentElement) {
+            // Use parent element dimensions
+            const rect = this.parentElement.getBoundingClientRect();
+            width = rect.width;
+            height = rect.height;
+        } else {
+            // Use window dimensions
+            width = window.innerWidth;
+            height = window.innerHeight;
+        }
+        
+        this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setSize(width, height);
     },
     
     // ==========================================
@@ -392,11 +569,17 @@ const DDOOBackground = {
         const currentZ = this.autoZoom.currentZ;
         const currentX = this.autoZoom.currentX;
         
-        this.camera.position.x = currentX + this.mouse.x * this.config.mouseX * 0.5;
-        this.camera.position.y = this.cameraDefaults.posY + this.mouse.y * this.config.mouseY * 0.5;
+        // Camera position (arena view with subtle parallax)
+        this.camera.position.x = this.cameraDefaults.posX + this.mouse.x * this.config.mouseX * 0.3;
+        this.camera.position.y = this.cameraDefaults.posY + this.mouse.y * this.config.mouseY * 0.2;
         this.camera.position.z = currentZ;
         
-        this.camera.lookAt(this.mouse.x * 0.3, 3, -5);
+        // Look at arena center
+        this.camera.lookAt(
+            this.cameraDefaults.lookAtX + this.mouse.x * 0.15,
+            this.cameraDefaults.lookAtY,
+            this.cameraDefaults.lookAtZ
+        );
         
         // 횃불 깜빡임
         this.torches.forEach(torch => {
@@ -430,7 +613,7 @@ const DDOOBackground = {
     },
     
     // ==========================================
-    // 3D → 2D 좌표 변환
+    // 3D -> 2D Coordinate Conversion
     // ==========================================
     project3DToScreen(x, y, z) {
         if (!this.isInitialized || !this.camera) return null;
@@ -443,10 +626,22 @@ const DDOOBackground = {
             return { screenX: 0, screenY: 0, scale: 0, visible: false };
         }
         
-        const screenX = (vec.x * 0.5 + 0.5) * window.innerWidth;
-        const screenY = (-vec.y * 0.5 + 0.5) * window.innerHeight;
+        // Use parent element dimensions (battle area) instead of window
+        let width, height;
+        if (this.parentElement) {
+            const rect = this.parentElement.getBoundingClientRect();
+            width = rect.width;
+            height = rect.height;
+        } else {
+            width = window.innerWidth;
+            height = window.innerHeight;
+        }
         
-        // 거리 기반 스케일
+        // Convert NDC to screen coordinates within the battle area
+        const screenX = (vec.x * 0.5 + 0.5) * width;
+        const screenY = (-vec.y * 0.5 + 0.5) * height;
+        
+        // Distance-based scale
         const cameraPos = this.camera.position;
         const distance = Math.sqrt(
             Math.pow(x - cameraPos.x, 2) +
@@ -462,7 +657,10 @@ const DDOOBackground = {
             screenY,
             scale: Math.min(Math.max(scale, 0.5), 2.0),
             visible: true,
-            depth: distance
+            depth: distance,
+            worldX: x,
+            worldY: y,
+            worldZ: z
         };
     },
     

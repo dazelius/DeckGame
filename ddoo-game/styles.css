@@ -1,208 +1,26 @@
 /* =====================================================
-   🎮 DDOO Game - 스타일시트
+   DDOO Game - Main Stylesheet
+   
+   CSS Structure:
+   - base.css       : Reset, Variables, Typography
+   - layout.css     : Battle/Card area structure
+   - battle-ui.css  : HP, Energy, Messages
+   - card.css       : Card styling and states
+   - controls.css   : Buttons and deck info
+   - combat.css     : Combat effects
+   - break.css      : Break system styles
+   - responsive.css : Media queries
+   - utils.css      : Loading, Animations, Utilities
    ===================================================== */
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: 'Noto Sans KR', 'Segoe UI', sans-serif;
-    background: #030202;  /* 3D 배경과 일치 */
-    color: #eee;
-    overflow: hidden;
-    user-select: none;
-}
-
-/* 3D 배경 컨테이너 */
-#ddoo-bg3d {
-    position: fixed !important;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 0 !important;
-    pointer-events: none;
-}
-
-/* ==================== 게임 컨테이너 ==================== */
-
-#game-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 1;
-}
-
-#game-container canvas {
-    display: block;
-}
-
-/* ==================== UI 오버레이 ==================== */
-
-#ui-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 10;
-    pointer-events: none;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}
-
-#ui-overlay * {
-    pointer-events: auto;
-}
-
-/* ==================== 상단 바 ==================== */
-
-#top-bar {
-    padding: 15px 20px;
-    display: flex;
-    justify-content: flex-start;
-    gap: 20px;
-}
-
-.player-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: rgba(0, 0, 0, 0.6);
-    padding: 8px 15px;
-    border-radius: 8px;
-    border: 1px solid #333;
-}
-
-.hp-bar {
-    width: 150px;
-    height: 18px;
-    background: #333;
-    border-radius: 4px;
-    overflow: hidden;
-    border: 2px solid #444;
-}
-
-.hp-fill {
-    display: block;
-    height: 100%;
-    width: 100%;
-    background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
-    transition: width 0.3s ease;
-}
-
-.hp-text {
-    font-size: 0.9rem;
-    font-weight: bold;
-    color: #ef4444;
-    text-shadow: 1px 1px 2px #000;
-    min-width: 70px;
-}
-
-/* ==================== 중앙 메시지 ==================== */
-
-#center-message {
-    position: absolute;
-    top: 40%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 3rem;
-    font-weight: bold;
-    color: #fbbf24;
-    text-shadow: 
-        2px 2px 0 #000,
-        -2px -2px 0 #000,
-        2px -2px 0 #000,
-        -2px 2px 0 #000,
-        0 0 20px rgba(251, 191, 36, 0.5);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    pointer-events: none;
-}
-
-/* ==================== 하단 바 ==================== */
-
-#bottom-bar {
-    padding: 15px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-}
-
-/* 카드 핸드 */
-#card-hand {
-    display: flex;
-    gap: 10px;
-}
-
-/* 액션 버튼 */
-#action-buttons {
-    display: flex;
-    gap: 10px;
-}
-
-.action-btn {
-    padding: 12px 25px;
-    font-size: 1rem;
-    font-weight: bold;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-    background: linear-gradient(180deg, #4a4a6a 0%, #2a2a4a 100%);
-    color: #eee;
-    border: 2px solid #5a5a7a;
-    text-shadow: 1px 1px 2px #000;
-}
-
-.action-btn:hover {
-    transform: translateY(-2px);
-    background: linear-gradient(180deg, #5a5a7a 0%, #3a3a5a 100%);
-    border-color: #6a6a8a;
-}
-
-.action-btn:active {
-    transform: translateY(0);
-}
-
-/* 턴 종료 버튼 특별 스타일 */
-#btn-end-turn {
-    background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%);
-    color: #000;
-    border-color: #fcd34d;
-}
-
-#btn-end-turn:hover {
-    background: linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%);
-}
-
-/* ==================== 반응형 ==================== */
-
-@media (max-width: 768px) {
-    #top-bar {
-        padding: 10px;
-    }
-    
-    .hp-bar {
-        width: 100px;
-    }
-    
-    #center-message {
-        font-size: 2rem;
-    }
-    
-    #bottom-bar {
-        padding: 10px;
-    }
-    
-    .action-btn {
-        padding: 10px 20px;
-        font-size: 0.9rem;
-    }
-}
+@import url('css/theme.css');
+@import url('css/base.css');
+@import url('css/layout.css');
+@import url('css/topbar.css');
+@import url('css/battle-ui.css');
+@import url('css/card.css');
+@import url('css/controls.css');
+@import url('css/combat.css');
+@import url('css/break.css');
+@import url('css/responsive.css');
+@import url('css/utils.css');

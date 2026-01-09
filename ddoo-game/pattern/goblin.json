@@ -1,0 +1,60 @@
+{
+    "id": "goblin",
+    "name": "Goblin",
+    "nameKo": "고블린",
+    
+    "stats": {
+        "hp": 25,
+        "damage": 8,
+        "range": 1,
+        "sprite": "goblin.png",
+        "scale": 0.35
+    },
+    
+    "ai": {
+        "attackType": "melee",
+        "preferredDistance": 1,
+        "retreatBeforeAttack": false,
+        "aggressive": true
+    },
+    
+    "weaknesses": ["physical", "fire"],
+    
+    "intents": [
+        { 
+            "id": "slash",
+            "name": "베기",
+            "nameEn": "Slash",
+            "type": "attack", 
+            "damage": 8,
+            "weight": 40,
+            "breakRecipe": 3
+        },
+        { 
+            "id": "wild_swing",
+            "name": "난폭한 휘두르기",
+            "nameEn": "Wild Swing",
+            "type": "attack", 
+            "damage": 12,
+            "weight": 25,
+            "breakRecipe": 2
+        },
+        { 
+            "id": "defend",
+            "name": "방어 태세",
+            "nameEn": "Defensive Stance",
+            "type": "defend", 
+            "block": 6,
+            "weight": 20
+        },
+        { 
+            "id": "prepare",
+            "name": "준비",
+            "nameEn": "Prepare",
+            "type": "buff", 
+            "buffType": "strength",
+            "buffValue": 2,
+            "weight": 15
+        }
+    ]
+}

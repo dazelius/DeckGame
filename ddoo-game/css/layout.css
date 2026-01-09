@@ -1,0 +1,75 @@
+/* =====================================================
+   layout.css - Main Layout Structure
+   ===================================================== */
+
+/* ==================== Battle Area (70%) ==================== */
+
+#battle-area {
+    position: relative;
+    flex: 7;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--color-bg-dark);
+}
+
+/* ==================== Card Area (30%) ==================== */
+
+#card-area {
+    position: relative;
+    flex: 3;
+    min-height: 120px;
+    max-height: 220px;
+    background: linear-gradient(180deg, var(--color-bg-card) 0%, var(--color-bg-card-dark) 100%);
+    border-top: 3px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: var(--spacing-md) var(--spacing-xl);
+}
+
+/* ==================== 3D Background Container ==================== */
+
+#ddoo-bg3d {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: var(--z-bg) !important;
+    pointer-events: none;
+}
+
+/* ==================== Game Container (PixiJS) ==================== */
+
+#game-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: var(--z-game);
+}
+
+#game-container canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* ==================== Battle UI Overlay ==================== */
+
+#battle-ui {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: var(--z-ui);
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+}
+
+#battle-ui * {
+    pointer-events: auto;
+}

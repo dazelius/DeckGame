@@ -1,0 +1,252 @@
+/* =====================================================
+   responsive.css - Media Queries
+   ===================================================== */
+
+/* ==================== Tablet (max-width: 1024px) ==================== */
+
+@media (max-width: 1024px) {
+    .hp-bar { width: 120px; }
+    #center-message { font-size: 2rem; }
+    
+    .card {
+        width: 90px;
+        height: 125px;
+    }
+    .card-name { font-size: 0.8rem; }
+    .card-desc { font-size: 0.65rem; }
+}
+
+/* ==================== Mobile (max-width: 768px) ==================== */
+
+@media (max-width: 768px) {
+    /* Layout */
+    #battle-area {
+        flex: 6;
+    }
+    
+    #card-area {
+        flex: 4;
+        min-height: 100px;
+        max-height: 180px;
+        padding: 8px 12px;
+    }
+    
+    /* Top Bar */
+    #top-bar {
+        padding: 8px 12px;
+        padding-top: max(8px, env(safe-area-inset-top));
+    }
+    
+    .player-info {
+        padding: 6px 10px;
+    }
+    
+    /* HP */
+    .hp-bar {
+        width: 80px;
+        height: 14px;
+    }
+    
+    .hp-text {
+        font-size: 0.75rem;
+        min-width: 50px;
+    }
+    
+    /* Energy */
+    #energy-text {
+        font-size: 0.9rem;
+    }
+    
+    /* Message */
+    #center-message {
+        font-size: 1.5rem;
+    }
+    
+    /* Cards */
+    #card-hand {
+        gap: 8px;
+    }
+    
+    .card {
+        width: 75px;
+        height: 105px;
+        padding: 6px;
+        border-radius: 8px;
+    }
+    
+    .card-cost {
+        width: 22px;
+        height: 22px;
+        font-size: 0.75rem;
+        top: -6px;
+        left: -6px;
+    }
+    
+    .card-name {
+        font-size: 0.7rem;
+        margin-top: 10px;
+    }
+    
+    .card-desc {
+        font-size: 0.55rem;
+    }
+    
+    .card:hover {
+        transform: translateY(-10px) scale(1.03);
+    }
+    
+    /* Controls */
+    #card-controls {
+        padding: 8px 0;
+    }
+    
+    .deck-count {
+        font-size: 1.2rem;
+    }
+    
+    .action-btn {
+        padding: 12px 20px;
+        font-size: 0.9rem;
+        min-height: 44px;
+    }
+    
+    /* Fullscreen Button */
+    #fullscreen-btn {
+        display: block;
+    }
+}
+
+/* ==================== Small Mobile (max-width: 480px) ==================== */
+
+@media (max-width: 480px) {
+    #card-area {
+        padding: 8px 10px;
+    }
+    
+    #top-bar {
+        padding: 6px 8px;
+    }
+    
+    .hp-bar {
+        width: 60px;
+        height: 12px;
+    }
+    
+    .hp-text {
+        font-size: 0.65rem;
+    }
+    
+    #center-message {
+        font-size: 1.2rem;
+    }
+    
+    .card {
+        width: 65px;
+        height: 90px;
+        padding: 4px;
+    }
+    
+    .card-cost {
+        width: 20px;
+        height: 20px;
+        font-size: 0.7rem;
+    }
+    
+    .card-name {
+        font-size: 0.6rem;
+    }
+    
+    .card-desc {
+        font-size: 0.5rem;
+        display: none;
+    }
+    
+    .action-btn {
+        padding: 10px 16px;
+        font-size: 0.8rem;
+    }
+}
+
+/* ==================== Landscape Mode ==================== */
+
+@media (max-height: 500px) and (orientation: landscape) {
+    #battle-area {
+        flex: 2.5;
+    }
+    
+    #card-area {
+        flex: 1;
+        flex-direction: row;
+        padding: 8px 15px;
+        align-items: center;
+    }
+    
+    #card-hand {
+        flex: 1;
+        padding: 0;
+        gap: 6px;
+    }
+    
+    .card {
+        width: 55px;
+        height: 75px;
+        padding: 3px;
+    }
+    
+    .card-cost {
+        width: 18px;
+        height: 18px;
+        font-size: 0.65rem;
+        top: -4px;
+        left: -4px;
+    }
+    
+    .card-name {
+        font-size: 0.55rem;
+        margin-top: 6px;
+    }
+    
+    .card-desc {
+        display: none;
+    }
+    
+    #card-controls {
+        flex-direction: column;
+        gap: 8px;
+        padding: 0;
+    }
+    
+    #deck-info {
+        flex-direction: row;
+        gap: 6px;
+    }
+    
+    .deck-count {
+        font-size: 1rem;
+    }
+    
+    .action-btn {
+        padding: 8px 14px;
+        font-size: 0.75rem;
+    }
+}
+
+/* ==================== Touch Device (No Hover) ==================== */
+
+@media (hover: none) and (pointer: coarse) {
+    .action-btn:hover {
+        transform: none;
+        background: linear-gradient(180deg, var(--color-border) 0%, #2a2a4a 100%);
+        border-color: var(--color-border-light);
+    }
+    
+    #btn-end-turn:hover {
+        background: linear-gradient(180deg, var(--color-accent) 0%, var(--color-accent-dark) 100%);
+    }
+    
+    .card:hover {
+        transform: none;
+        border-color: var(--color-border);
+        box-shadow: var(--shadow-card);
+    }
+}

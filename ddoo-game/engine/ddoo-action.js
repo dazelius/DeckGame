@@ -669,13 +669,20 @@ const DDOOAction = {
             charData.effects.breathing.kill();
         }
         
-        // DDOOAction 캐릭터 (container.scale=1, sprite.scale=baseScale)
-        charData.effects.breathing = gsap.to(sprite.scale, {
-            y: baseScale * (1 + amount),
-            duration: speed,
+        // DDOOAction 캐릭터 (container.scale=1, sprite.scale=baseScale) - 안전 체크 포함
+        charData.effects.breathing = gsap.to({ val: 0 }, {
+            val: Math.PI * 2,
+            duration: speed * 2,
             repeat: -1,
-            yoyo: true,
-            ease: 'sine.inOut'
+            ease: 'none',
+            onUpdate: function() {
+                if (!sprite || sprite.destroyed || !sprite.scale) {
+                    this.kill();
+                    return;
+                }
+                const breath = Math.sin(this.targets()[0].val);
+                sprite.scale.y = baseScale * (1 + breath * amount);
+            }
         });
     },
     

@@ -1,0 +1,51 @@
+{
+    "id": "skeleton",
+    "name": "Skeleton",
+    "nameKo": "해골",
+    
+    "stats": {
+        "hp": 15,
+        "damage": 6,
+        "range": 1,
+        "sprite": "skeleton.png",
+        "scale": 0.35
+    },
+    
+    "ai": {
+        "attackType": "melee",
+        "preferredDistance": 1,
+        "retreatBeforeAttack": false,
+        "aggressive": false
+    },
+    
+    "weaknesses": ["physical", "fire"],
+    
+    "intents": [
+        { 
+            "id": "bone_strike",
+            "name": "뼈 공격",
+            "nameEn": "Bone Strike",
+            "type": "attack", 
+            "damage": 6,
+            "weight": 60
+        },
+        { 
+            "id": "rattle",
+            "name": "뼈 울림",
+            "nameEn": "Rattle",
+            "type": "buff", 
+            "buffType": "strength",
+            "buffValue": 1,
+            "weight": 25,
+            "breakRecipe": 2
+        },
+        { 
+            "id": "bone_shield",
+            "name": "뼈 방패",
+            "nameEn": "Bone Shield",
+            "type": "defend", 
+            "block": 5,
+            "weight": 15
+        }
+    ]
+}
