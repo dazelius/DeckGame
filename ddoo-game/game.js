@@ -689,6 +689,60 @@ const Game = {
         }
         
         // ========================================
+        // ★ 브레이크 진행 게이지 (레시피 진행 상황)
+        // ========================================
+        if (hasBreakRecipe) {
+            const recipe = intent.breakRecipe;
+            const progress = enemy.breakProgress || [];
+            
+            const ElementColors = {
+                physical: 0xf59e0b,
+                fire: 0xef4444,
+                ice: 0x3b82f6,
+                lightning: 0xa855f7,
+                poison: 0x22c55e,
+                magic: 0xc084fc
+            };
+            const ElementIcons = {
+                physical: '⚔',
+                fire: '🔥',
+                ice: '❄',
+                lightning: '⚡',
+                poison: '☠',
+                magic: '✨'
+            };
+            
+            // 레시피 아이콘들을 가로로 배치
+            const gaugeY = 8; // 인텐트 아래쪽
+            const iconSpacing = 18;
+            const startX = -((recipe.length - 1) * iconSpacing) / 2;
+            
+            for (let i = 0; i < recipe.length; i++) {
+                const elem = recipe[i];
+                const filled = i < progress.length;
+                const color = ElementColors[elem] || 0xf59e0b;
+                const icon = ElementIcons[elem] || '⚔';
+                
+                // 아이콘 배경
+                const slotBg = new PIXI.Graphics();
+                slotBg.circle(startX + i * iconSpacing, gaugeY, 8);
+                slotBg.fill({ color: filled ? color : 0x222222, alpha: filled ? 1 : 0.5 });
+                slotBg.stroke({ color: filled ? 0xffffff : 0x444444, width: filled ? 2 : 1 });
+                container.addChild(slotBg);
+                
+                // 아이콘 텍스트
+                const slotIcon = new PIXI.Text({
+                    text: icon,
+                    style: { fontSize: 9, fill: filled ? '#ffffff' : '#666666' }
+                });
+                slotIcon.anchor.set(0.5);
+                slotIcon.x = startX + i * iconSpacing;
+                slotIcon.y = gaugeY;
+                container.addChild(slotIcon);
+            }
+        }
+        
+        // ========================================
         // 하단 화살표
         // ========================================
         const arrow = new PIXI.Graphics();
@@ -1726,15 +1780,26 @@ const Game = {
             const targetsInAoe = this.getEnemiesInAoe(targetEnemy.gridX, targetEnemy.gridZ, aoe);
             
             // 다중 공격 처리 (flurry 등)
+            console.log(`[Game] 다중 공격 시작: hits=${hits}, cardId=${cardId}`);
+            
             for (let hitNum = 0; hitNum < hits; hitNum++) {
-                if (targetEnemy.hp <= 0) break;
+                console.log(`[Game] Hit ${hitNum + 1}/${hits} - enemy HP: ${targetEnemy.hp}`);
                 
-                // 브레이크 시스템 연동
+                if (targetEnemy.hp <= 0) {
+                    console.log(`[Game] 적 사망으로 루프 종료`);
+                    break;
+                }
+                
+                // 브레이크 시스템 연동 (hitNum 전달로 시각적 구분)
                 if (typeof BreakSystem !== 'undefined') {
-                    const breakResult = BreakSystem.onAttack(targetEnemy, cardDef, 1);
+                    console.log(`[Game] BreakSystem.onAttack 호출 (${hitNum + 1}번째)`);
+                    const breakResult = BreakSystem.onAttack(targetEnemy, cardDef, 1, hitNum);
+                    console.log(`[Game] breakResult:`, breakResult, `| progress: ${targetEnemy.breakProgress?.join(',') || 'none'}`);
                     if (breakResult.broken) {
-                        console.log(`[Game] ${targetEnemy.name || targetEnemy.type} BROKEN!`);
+                        console.log(`[Game] 🔥 ${targetEnemy.name || targetEnemy.type} BROKEN!`);
                     }
+                    // 인텐트 UI 갱신 (브레이크 게이지 표시)
+                    this.createEnemyIntent(targetEnemy);
                 }
                 
                 // Attack animation toward primary target
@@ -1750,6 +1815,7 @@ const Game = {
                     await new Promise(r => setTimeout(r, 100));
                 }
             }
+            console.log(`[Game] 다중 공격 완료`);
             
             // Deal damage to all targets in AOE (except primary which was already hit)
             for (const target of targetsInAoe) {

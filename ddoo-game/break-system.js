@@ -118,7 +118,7 @@ const BreakSystem = {
     // ==========================================
     // 공격 시 브레이크 진행
     // ==========================================
-    onAttack(enemy, cardDef, hitCount = 1) {
+    onAttack(enemy, cardDef, hitCount = 1, hitNum = 0) {
         if (!this.hasBreakableIntent(enemy)) return { hit: false, broken: false };
         if (enemy.isBroken) return { hit: false, broken: false };
         
@@ -132,7 +132,7 @@ const BreakSystem = {
         if (element !== nextRequired) {
             // 잘못된 속성!
             console.log(`[BreakSystem] ${enemy.name || enemy.type}: ${element} 실패! (필요: ${nextRequired})`);
-            this.showRecipeResult(enemy, element, false, nextRequired);
+            this.showRecipeResult(enemy, element, false, nextRequired, hitNum);
             return { hit: false, broken: false };
         }
         
@@ -141,7 +141,7 @@ const BreakSystem = {
         enemy.breakProgress = progress;
         
         console.log(`[BreakSystem] ${enemy.name || enemy.type}: ${element} 성공! [${progress.length}/${recipe.length}]`);
-        this.showRecipeResult(enemy, element, true);
+        this.showRecipeResult(enemy, element, true, null, hitNum, progress.length, recipe.length);
         
         // 레시피 완성 체크
         if (progress.length >= recipe.length) {
@@ -157,7 +157,7 @@ const BreakSystem = {
     // ==========================================
     // 레시피 결과 표시
     // ==========================================
-    showRecipeResult(enemy, element, isHit, requiredElement = null) {
+    showRecipeResult(enemy, element, isHit, requiredElement = null, hitNum = 0, currentProgress = 0, totalRecipe = 0) {
         if (!enemy.sprite) return;
         
         const popup = document.createElement('div');
@@ -167,28 +167,42 @@ const BreakSystem = {
         const color = this.ElementColors[element] || '#f59e0b';
         
         if (isHit) {
-            popup.innerHTML = `<span style="color: ${color}">${icon}</span> <span style="color: #22c55e">✓</span>`;
+            // 진행 상황 표시: "⚔️ ✓ 2/3"
+            popup.innerHTML = `
+                <span style="color: ${color}; font-size: 1.8rem">${icon}</span>
+                <span style="color: #22c55e; font-size: 1.5rem">✓</span>
+                <span style="color: #ffdd00; font-size: 1.2rem; margin-left: 4px">${currentProgress}/${totalRecipe}</span>
+            `;
         } else {
-            const requiredIcon = this.ElementIcons[requiredElement] || '?';
             popup.innerHTML = `<span style="color: #666">${icon}</span> <span style="color: #ef4444">✗</span>`;
         }
         
-        // 위치 계산
+        // 위치 계산 - hitNum에 따라 X 오프셋 적용 (겹치지 않게)
         const globalPos = enemy.sprite.getGlobalPosition();
+        const xOffset = (hitNum - 1) * 30; // 히트마다 X 위치 다르게
+        const yOffset = hitNum * 15; // 히트마다 Y 위치도 살짝 다르게
+        
         popup.style.cssText = `
             position: fixed;
-            left: ${globalPos.x}px;
-            top: ${globalPos.y - 60}px;
+            left: ${globalPos.x + xOffset}px;
+            top: ${globalPos.y - 80 - yOffset}px;
             transform: translate(-50%, -50%);
             font-size: 1.5rem;
             font-weight: bold;
-            z-index: 10000;
+            z-index: ${10000 + hitNum};
             pointer-events: none;
-            animation: breakPopup 0.6s ease-out forwards;
+            animation: breakPopup 0.8s ease-out forwards;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(0,0,0,0.6);
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 2px solid ${isHit ? '#22c55e' : '#ef4444'};
         `;
         
         document.body.appendChild(popup);
-        setTimeout(() => popup.remove(), 600);
+        setTimeout(() => popup.remove(), 800);
     },
     
     // ==========================================
