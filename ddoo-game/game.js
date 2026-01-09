@@ -1655,96 +1655,31 @@ const Game = {
             this.updateCostUI();
         }
         
-        // Create sprite (scale: 1로 생성, 컨테이너 스케일로 조절)
-        const sprite = await DDOORenderer.createSprite(unitDef.sprite, {
-            scale: 1,  // 내부 스프라이트는 1:1
-            outline: { enabled: false },
-            shadow: { enabled: false },
-            breathing: { enabled: false }  // 스폰 애니메이션 후 시작
-        });
+        // ★ UnitSprite 모듈로 스프라이트 생성 (스케일 관리 통합)
+        const sprite = await UnitSprite.create(unitDef.sprite, unitDef.scale);
+        if (!sprite) {
+            console.error(`[Game] Failed to create sprite for ${unitType}`);
+            return;
+        }
         
-        // Position
+        // Position 계산
         const center = this.getCellCenter(gridX, gridZ);
-        const targetX = center ? center.x : 0;
-        const targetY = center ? center.y : 0;
+        const targetX = center?.x || 0;
+        const targetY = center?.y || 0;
         
-        // ★ 스폰 연출: 화면 밖에서 달려오기
-        const isEnemy = team === 'enemy';
-        const spawnOffsetX = isEnemy ? 200 : -200;  // 적은 오른쪽, 아군은 왼쪽에서
-        const targetScale = unitDef.scale;
-        
-        sprite.x = targetX + spawnOffsetX;
-        sprite.y = targetY + 50;  // 약간 아래에서 시작
-        sprite.alpha = 0;
-        sprite.scale.set(targetScale * 0.5);  // 컨테이너 스케일로 작게 시작
-        sprite.zIndex = Math.floor(targetY);
-        
-        // No team tint - use natural sprite colors
-        // sprite.tint은 컨테이너에 없음
-        
-        // baseScale 저장 (스폰 애니메이션 후 복원용)
-        sprite.baseScale = targetScale;
-        
+        // 컨테이너에 추가
         this.containers.units.addChild(sprite);
         
-        // ★ 달려오는 애니메이션 (컨테이너 스케일로 조절)
-        const runInAnimation = gsap.timeline({
-            onComplete: () => {
-                // 스폰 완료 후 스케일 확정 및 숨쉬기 시작
-                if (sprite && !sprite.destroyed) {
-                    sprite.scale.set(targetScale, targetScale);
-                    
-                    // 숨쉬기 시작 (컨테이너 스케일로)
-                    if (typeof gsap !== 'undefined') {
-                        gsap.to(sprite.scale, {
-                            y: targetScale * 1.025,
-                            duration: 2.5,
-                            repeat: -1,
-                            yoyo: true,
-                            ease: 'sine.inOut'
-                        });
-                    }
-                }
-            }
+        // ★ 스폰 애니메이션 재생 (UnitSprite 모듈 사용)
+        const isEnemy = team === 'enemy';
+        const showEffect = team === 'player' && unitType !== 'hero';
+        
+        UnitSprite.playSpawnAnimation(sprite, {
+            targetX,
+            targetY,
+            direction: isEnemy ? 'right' : 'left',
+            showEffect
         });
-        
-        // 등장 (페이드 인 + 커지면서) - 컨테이너 스케일 사용
-        runInAnimation
-            .to(sprite, { alpha: 1, duration: 0.1 })
-            .to(sprite.scale, { 
-                x: targetScale * 1.1, 
-                y: targetScale * 0.9, 
-                duration: 0.15 
-            }, '<')
-            // 달려오기 (빠르게!)
-            .to(sprite, {
-                x: targetX,
-                y: targetY,
-                duration: 0.25,
-                ease: 'power2.out'
-            }, '<')
-            // 착지 (스쿼시)
-            .to(sprite.scale, {
-                x: targetScale * 0.9,
-                y: targetScale * 1.15,
-                duration: 0.08
-            })
-            // 복구
-            .to(sprite.scale, {
-                x: targetScale,
-                y: targetScale,
-                duration: 0.15,
-                ease: 'elastic.out(1, 0.5)'
-            });
-        
-        // Summon effect (only for summon cards, not hero or enemies)
-        if (team === 'player' && unitType !== 'hero' && typeof CombatEffects !== 'undefined') {
-            // 착지 시점에 이펙트
-            setTimeout(() => {
-                CombatEffects.summonEffect(targetX, targetY);
-                CombatEffects.screenShake(5, 100);
-            }, 300);
-        }
         
         // Create unit object
         const unit = {
@@ -1760,7 +1695,7 @@ const Game = {
             damage: unitDef.damage,
             range: unitDef.range,
             sprite,
-            baseScale: unitDef.scale,  // 기본 스케일 저장
+            baseScale: unitDef.scale,  // unit 객체에도 저장 (호환성)
             isHero: unitDef.isHero || false,
             state: 'idle'
         };
