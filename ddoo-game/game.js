@@ -413,12 +413,6 @@ const Game = {
     updateCostUI() {
         const currentCost = this.state.cost;
         
-        // Update top bar cost orbs
-        const topOrbs = document.querySelectorAll('#top-cost-orbs .top-cost-orb');
-        topOrbs.forEach((orb, index) => {
-            orb.classList.toggle('active', index < currentCost);
-        });
-        
         // Update bottom panel cost orbs
         const bottomOrbs = document.querySelectorAll('#cost-orbs .cost-orb');
         bottomOrbs.forEach((orb, index) => {
