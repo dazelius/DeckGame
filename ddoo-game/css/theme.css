@@ -1,0 +1,840 @@
+/* =====================================================
+   theme.css - Dark Souls Theme Styles
+   다크소울 테마 및 메인 UI 스타일
+   ===================================================== */
+
+/* ==================== DARK SOULS THEME ==================== */
+:root {
+    --ds-black: #0a0806;
+    --ds-dark: #151210;
+    --ds-brown: #1a1512;
+    --ds-panel: #12100d;
+    --ds-gold: #c9a227;
+    --ds-gold-dark: #8b7320;
+    --ds-gold-glow: rgba(201, 162, 39, 0.4);
+    --ds-red: #8b2020;
+    --ds-red-bright: #c93030;
+    --ds-blood: #6b1010;
+    --ds-ember: #ff6a00;
+    --ds-text: #c4b998;
+    --ds-text-dim: #7a7060;
+    --ds-border: #3a3020;
+    --ds-border-light: #5a4a30;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--ds-black);
+    font-family: 'Cormorant Garamond', 'Times New Roman', serif;
+    color: var(--ds-text);
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* ==================== LAYOUT ==================== */
+#battle-area {
+    position: relative;
+    width: 100%;
+    height: 65vh;
+    overflow: hidden;
+    background: var(--ds-black);
+}
+
+#game-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* ==================== TOP BAR (Dark Souls Style) ==================== */
+#top-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    background: linear-gradient(180deg, 
+        rgba(10, 8, 6, 0.95) 0%, 
+        rgba(10, 8, 6, 0.7) 70%, 
+        transparent 100%);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 12px 20px;
+    z-index: 100;
+}
+
+/* HP Section */
+.hp-section {
+    display: flex;
+    gap: 20px;
+}
+
+.hp-box {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.hp-box .label {
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--ds-text-dim);
+    text-transform: uppercase;
+}
+
+.hp-bar-container {
+    position: relative;
+    width: 140px;
+    height: 12px;
+}
+
+.hp-bar-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #0a0a0a;
+    border: 1px solid var(--ds-border);
+}
+
+.hp-bar-fill {
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    height: calc(100% - 2px);
+    transition: width 0.4s ease-out;
+}
+
+.hp-bar-fill.player {
+    background: linear-gradient(180deg, var(--ds-gold) 0%, var(--ds-gold-dark) 100%);
+    box-shadow: 0 0 8px var(--ds-gold-glow);
+}
+
+.hp-bar-fill.enemy {
+    background: linear-gradient(180deg, var(--ds-red-bright) 0%, var(--ds-blood) 100%);
+}
+
+.hp-bar-shine {
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    right: 1px;
+    height: 40%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 100%);
+    pointer-events: none;
+}
+
+.hp-text {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    color: var(--ds-text);
+    margin-top: 2px;
+}
+
+/* Turn & Phase Display */
+.turn-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+#turn-display {
+    font-family: 'Cinzel', serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--ds-gold);
+    text-shadow: 0 0 10px var(--ds-gold-glow);
+}
+
+#phase-display {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--ds-text);
+    padding: 4px 16px;
+    border: 1px solid var(--ds-border);
+    background: rgba(0,0,0,0.5);
+}
+
+/* Cost/Souls Display */
+.souls-box {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.souls-label {
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--ds-text-dim);
+}
+
+.souls-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.souls-icon {
+    font-size: 20px;
+    color: var(--ds-gold);
+    text-shadow: 0 0 8px var(--ds-gold-glow);
+}
+
+.top-cost-orbs {
+    display: flex;
+    gap: 6px;
+}
+
+.top-cost-orb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--ds-gold-dark);
+    background: radial-gradient(circle at 30% 30%, #1a1510 0%, #0a0805 100%);
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.8);
+    transition: all 0.3s ease;
+}
+
+.top-cost-orb.active {
+    border-color: var(--ds-gold);
+    background: radial-gradient(circle at 30% 30%, 
+        #ffdd66 0%, #c9a227 40%, #8b6914 100%);
+    box-shadow: 
+        inset 0 0 8px rgba(255,220,100,0.5),
+        0 0 12px var(--ds-gold-glow);
+}
+
+/* ==================== CENTER MESSAGE ==================== */
+#center-message {
+    position: absolute;
+    top: 45%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Cinzel', serif;
+    font-size: 42px;
+    font-weight: 700;
+    letter-spacing: 8px;
+    color: var(--ds-gold);
+    text-shadow: 
+        0 0 20px var(--ds-gold-glow),
+        0 0 40px var(--ds-gold-glow),
+        2px 2px 4px #000;
+    opacity: 0;
+    transition: opacity 0.5s;
+    z-index: 200;
+    pointer-events: none;
+    text-transform: uppercase;
+}
+
+/* ==================== CARD PANEL ==================== */
+#unit-panel {
+    position: relative;
+    width: 100%;
+    height: 35vh;
+    background: linear-gradient(180deg, 
+        var(--ds-brown) 0%, 
+        var(--ds-dark) 50%,
+        var(--ds-black) 100%);
+    border-top: 2px solid var(--ds-border);
+    display: flex;
+    flex-direction: column;
+    padding: 8px 15px;
+}
+
+#unit-panel::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        var(--ds-gold-dark) 30%, 
+        var(--ds-gold) 50%, 
+        var(--ds-gold-dark) 70%, 
+        transparent 100%);
+}
+
+#panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 10px;
+    margin-bottom: 8px;
+}
+
+#panel-title {
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    letter-spacing: 4px;
+    color: var(--ds-text-dim);
+    text-transform: uppercase;
+}
+
+#panel-header span:last-child {
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    color: var(--ds-text-dim);
+}
+
+/* ==================== CARD HAND ==================== */
+#card-hand {
+    display: flex;
+    justify-content: center;
+    padding: 8px 20px;
+    flex: 1;
+    align-items: flex-end;
+}
+
+.card {
+    position: relative;
+    width: 160px;
+    height: 220px;
+    background: linear-gradient(170deg, 
+        #2a2520 0%, 
+        #1a1815 50%, 
+        #100e0c 100%);
+    border: 3px solid var(--ds-border);
+    border-radius: 8px;
+    padding: 12px 10px;
+    cursor: grab;
+    transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: flex;
+    flex-direction: column;
+    touch-action: none;
+    box-shadow: 
+        0 8px 16px rgba(0,0,0,0.8),
+        -3px 0 10px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+    transform-origin: center bottom;
+    margin-left: -30px;
+    opacity: 0;
+    transform: translateY(100px) rotateX(45deg) scale(0.5);
+}
+
+.card:first-child {
+    margin-left: 0;
+}
+
+.card.dealt {
+    opacity: 1;
+    transform: translateY(0) rotateX(0) scale(1);
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    right: 6px;
+    bottom: 6px;
+    border: 1px solid rgba(100, 80, 50, 0.3);
+    border-radius: 4px;
+    pointer-events: none;
+}
+
+.card:hover {
+    transform: translateY(-50px) scale(1.3);
+    border-color: var(--ds-gold-dark);
+    box-shadow: 
+        0 30px 60px rgba(0,0,0,0.95),
+        0 0 40px var(--ds-gold-glow),
+        inset 0 0 20px rgba(255,200,100,0.15);
+    z-index: 100;
+    margin-left: 15px;
+    margin-right: 15px;
+}
+
+.card:first-child:hover {
+    margin-left: 0;
+    margin-right: 15px;
+}
+
+.card:active {
+    cursor: grabbing;
+    transform: translateY(-55px) scale(1.32);
+}
+
+#card-hand:has(.card:hover) .card:not(:hover) {
+    transform: translateY(-8px) scale(0.92);
+    opacity: 0.7;
+}
+
+/* Card Cost */
+.card-cost {
+    position: absolute;
+    top: -16px;
+    left: -16px;
+    width: 50px;
+    height: 50px;
+    background: radial-gradient(circle at 30% 30%, 
+        var(--ds-gold) 0%, 
+        var(--ds-gold-dark) 100%);
+    border: 3px solid #4a3a20;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: 26px;
+    color: #1a1510;
+    box-shadow: 
+        0 4px 12px rgba(0,0,0,0.7),
+        inset 0 -2px 4px rgba(0,0,0,0.3);
+}
+
+.card-name {
+    font-family: 'Cinzel', serif;
+    font-size: 18px;
+    font-weight: 600;
+    text-align: center;
+    margin-top: 26px;
+    color: var(--ds-text);
+    letter-spacing: 1px;
+    text-shadow: 0 2px 3px rgba(0,0,0,0.6);
+}
+
+.card-type {
+    font-size: 12px;
+    text-align: center;
+    margin-top: 6px;
+    color: var(--ds-text-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.card-desc {
+    font-size: 13px;
+    text-align: center;
+    color: var(--ds-text-dim);
+    margin-top: auto;
+    line-height: 1.4;
+    padding: 0 6px;
+}
+
+/* Card Type Colors */
+.card.attack { border-color: var(--ds-red); }
+.card.attack:hover { border-color: var(--ds-red-bright); }
+.card.attack .card-cost { 
+    background: radial-gradient(circle at 30% 30%, 
+        var(--ds-red-bright) 0%, 
+        var(--ds-blood) 100%);
+    border-color: #4a2020;
+}
+
+.card.skill { border-color: #2a4a6a; }
+.card.skill:hover { border-color: #4080b0; }
+.card.skill .card-cost { 
+    background: radial-gradient(circle at 30% 30%, 
+        #4080b0 0%, 
+        #203050 100%);
+    border-color: #203040;
+}
+
+.card.summon { border-color: #4a3a6a; }
+.card.summon:hover { border-color: #8060b0; }
+.card.summon .card-cost { 
+    background: radial-gradient(circle at 30% 30%, 
+        #8060b0 0%, 
+        #3a2060 100%);
+    border-color: #302040;
+}
+
+/* ==================== DISABLED CARD ==================== */
+.card.disabled {
+    filter: saturate(0.3) brightness(0.75);
+    cursor: not-allowed;
+    opacity: 0.85;
+}
+
+.card.disabled .card-cost {
+    background: radial-gradient(circle at 30% 30%, 
+        #888 0%, 
+        #444 100%) !important;
+    border-color: #333;
+}
+
+.card.disabled:hover {
+    transform: translateY(-15px) scale(1.05);
+    border-color: #aa4444 !important;
+    box-shadow: 
+        0 15px 30px rgba(0,0,0,0.7),
+        0 0 20px rgba(170, 68, 68, 0.4);
+    z-index: 50;
+    animation: card-shake 0.4s ease-in-out;
+}
+
+@keyframes card-shake {
+    0%, 100% { transform: translateY(-15px) scale(1.05) rotate(0deg); }
+    20% { transform: translateY(-15px) scale(1.05) rotate(-3deg); }
+    40% { transform: translateY(-15px) scale(1.05) rotate(3deg); }
+    60% { transform: translateY(-15px) scale(1.05) rotate(-2deg); }
+    80% { transform: translateY(-15px) scale(1.05) rotate(2deg); }
+}
+
+.card.disabled:hover .card-cost {
+    background: radial-gradient(circle at 30% 30%, 
+        #cc4444 0%, 
+        #662222 100%) !important;
+    animation: cost-pulse 0.5s ease-in-out infinite;
+}
+
+@keyframes cost-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+}
+
+/* ==================== EXHAUST CARD ==================== */
+.exhaust-card-name {
+    font-family: 'Cinzel', serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #a78bfa;
+    text-shadow: 
+        0 0 15px rgba(139, 92, 246, 1),
+        0 0 30px rgba(139, 92, 246, 0.6),
+        2px 2px 0 #000;
+    letter-spacing: 2px;
+}
+
+.exhaust-label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1e1b4b;
+    background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.3), transparent);
+    padding: 4px 16px;
+    margin-top: 6px;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+}
+
+.card.exhaust-card::after {
+    content: 'EXHAUST';
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: #8b5cf6;
+    text-shadow: 0 0 5px rgba(139, 92, 246, 0.8);
+    letter-spacing: 1px;
+}
+
+/* ==================== LANGUAGE SELECTOR ==================== */
+.lang-selector {
+    display: flex;
+    gap: 4px;
+    margin-left: 15px;
+}
+
+.lang-btn {
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(180, 155, 100, 0.4);
+    border-radius: 4px;
+    background: rgba(30, 20, 10, 0.8);
+    color: rgba(180, 155, 100, 0.6);
+    font-family: 'Cinzel', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.lang-btn:hover {
+    border-color: rgba(180, 155, 100, 0.8);
+    color: rgba(180, 155, 100, 1);
+    background: rgba(50, 35, 20, 0.9);
+}
+
+.lang-btn.active {
+    border-color: var(--ds-gold);
+    color: var(--ds-gold);
+    background: rgba(180, 155, 100, 0.15);
+    box-shadow: 0 0 8px rgba(180, 155, 100, 0.3);
+}
+
+/* Drag Ghost */
+.drag-card {
+    background: linear-gradient(170deg, #3a3530 0%, #2a2825 50%, #1a1815 100%);
+    border: 3px solid var(--ds-gold-dark) !important;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 30px var(--ds-gold-glow);
+}
+
+/* ==================== BOTTOM BAR ==================== */
+#panel-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 20px;
+}
+
+.cost-orbs-panel {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.cost-orbs-label {
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: var(--ds-text-dim);
+    text-transform: uppercase;
+}
+
+.cost-orbs {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.cost-orb {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 3px solid var(--ds-gold-dark);
+    background: radial-gradient(circle at 30% 30%, 
+        #2a2015 0%, 
+        #15100a 50%, 
+        #0a0805 100%
+    );
+    box-shadow: 
+        inset 0 0 10px rgba(0,0,0,0.8),
+        0 0 5px rgba(0,0,0,0.5);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.cost-orb::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: transparent;
+    transition: all 0.3s ease;
+}
+
+.cost-orb.active {
+    border-color: var(--ds-gold);
+    background: radial-gradient(circle at 30% 30%, 
+        #ffdd66 0%, 
+        #c9a227 30%, 
+        #8b6914 70%,
+        #5a4410 100%
+    );
+    box-shadow: 
+        inset 0 0 15px rgba(255,220,100,0.5),
+        0 0 20px var(--ds-gold-glow),
+        0 0 40px rgba(201,162,39,0.3);
+    animation: orbPulse 2s ease-in-out infinite;
+}
+
+.cost-orb.active::before {
+    background: radial-gradient(circle, 
+        rgba(255,255,200,0.9) 0%, 
+        rgba(255,220,100,0.4) 50%,
+        transparent 70%
+    );
+    box-shadow: 0 0 10px rgba(255,220,100,0.8);
+}
+
+@keyframes orbPulse {
+    0%, 100% { 
+        box-shadow: 
+            inset 0 0 15px rgba(255,220,100,0.5),
+            0 0 20px var(--ds-gold-glow),
+            0 0 40px rgba(201,162,39,0.3);
+    }
+    50% { 
+        box-shadow: 
+            inset 0 0 20px rgba(255,220,100,0.7),
+            0 0 30px var(--ds-gold-glow),
+            0 0 50px rgba(201,162,39,0.5);
+    }
+}
+
+/* ==================== END TURN BUTTON ==================== */
+#btn-end-turn {
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--ds-text);
+    padding: 14px 35px;
+    background: linear-gradient(180deg, 
+        rgba(40, 35, 25, 0.9) 0%, 
+        rgba(20, 18, 12, 0.95) 100%);
+    border: 2px solid var(--ds-border);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+#btn-end-turn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, 
+        transparent, 
+        var(--ds-gold-dark), 
+        transparent);
+}
+
+#btn-end-turn:hover {
+    border-color: var(--ds-gold-dark);
+    color: var(--ds-gold);
+    box-shadow: 
+        0 0 20px var(--ds-gold-glow),
+        inset 0 0 20px rgba(201, 162, 39, 0.1);
+}
+
+#btn-end-turn:active {
+    transform: scale(0.98);
+}
+
+/* ==================== ENEMY INTENT ==================== */
+.enemy-intent {
+    position: absolute;
+    pointer-events: none;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform: translateX(-50%);
+    animation: intent-fade-in 0.4s ease-out;
+}
+
+@keyframes intent-fade-in {
+    from { opacity: 0; transform: translateX(-50%) translateY(-15px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.intent-container {
+    background: linear-gradient(180deg, 
+        rgba(15, 12, 8, 0.95) 0%, 
+        rgba(8, 6, 4, 0.9) 100%);
+    border: 1px solid var(--ds-border);
+    padding: 8px 14px;
+    min-width: 45px;
+    text-align: center;
+    position: relative;
+}
+
+.intent-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20%;
+    right: 20%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--ds-gold-dark), transparent);
+}
+
+.intent-container::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid var(--ds-border);
+}
+
+.intent-icon {
+    font-size: 18px;
+    display: block;
+}
+
+.intent-value {
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    font-weight: 700;
+    display: block;
+    margin-top: 2px;
+}
+
+.enemy-intent.attack .intent-icon,
+.enemy-intent.attack .intent-value {
+    color: var(--ds-red-bright);
+    text-shadow: 0 0 6px rgba(200, 50, 50, 0.6);
+}
+
+.enemy-intent.defend .intent-icon,
+.enemy-intent.defend .intent-value {
+    color: #6090c0;
+    text-shadow: 0 0 6px rgba(80, 130, 200, 0.5);
+}
+
+.enemy-intent.buff .intent-icon,
+.enemy-intent.buff .intent-value {
+    color: var(--ds-gold);
+    text-shadow: 0 0 6px var(--ds-gold-glow);
+}
+
+/* ==================== CHARACTER HP BARS ==================== */
+.char-hp-bar {
+    position: absolute;
+    pointer-events: none;
+    z-index: 500;
+    transform: translateX(-50%);
+}
+
+.char-hp-container {
+    width: 55px;
+    height: 6px;
+    background: #050505;
+    border: 1px solid #2a2520;
+    position: relative;
+}
+
+.char-hp-fill {
+    height: 100%;
+    transition: width 0.3s;
+}
+
+.char-hp-bar.player .char-hp-fill {
+    background: linear-gradient(180deg, var(--ds-gold) 0%, var(--ds-gold-dark) 100%);
+}
+
+.char-hp-bar.enemy .char-hp-fill {
+    background: linear-gradient(180deg, var(--ds-red-bright) 0%, var(--ds-blood) 100%);
+}
+
+.char-hp-bar.summon .char-hp-fill {
+    background: linear-gradient(180deg, #40a040 0%, #206020 100%);
+}
