@@ -1033,42 +1033,67 @@ const Game = {
         const hpBar = new PIXI.Container();
         
         // ========================================
-        // ★ 심플 HP 바 설정
+        // ★ HP 바 설정 (더 큰 사이즈)
         // ========================================
-        const barWidth = 50;
-        const barHeight = 6;
+        const barWidth = 70;
+        const barHeight = 10;
+        const padding = 3;
         
         // 색상 설정
         let hpColor = 0xcc3333; // Enemy - 빨강
+        let hpColorBright = 0xff4444;
         if (unit.isHero) {
             hpColor = 0xc9a227; // Hero - 금색
+            hpColorBright = 0xffd700;
         } else if (unit.team === 'player') {
             hpColor = 0x33aa33; // Summon - 초록
+            hpColorBright = 0x44dd44;
         }
         
-        // 배경
-        const bg = new PIXI.Graphics()
-            .rect(-barWidth/2 - 1, -1, barWidth + 2, barHeight + 2)
-            .fill(0x000000);
-        hpBar.addChild(bg);
+        // ========================================
+        // 쉴드 프레임 (HP 바를 감싸는 보호막)
+        // ========================================
+        const shieldFrame = new PIXI.Graphics();
+        shieldFrame.visible = false;
+        hpBar.addChild(shieldFrame);
+        unit.shieldFrame = shieldFrame;
+        
+        // 배경 프레임
+        const frame = new PIXI.Graphics()
+            .rect(-barWidth/2 - padding, -padding, barWidth + padding*2, barHeight + padding*2)
+            .fill(0x111111)
+            .stroke({ width: 2, color: 0x333333 });
+        hpBar.addChild(frame);
+        unit.hpFrame = frame;
+        
+        // HP 배경 (빈 부분)
+        const bgFill = new PIXI.Graphics()
+            .rect(-barWidth/2, 0, barWidth, barHeight)
+            .fill(0x220000);
+        hpBar.addChild(bgFill);
         
         // HP 게이지 (실제 HP)
         const hpFill = new PIXI.Graphics();
         hpBar.addChild(hpFill);
         unit.hpFill = hpFill;
         
-        // 쉴드 게이지
-        const shieldFill = new PIXI.Graphics();
-        hpBar.addChild(shieldFill);
-        unit.shieldFill = shieldFill;
+        // HP 하이라이트 (상단 빛)
+        const highlight = new PIXI.Graphics();
+        hpBar.addChild(highlight);
+        unit.hpHighlight = highlight;
         
         // HP 텍스트
         const hpText = new PIXI.Text({
-            text: `${unit.hp}/${unit.maxHp}`,
+            text: `${unit.hp}`,
             style: {
-                fontSize: 8,
+                fontSize: 11,
                 fill: '#ffffff',
-                fontWeight: 'bold'
+                fontWeight: 'bold',
+                dropShadow: {
+                    color: '#000000',
+                    blur: 2,
+                    distance: 1
+                }
             }
         });
         hpText.anchor.set(0.5);
@@ -1076,16 +1101,47 @@ const Game = {
         hpBar.addChild(hpText);
         unit.hpText = hpText;
         
+        // 쉴드 배지 (HP 바 오른쪽 상단)
+        const shieldBadge = new PIXI.Container();
+        shieldBadge.visible = false;
+        shieldBadge.x = barWidth / 2 + 8;
+        shieldBadge.y = -2;
+        hpBar.addChild(shieldBadge);
+        unit.shieldBadge = shieldBadge;
+        
+        // 쉴드 아이콘 배경
+        const shieldIcon = new PIXI.Graphics()
+            .circle(0, 0, 10)
+            .fill(0x2266cc)
+            .stroke({ width: 2, color: 0x66aaff });
+        shieldBadge.addChild(shieldIcon);
+        unit.shieldIcon = shieldIcon;
+        
+        // 쉴드 숫자
+        const shieldText = new PIXI.Text({
+            text: '0',
+            style: {
+                fontSize: 10,
+                fill: '#ffffff',
+                fontWeight: 'bold'
+            }
+        });
+        shieldText.anchor.set(0.5);
+        shieldBadge.addChild(shieldText);
+        unit.shieldText = shieldText;
+        
         // 단위 저장
         unit.hpBarWidth = barWidth;
         unit.hpBarHeight = barHeight;
+        unit.hpBarPadding = padding;
         unit.hpColor = hpColor;
+        unit.hpColorBright = hpColorBright;
         
         // 초기 그리기
         this.updateHPFill(unit);
         
         // Position at sprite's feet (bottom) with small margin
-        hpBar.y = 5;
+        hpBar.y = 8;
         hpBar.zIndex = 50;
         
         // ★ 새 구조: container에 추가
@@ -1110,7 +1166,7 @@ const Game = {
     updateHPFill(unit) {
         if (!unit.hpFill) return;
         
-        const { hpBarWidth, hpBarHeight, hpColor } = unit;
+        const { hpBarWidth, hpBarHeight, hpBarPadding, hpColor, hpColorBright } = unit;
         const hpRatio = Math.max(0, Math.min(1, unit.hp / unit.maxHp));
         const shield = unit.block || 0;
         
@@ -1122,22 +1178,78 @@ const Game = {
                 .fill(hpColor);
         }
         
-        // 쉴드 게이지 (파란색, HP 위에 오버레이)
-        unit.shieldFill.clear();
-        if (shield > 0) {
-            const shieldRatio = Math.min(1, shield / unit.maxHp);
-            unit.shieldFill
-                .rect(-hpBarWidth/2, 0, hpBarWidth * shieldRatio, hpBarHeight)
-                .fill({ color: 0x3388ff, alpha: 0.7 });
+        // HP 하이라이트 (상단 빛 효과)
+        if (unit.hpHighlight) {
+            unit.hpHighlight.clear();
+            if (hpRatio > 0) {
+                unit.hpHighlight
+                    .rect(-hpBarWidth/2, 1, hpBarWidth * hpRatio, 3)
+                    .fill({ color: hpColorBright, alpha: 0.5 });
+            }
+        }
+        
+        // ========================================
+        // 쉴드 프레임 (HP 바를 감싸는 보호막)
+        // ========================================
+        if (unit.shieldFrame) {
+            unit.shieldFrame.clear();
+            if (shield > 0) {
+                unit.shieldFrame.visible = true;
+                const p = hpBarPadding + 2;
+                // 외곽 글로우 (파란색)
+                unit.shieldFrame
+                    .rect(-hpBarWidth/2 - p - 2, -p - 2, hpBarWidth + (p+2)*2, hpBarHeight + (p+2)*2)
+                    .fill({ color: 0x3388ff, alpha: 0.3 });
+                // 보호막 테두리
+                unit.shieldFrame
+                    .rect(-hpBarWidth/2 - p, -p, hpBarWidth + p*2, hpBarHeight + p*2)
+                    .stroke({ width: 3, color: 0x66aaff });
+            } else {
+                unit.shieldFrame.visible = false;
+            }
+        }
+        
+        // 프레임 색상 변경 (쉴드 있을 때)
+        if (unit.hpFrame) {
+            unit.hpFrame.clear();
+            const frameColor = shield > 0 ? 0x4488cc : 0x333333;
+            unit.hpFrame
+                .rect(-hpBarWidth/2 - hpBarPadding, -hpBarPadding, hpBarWidth + hpBarPadding*2, hpBarHeight + hpBarPadding*2)
+                .fill(0x111111)
+                .stroke({ width: 2, color: frameColor });
+        }
+        
+        // 쉴드 배지 표시
+        if (unit.shieldBadge) {
+            if (shield > 0) {
+                unit.shieldBadge.visible = true;
+                if (unit.shieldText) {
+                    unit.shieldText.text = `${shield}`;
+                }
+                // 쉴드 아이콘 펄스 애니메이션
+                if (unit.shieldIcon && !unit.shieldPulse) {
+                    unit.shieldPulse = true;
+                    gsap.to(unit.shieldIcon, {
+                        alpha: 0.7,
+                        duration: 0.5,
+                        yoyo: true,
+                        repeat: -1,
+                        ease: "sine.inOut"
+                    });
+                }
+            } else {
+                unit.shieldBadge.visible = false;
+                if (unit.shieldPulse) {
+                    gsap.killTweensOf(unit.shieldIcon);
+                    unit.shieldIcon.alpha = 1;
+                    unit.shieldPulse = false;
+                }
+            }
         }
         
         // HP 텍스트 업데이트
         if (unit.hpText) {
-            if (shield > 0) {
-                unit.hpText.text = `${unit.hp}+${shield}`;
-            } else {
-                unit.hpText.text = `${unit.hp}/${unit.maxHp}`;
-            }
+            unit.hpText.text = `${unit.hp}`;
         }
     },
     
