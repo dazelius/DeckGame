@@ -9,6 +9,7 @@ const KnockbackSystem = {
     KNOCKBACK_DAMAGE: 2,      // 기본 넉백 대미지
     WALL_DAMAGE: 5,           // 벽 충돌 대미지
     COLLISION_DAMAGE: 3,      // 유닛 충돌 대미지 (양쪽)
+    PULL_CRASH_DAMAGE: 2,     // 당기기 충돌 대미지
     
     // ==========================================
     // 초기화
@@ -75,6 +76,116 @@ const KnockbackSystem = {
     },
     
     // ==========================================
+    // ★ Hook Pull (갈고리 당기기) - 갈고리 스킬 전용!
+    // 적을 플레이어 쪽으로 당김, 앞에 있던 적과 충돌하면 크래시 대미지!
+    // ==========================================
+    async hookPull(unit, crashDamage = 2) {
+        const posTarget = this.getPositionTarget(unit);
+        if (!posTarget || unit.hp <= 0) return { success: false, crashedUnits: [] };
+        if (!this.game) return { success: false, crashedUnits: [] };
+        
+        const hero = this.game.state.hero;
+        if (!hero) return { success: false, crashedUnits: [] };
+        
+        // 타겟 위치: 플레이어 바로 앞 (X+1)
+        const targetGridX = hero.gridX + 1;
+        const oldGridX = unit.gridX;
+        
+        console.log(`[Pull] ${unit.type}: gridX ${oldGridX} → ${targetGridX}`);
+        
+        // 이미 맨 앞이면 무시
+        if (unit.gridX <= targetGridX) {
+            console.log(`[Pull] 이미 앞에 있음`);
+            return { success: false, crashedUnits: [] };
+        }
+        
+        // ★ 경로에 있는 적들 찾기 (당겨지는 적이 지나가는 칸의 적들)
+        const allEnemies = this.game.state.enemyUnits.filter(e => 
+            e !== unit && e.hp > 0 && e.gridZ === unit.gridZ
+        );
+        
+        // 경로에 있는 적들 (targetGridX ~ unit.gridX 사이)
+        const enemiesInPath = allEnemies.filter(e => 
+            e.gridX >= targetGridX && e.gridX < oldGridX
+        ).sort((a, b) => a.gridX - b.gridX); // X 오름차순 정렬
+        
+        const crashedUnits = [];
+        
+        // ★ 각 적을 밀어내고 충돌 처리
+        for (const enemy of enemiesInPath) {
+            // 적을 한 칸 뒤로 밀기
+            const newEnemyX = enemy.gridX + 1;
+            
+            // 밀린 자리에 다른 적이 있으면 체인 밀기
+            if (newEnemyX < this.game.arena.width) {
+                await this.executeKnockback(enemy, newEnemyX);
+            }
+            
+            // ★ 크래시 대미지!
+            crashedUnits.push(enemy);
+            this.dealKnockbackDamage(enemy, crashDamage, 'crash');
+            this.dealKnockbackDamage(unit, crashDamage, 'crash');
+            
+            // 충돌 이펙트
+            await this.collisionImpact(unit, enemy);
+        }
+        
+        // ★ 당겨지는 유닛을 최종 위치로 이동
+        await this.executePull(unit, targetGridX);
+        
+        console.log(`[Pull] 완료! 충돌 적: ${crashedUnits.length}명`);
+        
+        return { success: true, crashedUnits };
+    },
+    
+    // ==========================================
+    // Pull 이동 실행 (당겨지는 애니메이션)
+    // ==========================================
+    async executePull(unit, newGridX) {
+        const posTarget = this.getPositionTarget(unit);
+        if (!posTarget || posTarget.destroyed) {
+            unit.gridX = newGridX;
+            unit.x = newGridX + 0.5;
+            return;
+        }
+        
+        const startX = posTarget.x;
+        const startY = posTarget.y;
+        
+        unit.gridX = newGridX;
+        unit.x = newGridX + 0.5;
+        
+        const newPos = this.game.getCellCenter(unit.gridX, unit.gridZ);
+        if (!newPos) return;
+        
+        unit.isAnimating = true;
+        
+        // ★ 당겨지는 애니메이션 (빠르게 끌려옴)
+        await new Promise(resolve => {
+            gsap.timeline({ onComplete: resolve })
+                // 끌려오면서 기울어짐
+                .to(posTarget, {
+                    x: newPos.x,
+                    y: newPos.y,
+                    duration: 0.2,
+                    ease: 'power3.in'
+                })
+                .to(posTarget, {
+                    rotation: -0.15,
+                    duration: 0.1
+                }, 0)
+                // 착지하며 복원
+                .to(posTarget, {
+                    rotation: 0,
+                    duration: 0.15,
+                    ease: 'elastic.out(1, 0.5)'
+                });
+        });
+        
+        unit.isAnimating = false;
+    },
+    
+    // ==========================================
     // 넉백 대미지 처리
     // ==========================================
     dealKnockbackDamage(unit, damage, type = 'knockback') {
@@ -94,7 +205,8 @@ const KnockbackSystem = {
             const colors = {
                 knockback: 'normal',
                 wall: 'bash',      // 벽 충돌은 주황색
-                collision: 'burn'  // 유닛 충돌은 빨강
+                collision: 'burn', // 유닛 충돌은 빨강
+                crash: 'burn'      // 갈고리 충돌은 빨강
             };
             
             CombatEffects.showDamageNumber(

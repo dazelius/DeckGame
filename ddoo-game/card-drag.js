@@ -185,9 +185,9 @@ const CardDrag = {
     handleAttackDrag(touch, ghost, cardDef) {
         let targetEnemy;
         
-        // ★ 직선 전용 카드 (스피어 투척 등)
-        if (cardDef.straight) {
-            targetEnemy = this.getStraightLineTarget();
+        // ★ 스피어 투척: 레인 선택 → 해당 레인의 최전선 적만 타겟!
+        if (cardDef.distanceBonus) {
+            targetEnemy = this.getSpearTarget(touch.clientX, touch.clientY);
         } else {
             targetEnemy = this.getEnemyAtScreen(touch.clientX, touch.clientY, cardDef.frontOnly || false);
         }
@@ -199,9 +199,9 @@ const CardDrag = {
         const cursorX = touch.clientX - rect.left;
         const cursorY = touch.clientY - rect.top;
         
-        // ★ 직선 카드면 직선 타겟팅 라인만 표시
-        if (cardDef.straight) {
-            this.drawStraightTargetingLine(targetEnemy);
+        // ★ 스피어 투척: 직선 타겟팅 라인 표시 (타겟 방향으로)
+        if (cardDef.distanceBonus) {
+            this.drawSpearTargetingLine(targetEnemy);
         } else {
             this.drawTargetingCurvesToEnemies(cursorX, cursorY, targetEnemy, cardDef.frontOnly || false);
         }
@@ -212,15 +212,15 @@ const CardDrag = {
                 const crossTargets = this.game.getEnemiesInCrossAoe(targetEnemy.gridX, targetEnemy.gridZ, 1);
                 this.highlightEnemiesInAoe(crossTargets);
                 this.showCrossAoeHighlight(targetEnemy.gridX, targetEnemy.gridZ, 1);
-            } else if (!cardDef.straight) {
+            } else if (cardDef.distanceBonus) {
+                // 스피어: 단일 타겟만 하이라이트
+                this.highlightEnemiesInAoe([targetEnemy]);
+                this.clearAoeHighlight();
+            } else {
                 const aoe = cardDef.aoe || { width: 1, depth: 1 };
                 const targetsInAoe = this.game.getEnemiesInAoe(targetEnemy.gridX, targetEnemy.gridZ, aoe);
                 this.highlightEnemiesInAoe(targetsInAoe);
                 this.showAoeHighlight(targetEnemy.gridX, targetEnemy.gridZ, aoe);
-            } else {
-                // 직선 카드는 단일 타겟만 하이라이트
-                this.highlightEnemiesInAoe([targetEnemy]);
-                this.clearAoeHighlight();
             }
             
             ghost.style.transform = 'scale(1.2) rotate(0deg)';
@@ -230,11 +230,7 @@ const CardDrag = {
             this.clearEnemyHighlights();
             this.clearAoeHighlight();
             
-            if (cardDef.straight) {
-                // ★ 직선 카드: 타겟 없으면 항상 사용 불가 표시
-                ghost.style.transform = 'scale(1.15) rotate(-3deg)';
-                ghost.querySelector('.drag-card').style.borderColor = '#ff6666';
-            } else if (dragDist > 100) {
+            if (dragDist > 100) {
                 ghost.style.transform = 'scale(1.2) rotate(0deg)';
                 ghost.querySelector('.drag-card').style.borderColor = '#44ff44';
             } else {
@@ -358,10 +354,10 @@ const CardDrag = {
     handleAttackDrop(touch, cardId, handIndex, cardDef) {
         let targetEnemy = this.dragState.targetEnemy;
         
-        // ★ 직선 카드면 직선 타겟만 사용
+        // ★ 타겟이 없으면 마지막으로 다시 확인
         if (!targetEnemy) {
-            if (cardDef.straight) {
-                targetEnemy = this.getStraightLineTarget();
+            if (cardDef.distanceBonus) {
+                targetEnemy = this.getSpearTarget(touch.clientX, touch.clientY);
             } else {
                 targetEnemy = this.getEnemyAtScreen(touch.clientX, touch.clientY, cardDef.frontOnly || false);
             }
@@ -373,11 +369,7 @@ const CardDrag = {
             if (targetEnemy) {
                 this.game.executeCardOnTarget(cardId, handIndex, targetEnemy);
                 return true;
-            } else if (cardDef.straight && dragDist > 100) {
-                // ★ 직선 카드: 같은 라인에 적이 없으면 안내 메시지
-                this.game.showMessage('같은 라인에 대상이 없습니다!', 1500);
-                return false;
-            } else if (dragDist > 100 && !cardDef.straight) {
+            } else if (dragDist > 100) {
                 this.game.executeCard(cardId, handIndex);
                 return true;
             }
@@ -560,6 +552,74 @@ const CardDrag = {
     },
     
     // ==========================================
+    // ★ 스피어 타겟팅 (선택한 레인의 최전선 적)
+    // ==========================================
+    getSpearTarget(screenX, screenY) {
+        const canvas = this.app.canvas;
+        const rect = canvas.getBoundingClientRect();
+        const localX = screenX - rect.left;
+        const localY = screenY - rect.top;
+        
+        // 1. 커서가 가리키는 적이 있는지 확인
+        let hoveredEnemy = null;
+        for (const enemy of this.game.state.enemyUnits) {
+            if (enemy.hp <= 0) continue;
+            
+            const globalPos = this.getUnitGlobalPosition(enemy);
+            if (!globalPos) continue;
+            
+            const spriteWidth = enemy.sprite?.width || 80;
+            const spriteHeight = enemy.sprite?.height || 100;
+            const hitPadding = 50;
+            
+            const left = globalPos.x - spriteWidth / 2 - hitPadding;
+            const right = globalPos.x + spriteWidth / 2 + hitPadding;
+            const top = globalPos.y - spriteHeight - hitPadding;
+            const bottom = globalPos.y + hitPadding;
+            
+            if (localX >= left && localX <= right && localY >= top && localY <= bottom) {
+                hoveredEnemy = enemy;
+                break;
+            }
+        }
+        
+        // 2. 레인 결정 (적을 클릭했으면 그 적의 레인, 아니면 커서 Y 위치로 추정)
+        let targetZ;
+        if (hoveredEnemy) {
+            targetZ = hoveredEnemy.gridZ;
+        } else {
+            // Y 위치로 레인 추정 (대략적인 계산)
+            const hero = this.game.state.hero;
+            if (!hero) return null;
+            
+            // 화면 중앙 기준으로 레인 결정
+            const canvasHeight = rect.height;
+            if (localY < canvasHeight * 0.35) {
+                targetZ = 0;  // 상단 레인
+            } else if (localY > canvasHeight * 0.65) {
+                targetZ = 2;  // 하단 레인
+            } else {
+                targetZ = 1;  // 중앙 레인
+            }
+        }
+        
+        // 3. 해당 레인에서 가장 앞에 있는 적 찾기
+        const enemiesInLane = this.game.state.enemyUnits.filter(e => 
+            e.hp > 0 && e.gridZ === targetZ
+        );
+        
+        if (enemiesInLane.length === 0) {
+            // 해당 레인에 적이 없으면 null (또는 가장 가까운 레인의 적)
+            return null;
+        }
+        
+        // 가장 앞에 있는 적 (gridX가 가장 작은)
+        return enemiesInLane.reduce((closest, e) => 
+            (!closest || e.gridX < closest.gridX) ? e : closest, null
+        );
+    },
+    
+    // ==========================================
     // 직선 타겟팅 라인 그리기 (스피어 투척)
     // ==========================================
     drawStraightTargetingLine(target) {
@@ -703,6 +763,204 @@ const CardDrag = {
             noTargetText.anchor.set(0.5);
             noTargetText.x = startX + 120;
             noTargetText.y = startY - 25;
+            
+            this._distanceText = noTargetText;
+            this.game.containers.effects.addChild(noTargetText);
+        }
+    },
+    
+    // ==========================================
+    // 스피어 타겟팅 라인 (모든 레인 타겟 가능)
+    // ==========================================
+    drawSpearTargetingLine(target) {
+        if (!this.targetingCurve) {
+            this.targetingCurve = new PIXI.Graphics();
+            this.targetingCurve.zIndex = 100;
+            this.game.containers.effects.addChild(this.targetingCurve);
+        }
+        
+        this.targetingCurve.clear();
+        
+        const hero = this.game.state.hero;
+        if (!hero || !hero.sprite) return;
+        
+        const heroPos = hero.sprite.getGlobalPosition();
+        const hasTarget = !!target;
+        
+        // 히어로가 레인 이동해야 하는지 확인
+        const needsLaneChange = hasTarget && target.gridZ !== hero.gridZ;
+        
+        let startX, startY, endX, endY;
+        
+        if (needsLaneChange) {
+            // 이동 후 발사 위치 계산
+            const moveToZ = target.gridZ;
+            const movePos = this.game.getCellCenter(hero.gridX, moveToZ);
+            startX = movePos.x + 20;
+            startY = movePos.y - 45;
+        } else {
+            startX = heroPos.x + 20;
+            startY = heroPos.y - 45;
+        }
+        
+        if (target) {
+            const targetPos = target.sprite.getGlobalPosition();
+            endX = targetPos.x;
+            endY = targetPos.y - 40;
+        } else {
+            endX = startX + 350;
+            endY = startY;
+        }
+        
+        const lineColor = hasTarget ? 0xf59e0b : 0x666666;
+        const glowColor = hasTarget ? 0xfbbf24 : 0x444444;
+        const angle = Math.atan2(endY - startY, endX - startX);
+        const distance = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
+        
+        // 0. 레인 이동 화살표 (다른 레인 타겟 시)
+        if (needsLaneChange) {
+            const arrowColor = 0x60a5fa; // 파란색
+            const moveStartX = heroPos.x;
+            const moveStartY = heroPos.y - 30;
+            const moveEndX = startX - 20;
+            const moveEndY = startY + 15;
+            
+            // 이동 경로 (점선)
+            this.targetingCurve.moveTo(moveStartX, moveStartY);
+            this.targetingCurve.lineTo(moveEndX, moveEndY);
+            this.targetingCurve.stroke({ width: 3, color: arrowColor, alpha: 0.6 });
+            
+            // 이동 화살표
+            const moveAngle = Math.atan2(moveEndY - moveStartY, moveEndX - moveStartX);
+            const arrowSize = 10;
+            this.targetingCurve.moveTo(moveEndX, moveEndY);
+            this.targetingCurve.lineTo(
+                moveEndX - arrowSize * Math.cos(moveAngle - 0.5),
+                moveEndY - arrowSize * Math.sin(moveAngle - 0.5)
+            );
+            this.targetingCurve.moveTo(moveEndX, moveEndY);
+            this.targetingCurve.lineTo(
+                moveEndX - arrowSize * Math.cos(moveAngle + 0.5),
+                moveEndY - arrowSize * Math.sin(moveAngle + 0.5)
+            );
+            this.targetingCurve.stroke({ width: 3, color: arrowColor, alpha: 0.8 });
+            
+            // 이동 위치 원
+            this.targetingCurve.circle(moveEndX + 20, moveEndY + 15, 25);
+            this.targetingCurve.stroke({ width: 2, color: arrowColor, alpha: 0.4 });
+        }
+        
+        // 1. 글로우 라인 (배경)
+        this.targetingCurve.moveTo(startX, startY);
+        this.targetingCurve.lineTo(endX - 20, endY);
+        this.targetingCurve.stroke({ 
+            width: 8, 
+            color: glowColor, 
+            alpha: 0.3,
+            cap: 'round'
+        });
+        
+        // 2. 점선 패턴 (창 궤적)
+        const dashLength = 15;
+        const gapLength = 10;
+        let currentDist = 0;
+        
+        while (currentDist < distance - 30) {
+            const x1 = startX + Math.cos(angle) * currentDist;
+            const y1 = startY + Math.sin(angle) * currentDist;
+            const x2 = startX + Math.cos(angle) * Math.min(currentDist + dashLength, distance - 30);
+            const y2 = startY + Math.sin(angle) * Math.min(currentDist + dashLength, distance - 30);
+            
+            this.targetingCurve.moveTo(x1, y1);
+            this.targetingCurve.lineTo(x2, y2);
+            
+            currentDist += dashLength + gapLength;
+        }
+        this.targetingCurve.stroke({ 
+            width: 3, 
+            color: lineColor, 
+            alpha: 0.9,
+            cap: 'round'
+        });
+        
+        // 3. 창 모양 화살표
+        if (hasTarget) {
+            const spearX = endX - 15;
+            const spearY = endY;
+            
+            this.targetingCurve.poly([
+                { x: endX, y: endY },
+                { x: spearX - 8, y: spearY - 8 },
+                { x: spearX - 8, y: spearY + 8 }
+            ]);
+            this.targetingCurve.fill({ color: 0xffffff, alpha: 0.9 });
+            this.targetingCurve.stroke({ width: 2, color: lineColor });
+            
+            this.targetingCurve.moveTo(spearX - 8, spearY);
+            this.targetingCurve.lineTo(spearX - 35, spearY);
+            this.targetingCurve.stroke({ width: 4, color: 0x8b4513, alpha: 0.8 });
+        } else {
+            // X 표시
+            const xSize = 12;
+            this.targetingCurve.moveTo(endX - xSize, startY - xSize);
+            this.targetingCurve.lineTo(endX + xSize, startY + xSize);
+            this.targetingCurve.moveTo(endX + xSize, startY - xSize);
+            this.targetingCurve.lineTo(endX - xSize, startY + xSize);
+            this.targetingCurve.stroke({ width: 4, color: 0xff4444, alpha: 0.8 });
+        }
+        
+        // 4. 시작점 원
+        this.targetingCurve.circle(startX, startY, 6);
+        this.targetingCurve.fill({ color: lineColor, alpha: 0.8 });
+        this.targetingCurve.stroke({ width: 2, color: 0xffffff, alpha: 0.5 });
+        
+        // 5. 텍스트 UI
+        if (this._distanceText && !this._distanceText.destroyed) {
+            this._distanceText.destroy();
+        }
+        if (this._spearLabel && !this._spearLabel.destroyed) {
+            this._spearLabel.destroy();
+        }
+        
+        if (hasTarget) {
+            const gridDistance = Math.abs(target.gridX - hero.gridX);
+            const bonusDamage = gridDistance * 1;
+            
+            // 레인 이동 + 거리 보너스 텍스트
+            let labelText = `🎯 ${gridDistance}칸 → +${bonusDamage} DMG`;
+            if (needsLaneChange) {
+                const direction = target.gridZ > hero.gridZ ? '↓' : '↑';
+                labelText = `${direction} 이동 후 투척! ${gridDistance}칸 → +${bonusDamage} DMG`;
+            }
+            
+            const distText = new PIXI.Text({
+                text: labelText,
+                style: {
+                    fontSize: 13,
+                    fontWeight: 'bold',
+                    fill: needsLaneChange ? '#93c5fd' : '#fef3c7',
+                    stroke: { color: needsLaneChange ? '#1e3a8a' : '#78350f', width: 3 }
+                }
+            });
+            distText.anchor.set(0.5);
+            distText.x = (startX + endX) / 2;
+            distText.y = startY - 25;
+            
+            this._distanceText = distText;
+            this.game.containers.effects.addChild(distText);
+        } else {
+            const noTargetText = new PIXI.Text({
+                text: '🎯 적을 선택하세요',
+                style: {
+                    fontSize: 13,
+                    fontWeight: 'bold',
+                    fill: '#a1a1aa',
+                    stroke: { color: '#27272a', width: 3 }
+                }
+            });
+            noTargetText.anchor.set(0.5);
+            noTargetText.x = heroPos.x + 120;
+            noTargetText.y = heroPos.y - 70;
             
             this._distanceText = noTargetText;
             this.game.containers.effects.addChild(noTargetText);

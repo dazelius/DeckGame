@@ -24,6 +24,7 @@ const CardSystem = {
         fireBolt: 1,
         fireBall: 1,
         spearThrow: 1,
+        hook: 1,       // ★ 갈고리 추가
         summonKnight: 2,
         summonArcher: 2,
         heal: 1

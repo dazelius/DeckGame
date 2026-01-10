@@ -90,8 +90,19 @@
         "target": "enemy",
         "melee": false,
         "frontOnly": false,
-        "straight": true,
         "distanceBonus": 1,
+        "element": "physical"
+    },
+    "hook": {
+        "name": "Hook",
+        "cost": 1,
+        "type": "attack",
+        "damage": 4,
+        "target": "enemy",
+        "melee": false,
+        "frontOnly": false,
+        "pull": 99,
+        "crashDamage": 2,
         "element": "physical"
     }
 }

@@ -1,0 +1,40 @@
+{
+  "id": "cleave",
+  "name": "휘두르기",
+  "type": "melee",
+  "hits": 1,
+  "aoe": true,
+  "animation": {
+    "approach": {
+      "windUp": { "x": -20, "duration": 0.1 },
+      "dash": { "distance": 60, "duration": 0.15, "ease": "power2.in" }
+    },
+    "strike": {
+      "rotation": -0.3,
+      "duration": 0.1,
+      "scale": { "x": 0.9, "y": 1.1 }
+    },
+    "sweep": {
+      "rotation": 0.4,
+      "duration": 0.08,
+      "scale": { "x": 1.2, "y": 0.8 }
+    },
+    "return": {
+      "duration": 0.2,
+      "ease": "power2.out"
+    }
+  },
+  "vfx": {
+    "type": "cleave",
+    "color": "0xffffff",
+    "width": 200
+  },
+  "sfx": {
+    "hit": "cleave"
+  },
+  "screenShake": {
+    "intensity": 12,
+    "duration": 250
+  }
+}
+

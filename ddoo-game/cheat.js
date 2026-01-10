@@ -371,7 +371,13 @@ const CheatSystem = {
         const grid = this.modal.querySelector('.cheat-card-grid');
         grid.innerHTML = '';
         
-        if (typeof CardSystem === 'undefined' || !CardSystem.cards) return;
+        if (typeof CardSystem === 'undefined' || !CardSystem.cards) {
+            console.warn('[Cheat] CardSystem 또는 cards 없음!');
+            return;
+        }
+        
+        const cardCount = Object.keys(CardSystem.cards).length;
+        console.log(`[Cheat] 카드 목록 갱신: ${cardCount}개 카드 (hook 포함: ${!!CardSystem.cards.hook})`);
         
         const cardIcons = {
             attack: '⚔️',

@@ -93,14 +93,30 @@ const UnitCombat = {
         const dashDirection = isEnemy ? -1 : 1;
         const dashX = targetX - (dashDirection * 60);
         
-        // 1. 윈드업 + 돌진 (위치: posTarget, 스케일: scaleTarget)
+        // 1. 윈드업 + 돌진 (위치: posTarget, 스케일: scaleTarget) + ★ 산데비스탄!
+        // 잔상: 윈드업 시작
+        if (typeof SkillSystem !== 'undefined') {
+            SkillSystem.createGhost(attacker, 0.5, SkillSystem.GHOST_COLORS.CYAN);
+        }
+        
         await new Promise(resolve => {
+            // 잔상: 대시 중 산데비스탄 트레일 (★ 더 많이, 더 빠르게!)
+            let trailTimer = null;
+            if (typeof SkillSystem !== 'undefined') {
+                trailTimer = SkillSystem.startSandevistanTrail(attacker, 6, SkillSystem.GHOST_COLORS.CYAN, 18);
+            }
+            
             gsap.timeline()
                 .to(posTarget, { x: startX - (dashDirection * 15), duration: 0.08 })
                 .to(scaleTarget.scale, { x: baseScale * 0.9, y: baseScale * 1.1, duration: 0.08 }, '<')
                 .to(posTarget, { x: dashX, duration: 0.12, ease: 'power2.in' })
                 .to(scaleTarget.scale, { x: baseScale * 1.1, y: baseScale * 0.9, duration: 0.1 }, '<')
-                .add(resolve);
+                .add(() => {
+                    if (trailTimer && typeof SkillSystem !== 'undefined') {
+                        SkillSystem.stopSandevistanTrail(trailTimer);
+                    }
+                    resolve();
+                });
         });
         
         // 2. 히트 스톱
@@ -129,8 +145,19 @@ const UnitCombat = {
         
         if (onHit) onHit();
         
-        // 5. 복귀 (await 없이) + 스케일 복원!
+        // 5. 복귀 (await 없이) + 스케일 복원! + ★ 산데비스탄!
         if (posTarget && scaleTarget && !scaleTarget.destroyed) {
+            // 잔상: 복귀 시작
+            if (typeof SkillSystem !== 'undefined') {
+                SkillSystem.createGhost(attacker, 0.5, SkillSystem.GHOST_COLORS.MAGENTA);
+            }
+            
+            // 잔상: 복귀 중 산데비스탄 트레일 (★ 더 많이!)
+            let returnTrailTimer = null;
+            if (typeof SkillSystem !== 'undefined') {
+                returnTrailTimer = SkillSystem.startSandevistanTrail(attacker, 5, SkillSystem.GHOST_COLORS.MAGENTA, 25);
+            }
+            
             gsap.timeline()
                 .to(posTarget, {
                     x: startX,
@@ -145,6 +172,9 @@ const UnitCombat = {
                     ease: 'power2.out'
                 }, '<')
                 .call(() => {
+                    if (returnTrailTimer && typeof SkillSystem !== 'undefined') {
+                        SkillSystem.stopSandevistanTrail(returnTrailTimer);
+                    }
                     if (attacker) attacker.isAnimating = false;
                 });
         } else {
@@ -187,9 +217,20 @@ const UnitCombat = {
         const dashDirection = isEnemy ? -1 : 1;
         const bashX = targetX - (dashDirection * 40);
         
-        // 1. 큰 윈드업 (무기 들어올림)
+        // 1. 큰 윈드업 (무기 들어올림) + ★ 산데비스탄!
+        // 잔상: 윈드업 시작
+        if (typeof SkillSystem !== 'undefined') {
+            SkillSystem.createGhost(attacker, 0.5, SkillSystem.GHOST_COLORS.YELLOW);
+        }
+        
         await new Promise(resolve => {
             if (!posTarget || !scaleTarget) { resolve(); return; }
+            
+            // 잔상: 대시 중 산데비스탄 트레일 (강타는 노란색 + 더 강하게!)
+            let trailTimer = null;
+            if (typeof SkillSystem !== 'undefined') {
+                trailTimer = SkillSystem.startSandevistanTrail(attacker, 7, SkillSystem.GHOST_COLORS.YELLOW, 15);
+            }
             
             gsap.timeline()
                 .to(posTarget, { x: startX - (dashDirection * 25), duration: 0.12 })
@@ -207,7 +248,16 @@ const UnitCombat = {
                     ease: 'power3.in' 
                 })
                 .to(scaleTarget.scale, { x: baseScale * 1.4, y: baseScale * 0.65, duration: 0.08 }, '<')
-                .add(resolve);
+                .add(() => {
+                    if (trailTimer && typeof SkillSystem !== 'undefined') {
+                        SkillSystem.stopSandevistanTrail(trailTimer);
+                    }
+                    // 착지 잔상
+                    if (typeof SkillSystem !== 'undefined') {
+                        SkillSystem.createGhost(attacker, 0.6, SkillSystem.GHOST_COLORS.YELLOW);
+                    }
+                    resolve();
+                });
         });
         
         // 2. 긴 히트스톱
@@ -241,8 +291,19 @@ const UnitCombat = {
         
         if (onHit) onHit();
         
-        // 6. 느린 복귀 + 스케일 복원!
+        // 6. 느린 복귀 + 스케일 복원! + ★ 산데비스탄!
         if (posTarget && scaleTarget && !scaleTarget.destroyed) {
+            // 잔상: 복귀 시작
+            if (typeof SkillSystem !== 'undefined') {
+                SkillSystem.createGhost(attacker, 0.5, SkillSystem.GHOST_COLORS.MAGENTA);
+            }
+            
+            // 잔상: 복귀 중 산데비스탄 트레일 (★ 더 많이!)
+            let returnTrailTimer = null;
+            if (typeof SkillSystem !== 'undefined') {
+                returnTrailTimer = SkillSystem.startSandevistanTrail(attacker, 6, SkillSystem.GHOST_COLORS.MAGENTA, 30);
+            }
+            
             gsap.timeline()
                 .to({}, { duration: 0.15 })
                 .to(scaleTarget.scale, { x: baseScale, y: baseScale, duration: 0.2, ease: 'power2.out' })
@@ -252,6 +313,9 @@ const UnitCombat = {
                     duration: 0.35,
                     ease: 'power2.out',
                     onComplete: () => {
+                        if (returnTrailTimer && typeof SkillSystem !== 'undefined') {
+                            SkillSystem.stopSandevistanTrail(returnTrailTimer);
+                        }
                         if (attacker) attacker.isAnimating = false;
                     }
                 }, '<');
@@ -294,16 +358,33 @@ const UnitCombat = {
         const dashDirection = isEnemy ? -1 : 1;
         const dashX = targetX - (dashDirection * 50);
         
-        // 1. 빠른 돌진 (안전 체크)
+        // 1. 빠른 돌진 (안전 체크) + ★ 산데비스탄!
+        // 잔상: 돌진 시작
+        if (typeof SkillSystem !== 'undefined') {
+            SkillSystem.createGhost(attacker, 0.5, SkillSystem.GHOST_COLORS.CYAN);
+        }
+        
         await new Promise(resolve => {
             if (!posTarget || posTarget.destroyed || !scaleTarget || scaleTarget.destroyed) {
                 resolve();
                 return;
             }
+            
+            // 잔상: 대시 중 트레일 (빠른 공격용)
+            let trailTimer = null;
+            if (typeof SkillSystem !== 'undefined') {
+                trailTimer = SkillSystem.startSandevistanTrail(attacker, 5, SkillSystem.GHOST_COLORS.CYAN, 15);
+            }
+            
             gsap.timeline()
                 .to(posTarget, { x: dashX, duration: 0.08, ease: 'power3.in' })
                 .to(scaleTarget.scale, { x: baseScale * 1.05, y: baseScale * 0.95, duration: 0.06 }, '<')
-                .add(resolve);
+                .add(() => {
+                    if (trailTimer && typeof SkillSystem !== 'undefined') {
+                        SkillSystem.stopSandevistanTrail(trailTimer);
+                    }
+                    resolve();
+                });
         });
         
         // ★ 타겟 사망 체크
@@ -341,13 +422,19 @@ const UnitCombat = {
         
         if (onHit) onHit();
         
-        // 5. 빠른 복귀 (바로 다음 타격 준비) + 스케일 복원!
+        // 5. 빠른 복귀 (바로 다음 타격 준비) + 스케일 복원! + ★ 산데비스탄!
         await new Promise(resolve => {
             if (!scaleTarget || scaleTarget.destroyed || !posTarget || posTarget.destroyed) {
                 if (attacker) attacker.isAnimating = false;
                 resolve();
                 return;
             }
+            
+            // 잔상: 복귀
+            if (typeof SkillSystem !== 'undefined') {
+                SkillSystem.createGhost(attacker, 0.4, SkillSystem.GHOST_COLORS.MAGENTA);
+            }
+            
             gsap.timeline()
                 .to(scaleTarget.scale, { x: baseScale, y: baseScale, duration: 0.06 })
                 .to(posTarget, {
@@ -450,6 +537,11 @@ const UnitCombat = {
             }
         }
         
+        // ★★★ 타격 시점! onHit 콜백 (브레이크 시스템 등) ★★★
+        if (typeof onHit === 'function') {
+            onHit(target);
+        }
+        
         // 3. 데미지
         if (isEnemy) {
             this.game.dealDamageToTarget(target, damage);
@@ -461,8 +553,6 @@ const UnitCombat = {
         if (createZone && typeof GridAOE !== 'undefined') {
             GridAOE.createZone(createZone, target.gridX, target.gridZ);
         }
-        
-        if (onHit) onHit();
         
         // 5. 복귀 + 스프라이트 방향 복원
         if (scaleTarget && posTarget) {
