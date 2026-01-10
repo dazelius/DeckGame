@@ -1,0 +1,74 @@
+{
+  "id": "flurry",
+  "name": "연속찌르기",
+  "type": "melee",
+  "hits": 3,
+  "hitDelay": 30,
+  "animation": {
+    "approach": {
+      "windUp": { 
+        "x": -30, 
+        "duration": 0.1, 
+        "scale": { "x": 0.8, "y": 1.2 },
+        "rotation": -0.05
+      },
+      "dash": { 
+        "distance": 55, 
+        "duration": 0.1, 
+        "ease": "power4.out", 
+        "scale": { "x": 1.15, "y": 0.85 }
+      },
+      "land": {
+        "duration": 0.05,
+        "scale": { "x": 1.0, "y": 1.0 }
+      }
+    },
+    "strikes": [
+      { 
+        "offset": 35, 
+        "rotation": 0.08, 
+        "duration": 0.03,
+        "scale": { "x": 1.08, "y": 0.92 },
+        "easeIn": "power2.out"
+      },
+      { 
+        "offset": 40, 
+        "rotation": -0.06, 
+        "duration": 0.03,
+        "scale": { "x": 1.1, "y": 0.9 },
+        "easeIn": "power2.out"
+      },
+      { 
+        "offset": 50, 
+        "rotation": 0.12, 
+        "duration": 0.04,
+        "scale": { "x": 1.15, "y": 0.85 },
+        "easeIn": "power3.out"
+      }
+    ],
+    "recover": {
+      "duration": 0.02,
+      "ease": "power1.in"
+    },
+    "return": {
+      "windUp": { "x": -20, "duration": 0.05 },
+      "dash": { "duration": 0.12, "ease": "power2.out" }
+    }
+  },
+  "vfx": {
+    "type": "stab",
+    "colors": ["0xffffff", "0x88ccff", "0x60a5fa"],
+    "angles": [0, 5, -5],
+    "scale": [0.9, 1.0, 1.2],
+    "trail": true
+  },
+  "sfx": {
+    "approach": "dash",
+    "hit": ["stab1", "stab2", "stab3"]
+  },
+  "screenShake": {
+    "intensity": [3, 4, 6],
+    "duration": [60, 80, 120]
+  },
+  "hitStop": [15, 20, 35]
+}

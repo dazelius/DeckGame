@@ -81,7 +81,9 @@ const Game = {
             damage: 8,
             range: 4,
             sprite: 'ally_archer.png',
-            scale: 0.45  // 30% bigger
+            scale: 0.45,
+            retreatBeforeAttack: true,  // ★ 뒤로 후퇴 후 쏘기
+            retreatDistance: 1
         },
         // Enemies
         goblin: {
@@ -155,6 +157,16 @@ const Game = {
         // Combat Effects
         if (typeof CombatEffects !== 'undefined') {
             CombatEffects.init(this.app);
+        }
+        
+        // Shield VFX
+        if (typeof ShieldVFX !== 'undefined') {
+            ShieldVFX.init(this.app, this.app.stage);
+        }
+        
+        // ★ Skill System 초기화 (JSON 기반 스킬 로드)
+        if (typeof SkillSystem !== 'undefined') {
+            await SkillSystem.init(this);
         }
         
         // Knockback System
@@ -562,7 +574,12 @@ const Game = {
         // ★ 컴팩트 1열 인텐트 UI (다크소울 스타일)
         // ========================================
         const intent = enemy.intent;
-        const hasBreakRecipe = intent.breakRecipe && (intent.breakRecipe.count > 0 || (Array.isArray(intent.breakRecipe) && intent.breakRecipe.length > 0));
+        // ★ breakRecipe가 숫자(2, 3 등)이거나 객체/배열인 경우 모두 처리
+        const hasBreakRecipe = !!(intent.breakRecipe && (
+            typeof intent.breakRecipe === 'number' ||  // 숫자인 경우 (예: breakRecipe: 3)
+            intent.breakRecipe.count > 0 || 
+            (Array.isArray(intent.breakRecipe) && intent.breakRecipe.length > 0)
+        ));
         
         // 색상 팔레트
         const COLORS = {
@@ -575,11 +592,11 @@ const Game = {
         
         const colors = COLORS[intent.type] || COLORS.attack;
         
-        // ★ 1열 컴팩트 디자인: [아이콘] [데미지] + 강공격 시 [!]
+        // ★ 1열 컴팩트 디자인: [아이콘] [데미지] (브레이크 게이지는 하단에!)
         const iconSize = 28;
         const dmgBoxWidth = intent.damage ? 36 : 0;
-        const warningWidth = hasBreakRecipe ? 20 : 0;
-        const frameWidth = iconSize + dmgBoxWidth + warningWidth + 12;
+        // ★ 느낌표 제거! 게이지가 경고 역할
+        const frameWidth = iconSize + dmgBoxWidth + 12;
         const frameHeight = 32;
         
         // ========================================
@@ -691,109 +708,9 @@ const Game = {
             container.addChild(valueText);
         }
         
-        // ========================================
-        // ★ 강력한 공격 경고 표시 (브레이크 레시피)
-        // ========================================
-        if (hasBreakRecipe) {
-            // 느낌표 경고 아이콘
-            const warningIcon = new PIXI.Text({
-                text: '❗',
-                style: { fontSize: 16 }
-            });
-            warningIcon.anchor.set(0.5);
-            warningIcon.x = frameWidth/2 - 10;
-            warningIcon.y = -frameHeight/2;
-            container.addChild(warningIcon);
-            
-            // 느낌표 흔들림 애니메이션 (안전 체크 포함)
-            if (typeof gsap !== 'undefined') {
-                const baseX = warningIcon.x;
-                gsap.to({ shake: 0, scale: 0 }, {
-                    shake: Math.PI * 2,
-                    scale: Math.PI * 2,
-                    duration: 0.3,
-                    repeat: -1,
-                    ease: 'none',
-                    onUpdate: function() {
-                        if (!warningIcon || warningIcon.destroyed) {
-                            this.kill();
-                            return;
-                        }
-                        const t = this.targets()[0];
-                        warningIcon.x = baseX + Math.sin(t.shake * 3) * 2;
-                        const s = 1 + Math.sin(t.scale) * 0.2;
-                        warningIcon.scale.set(s);
-                    }
-                });
-            }
-        }
+        // ★ 느낌표 아이콘 제거됨! (브레이크 게이지가 하단에서 경고 역할)
         
-        // ========================================
-        // ★ 브레이크 진행 게이지 (세그먼트 바 형태)
-        // ========================================
-        if (hasBreakRecipe) {
-            const recipe = intent.breakRecipe;
-            const progress = enemy.breakProgress || [];
-            
-            const ElementColors = {
-                physical: 0xf59e0b,
-                fire: 0xef4444,
-                ice: 0x3b82f6,
-                lightning: 0xa855f7,
-                poison: 0x22c55e,
-                magic: 0xc084fc
-            };
-            
-            // 게이지 바 설정
-            const gaugeY = 8;
-            const segmentWidth = 16;
-            const segmentHeight = 6;
-            const gap = 2;
-            const totalWidth = recipe.length * segmentWidth + (recipe.length - 1) * gap;
-            
-            // 게이지 배경 프레임
-            const gaugeBg = new PIXI.Graphics();
-            gaugeBg.roundRect(-totalWidth/2 - 3, gaugeY - segmentHeight/2 - 2, totalWidth + 6, segmentHeight + 4, 2);
-            gaugeBg.fill({ color: 0x000000, alpha: 0.8 });
-            gaugeBg.stroke({ width: 1, color: 0x333333 });
-            container.addChild(gaugeBg);
-            
-            // 각 세그먼트 그리기
-            for (let i = 0; i < recipe.length; i++) {
-                const elem = recipe[i];
-                const filled = i < progress.length;
-                const color = ElementColors[elem] || 0xf59e0b;
-                
-                const x = -totalWidth/2 + i * (segmentWidth + gap);
-                const y = gaugeY - segmentHeight/2;
-                
-                // 세그먼트 배경
-                const segBg = new PIXI.Graphics();
-                segBg.rect(x, y, segmentWidth, segmentHeight);
-                segBg.fill({ color: 0x1a1a1a });
-                container.addChild(segBg);
-                
-                if (filled) {
-                    // ★ 완료된 세그먼트: 밝은 초록 + 광택
-                    const fill = new PIXI.Graphics();
-                    fill.rect(x, y, segmentWidth, segmentHeight);
-                    fill.fill({ color: 0x22c55e });
-                    container.addChild(fill);
-                    
-                    // 상단 광택
-                    const shine = new PIXI.Graphics();
-                    shine.rect(x + 1, y + 1, segmentWidth - 2, 2);
-                    shine.fill({ color: 0xffffff, alpha: 0.4 });
-                    container.addChild(shine);
-                } else {
-                    // ★ 미완료 세그먼트: 속성 색상 힌트
-                    const dim = new PIXI.Graphics();
-                    dim.rect(x + 1, y + 1, segmentWidth - 2, segmentHeight - 2);
-                    dim.fill({ color: color, alpha: 0.25 });
-                    container.addChild(dim);
-                }
-            }
-        }
+        // ★ 브레이크 게이지는 BreakSystem.createBreakGauge()에서 하단에 일체화됨!
         
         // ========================================
         // 하단 화살표
@@ -878,6 +795,14 @@ const Game = {
         // ========================================
         if (hasBreakRecipe && enemy.sprite && typeof gsap !== 'undefined') {
             this.playChargingEffect(enemy);
+        }
+        
+        // ========================================
+        // ★ 브레이크 게이지 생성 (intentContainer 이후!)
+        // ========================================
+        if (hasBreakRecipe && typeof BreakSystem !== 'undefined' && enemy.currentBreakRecipe) {
+            console.log(`[Game] 브레이크 게이지 생성: ${enemy.name || enemy.type}`);
+            BreakSystem.createBreakGauge(enemy);
         }
     },
     
@@ -1765,20 +1690,203 @@ const Game = {
             await UnitCombat.rangedAttack(hero, target, damage, {
                 projectileColor: options.projectileColor || 0xffaa00,
                 createZone: options.createZone || null,
-                isEnemy: false
+                isEnemy: false,
+                // ★ 타격 시 콜백 (브레이크 시스템용)
+                onHit: options.onHit || null
             });
         } else {
+            // 폴백: onHit 콜백 먼저 실행 후 대미지
+            if (typeof options.onHit === 'function') {
+                options.onHit(target);
+            }
             this.dealDamage(target, damage);
         }
     },
     
-    // ★ 스피어 투척 애니메이션
-    async heroSpearThrowAnimation(hero, target, baseDamage, distanceBonus = 0) {
-        if (typeof CombatEffects !== 'undefined') {
-            await CombatEffects.spearThrowEffect(hero, target, baseDamage, distanceBonus, this);
-        } else {
-            this.dealDamage(target, baseDamage + distanceBonus);
+    // ★★★ 갈고리 애니메이션 (베지어 곡선으로 던지고 당기기!) ★★★
+    async heroHookAnimation(hero, target, damage, crashDamage = 2, options = {}) {
+        console.log(`[Hook Animation] 갈고리! 대미지: ${damage}, 충돌 대미지: ${crashDamage}`);
+        
+        const heroPos = this.getCellCenter(hero.gridX, hero.gridZ);
+        const targetPos = this.getCellCenter(target.gridX, target.gridZ);
+        
+        if (!heroPos || !targetPos) {
+            // 폴백: onHit 먼저 실행 후 대미지
+            if (typeof options.onHit === 'function') {
+                options.onHit(target);
+            }
+            this.dealDamage(target, damage);
+            return;
         }
+        
+        // ★ CombatEffects로 갈고리 VFX 실행 (onHit 콜백 전달)
+        if (typeof CombatEffects !== 'undefined') {
+            await CombatEffects.hookEffect(heroPos, targetPos, target, damage, crashDamage, this, options.onHit);
+        } else {
+            // 폴백: onHit 먼저 실행 후 대미지
+            if (typeof options.onHit === 'function') {
+                options.onHit(target);
+            }
+            this.dealDamage(target, damage);
+            if (typeof KnockbackSystem !== 'undefined') {
+                await KnockbackSystem.hookPull(target, crashDamage);
+            }
+        }
+    },
+    
+    // ★ 스피어 투척 애니메이션 (그리드 거리 기반 파워업!)
+    async heroSpearThrowAnimation(hero, target, baseDamage, distanceBonus = 0, options = {}) {
+        // 그리드 거리 계산
+        const gridDistance = Math.abs(target.gridX - hero.gridX);
+        const totalDamage = baseDamage + distanceBonus;
+        console.log(`[Spear Animation] 그리드 거리: ${gridDistance}, 기본: ${baseDamage}, 보너스: ${distanceBonus}, 총: ${totalDamage}`);
+        console.log(`[Spear Animation] 타겟 HP: ${target.hp} → ${target.hp - totalDamage}`);
+        
+        if (typeof CombatEffects !== 'undefined') {
+            await CombatEffects.spearThrowEffect(hero, target, baseDamage, distanceBonus, this, options.onHit);
+        } else {
+            // 폴백: onHit 먼저 실행 후 대미지
+            if (typeof options.onHit === 'function') {
+                options.onHit(target);
+            }
+            this.dealDamage(target, totalDamage);
+        }
+    },
+    
+    // ★★★ Flurry: 연속찌르기 애니메이션 ★★★
+    async heroFlurryAnimation(hero, target, cardDef) {
+        const posTarget = hero.container || hero.sprite;
+        const scaleTarget = hero.sprite;
+        if (!posTarget || !scaleTarget || !target.sprite) {
+            // 애니메이션 없이 대미지만 처리
+            for (let i = 0; i < 3; i++) {
+                if (target.hp <= 0) break;
+                if (typeof BreakSystem !== 'undefined') {
+                    BreakSystem.onAttack(target, cardDef, 1, i);
+                    this.createEnemyIntent(target);
+                }
+                this.dealDamage(target, cardDef.damage);
+            }
+            return;
+        }
+        
+        const heroPos = this.getCellCenter(hero.gridX, hero.gridZ);
+        const targetPos = this.getCellCenter(target.gridX, target.gridZ);
+        
+        // ★ 안전 체크: 좌표가 유효한지 확인
+        if (!heroPos || !targetPos || isNaN(heroPos.x) || isNaN(targetPos.x)) {
+            console.warn('[Flurry] 좌표 오류, 대미지만 처리');
+            for (let i = 0; i < 3; i++) {
+                if (target.hp <= 0) break;
+                if (typeof BreakSystem !== 'undefined') {
+                    BreakSystem.onAttack(target, cardDef, 1, i);
+                    this.createEnemyIntent(target);
+                }
+                this.dealDamage(target, cardDef.damage);
+            }
+            return;
+        }
+        
+        const baseScale = scaleTarget.scale?.x || hero.baseScale || 1;
+        
+        // 적 앞 위치 계산 (약간의 여백)
+        const attackX = targetPos.x - 60;
+        
+        return new Promise(async (resolve) => {
+            // ========================================
+            // 1. 대쉬로 적 앞으로 이동
+            // ========================================
+            const dashTl = gsap.timeline();
+            
+            // 웅크리기
+            dashTl.to(posTarget, { x: heroPos.x - 15, duration: 0.08, ease: 'power2.in' });
+            dashTl.to(scaleTarget.scale, { x: baseScale * 0.85, y: baseScale * 1.15, duration: 0.08 }, '<');
+            
+            // 대쉬!
+            dashTl.to(posTarget, { x: attackX, y: targetPos.y, duration: 0.12, ease: 'power4.out' });
+            dashTl.to(scaleTarget.scale, { x: baseScale * 1.1, y: baseScale * 0.9, duration: 0.12 }, '<');
+            
+            // 착지
+            dashTl.to(scaleTarget.scale, { x: baseScale, y: baseScale, duration: 0.08, ease: 'power2.out' });
+            
+            await dashTl;
+            
+            // ========================================
+            // 2. 3연속 찌르기
+            // ========================================
+            const stabOffsets = [
+                { x: 20, rotation: 0.05 },   // 1번: 중앙
+                { x: 25, rotation: -0.03 },  // 2번: 살짝 위
+                { x: 30, rotation: 0.08 }    // 3번: 강하게
+            ];
+            
+            for (let hitNum = 0; hitNum < 3; hitNum++) {
+                if (target.hp <= 0) {
+                    console.log(`[Flurry] 적 사망으로 중단 (${hitNum}/3)`);
+                    break;
+                }
+                
+                const stab = stabOffsets[hitNum];
+                const stabTl = gsap.timeline();
+                
+                // 찌르기 동작
+                stabTl.to(posTarget, { x: attackX + stab.x, duration: 0.04, ease: 'power2.out' });
+                stabTl.to(scaleTarget, { rotation: stab.rotation, duration: 0.04 }, '<');
+                stabTl.to(scaleTarget.scale, { x: baseScale * 1.05, y: baseScale * 0.95, duration: 0.04 }, '<');
+                
+                await stabTl;
+                
+                // 브레이크 시스템 연동
+                if (typeof BreakSystem !== 'undefined') {
+                    const breakResult = BreakSystem.onAttack(target, cardDef, 1, hitNum);
+                    if (breakResult.broken) {
+                        console.log(`[Flurry] 🔥 ${target.name || target.type} BROKEN!`);
+                    }
+                    this.createEnemyIntent(target);
+                }
+                
+                // 대미지 적용
+                console.log(`[Flurry] Hit ${hitNum + 1}/3 - damage: ${cardDef.damage}`);
+                this.dealDamage(target, cardDef.damage);
+                
+                // 히트 이펙트
+                if (typeof CombatEffects !== 'undefined' && target.sprite && !target.sprite.destroyed) {
+                    CombatEffects.hitEffect(target.sprite);  // sprite 전달!
+                    CombatEffects.screenShake(3 + hitNum * 2, 50);
+                }
+                
+                // 복귀 동작 (마지막 제외)
+                if (hitNum < 2) {
+                    const returnTl = gsap.timeline();
+                    returnTl.to(posTarget, { x: attackX - 5, duration: 0.05, ease: 'power2.in' });
+                    returnTl.to(scaleTarget, { rotation: 0, duration: 0.05 }, '<');
+                    returnTl.to(scaleTarget.scale, { x: baseScale, y: baseScale, duration: 0.05 }, '<');
+                    await returnTl;
+                    
+                    // 다음 찌르기 전 짧은 대기
+                    await new Promise(r => setTimeout(r, 30));
+                }
+            }
+            
+            // ========================================
+            // 3. 원위치 복귀
+            // ========================================
+            const returnTl = gsap.timeline();
+            
+            // 뒤로 살짝 물러남
+            returnTl.to(posTarget, { x: attackX - 30, duration: 0.08, ease: 'power2.in' });
+            returnTl.to(scaleTarget.scale, { x: baseScale * 0.9, y: baseScale * 1.1, duration: 0.08 }, '<');
+            returnTl.to(scaleTarget, { rotation: 0, duration: 0.08 }, '<');
+            
+            // 원위치로 대쉬백
+            returnTl.to(posTarget, { x: heroPos.x, y: heroPos.y, duration: 0.15, ease: 'power2.out' });
+            returnTl.to(scaleTarget.scale, { x: baseScale, y: baseScale, duration: 0.15 }, '<');
+            
+            await returnTl;
+            
+            console.log(`[Flurry] 완료!`);
+            resolve();
+        });
     },
     
     async heroAoeAnimation(hero, targets, damage) {
@@ -1838,16 +1946,17 @@ const Game = {
         });
     },
     
-    async playSkillCard(cardDef) {
+    async playSkillCard(cardId, cardDef) {
         const hero = this.state.hero;
-        console.log(`[Skill] playSkillCard 호출, moveBack: ${cardDef.moveBack}, hero: ${!!hero}`);
+        console.log(`[Skill] playSkillCard 호출, cardId: ${cardId}, moveBack: ${cardDef.moveBack}, hero: ${!!hero}`);
         
-        // ★ 뒤로 이동 (Dodge 등)
+        // ★ 뒤로 이동 (Dodge 등) - heroMoveBack 함수로 자연스러운 애니메이션
         if (cardDef.moveBack && hero) {
             console.log(`[Skill] heroMoveBack 호출! distance: ${cardDef.moveBack}`);
             await this.heroMoveBack(cardDef.moveBack);
         }
         
+        // ★ 블록 처리
         if (cardDef.block) {
             this.state.heroBlock += cardDef.block;
             hero.block = this.state.heroBlock;
@@ -1859,6 +1968,7 @@ const Game = {
             }
         }
         
+        // ★ 힐 처리
         if (cardDef.heal && hero) {
             hero.hp = Math.min(hero.hp + cardDef.heal, hero.maxHp);
             this.updateUnitHPBar(hero);
@@ -1871,6 +1981,94 @@ const Game = {
                 this.showMessage(`+${cardDef.heal} HP`, 500);
             }
         }
+    },
+    
+    // ★ 히어로 레인 이동 (스피어 투척 등) - meleeAttack 스타일 돌진!
+    async heroLaneShift(hero, targetZ) {
+        if (!hero || !hero.sprite) return;
+        
+        const currentZ = hero.gridZ;
+        if (currentZ === targetZ) return;
+        
+        // 레인 이동 가능 여부 체크 (아군이 없어야 함)
+        const isOccupied = this.state.playerUnits.some(u => 
+            u !== hero && u.hp > 0 && u.gridX === hero.gridX && u.gridZ === targetZ
+        );
+        
+        if (isOccupied) {
+            this.showMessage('해당 위치에 아군이 있습니다!', 1000);
+            return;
+        }
+        
+        const startX = hero.container?.x || hero.sprite.x;
+        const startY = hero.container?.y || hero.sprite.y;
+        hero.gridZ = targetZ;
+        const newPos = this.getCellCenter(hero.gridX, targetZ);
+        const posTarget = hero.container || hero.sprite;
+        const scaleTarget = hero.sprite;
+        const baseScale = hero.baseScale || scaleTarget.scale.x;
+        
+        // 이동 방향 (위/아래)
+        const moveDirection = targetZ > currentZ ? 1 : -1;
+        
+        return new Promise(resolve => {
+            const tl = gsap.timeline({ onComplete: resolve });
+            
+            // ★ 산데비스탄 잔상: 윈드업 시작
+            if (typeof SkillSystem !== 'undefined') {
+                SkillSystem.createGhost(hero, 0.5, SkillSystem.GHOST_COLORS.BLUE);
+            }
+            
+            // 1. 윈드업 - 뒤로 약간 빠지면서 웅크림
+            tl.to(posTarget, { 
+                x: startX - 10, 
+                y: startY - moveDirection * 5,
+                duration: 0.08 
+            });
+            tl.to(scaleTarget.scale, {
+                x: baseScale * 0.85,
+                y: baseScale * 1.15,
+                duration: 0.08
+            }, '<');
+            
+            // 2. 대시! (산데비스탄 트레일!) - ★ 더 강하게!
+            let trailTimer = null;
+            tl.call(() => {
+                if (typeof SkillSystem !== 'undefined') {
+                    trailTimer = SkillSystem.startSandevistanTrail(hero, 6, SkillSystem.GHOST_COLORS.BLUE, 18);
+                }
+            });
+            tl.to(posTarget, {
+                x: newPos.x,
+                y: newPos.y,
+                duration: 0.12,
+                ease: 'power2.in'
+            });
+            tl.to(scaleTarget.scale, {
+                x: baseScale * 1.15,
+                y: baseScale * 0.85,
+                duration: 0.1
+            }, '<');
+            tl.call(() => {
+                if (trailTimer && typeof SkillSystem !== 'undefined') {
+                    SkillSystem.stopSandevistanTrail(trailTimer);
+                }
+            });
+            
+            // 3. 착지 - 약간의 바운스
+            tl.to(scaleTarget.scale, {
+                x: baseScale * 0.95,
+                y: baseScale * 1.05,
+                duration: 0.06,
+                ease: 'power1.out'
+            });
+            tl.to(scaleTarget.scale, {
+                x: baseScale,
+                y: baseScale,
+                duration: 0.08,
+                ease: 'elastic.out(1, 0.5)'
+            });
+        });
     },
     
     // ★ 히어로 뒤로 이동 (닷지) - 백점프 애니메이션
@@ -1904,7 +2102,7 @@ const Game = {
         const oldX = hero.gridX;
         hero.gridX = newX;
         
-        const newPos = this.gridToScreen(newX, hero.gridZ);
+        const newPos = this.getCellCenter(newX, hero.gridZ);
         await this.playDodgeAnimation(hero, true, newPos);
         
         console.log(`[Game] 히어로 백스텝: ${oldX} -> ${newX}`);
@@ -1927,8 +2125,10 @@ const Game = {
         const targetX = moveBack && newPos ? newPos.x : startX - 30;  // 이동 안해도 살짝 뒤로
         const targetY = moveBack && newPos ? newPos.y : startY;
         
-        // 회피 이펙트 (잔상)
-        this.createDodgeAfterimage(hero);
+        // ★ 산데비스탄 잔상: 준비 자세
+        if (typeof SkillSystem !== 'undefined') {
+            SkillSystem.createGhost(hero, 0.5, SkillSystem.GHOST_COLORS.BLUE);
+        }
         
         await new Promise(resolve => {
             const tl = gsap.timeline({ onComplete: resolve });
@@ -1945,7 +2145,13 @@ const Game = {
                 duration: 0.06
             }, '<');
             
-            // 2. 백점프! (위로 + 뒤로)
+            // 2. 백점프! (산데비스탄 트레일!) - ★ 더 강하게!
+            let trailTimer = null;
+            tl.call(() => {
+                if (typeof SkillSystem !== 'undefined') {
+                    trailTimer = SkillSystem.startSandevistanTrail(hero, 7, SkillSystem.GHOST_COLORS.BLUE, 20);
+                }
+            });
             tl.to(posTarget, {
                 x: targetX,
                 y: startY - 50,  // 높이 점프
@@ -1965,6 +2171,15 @@ const Game = {
             }, '<');
             
             // 3. 착지
+            tl.call(() => {
+                if (trailTimer && typeof SkillSystem !== 'undefined') {
+                    SkillSystem.stopSandevistanTrail(trailTimer);
+                }
+                // 착지 잔상
+                if (typeof SkillSystem !== 'undefined') {
+                    SkillSystem.createGhost(hero, 0.4, SkillSystem.GHOST_COLORS.BLUE);
+                }
+            });
             tl.to(posTarget, {
                 y: targetY,
                 duration: 0.15,
@@ -2087,6 +2302,11 @@ const Game = {
                 absorbedByShield = block;
                 remainingDamage -= block;
                 target.block = 0;
+                
+                // ★ 실드 완전 파괴 연출!
+                if (typeof ShieldVFX !== 'undefined') {
+                    ShieldVFX.breakAtUnit(target, block);
+                }
             }
             
             if (typeof HPBarSystem !== 'undefined') {
@@ -2134,6 +2354,11 @@ const Game = {
                 absorbedByShield = block;
                 remainingDamage -= block;
                 target.block = 0;
+                
+                // ★ 실드 완전 파괴 연출!
+                if (typeof ShieldVFX !== 'undefined') {
+                    ShieldVFX.breakAtUnit(target, block);
+                }
             }
             
             // ★ 쉴드 피격 연출
@@ -2142,7 +2367,10 @@ const Game = {
             }
         }
         
-        // 남은 대미지로 HP 감소
+        // ★ 사망 전 HP 기록 (오버킬 계산용)
+        const hpBeforeDamage = target.hp;
+        
+        // 남은 대미지로 HP 감소 (마이너스 가능!)
         if (remainingDamage > 0) {
             target.hp -= remainingDamage;
         }
@@ -2156,16 +2384,33 @@ const Game = {
         this.updateUnitHPBar(target);
         
         // Hit effect (스프라이트 알파만 변경, 위치는 건드리지 않음)
-        if (target.sprite) {
+        if (target.sprite && !target.sprite.destroyed) {
             gsap.to(target.sprite, {
                 alpha: 0.5,
                 duration: 0.1,
                 yoyo: true,
-                repeat: 1
+                repeat: 1,
+                onUpdate: function() {
+                    // ★ 애니메이션 중 파괴 체크
+                    if (!target.sprite || target.sprite.destroyed) {
+                        this.kill();
+                    }
+                }
             });
         }
         
         if (target.hp <= 0) {
+            // ★★★ 오버킬 체크! HP가 maxHp의 10% 이상 마이너스면 고어 사망!
+            const maxHp = target.maxHp || target.originalHp || 10;
+            const overkillDamage = Math.abs(target.hp); // 마이너스 HP = 오버킬 대미지
+            const overkillThreshold = maxHp * 0.1; // 10% 기준
+            
+            if (overkillDamage >= overkillThreshold) {
+                target._goreDeath = true;
+                target._overkillDamage = overkillDamage;
+                console.log(`[Overkill] 💀 ${target.type}: ${overkillDamage.toFixed(1)} 오버킬! (기준: ${overkillThreshold.toFixed(1)})`);
+            }
+            
             this.killUnit(target);
         }
         
@@ -2290,43 +2535,84 @@ const Game = {
             // Find all enemies in AOE range from target position
             const targetsInAoe = this.getEnemiesInAoe(targetEnemy.gridX, targetEnemy.gridZ, aoe);
             
-            // 다중 공격 처리 (flurry 등)
-            console.log(`[Game] 다중 공격 시작: hits=${hits}, cardId=${cardId}`);
+            // ★★★ 스킬 실행 (폴백 없음! 무조건 카드에 맞는 스킬 실행!) ★★★
+            console.log(`[Game] 스킬 실행: ${cardId}, hits=${hits}`);
             
-            for (let hitNum = 0; hitNum < hits; hitNum++) {
-                console.log(`[Game] Hit ${hitNum + 1}/${hits} - enemy HP: ${targetEnemy.hp}`);
+            // 1순위: SkillSystem (JSON 기반)
+            const skillData = typeof SkillSystem !== 'undefined' && SkillSystem.getSkill(cardId);
+            
+            if (skillData) {
+                console.log(`[Game] SkillSystem.execute: ${cardId}`);
+                await SkillSystem.execute(cardId, hero, targetEnemy, {
+                    cardDef,
+                    damage: cardDef.damage,
+                    knockback: cardDef.knockback || 0,
+                    isEnemy: false
+                });
+            } 
+            // 2순위: UnitCombat 직접 매핑 (폴백 아님! 카드별 전용 함수!)
+            else if (typeof UnitCombat !== 'undefined') {
+                console.log(`[Game] UnitCombat 직접 실행: ${cardId}`);
                 
-                if (targetEnemy.hp <= 0) {
-                    console.log(`[Game] 적 사망으로 루프 종료`);
-                    break;
-                }
-                
-                // 브레이크 시스템 연동 (hitNum 전달로 시각적 구분)
-                if (typeof BreakSystem !== 'undefined') {
-                    console.log(`[Game] BreakSystem.onAttack 호출 (${hitNum + 1}번째)`);
-                    const breakResult = BreakSystem.onAttack(targetEnemy, cardDef, 1, hitNum);
-                    console.log(`[Game] breakResult:`, breakResult, `| progress: ${targetEnemy.breakProgress ?? 'none'}`);
-                    if (breakResult.broken) {
-                        console.log(`[Game] 🔥 ${targetEnemy.name || targetEnemy.type} BROKEN!`);
-                    }
-                    // 인텐트 UI 갱신 (브레이크 게이지 표시)
-                    this.createEnemyIntent(targetEnemy);
-                }
-                
-                // Attack animation toward primary target
-                // ★ cardId로 타입 판단 (로컬라이제이션 영향 없음)
-                const cardType = cardId === 'bash' ? 'bash' : 
-                                 cardId === 'flurry' ? 'flurry' : 'strike';
-                const knockback = (hitNum === hits - 1) ? (cardDef.knockback || 0) : 0; // 마지막 타격에만 넉백
-                
-                await this.heroAttackAnimation(hero, targetEnemy, cardDef.damage, cardType, knockback);
-                
-                // 다중 공격 시 타격 간 짧은 딜레이
-                if (hits > 1 && hitNum < hits - 1) {
-                    await new Promise(r => setTimeout(r, 100));
+                // ★ 카드 ID에 맞는 공격 함수 직접 호출!
+                switch (cardId) {
+                    case 'flurry':
+                        // 연속찌르기: flurryAttack × hits
+                        for (let hitNum = 0; hitNum < hits; hitNum++) {
+                            if (targetEnemy.hp <= 0) break;
+                            if (typeof BreakSystem !== 'undefined') {
+                                BreakSystem.onAttack(targetEnemy, cardDef, 1, hitNum);
+                            }
+                            await UnitCombat.flurryAttack(hero, targetEnemy, cardDef.damage, { isEnemy: false });
+                            if (hitNum < hits - 1) await new Promise(r => setTimeout(r, 50));
+                        }
+                        break;
+                        
+                    case 'bash':
+                        // 강타: bashAttack
+                        if (typeof BreakSystem !== 'undefined') {
+                            BreakSystem.onAttack(targetEnemy, cardDef, 1, 0);
+                        }
+                        await UnitCombat.bashAttack(hero, targetEnemy, cardDef.damage, { isEnemy: false });
+                        break;
+                        
+                    case 'cleave':
+                        // 휘두르기: 강한 일격 (bash 스타일)
+                        if (typeof BreakSystem !== 'undefined') {
+                            BreakSystem.onAttack(targetEnemy, cardDef, 1, 0);
+                        }
+                        await UnitCombat.bashAttack(hero, targetEnemy, cardDef.damage, { isEnemy: false });
+                        break;
+                        
+                    case 'strike':
+                    default:
+                        // 기본 타격: meleeAttack
+                        for (let hitNum = 0; hitNum < hits; hitNum++) {
+                            if (targetEnemy.hp <= 0) break;
+                            if (typeof BreakSystem !== 'undefined') {
+                                BreakSystem.onAttack(targetEnemy, cardDef, 1, hitNum);
+                            }
+                            await UnitCombat.meleeAttack(hero, targetEnemy, cardDef.damage, { isEnemy: false });
+                            if (hitNum < hits - 1) await new Promise(r => setTimeout(r, 100));
+                        }
+                        break;
                 }
             }
-            console.log(`[Game] 다중 공격 완료`);
+            // 3순위: 최소 대미지 처리 (안전망)
+            else {
+                console.error(`[Game] 스킬 시스템 없음! 대미지만 처리: ${cardId}`);
+                for (let hitNum = 0; hitNum < hits; hitNum++) {
+                    if (targetEnemy.hp <= 0) break;
+                    this.dealDamage(targetEnemy, cardDef.damage);
+                }
+            }
+            
+            // 넉백 처리
+            if (cardDef.knockback && targetEnemy.hp > 0 && typeof KnockbackSystem !== 'undefined') {
+                KnockbackSystem.knockback(targetEnemy, 1, cardDef.knockback);
+            }
+            
+            console.log(`[Game] 스킬 완료: ${cardId}`);
             
             // Deal damage to all targets in AOE (except primary which was already hit)
             for (const target of targetsInAoe) {
@@ -2341,37 +2627,79 @@ const Game = {
         } else {
             // Ranged: Attack from current position
             
-            // ★ 스피어 투척 (직선 전용, 거리 보너스)
-            if (cardDef.straight) {
-                // 거리 계산 (히어로와 타겟 사이)
+            // ★ 스피어 투척 (거리 보너스가 있는 원거리 공격, 다른 레인 타겟 가능!)
+            if (cardDef.distanceBonus) {
+                // 다른 레인의 적이면 먼저 레인 이동
+                if (targetEnemy.gridZ !== hero.gridZ) {
+                    console.log(`[Game] 스피어 - 레인 이동: Z ${hero.gridZ} → ${targetEnemy.gridZ}`);
+                    await this.heroLaneShift(hero, targetEnemy.gridZ);
+                }
+                
+                // 거리 계산 (X축 거리 기반)
                 const distance = Math.abs(targetEnemy.gridX - hero.gridX);
-                const distanceBonus = (cardDef.distanceBonus || 0) * distance;
+                const distanceBonus = cardDef.distanceBonus * distance;
                 const baseDamage = cardDef.damage;
                 
                 console.log(`[Game] 스피어 투척! 거리: ${distance}, 기본 대미지: ${baseDamage}, 거리 보너스: ${distanceBonus}`);
                 
-                // 브레이크 시스템
-                if (typeof BreakSystem !== 'undefined') {
-                    BreakSystem.onAttack(targetEnemy, cardDef, 1, 0);
-                    this.createEnemyIntent(targetEnemy);
+                // 스피어 발사 애니메이션 (★ 브레이크는 타격 시점에 처리!)
+                const gameRef = this;
+                await this.heroSpearThrowAnimation(hero, targetEnemy, baseDamage, distanceBonus, {
+                    onHit: (hitTarget) => {
+                        if (typeof BreakSystem !== 'undefined') {
+                            BreakSystem.onAttack(hitTarget, cardDef, 1, 0);
+                            gameRef.createEnemyIntent(hitTarget);
+                        }
+                    }
+                });
+            }
+            // ★★★ 갈고리 (Hook) - 적을 앞으로 당김! ★★★
+            else if (cardDef.pull) {
+                console.log(`[Game] 갈고리! 대상: ${targetEnemy.type}, 위치: ${targetEnemy.gridX}`);
+                
+                // 다른 레인의 적이면 먼저 레인 이동
+                if (targetEnemy.gridZ !== hero.gridZ) {
+                    console.log(`[Game] 갈고리 - 레인 이동: Z ${hero.gridZ} → ${targetEnemy.gridZ}`);
+                    await this.heroLaneShift(hero, targetEnemy.gridZ);
                 }
                 
-                // 스피어 발사 애니메이션 (기본 대미지 + 거리 보너스 분리 전달)
-                await this.heroSpearThrowAnimation(hero, targetEnemy, baseDamage, distanceBonus);
+                // ★ 갈고리 애니메이션 실행! (브레이크는 타격 시점에 처리)
+                const gameRef = this;
+                await this.heroHookAnimation(hero, targetEnemy, cardDef.damage, cardDef.crashDamage || 2, {
+                    onHit: (hitTarget) => {
+                        if (typeof BreakSystem !== 'undefined') {
+                            BreakSystem.onAttack(hitTarget, cardDef, 1, 0);
+                            gameRef.createEnemyIntent(hitTarget);
+                        }
+                    }
+                });
             }
             // 십자가 패턴 처리 (Fireball 등)
             else if (cardDef.aoePattern === 'cross') {
                 const crossTargets = this.getEnemiesInCrossAoe(targetEnemy.gridX, targetEnemy.gridZ, 1);
+                const gameRef = this;
                 
-                // 파이어볼 발사
+                // 파이어볼 발사 (★ 브레이크는 타격 시점에 처리!)
                 await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage, {
-                    createZone: cardDef.createZone || null
+                    createZone: cardDef.createZone || null,
+                    // ★ 타격 시점에 브레이크 시스템 호출!
+                    onHit: (hitTarget) => {
+                        if (typeof BreakSystem !== 'undefined') {
+                            BreakSystem.onAttack(hitTarget, cardDef, 1, 0);
+                            gameRef.createEnemyIntent(hitTarget);
+                        }
+                    }
                 });
                 
                 // 모든 십자가 영역의 적에게 대미지
-                for (const target of crossTargets) {
+                for (let i = 0; i < crossTargets.length; i++) {
+                    const target = crossTargets[i];
                     if (target !== targetEnemy && target.hp > 0) {
-                        // dealDamage에서 데미지 숫자 표시됨
+                        // ★ 추가 타겟도 대미지 시점에 브레이크 처리
+                        if (typeof BreakSystem !== 'undefined') {
+                            BreakSystem.onAttack(target, cardDef, 1, i + 1);
+                            this.createEnemyIntent(target);
+                        }
                         this.dealDamage(target, cardDef.damage);
                     }
                 }
@@ -2386,13 +2714,29 @@ const Game = {
             } else {
                 // 일반 원거리 공격
                 const targetsInAoe = this.getEnemiesInAoe(targetEnemy.gridX, targetEnemy.gridZ, aoe);
+                const gameRef = this;
+                
+                // 원거리 발사 (★ 브레이크는 타격 시점에 처리!)
                 await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage, {
-                    createZone: cardDef.createZone || null
+                    createZone: cardDef.createZone || null,
+                    // ★ 타격 시점에 브레이크 시스템 호출!
+                    onHit: (hitTarget) => {
+                        if (typeof BreakSystem !== 'undefined') {
+                            BreakSystem.onAttack(hitTarget, cardDef, 1, 0);
+                            gameRef.createEnemyIntent(hitTarget);
+                        }
+                    }
                 });
                 
                 // Deal damage to additional targets in AOE
-                for (const target of targetsInAoe) {
+                for (let i = 0; i < targetsInAoe.length; i++) {
+                    const target = targetsInAoe[i];
                     if (target !== targetEnemy && target.hp > 0) {
+                        // ★ 추가 타겟도 대미지 시점에 브레이크 처리
+                        if (typeof BreakSystem !== 'undefined') {
+                            BreakSystem.onAttack(target, cardDef, 1, i + 1);
+                            this.createEnemyIntent(target);
+                        }
                         await this.dealDamage(target, cardDef.damage);
                     }
                 }
@@ -2497,7 +2841,7 @@ const Game = {
         if (cardDef.type === 'attack') {
             await this.playAttackCard(cardDef);
         } else if (cardDef.type === 'skill') {
-            await this.playSkillCard(cardDef);
+            await this.playSkillCard(cardId, cardDef);
         }
         
         this.renderHand(false);
@@ -2735,7 +3079,11 @@ const Game = {
             sprite,             // ★ 스프라이트 래퍼 (스케일 적용)
             baseScale,          // 기본 스케일
             isHero: unitDef.isHero || false,
-            state: 'idle'
+            state: 'idle',
+            // ★ 고어 연출용 텍스처 경로 저장
+            textureUrl: unitDef.sprite ? (typeof DDOOConfig !== 'undefined' ? DDOOConfig.getImagePath(unitDef.sprite) : `image/${unitDef.sprite}`) : null,
+            spriteWidth: 80,
+            spriteHeight: 120
         };
         
         if (team === 'player') {
@@ -2886,6 +3234,12 @@ const Game = {
     },
     
     async summonRangedAttack(summon, target) {
+        // ★ 유닛 정의에서 retreatBeforeAttack 체크
+        const unitDef = this.unitTypes[summon.type] || {};
+        if (unitDef.retreatBeforeAttack) {
+            await this.summonRetreatBeforeAttack(summon, unitDef.retreatDistance || 1);
+        }
+        
         if (typeof UnitCombat !== 'undefined') {
             // 아처면 화살 VFX 사용
             const isArcher = summon.type === 'archer';
@@ -2898,6 +3252,122 @@ const Game = {
         } else {
             this.dealDamage(target, summon.damage);
         }
+    },
+    
+    // ★ 소환수 후퇴 후 공격 (닷지 스타일)
+    async summonRetreatBeforeAttack(summon, distance = 1) {
+        console.log(`[Summon Retreat] summonRetreatBeforeAttack 호출`, {
+            type: summon?.type,
+            hasSprite: !!summon?.sprite,
+            hasContainer: !!summon?.container,
+            gridX: summon?.gridX,
+            gridZ: summon?.gridZ
+        });
+        
+        if (!summon || !summon.sprite) {
+            console.log(`[Summon Retreat] summon 또는 sprite 없음!`);
+            return;
+        }
+        
+        const newX = summon.gridX - distance;
+        
+        // 뒤로 갈 수 있는지 체크 (그리드 범위 & 아군 충돌)
+        if (newX < 0) {
+            // 뒤로 못가도 후퇴 모션은 보여줌
+            await this.playSummonRetreatAnimation(summon, false);
+            return;
+        }
+        
+        const isOccupied = this.state.playerUnits.some(u => 
+            u !== summon && u.hp > 0 && u.gridX === newX && u.gridZ === summon.gridZ
+        );
+        
+        if (isOccupied) {
+            await this.playSummonRetreatAnimation(summon, false);
+            return;
+        }
+        
+        // 실제 이동
+        const oldX = summon.gridX;
+        summon.gridX = newX;
+        const newPos = this.getCellCenter(newX, summon.gridZ);
+        await this.playSummonRetreatAnimation(summon, true, newPos);
+        
+        console.log(`[Summon] ${summon.type} 후퇴: ${oldX} → ${newX}`);
+    },
+    
+    // ★ 소환수 후퇴 애니메이션 (부드러운 이동)
+    async playSummonRetreatAnimation(summon, actualMove = true, newPos = null) {
+        const posTarget = summon.container || summon.sprite;
+        if (!posTarget) return;
+        
+        const startX = posTarget.x;
+        const startY = posTarget.y;
+        const targetX = actualMove && newPos ? newPos.x : startX - 50;
+        const targetY = actualMove && newPos ? newPos.y : startY;
+        
+        return new Promise(resolve => {
+            // 부드럽게 뒤로 이동
+            gsap.to(posTarget, {
+                x: targetX,
+                y: targetY,
+                duration: 0.25,
+                ease: 'power2.out',
+                onComplete: resolve
+            });
+        });
+    },
+    
+    // ★ (레거시) 소환수 후퇴 애니메이션 - 점프 스타일
+    async playSummonRetreatAnimationJump(summon, actualMove = true, newPos = null) {
+        const posTarget = summon.container || summon.sprite;
+        const scaleTarget = summon.sprite;
+        
+        if (!posTarget || !scaleTarget || !scaleTarget.scale) return;
+        
+        const baseScale = summon.baseScale || scaleTarget.scale.x || 1;
+        const startX = posTarget.x;
+        const startY = posTarget.y;
+        const targetX = actualMove && newPos ? newPos.x : startX - 40;
+        const targetY = actualMove && newPos ? newPos.y : startY;
+        
+        return new Promise(resolve => {
+            const tl = gsap.timeline({ onComplete: resolve });
+            
+            tl.to(posTarget, {
+                x: startX + 15,
+                duration: 0.1
+            });
+            tl.to(scaleTarget.scale, {
+                x: baseScale * 0.8,
+                y: baseScale * 1.2,
+                duration: 0.1
+            }, '<');
+            
+            tl.to(posTarget, {
+                x: targetX,
+                y: targetY - 40,
+                duration: 0.2,
+                ease: 'power2.out'
+            });
+            tl.to(scaleTarget.scale, {
+                x: baseScale * 1.15,
+                y: baseScale * 0.8,
+                duration: 0.15
+            }, '<');
+            
+            tl.to(posTarget, {
+                y: targetY,
+                duration: 0.12,
+                ease: 'bounce.out'
+            });
+            tl.to(scaleTarget.scale, {
+                x: baseScale,
+                y: baseScale,
+                duration: 0.1,
+                ease: 'elastic.out(1, 0.5)'
+            }, '<');
+        });
     },
     
     // Find target for summon attack
@@ -3120,7 +3590,7 @@ const Game = {
             const oldX = enemy.gridX;
             enemy.gridX = newX;
             
-            const newPos = this.gridToScreen(newX, enemy.gridZ);
+            const newPos = this.getCellCenter(newX, enemy.gridZ);
             const posTarget = enemy.container || enemy.sprite;
             const scaleTarget = enemy.sprite;
             const baseScale = enemy.baseScale || scaleTarget.scale.x;
@@ -3211,16 +3681,28 @@ const Game = {
         
         if (target.isHero && this.state.heroBlock > 0) {
             // 히어로는 state.heroBlock 사용
+            const prevBlock = this.state.heroBlock;
             blocked = Math.min(this.state.heroBlock, damage);
             this.state.heroBlock -= blocked;
             target.block = this.state.heroBlock; // 동기화
             damage -= blocked;
             this.updateBlockUI();
+            
+            // ★ 히어로 실드 완전 파괴 연출
+            if (prevBlock > 0 && this.state.heroBlock === 0 && typeof ShieldVFX !== 'undefined') {
+                ShieldVFX.breakAtUnit(target, prevBlock);
+            }
         } else if (target.block && target.block > 0) {
             // 일반 유닛은 target.block 사용
+            const prevBlock = target.block;
             blocked = Math.min(target.block, damage);
             target.block -= blocked;
             damage -= blocked;
+            
+            // ★ 유닛 실드 완전 파괴 연출
+            if (prevBlock > 0 && target.block === 0 && typeof ShieldVFX !== 'undefined') {
+                ShieldVFX.breakAtUnit(target, prevBlock);
+            }
         }
         
         if (blocked > 0) {
@@ -3328,6 +3810,12 @@ const Game = {
     killUnit(unit) {
         console.log(`[Game] ${unit.type} died!`);
         
+        // ★★★ 해당 유닛 위치의 플로터(데미지 숫자) 정리 ★★★
+        const unitPos = this.getUnitPosition(unit);
+        if (unitPos && typeof CombatEffects !== 'undefined') {
+            CombatEffects.cleanupFloatersInArea(unitPos.x, unitPos.y, 150);
+        }
+        
         // ★★★ 모든 gsap 애니메이션 먼저 정리 ★★★
         try {
             // 스프라이트 관련 애니메이션 정리
@@ -3408,7 +3896,7 @@ const Game = {
             unit.intentContainer = null;
         }
         
-        // ★ 사망 연출 (화려하게!)
+        // ★ 사망 연출
         // 새 구조: container가 최상위, sprite는 container의 자식
         const posTarget = unit.container || unit.sprite;
         const scaleTarget = unit.sprite;
@@ -3421,67 +3909,173 @@ const Game = {
             const deathX = globalPos.x;
             const deathY = globalPos.y;
             
-            // 1. 히트스톱 + 플래시
-            if (typeof CombatEffects !== 'undefined') {
-                CombatEffects.hitStop(80);
-                CombatEffects.screenFlash(isEnemy ? '#ff4444' : '#ffffff', 100, 0.3);
-            }
+            // ★★★ 오버킬 시 고어 연출! ★★★
+            const isGoreDeath = unit._goreDeath && typeof GoreVFX !== 'undefined';
             
-            // 2. 사망 파티클
-            this.createDeathParticles(deathX, deathY, isEnemy);
-            
-            // 3. 사망 애니메이션 (쓰러지면서 사라짐)
-            const baseScale = unit.baseScale || scaleTarget?.baseScale || 1;
-            const startY = posTarget.y;
-            
-            // 사망 플래그 설정 (중복 애니메이션 방지)
-            unit.isDying = true;
-            
-            gsap.timeline()
-                // 피격 경직 (스프라이트 틴트)
-                .call(() => {
-                    if (scaleTarget && !scaleTarget.destroyed) scaleTarget.tint = 0xffffff;
-                })
-                .to({}, { duration: 0.05 })
-                // 빨갛게 변하면서 (스프라이트 틴트)
-                .call(() => {
-                    if (scaleTarget && !scaleTarget.destroyed) scaleTarget.tint = isEnemy ? 0xff0000 : 0x888888;
-                })
-                // 위로 살짝 튀어오름 (컨테이너 위치)
-                .to(posTarget, { y: startY - 20, duration: 0.1, ease: 'power2.out' })
-                .call(() => {
-                    if (scaleTarget && !scaleTarget.destroyed && scaleTarget.scale) {
-                        gsap.to(scaleTarget.scale, { x: baseScale * 1.2, y: baseScale * 0.8, duration: 0.1 });
+            if (isGoreDeath) {
+                console.log(`[Gore] 🩸 ${unit.type} 고어 사망 연출!`);
+                
+                // ★★★ 모든 GSAP 트윈 철저히 정리! (에러 방지) ★★★
+                try {
+                    // 컨테이너 & 스프라이트 & 스케일 모든 트윈 정리
+                    if (unit.container) {
+                        gsap.killTweensOf(unit.container);
+                        if (unit.container.scale) gsap.killTweensOf(unit.container.scale);
                     }
-                }, null, '<')
-                // 아래로 쓰러짐 (컨테이너 위치)
-                .to(posTarget, { 
-                    y: startY + 30,
-                    duration: 0.25, 
-                    ease: 'power3.in' 
-                })
-                .call(() => {
-                    if (scaleTarget && !scaleTarget.destroyed) {
-                        if (scaleTarget.scale) gsap.to(scaleTarget.scale, { x: baseScale * 0.6, y: baseScale * 1.3, duration: 0.2 });
-                        gsap.to(scaleTarget, { rotation: isEnemy ? 0.3 : -0.3, duration: 0.2 });
+                    if (unit.sprite) {
+                        gsap.killTweensOf(unit.sprite);
+                        if (unit.sprite.scale) gsap.killTweensOf(unit.sprite.scale);
                     }
-                }, null, '<')
-                // 페이드 아웃 (전체 컨테이너)
-                .to(posTarget, { 
-                    alpha: 0, 
-                    duration: 0.3,
-                    onComplete: () => {
-                        try {
-                            // 컨테이너 전체 삭제 (sprite, hpBar, intentContainer 포함)
-                            if (posTarget && !posTarget.destroyed) {
-                                gsap.killTweensOf(posTarget);
-                                posTarget.destroy({ children: true });
-                            }
-                        } catch(e) {}
-                        unit.container = null;
-                        unit.sprite = null;
+                    if (posTarget) gsap.killTweensOf(posTarget);
+                    if (scaleTarget) gsap.killTweensOf(scaleTarget);
+                    if (scaleTarget?.scale) gsap.killTweensOf(scaleTarget.scale);
+                    
+                    // HP바, 인텐트 트윈도 정리
+                    if (unit.hpBar) gsap.killTweensOf(unit.hpBar);
+                    if (unit.intentContainer) gsap.killTweensOf(unit.intentContainer);
+                    
+                    // 브리딩 애니메이션 정리
+                    if (unit.breathingTween) {
+                        unit.breathingTween.kill();
+                        unit.breathingTween = null;
                     }
+                } catch(e) {
+                    console.log('[Gore] GSAP cleanup error:', e);
+                }
+                
+                // 스프라이트 크기 계산
+                const spriteWidth = unit.spriteWidth || (scaleTarget?.width) || 80;
+                const spriteHeight = unit.spriteHeight || (scaleTarget?.height) || 120;
+                
+                // 스프라이트 이미지 경로
+                let imgSrc = unit.textureUrl || null;
+                
+                // 스프라이트 즉시 숨김 (고어 VFX가 대신함)
+                if (posTarget && !posTarget.destroyed) {
+                    posTarget.alpha = 0;
+                    posTarget.visible = false;
+                }
+                
+                // ★★★ 산산조각(shatter) 연출! + meat.png 조각도 함께! ★★★
+                GoreVFX.shatterDismember(deathX, deathY - spriteHeight / 3, {
+                    width: spriteWidth,
+                    height: spriteHeight,
+                    duration: 2000,
+                    imgSrc: imgSrc
                 });
+                
+                // meat.png 조각도 추가!
+                GoreVFX.addMeatChunks(deathX, deathY - spriteHeight / 3, {
+                    width: spriteWidth,
+                    height: spriteHeight
+                });
+                
+                // 강한 화면 흔들림!
+                if (typeof CombatEffects !== 'undefined') {
+                    CombatEffects.screenShake(15, 250);
+                    CombatEffects.screenFlash('#ff0000', 200, 0.6);
+                }
+                
+                // 피 분출!
+                GoreVFX.bloodSplatter(deathX, deathY, {
+                    count: 50,
+                    speed: 400,
+                    size: 10,
+                    duration: 1500
+                });
+                
+                // ★ 컨테이너를 null로 먼저 설정 (다른 곳에서 참조 방지)
+                const containerToDestroy = unit.container;
+                const spriteToDestroy = unit.sprite;
+                unit.container = null;
+                unit.sprite = null;
+                
+                // ★ 딜레이 후 실제 파괴 (진행 중인 트윈 완료 대기)
+                setTimeout(() => {
+                    try {
+                        if (containerToDestroy && !containerToDestroy.destroyed) {
+                            gsap.killTweensOf(containerToDestroy);
+                            if (containerToDestroy.scale) gsap.killTweensOf(containerToDestroy.scale);
+                            containerToDestroy.destroy({ children: true });
+                        }
+                        if (spriteToDestroy && !spriteToDestroy.destroyed) {
+                            gsap.killTweensOf(spriteToDestroy);
+                            if (spriteToDestroy.scale) gsap.killTweensOf(spriteToDestroy.scale);
+                        }
+                    } catch(e) {
+                        console.log('[Gore] Destroy error:', e);
+                    }
+                }, 100);
+                
+                // 플래그 정리
+                delete unit._goreDeath;
+                delete unit._overkillDamage;
+                
+            } else {
+                // ★ 일반 사망 연출 (기존 로직)
+                
+                // 1. 히트스톱 + 플래시
+                if (typeof CombatEffects !== 'undefined') {
+                    CombatEffects.hitStop(80);
+                    CombatEffects.screenFlash(isEnemy ? '#ff4444' : '#ffffff', 100, 0.3);
+                }
+                
+                // 2. 사망 파티클
+                this.createDeathParticles(deathX, deathY, isEnemy);
+                
+                // 3. 사망 애니메이션 (쓰러지면서 사라짐)
+                const baseScale = unit.baseScale || scaleTarget?.baseScale || 1;
+                const startY = posTarget.y;
+                
+                // 사망 플래그 설정 (중복 애니메이션 방지)
+                unit.isDying = true;
+                
+                gsap.timeline()
+                    // 피격 경직 (스프라이트 틴트)
+                    .call(() => {
+                        if (scaleTarget && !scaleTarget.destroyed) scaleTarget.tint = 0xffffff;
+                    })
+                    .to({}, { duration: 0.05 })
+                    // 빨갛게 변하면서 (스프라이트 틴트)
+                    .call(() => {
+                        if (scaleTarget && !scaleTarget.destroyed) scaleTarget.tint = isEnemy ? 0xff0000 : 0x888888;
+                    })
+                    // 위로 살짝 튀어오름 (컨테이너 위치)
+                    .to(posTarget, { y: startY - 20, duration: 0.1, ease: 'power2.out' })
+                    .call(() => {
+                        if (scaleTarget && !scaleTarget.destroyed && scaleTarget.scale) {
+                            gsap.to(scaleTarget.scale, { x: baseScale * 1.2, y: baseScale * 0.8, duration: 0.1 });
+                        }
+                    }, null, '<')
+                    // 아래로 쓰러짐 (컨테이너 위치)
+                    .to(posTarget, { 
+                        y: startY + 30,
+                        duration: 0.25, 
+                        ease: 'power3.in' 
+                    })
+                    .call(() => {
+                        if (scaleTarget && !scaleTarget.destroyed) {
+                            if (scaleTarget.scale) gsap.to(scaleTarget.scale, { x: baseScale * 0.6, y: baseScale * 1.3, duration: 0.2 });
+                            gsap.to(scaleTarget, { rotation: isEnemy ? 0.3 : -0.3, duration: 0.2 });
+                        }
+                    }, null, '<')
+                    // 페이드 아웃 (전체 컨테이너)
+                    .to(posTarget, { 
+                        alpha: 0, 
+                        duration: 0.3,
+                        onComplete: () => {
+                            try {
+                                // 컨테이너 전체 삭제 (sprite, hpBar, intentContainer 포함)
+                                if (posTarget && !posTarget.destroyed) {
+                                    gsap.killTweensOf(posTarget);
+                                    posTarget.destroy({ children: true });
+                                }
+                            } catch(e) {}
+                            unit.container = null;
+                            unit.sprite = null;
+                        }
+                    });
+            } // else 블록 닫기
         }
         
         // Remove from arrays
@@ -3540,6 +4134,35 @@ const Game = {
         const aliveEnemies = this.state.enemyUnits.filter(e => e.hp > 0);
         if (aliveEnemies.length === 0) {
             console.log('[Game] Victory!');
+            
+            // ★★★ 모든 플로터 정리 ★★★
+            if (typeof CombatEffects !== 'undefined') {
+                CombatEffects.cleanupAllFloaters();
+            }
+            
+            // ★★★ 모든 진행 중인 GSAP 애니메이션 정리 ★★★
+            try {
+                // 모든 적 유닛의 애니메이션 정리
+                this.state.enemyUnits.forEach(enemy => {
+                    if (enemy.sprite && !enemy.sprite.destroyed) {
+                        gsap.killTweensOf(enemy.sprite);
+                        if (enemy.sprite.scale) gsap.killTweensOf(enemy.sprite.scale);
+                    }
+                    if (enemy.container && !enemy.container.destroyed) {
+                        gsap.killTweensOf(enemy.container);
+                    }
+                });
+                // CombatEffects 컨테이너의 모든 자식 애니메이션 정리
+                if (typeof CombatEffects !== 'undefined' && CombatEffects.container) {
+                    CombatEffects.container.children.forEach(child => {
+                        if (child && !child.destroyed) {
+                            gsap.killTweensOf(child);
+                        }
+                    });
+                }
+            } catch(e) {
+                console.log('[Victory] GSAP cleanup error:', e);
+            }
             
             if (typeof TurnEffects !== 'undefined') {
                 TurnEffects.showVictory(() => {

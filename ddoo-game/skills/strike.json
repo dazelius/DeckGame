@@ -1,0 +1,36 @@
+{
+  "id": "strike",
+  "name": "일격",
+  "type": "melee",
+  "hits": 1,
+  "animation": {
+    "approach": {
+      "windUp": { "x": -15, "duration": 0.08 },
+      "dash": { "distance": 60, "duration": 0.12, "ease": "power2.in" }
+    },
+    "strike": {
+      "offset": 40,
+      "rotation": 0.1,
+      "duration": 0.06,
+      "scale": { "x": 1.1, "y": 0.9 }
+    },
+    "return": {
+      "duration": 0.15,
+      "ease": "power2.out"
+    }
+  },
+  "vfx": {
+    "type": "slash",
+    "color": "0xffffff",
+    "angle": -45,
+    "scale": 1.3
+  },
+  "sfx": {
+    "hit": "slash"
+  },
+  "screenShake": {
+    "intensity": 6,
+    "duration": 120
+  }
+}
+

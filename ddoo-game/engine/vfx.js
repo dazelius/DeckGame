@@ -622,23 +622,20 @@ const VFX = {
                 // 방어 자세 (글로우 거의 없이!)
                 gsap.timeline()
                     .to(playerSprite, {
-                        scaleX: 1.03,
-                        scaleY: 0.98,
+                        scale: 1.03,
                         x: -2,
                         filter: 'brightness(1.05)',  // 글로우 제거, 살짝 밝게만
                         duration: 0.06,
                         ease: "power2.out"
                     })
                     .to(playerSprite, {
-                        scaleX: 0.98,
-                        scaleY: 1.02,
+                        scale: 0.98,
                         x: 1,
                         filter: 'brightness(1.02)',
                         duration: 0.05
                     })
                     .to(playerSprite, {
-                        scaleX: 1,
-                        scaleY: 1,
+                        scale: 1,
                         x: 0,
                         filter: '',
                         duration: 0.12,

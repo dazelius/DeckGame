@@ -1,0 +1,37 @@
+{
+  "id": "bash",
+  "name": "강타",
+  "type": "melee",
+  "hits": 1,
+  "animation": {
+    "approach": {
+      "windUp": { "x": -25, "duration": 0.15, "scale": { "x": 0.75, "y": 1.25 } },
+      "dash": { "distance": 40, "duration": 0.1, "ease": "power4.out", "scale": { "x": 1.2, "y": 0.8 } }
+    },
+    "strike": {
+      "offset": 50,
+      "rotation": 0.15,
+      "duration": 0.06,
+      "scale": { "x": 1.15, "y": 0.85 }
+    },
+    "return": {
+      "duration": 0.2,
+      "ease": "power2.out"
+    }
+  },
+  "vfx": {
+    "type": "heavySlash",
+    "color": "0xff8800",
+    "angle": -30,
+    "scale": 1.5
+  },
+  "sfx": {
+    "hit": "bash_impact"
+  },
+  "screenShake": {
+    "intensity": 10,
+    "duration": 200
+  },
+  "hitStop": 80
+}
+

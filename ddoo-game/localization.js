@@ -167,6 +167,10 @@ const Localization = {
                 name: '스피어 투척',
                 desc: '5 피해. 직선만. 거리당 +1 피해.'
             },
+            hook: {
+                name: '갈고리',
+                desc: '4 피해. 적을 맨 앞으로 당김. 충돌 시 2 피해.'
+            },
             
             // 스킬 카드
             defend: {
@@ -225,6 +229,10 @@ const Localization = {
                 name: 'Spear Throw',
                 desc: '5 damage. Straight line only. +1 per grid distance.'
             },
+            hook: {
+                name: 'Hook',
+                desc: '4 damage. Pull enemy to front. 2 crash damage on collision.'
+            },
             defend: {
                 name: 'Defend',
                 desc: 'Gain 5 Block'
@@ -278,6 +286,10 @@ const Localization = {
             spearThrow: {
                 name: '槍投げ',
                 desc: '5ダメージ。直線のみ。距離ごとに+1。'
+            },
+            hook: {
+                name: 'フック',
+                desc: '4ダメージ。敵を最前線に引く。衝突時2ダメージ。'
             },
             defend: {
                 name: '防御',

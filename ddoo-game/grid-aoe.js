@@ -204,170 +204,362 @@ const GridAOE = {
     },
     
     // ==========================================
-    // 화염 지대 전용 시각화
+    // 화염 지대 전용 시각화 - 3D 볼류메트릭 파티클 시스템
     // ==========================================
     createFireZoneVisual(zone, container) {
-        // Get actual cell size from game
         const cellSize = this.getApproxCellSize();
-        const size = Math.max(cellSize * 1.2, 120); // Ensure minimum size
+        const size = Math.max(cellSize * 1.2, 120);
+        zone.zoneSize = size;
         
-        // Layer 1: Outer glow (heat haze) - covers full cell
-        const outerGlow = new PIXI.Graphics();
-        outerGlow.beginFill(0xff2200, 0.2);
-        outerGlow.drawEllipse(0, 0, size * 0.8, size * 0.45);
-        outerGlow.endFill();
-        outerGlow.beginFill(0xff4400, 0.15);
-        outerGlow.drawEllipse(0, 0, size * 0.65, size * 0.38);
-        outerGlow.endFill();
-        container.addChild(outerGlow);
-        zone.outerGlow = outerGlow;
+        // ========================================
+        // Layer 1: 바닥 스콜치 마크 (그을음)
+        // ========================================
+        const scorch = new PIXI.Graphics();
+        scorch.beginFill(0x110500, 0.4);
+        scorch.drawEllipse(0, 8, size * 0.75, size * 0.35);
+        scorch.endFill();
+        scorch.beginFill(0x220800, 0.3);
+        scorch.drawEllipse(0, 5, size * 0.6, size * 0.28);
+        scorch.endFill();
+        container.addChild(scorch);
+        zone.scorch = scorch;
         
-        // Layer 2: Mid glow (hot core)
-        const midGlow = new PIXI.Graphics();
-        midGlow.beginFill(0xff4400, 0.3);
-        midGlow.drawEllipse(0, 0, size * 0.55, size * 0.32);
-        midGlow.endFill();
-        midGlow.beginFill(0xff6600, 0.4);
-        midGlow.drawEllipse(0, 0, size * 0.4, size * 0.24);
-        midGlow.endFill();
-        container.addChild(midGlow);
-        zone.midGlow = midGlow;
+        // ========================================
+        // Layer 2: 3D 볼류메트릭 열기 (다중 글로우)
+        // ========================================
+        const heatLayers = [];
+        for (let i = 4; i >= 0; i--) {
+            const heat = new PIXI.Graphics();
+            const layerSize = 0.5 + i * 0.12;
+            const colors = [0xffffcc, 0xffcc44, 0xff8822, 0xff4400, 0xff2200];
+            const alphas = [0.08, 0.12, 0.15, 0.12, 0.08];
+            
+            heat.beginFill(colors[i], alphas[i]);
+            heat.drawEllipse(0, -i * 2, size * layerSize, size * layerSize * 0.5);
+            heat.endFill();
+            
+            heat._baseY = -i * 2;
+            heat._pulsePhase = i * 0.5;
+            container.addChild(heat);
+            heatLayers.push(heat);
+        }
+        zone.heatLayers = heatLayers;
         
-        // Layer 3: Inner core (white-hot center)
-        const innerCore = new PIXI.Graphics();
-        innerCore.beginFill(0xffaa00, 0.5);
-        innerCore.drawEllipse(0, 0, size * 0.25, size * 0.15);
-        innerCore.endFill();
-        innerCore.beginFill(0xffdd44, 0.6);
-        innerCore.drawEllipse(0, 0, size * 0.15, size * 0.09);
-        innerCore.endFill();
-        container.addChild(innerCore);
-        zone.innerCore = innerCore;
+        // ========================================
+        // Layer 3: 3D 궤도 화염 파티클
+        // ========================================
+        const orbitContainer = new PIXI.Container();
+        container.addChild(orbitContainer);
+        zone.orbitContainer = orbitContainer;
         
-        // Layer 4: Flame tongues container
-        const flameContainer = new PIXI.Container();
-        container.addChild(flameContainer);
-        zone.flameContainer = flameContainer;
+        zone.orbitFlames = [];
+        const NUM_ORBITS = 3;
+        const FLAMES_PER_ORBIT = 6;
         
-        // Create multiple flame tongues - spread across full cell
-        zone.flames = [];
-        const flameCount = 14; // More flames
-        for (let i = 0; i < flameCount; i++) {
-            const flame = this.createFlameTongue(size);
-            // Spread across elliptical area
-            const angle = (i / flameCount) * Math.PI * 2;
-            const radiusX = (0.3 + Math.random() * 0.4) * size * 0.5;
-            const radiusY = (0.3 + Math.random() * 0.4) * size * 0.3;
-            flame.x = Math.cos(angle) * radiusX;
-            flame.y = Math.sin(angle) * radiusY;
-            flame.baseX = flame.x;
-            flame.baseY = flame.y;
-            flame.phase = Math.random() * Math.PI * 2;
-            flame.speed = 3 + Math.random() * 2;
-            flameContainer.addChild(flame);
-            zone.flames.push(flame);
+        for (let orbit = 0; orbit < NUM_ORBITS; orbit++) {
+            const orbitRadius = size * (0.2 + orbit * 0.15);
+            
+            for (let i = 0; i < FLAMES_PER_ORBIT; i++) {
+                const flame = this.create3DFlameParticle(size, orbit);
+                const angle = (i / FLAMES_PER_ORBIT) * Math.PI * 2;
+                
+                flame._angle = angle;
+                flame._orbit = orbitRadius;
+                flame._orbitY = orbitRadius * 0.5; // Y축 압축 (원근)
+                flame._speed = 0.8 + Math.random() * 0.4 - orbit * 0.15;
+                flame._zPhase = Math.random() * Math.PI * 2;
+                flame._baseScale = 0.7 + Math.random() * 0.4;
+                flame._orbitIndex = orbit;
+                
+                orbitContainer.addChild(flame);
+                zone.orbitFlames.push(flame);
+            }
         }
         
-        // Layer 5: Ember/spark container
+        // ========================================
+        // Layer 4: 중앙 핫스팟 (3D 코어)
+        // ========================================
+        const coreContainer = new PIXI.Container();
+        container.addChild(coreContainer);
+        zone.coreContainer = coreContainer;
+        
+        // 다층 코어 (밝은 중심)
+        for (let i = 3; i >= 0; i--) {
+            const core = new PIXI.Graphics();
+            const coreSize = size * (0.08 + i * 0.05);
+            const colors = [0xffffff, 0xffffcc, 0xffdd66, 0xffaa33];
+            const alphas = [0.9, 0.7, 0.5, 0.4];
+            
+            core.beginFill(colors[i], alphas[i]);
+            core.drawEllipse(0, 0, coreSize, coreSize * 0.6);
+            core.endFill();
+            
+            core._pulsePhase = i * 0.3;
+            coreContainer.addChild(core);
+        }
+        zone.cores = coreContainer.children;
+        
+        // ========================================
+        // Layer 5: 수직 불꽃 기둥들
+        // ========================================
+        const pillarContainer = new PIXI.Container();
+        container.addChild(pillarContainer);
+        zone.pillarContainer = pillarContainer;
+        
+        zone.flamePillars = [];
+        const NUM_PILLARS = 8;
+        
+        for (let i = 0; i < NUM_PILLARS; i++) {
+            const pillar = this.create3DFlamePillar(size);
+            const angle = (i / NUM_PILLARS) * Math.PI * 2 + Math.random() * 0.3;
+            const dist = size * (0.15 + Math.random() * 0.25);
+            
+            pillar.x = Math.cos(angle) * dist;
+            pillar.y = Math.sin(angle) * dist * 0.5;
+            pillar._baseX = pillar.x;
+            pillar._baseY = pillar.y;
+            pillar._phase = Math.random() * Math.PI * 2;
+            pillar._speed = 2 + Math.random() * 2;
+            pillar._swayAmount = 3 + Math.random() * 5;
+            
+            pillarContainer.addChild(pillar);
+            zone.flamePillars.push(pillar);
+        }
+        
+        // ========================================
+        // Layer 6: 3D 불씨/스파크 시스템
+        // ========================================
         const emberContainer = new PIXI.Container();
         container.addChild(emberContainer);
         zone.emberContainer = emberContainer;
         zone.embers = [];
-        zone.zoneSize = size; // Store for ember spawning
         
-        // Initial embers - more of them
-        for (let i = 0; i < 20; i++) {
-            this.spawnFireEmber(zone);
+        // 초기 불씨 생성
+        for (let i = 0; i < 30; i++) {
+            this.spawn3DFireEmber(zone);
         }
         
-        // Layer 6: Smoke wisps
+        // ========================================
+        // Layer 7: 연기/아지랑이
+        // ========================================
         const smokeContainer = new PIXI.Container();
         container.addChild(smokeContainer);
         zone.smokeContainer = smokeContainer;
         zone.smokeParticles = [];
+        
+        // 초기 연기
+        for (let i = 0; i < 5; i++) {
+            this.spawn3DSmoke(zone);
+        }
+        
+        // ========================================
+        // 애니메이션 시작 시간 저장
+        // ========================================
+        zone._animTime = 0;
+    },
+    
+    // ==========================================
+    // 3D 화염 파티클 생성
+    // ==========================================
+    create3DFlameParticle(zoneSize, layer = 0) {
+        const particle = new PIXI.Container();
+        const scale = zoneSize / 100;
+        
+        // 외부 글로우
+        const outerGlow = new PIXI.Graphics();
+        const outerSize = (12 + Math.random() * 8) * scale;
+        const glowColors = [0xff6600, 0xff4400, 0xff3300];
+        outerGlow.beginFill(glowColors[layer] || 0xff4400, 0.3);
+        outerGlow.drawCircle(0, 0, outerSize);
+        outerGlow.endFill();
+        particle.addChild(outerGlow);
+        
+        // 중간 불꽃
+        const midFlame = new PIXI.Graphics();
+        const midSize = outerSize * 0.7;
+        midFlame.beginFill(0xff8844, 0.6);
+        midFlame.drawCircle(0, 0, midSize);
+        midFlame.endFill();
+        particle.addChild(midFlame);
+        
+        // 밝은 코어
+        const core = new PIXI.Graphics();
+        const coreSize = outerSize * 0.4;
+        core.beginFill(0xffcc66, 0.9);
+        core.drawCircle(0, 0, coreSize);
+        core.endFill();
+        particle.addChild(core);
+        
+        // 핫스팟
+        const hot = new PIXI.Graphics();
+        hot.beginFill(0xffffaa, 0.8);
+        hot.drawCircle(0, 0, coreSize * 0.5);
+        hot.endFill();
+        particle.addChild(hot);
+        
+        return particle;
+    },
+    
+    // ==========================================
+    // 3D 불꽃 기둥 생성
+    // ==========================================
+    create3DFlamePillar(zoneSize) {
+        const pillar = new PIXI.Container();
+        const scale = zoneSize / 100;
+        const height = (25 + Math.random() * 35) * scale;
+        const width = (10 + Math.random() * 8) * scale;
+        
+        // 여러 층의 불꽃 (3D 깊이감)
+        for (let layer = 2; layer >= 0; layer--) {
+            const flame = new PIXI.Graphics();
+            const layerScale = 1 - layer * 0.2;
+            const layerAlpha = 0.4 + layer * 0.2;
+            const h = height * layerScale;
+            const w = width * layerScale;
+            
+            // 외부 불꽃 (어두운)
+            const colors = [0xff3300, 0xff5500, 0xff7700];
+            flame.beginFill(colors[layer], layerAlpha * 0.5);
+            flame.moveTo(0, 0);
+            flame.bezierCurveTo(-w * 0.6, -h * 0.3, -w * 0.4, -h * 0.7, 0, -h);
+            flame.bezierCurveTo(w * 0.4, -h * 0.7, w * 0.6, -h * 0.3, 0, 0);
+            flame.endFill();
+            
+            // 내부 불꽃 (밝은)
+            const innerColors = [0xffaa44, 0xffcc66, 0xffee88];
+            flame.beginFill(innerColors[layer], layerAlpha);
+            flame.moveTo(0, 0);
+            flame.bezierCurveTo(-w * 0.3, -h * 0.25, -w * 0.2, -h * 0.6, 0, -h * 0.85);
+            flame.bezierCurveTo(w * 0.2, -h * 0.6, w * 0.3, -h * 0.25, 0, 0);
+            flame.endFill();
+            
+            flame.y = -layer * 2;
+            pillar.addChild(flame);
+        }
+        
+        // 핫스팟 코어
+        const hotspot = new PIXI.Graphics();
+        hotspot.beginFill(0xffffcc, 0.8);
+        hotspot.drawEllipse(0, -height * 0.15, width * 0.3, height * 0.1);
+        hotspot.endFill();
+        pillar.addChild(hotspot);
+        
+        return pillar;
+    },
+    
+    // ==========================================
+    // 3D 불씨 생성
+    // ==========================================
+    spawn3DFireEmber(zone) {
+        if (!zone.emberContainer) return;
+        
+        const zoneSize = zone.zoneSize || 100;
+        const ember = new PIXI.Container();
+        
+        // 메인 불씨
+        const size = 2 + Math.random() * 5;
+        const colors = [0xffffaa, 0xffdd66, 0xffaa44, 0xff8833];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        
+        // 글로우
+        const glow = new PIXI.Graphics();
+        glow.beginFill(color, 0.2);
+        glow.drawCircle(0, 0, size * 3);
+        glow.endFill();
+        ember.addChild(glow);
+        
+        // 코어
+        const core = new PIXI.Graphics();
+        core.beginFill(color, 0.9);
+        core.drawCircle(0, 0, size);
+        core.endFill();
+        ember.addChild(core);
+        
+        // 핫스팟
+        const hot = new PIXI.Graphics();
+        hot.beginFill(0xffffff, 0.8);
+        hot.drawCircle(0, 0, size * 0.4);
+        hot.endFill();
+        ember.addChild(hot);
+        
+        // 위치 (3D 분포)
+        const angle = Math.random() * Math.PI * 2;
+        const dist = Math.random() * zoneSize * 0.4;
+        ember.x = Math.cos(angle) * dist;
+        ember.y = Math.sin(angle) * dist * 0.5;
+        
+        // 3D 속성
+        ember._vx = (Math.random() - 0.5) * 1.5;
+        ember._vy = -3 - Math.random() * 4;
+        ember._vz = (Math.random() - 0.5) * 2; // Z축 속도 (깊이)
+        ember._z = Math.random() * 20 - 10; // Z 위치
+        ember._life = 1;
+        ember._decay = 0.008 + Math.random() * 0.012;
+        ember._wobble = Math.random() * Math.PI * 2;
+        ember._wobbleSpeed = 8 + Math.random() * 4;
+        ember._baseSize = size;
+        
+        zone.emberContainer.addChild(ember);
+        zone.embers.push(ember);
+    },
+    
+    // ==========================================
+    // 3D 연기 생성
+    // ==========================================
+    spawn3DSmoke(zone) {
+        if (!zone.smokeContainer) return;
+        
+        const zoneSize = zone.zoneSize || 100;
+        const smoke = new PIXI.Container();
+        
+        // 다층 연기 (볼륨감)
+        for (let i = 2; i >= 0; i--) {
+            const puff = new PIXI.Graphics();
+            const size = (8 + Math.random() * 12) + i * 4;
+            const alpha = 0.15 - i * 0.03;
+            
+            puff.beginFill(0x332211, alpha);
+            puff.drawCircle(i * 2, i * 1, size);
+            puff.endFill();
+            smoke.addChild(puff);
+        }
+        
+        // 위치
+        smoke.x = (Math.random() - 0.5) * zoneSize * 0.5;
+        smoke.y = (Math.random() - 0.5) * zoneSize * 0.25;
+        
+        // 속성
+        smoke._vx = (Math.random() - 0.5) * 0.8;
+        smoke._vy = -1.5 - Math.random() * 1;
+        smoke._life = 1;
+        smoke._decay = 0.006 + Math.random() * 0.004;
+        smoke._rotation = (Math.random() - 0.5) * 0.02;
+        
+        zone.smokeContainer.addChild(smoke);
+        zone.smokeParticles.push(smoke);
     },
     
     // ==========================================
     // 그리드 셀 크기 추정
     // ==========================================
     getApproxCellSize() {
-        // Get two adjacent cell centers and calculate distance
         const pos1 = this.game.getCellCenter(0, 0);
         const pos2 = this.game.getCellCenter(1, 0);
         if (pos1 && pos2) {
             return Math.abs(pos2.x - pos1.x);
         }
-        return 100; // Default fallback
+        return 100;
     },
     
     // ==========================================
-    // 불꽃 혀 생성
+    // 레거시 호환용 래퍼
     // ==========================================
     createFlameTongue(zoneSize = 100) {
-        const flame = new PIXI.Graphics();
-        const scale = zoneSize / 100;
-        const height = (20 + Math.random() * 30) * scale;
-        const width = (8 + Math.random() * 8) * scale;
-        
-        // Draw flame shape (teardrop)
-        flame.beginFill(0xff6600, 0.8);
-        flame.moveTo(0, 0);
-        flame.bezierCurveTo(-width/2, -height*0.3, -width/3, -height*0.7, 0, -height);
-        flame.bezierCurveTo(width/3, -height*0.7, width/2, -height*0.3, 0, 0);
-        flame.endFill();
-        
-        // Inner bright core
-        flame.beginFill(0xffaa00, 0.9);
-        flame.moveTo(0, 0);
-        flame.bezierCurveTo(-width/4, -height*0.25, -width/5, -height*0.5, 0, -height*0.7);
-        flame.bezierCurveTo(width/5, -height*0.5, width/4, -height*0.25, 0, 0);
-        flame.endFill();
-        
-        // Hottest center
-        flame.beginFill(0xffffaa, 0.7);
-        flame.drawEllipse(0, -height*0.2, width*0.25, height*0.18);
-        flame.endFill();
-        
-        return flame;
+        return this.create3DFlamePillar(zoneSize);
     },
     
-    // ==========================================
-    // 불씨/스파크 생성
-    // ==========================================
     spawnFireEmber(zone) {
-        if (!zone.emberContainer) return;
-        
-        const zoneSize = zone.zoneSize || 100;
-        const ember = new PIXI.Graphics();
-        const size = 2 + Math.random() * 4;
-        
-        // Bright ember color
-        const colors = [0xffff00, 0xffaa00, 0xff6600, 0xff4400];
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        
-        ember.beginFill(color, 0.9);
-        ember.drawCircle(0, 0, size);
-        ember.endFill();
-        
-        // Add glow
-        ember.beginFill(color, 0.3);
-        ember.drawCircle(0, 0, size * 2.5);
-        ember.endFill();
-        
-        // Position - spread across full zone
-        ember.x = (Math.random() - 0.5) * zoneSize * 0.7;
-        ember.y = (Math.random() - 0.5) * zoneSize * 0.4;
-        
-        // Animation properties
-        ember.vx = (Math.random() - 0.5) * 2;
-        ember.vy = -2.5 - Math.random() * 4;
-        ember.life = 1;
-        ember.decay = 0.012 + Math.random() * 0.015;
-        ember.wobble = Math.random() * Math.PI * 2;
-        ember.wobbleSpeed = 5 + Math.random() * 5;
-        
-        zone.emberContainer.addChild(ember);
-        zone.embers.push(ember);
+        this.spawn3DFireEmber(zone);
     },
     
     // ==========================================
@@ -596,106 +788,159 @@ const GridAOE = {
     },
     
     // ==========================================
-    // 화염 지대 애니메이션 업데이트
+    // 화염 지대 애니메이션 업데이트 - 3D 볼류메트릭 버전
     // ==========================================
     updateFireZone(zone, delta) {
         const t = zone.animationTime;
+        zone._animTime = (zone._animTime || 0) + delta;
         
-        // Outer glow - slow pulse with heat shimmer
-        if (zone.outerGlow) {
-            zone.outerGlow.alpha = 0.12 + Math.sin(t * 2) * 0.05;
-            zone.outerGlow.scale.x = 1 + Math.sin(t * 1.5) * 0.08;
-            zone.outerGlow.scale.y = 1 + Math.cos(t * 1.8) * 0.05;
+        // ========================================
+        // 1. 열기 레이어 펄스 (3D 깊이감)
+        // ========================================
+        if (zone.heatLayers) {
+            zone.heatLayers.forEach((heat, i) => {
+                const phase = t * (2 + i * 0.5) + heat._pulsePhase;
+                const pulse = 1 + Math.sin(phase) * 0.15;
+                heat.scale.set(pulse, pulse * 0.7);
+                heat.alpha = 0.08 + Math.sin(phase * 1.5) * 0.04 + (3 - i) * 0.02;
+                heat.y = heat._baseY + Math.sin(phase * 0.8) * 2;
+            });
         }
         
-        // Mid glow - faster flicker
-        if (zone.midGlow) {
-            zone.midGlow.alpha = 0.25 + Math.sin(t * 5) * 0.1;
-            zone.midGlow.scale.x = 1 + Math.sin(t * 6) * 0.1;
-            zone.midGlow.scale.y = 1 + Math.cos(t * 4) * 0.08;
-        }
-        
-        // Inner core - intense rapid flicker
-        if (zone.innerCore) {
-            zone.innerCore.alpha = 0.5 + Math.sin(t * 10) * 0.2;
-            zone.innerCore.scale.x = 1 + Math.sin(t * 12) * 0.15;
-            zone.innerCore.scale.y = 1 + Math.cos(t * 8) * 0.1;
-            zone.innerCore.rotation = Math.sin(t * 3) * 0.1;
-        }
-        
-        // Animate flame tongues
-        if (zone.flames) {
-            for (const flame of zone.flames) {
-                flame.phase += delta * flame.speed;
+        // ========================================
+        // 2. 3D 궤도 화염 파티클 회전
+        // ========================================
+        if (zone.orbitFlames) {
+            zone.orbitFlames.forEach(flame => {
+                flame._angle += delta * flame._speed;
                 
-                // Sway and dance
-                flame.x = flame.baseX + Math.sin(flame.phase) * 5;
-                flame.y = flame.baseY + Math.cos(flame.phase * 0.7) * 3;
+                // 3D 원형 궤도 시뮬레이션
+                const zOffset = Math.sin(flame._angle + flame._zPhase);
+                const depthScale = 0.5 + zOffset * 0.5;
                 
-                // Scale flicker
-                flame.scale.x = 0.8 + Math.sin(flame.phase * 1.5) * 0.3;
-                flame.scale.y = 0.9 + Math.sin(flame.phase * 2) * 0.2;
+                // XY 위치 (타원 궤도)
+                flame.x = Math.cos(flame._angle) * flame._orbit;
+                flame.y = Math.sin(flame._angle) * flame._orbitY;
                 
-                // Alpha flicker
-                flame.alpha = 0.6 + Math.sin(flame.phase * 3) * 0.3;
+                // 깊이에 따른 스케일 & 알파
+                const scale = flame._baseScale * depthScale;
+                flame.scale.set(scale);
+                flame.alpha = 0.4 + depthScale * 0.5;
                 
-                // Slight rotation
-                flame.rotation = Math.sin(flame.phase * 0.8) * 0.2;
+                // 뒤에 있으면 더 어둡게 (3D 효과)
+                if (zOffset < 0) {
+                    flame.alpha *= 0.5;
+                    flame.zIndex = -1;
+                } else {
+                    flame.zIndex = 1;
+                }
+            });
+            
+            // Z 정렬
+            if (zone.orbitContainer) {
+                zone.orbitContainer.sortChildren();
             }
         }
         
-        // Update embers
+        // ========================================
+        // 3. 코어 펄스
+        // ========================================
+        if (zone.cores) {
+            zone.cores.forEach((core, i) => {
+                const phase = t * (8 + i * 2) + (core._pulsePhase || 0);
+                const pulse = 1 + Math.sin(phase) * 0.2;
+                core.scale.set(pulse, pulse * 0.7);
+            });
+        }
+        
+        // ========================================
+        // 4. 불꽃 기둥 애니메이션
+        // ========================================
+        if (zone.flamePillars) {
+            zone.flamePillars.forEach(pillar => {
+                pillar._phase += delta * pillar._speed;
+                
+                // 흔들림
+                pillar.x = pillar._baseX + Math.sin(pillar._phase) * pillar._swayAmount;
+                pillar.y = pillar._baseY + Math.cos(pillar._phase * 0.7) * 2;
+                
+                // 스케일 플리커
+                const scaleX = 0.85 + Math.sin(pillar._phase * 2) * 0.2;
+                const scaleY = 0.9 + Math.sin(pillar._phase * 1.5) * 0.15;
+                pillar.scale.set(scaleX, scaleY);
+                
+                // 알파 플리커
+                pillar.alpha = 0.7 + Math.sin(pillar._phase * 3) * 0.25;
+                
+                // 회전
+                pillar.rotation = Math.sin(pillar._phase * 0.5) * 0.15;
+            });
+        }
+        
+        // ========================================
+        // 5. 3D 불씨 업데이트
+        // ========================================
         if (zone.embers) {
             const toRemove = [];
             
             for (const ember of zone.embers) {
-                ember.wobble += delta * ember.wobbleSpeed;
+                ember._wobble += delta * ember._wobbleSpeed;
                 
-                // Movement with wobble
-                ember.x += ember.vx + Math.sin(ember.wobble) * 0.5;
-                ember.y += ember.vy;
-                ember.vy -= 0.03; // Float up faster over time
+                // 3D 이동
+                ember.x += ember._vx + Math.sin(ember._wobble) * 0.8;
+                ember.y += ember._vy;
+                ember._z += ember._vz;
+                ember._vy -= 0.02; // 위로 가속
                 
-                // Fade
-                ember.life -= ember.decay;
-                ember.alpha = ember.life;
-                ember.scale.set(0.5 + ember.life * 0.5);
+                // Z축에 따른 스케일 (원근)
+                const zScale = 0.6 + (ember._z + 10) / 30;
+                ember.scale.set(Math.max(0.3, zScale));
                 
-                if (ember.life <= 0) {
+                // 페이드
+                ember._life -= ember._decay;
+                ember.alpha = ember._life;
+                
+                if (ember._life <= 0) {
                     toRemove.push(ember);
                 }
             }
             
-            // Remove dead embers and spawn new ones
+            // 제거 및 재생성
             for (const e of toRemove) {
                 const idx = zone.embers.indexOf(e);
                 if (idx > -1) zone.embers.splice(idx, 1);
                 if (zone.emberContainer) zone.emberContainer.removeChild(e);
-                e.destroy();
+                try { e.destroy({ children: true }); } catch(err) {}
                 
-                // Spawn replacement
-                this.spawnFireEmber(zone);
+                // 교체 생성
+                this.spawn3DFireEmber(zone);
+            }
+            
+            // 추가 불씨 (확률적)
+            if (Math.random() < 0.1) {
+                this.spawn3DFireEmber(zone);
             }
         }
         
-        // Occasional smoke puff
-        if (Math.random() < 0.02 && zone.smokeContainer) {
-            this.spawnSmokePuff(zone);
-        }
-        
-        // Update smoke
+        // ========================================
+        // 6. 연기 업데이트
+        // ========================================
         if (zone.smokeParticles) {
             const smokeToRemove = [];
             
             for (const smoke of zone.smokeParticles) {
-                smoke.x += smoke.vx;
-                smoke.y += smoke.vy;
-                smoke.vy -= 0.02;
-                smoke.life -= smoke.decay;
-                smoke.alpha = smoke.life * 0.3;
-                smoke.scale.set(smoke.scale.x + 0.01);
+                smoke.x += smoke._vx;
+                smoke.y += smoke._vy;
+                smoke._vy -= 0.01;
+                smoke._life -= smoke._decay;
+                smoke.alpha = smoke._life * 0.2;
+                smoke.rotation += smoke._rotation;
                 
-                if (smoke.life <= 0) {
+                // 확장
+                const currentScale = smoke.scale.x;
+                smoke.scale.set(currentScale + 0.008);
+                
+                if (smoke._life <= 0) {
                     smokeToRemove.push(smoke);
                 }
             }
@@ -704,31 +949,38 @@ const GridAOE = {
                 const idx = zone.smokeParticles.indexOf(s);
                 if (idx > -1) zone.smokeParticles.splice(idx, 1);
                 if (zone.smokeContainer) zone.smokeContainer.removeChild(s);
-                s.destroy();
+                try { s.destroy({ children: true }); } catch(err) {}
+            }
+            
+            // 새 연기 생성 (확률적)
+            if (Math.random() < 0.015 && zone.smokeContainer) {
+                this.spawn3DSmoke(zone);
+            }
+        }
+        
+        // ========================================
+        // 7. 레거시 호환 (flames 배열)
+        // ========================================
+        if (zone.flames && zone.flames.length > 0 && !zone.flamePillars) {
+            for (const flame of zone.flames) {
+                if (flame.phase !== undefined) {
+                    flame.phase += delta * (flame.speed || 3);
+                    flame.x = (flame.baseX || 0) + Math.sin(flame.phase) * 5;
+                    flame.y = (flame.baseY || 0) + Math.cos(flame.phase * 0.7) * 3;
+                    flame.scale.x = 0.8 + Math.sin(flame.phase * 1.5) * 0.3;
+                    flame.scale.y = 0.9 + Math.sin(flame.phase * 2) * 0.2;
+                    flame.alpha = 0.6 + Math.sin(flame.phase * 3) * 0.3;
+                    flame.rotation = Math.sin(flame.phase * 0.8) * 0.2;
+                }
             }
         }
     },
     
     // ==========================================
-    // 연기 생성
+    // 연기 생성 (3D 래퍼)
     // ==========================================
     spawnSmokePuff(zone) {
-        const smoke = new PIXI.Graphics();
-        const size = 8 + Math.random() * 8;
-        
-        smoke.beginFill(0x444444, 0.3);
-        smoke.drawCircle(0, 0, size);
-        smoke.endFill();
-        
-        smoke.x = (Math.random() - 0.5) * 30;
-        smoke.y = -10;
-        smoke.vx = (Math.random() - 0.5) * 0.5;
-        smoke.vy = -1 - Math.random();
-        smoke.life = 1;
-        smoke.decay = 0.02;
-        
-        zone.smokeContainer.addChild(smoke);
-        zone.smokeParticles.push(smoke);
+        this.spawn3DSmoke(zone);
     },
     
     updateParticles(zone) {
