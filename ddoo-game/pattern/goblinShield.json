@@ -24,12 +24,13 @@
     "intents": [
         { 
             "id": "shield_bash",
-            "name": "방패 돌진",
+            "name": "방패 밀치기",
             "nameEn": "Shield Bash",
             "type": "attack", 
-            "damage": 6,
-            "knockback": 1,
-            "weight": 25,
+            "damage": 4,
+            "hits": 1,
+            "knockbackPerHit": 1,
+            "weight": 30,
             "breakRecipe": 2
         },
         { 
@@ -39,7 +40,7 @@
             "type": "defend", 
             "block": 8,
             "moveForward": 1,
-            "weight": 35
+            "weight": 25
         },
         { 
             "id": "fortify",
@@ -47,15 +48,6 @@
             "nameEn": "Fortify",
             "type": "defend", 
             "block": 12,
-            "weight": 20
-        },
-        { 
-            "id": "taunt",
-            "name": "도발",
-            "nameEn": "Taunt",
-            "type": "buff", 
-            "buffType": "taunt",
-            "buffValue": 1,
             "weight": 10
         },
         { 
@@ -66,7 +58,7 @@
             "damage": 0,
             "hits": 3,
             "knockbackPerHit": 1,
-            "weight": 10,
+            "weight": 35,
             "breakRecipe": 3
         }
     ],
