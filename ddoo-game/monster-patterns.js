@@ -588,7 +588,7 @@ const MonsterPatterns = {
             
             const ball = PIXI.Sprite.from(imagePath);
             ball.anchor.set(0.5);
-            ball.scale.set(0.5);  // 적절한 크기로 조절
+            ball.scale.set(1);  // 원본 크기
             ball.x = startX;
             ball.y = startY;
             ball.zIndex = 250;
@@ -618,7 +618,7 @@ const MonsterPatterns = {
                 ball.y = u * u * startY + 2 * u * t * cpY + t * t * target.screenY;
                 
                 // 크기 변화 (통통)
-                const baseScale = 0.5;
+                const baseScale = 1;
                 const scale = baseScale * (1 + Math.sin(t * Math.PI) * 0.3);
                 ball.scale.set(scale);
                 
