@@ -331,7 +331,10 @@ const UnitCombat = {
     async rushAttack(attacker, target, damage, options = {}) {
         const { hits = 3, knockbackPerHit = 1, isEnemy = false, onHit = null } = options;
         
+        console.log(`[Rush] 돌진 시작! hits=${hits}, damage=${damage}`);
+        
         if (!target || target.hp <= 0 || !target.sprite) {
+            console.log('[Rush] 타겟 없음, 종료');
             if (attacker) attacker.isAnimating = false;
             return;
         }
@@ -343,6 +346,7 @@ const UnitCombat = {
         const baseScale = attacker.baseScale || scaleTarget?.baseScale || 1;
         
         if (!posTarget || !scaleTarget) {
+            console.log('[Rush] posTarget/scaleTarget 없음, 종료');
             if (attacker) attacker.isAnimating = false;
             return;
         }
@@ -352,7 +356,7 @@ const UnitCombat = {
         const dashDirection = isEnemy ? -1 : 1;
         
         // ====================================
-        // 1. 초기 돌진 (한 번만!)
+        // 1. 초기 돌진 (한 번만!) - 강력한 연출!
         // ====================================
         const initialTargetPos = this.getPositionTarget(target);
         if (!initialTargetPos) {
@@ -360,31 +364,38 @@ const UnitCombat = {
             return;
         }
         
-        const initialDashX = initialTargetPos.x - (dashDirection * 30);
+        const initialDashX = initialTargetPos.x - (dashDirection * 25);
         
-        // 잔상 효과
+        // ★ 돌진 준비 - 웅크림 + 충격파 예고
         if (typeof SkillSystem !== 'undefined') {
-            SkillSystem.createGhost(attacker, 0.6, SkillSystem.GHOST_COLORS.RED);
+            SkillSystem.createGhost(attacker, 0.7, SkillSystem.GHOST_COLORS.RED);
         }
         
-        // 윈드업
+        // 스피드라인 생성
+        this.createRushSpeedLines(posTarget.x, posTarget.y, dashDirection);
+        
+        // 윈드업 (더 극적으로)
         await new Promise(resolve => {
             gsap.timeline({ onComplete: resolve })
-                .to(posTarget, { x: startX - (dashDirection * 30), duration: 0.12, ease: 'power2.in' })
-                .to(scaleTarget.scale, { x: baseScale * 0.8, y: baseScale * 1.3, duration: 0.12 }, '<');
+                .to(posTarget, { x: startX - (dashDirection * 40), duration: 0.1, ease: 'power2.in' })
+                .to(scaleTarget.scale, { x: baseScale * 0.7, y: baseScale * 1.4, duration: 0.1 }, '<');
         });
         
-        // 대쉬 트레일
+        // ★ 강력한 대쉬 트레일
         let trailTimer = null;
         if (typeof SkillSystem !== 'undefined') {
-            trailTimer = SkillSystem.startSandevistanTrail(attacker, 8, SkillSystem.GHOST_COLORS.RED, 10);
+            trailTimer = SkillSystem.startSandevistanTrail(attacker, 12, SkillSystem.GHOST_COLORS.RED, 8);
         }
         
-        // 돌진!
+        // ★ 돌진! (더 빠르고 강하게)
+        if (typeof CombatEffects !== 'undefined') {
+            CombatEffects.screenFlash('#ff8800', 40, 0.2);
+        }
+        
         await new Promise(resolve => {
             gsap.timeline({ onComplete: resolve })
-                .to(posTarget, { x: initialDashX, duration: 0.1, ease: 'power3.out' })
-                .to(scaleTarget.scale, { x: baseScale * 1.3, y: baseScale * 0.8, duration: 0.08 }, '<');
+                .to(posTarget, { x: initialDashX, y: startY - 10, duration: 0.08, ease: 'power4.out' })
+                .to(scaleTarget.scale, { x: baseScale * 1.4, y: baseScale * 0.7, duration: 0.06 }, '<');
         });
         
         if (trailTimer && typeof SkillSystem !== 'undefined') {
@@ -392,37 +403,60 @@ const UnitCombat = {
         }
         
         // ====================================
-        // 2. 연속 밀어붙이기 (파파팍!)
+        // 2. 연속 밀어붙이기 (파파팍!) - 강화된 이펙트
         // ====================================
         for (let hitNum = 0; hitNum < hits; hitNum++) {
+            console.log(`[Rush] Hit ${hitNum + 1}/${hits}`);
+            
             // 타겟 사망 체크
             if (!target || target.hp <= 0 || !target.sprite || target.sprite.destroyed) {
+                console.log(`[Rush] 타겟 사망, 중단`);
                 break;
             }
             
             // 현재 타겟 위치
             const currentTargetPos = this.getPositionTarget(target);
-            if (!currentTargetPos) break;
-            
-            const targetX = currentTargetPos.x;
-            const targetCenter = currentTargetPos.y - (target.sprite?.height || 60) / 2;
-            
-            // ★ 아주 짧은 히트스톱 (빠른 연타감)
-            if (typeof CombatEffects !== 'undefined') {
-                await CombatEffects.hitStop(15);
+            if (!currentTargetPos) {
+                console.log(`[Rush] 타겟 위치 없음, 중단`);
+                break;
             }
             
-            // 타격 이펙트 (점점 강해짐)
+            const targetX = currentTargetPos.x;
+            const targetY = currentTargetPos.y;
+            const targetCenter = targetY - (target.sprite?.height || 60) / 2;
+            
+            // ★ 타격 직전 - 몸통 앞으로 찌름
+            if (scaleTarget && !scaleTarget.destroyed) {
+                gsap.to(scaleTarget.scale, { 
+                    x: baseScale * 1.2, 
+                    y: baseScale * 0.85, 
+                    duration: 0.03 
+                });
+            }
+            
+            // ★ 짧은 히트스톱
             if (typeof CombatEffects !== 'undefined') {
-                CombatEffects.slashEffect(targetX, targetCenter, -30 + hitNum * 20, 0xff6600);
-                CombatEffects.screenShake(6 + hitNum * 3, 60);
-                CombatEffects.burstParticles(targetX, targetCenter, 0xff8844, 4 + hitNum * 2);
+                await CombatEffects.hitStop(12);
+            }
+            
+            // ★ 타격 이펙트 (점점 강해짐!)
+            if (typeof CombatEffects !== 'undefined') {
+                // 임팩트 효과
+                CombatEffects.impactEffect(targetX, targetCenter, 0xff6600, 0.8 + hitNum * 0.3);
+                CombatEffects.slashEffect(targetX, targetCenter, -45 + hitNum * 30, 0xff8844);
+                CombatEffects.burstParticles(targetX, targetCenter, 0xffaa44, 5 + hitNum * 3);
+                CombatEffects.screenShake(5 + hitNum * 4, 50);
+                
+                // 스피드라인 (밀어붙이는 느낌)
+                this.createPushImpactLines(targetX, targetY, dashDirection);
                 
                 if (hitNum === hits - 1) {
-                    // 마지막 타격은 더 강하게!
+                    // ★ 마지막 타격 - 폭발적!
                     CombatEffects.heavySlash(targetX, targetCenter, 0, 0xff4400);
-                    CombatEffects.screenFlash('#ff4400', 60, 0.3);
-                    CombatEffects.screenShake(12, 120);
+                    CombatEffects.impactEffect(targetX, targetCenter, 0xff4400, 1.5);
+                    CombatEffects.screenFlash('#ff4400', 80, 0.35);
+                    CombatEffects.screenShake(15, 150);
+                    CombatEffects.burstParticles(targetX, targetCenter, 0xff6600, 15);
                 }
             }
             
@@ -445,53 +479,52 @@ const UnitCombat = {
                 BreakSystem.onAttack(target, options.cardDef, 1, hitNum);
             }
             
-            // ★ 넉백 + 추격을 동시에! (더 부드럽게)
+            // ★ 넉백 + 추격을 동시에!
             if (target.hp > 0 && typeof KnockbackSystem !== 'undefined') {
-                // 넉백 시작 (await 없이!)
+                // 넉백 시작
                 const knockbackPromise = KnockbackSystem.knockback(target, dashDirection, knockbackPerHit);
                 
                 // 적을 따라가기 (넉백과 동시에!)
                 if (hitNum < hits - 1 && posTarget && !posTarget.destroyed) {
-                    // 예상 위치로 먼저 이동 시작
-                    const predictedX = currentTargetPos.x + (dashDirection * 60);
-                    const chaseX = predictedX - (dashDirection * 25);
+                    const predictedX = currentTargetPos.x + (dashDirection * 65);
+                    const chaseX = predictedX - (dashDirection * 20);
                     
-                    // 추격 잔상
+                    // 추격 잔상 + 스케일
                     if (typeof SkillSystem !== 'undefined') {
-                        SkillSystem.createGhost(attacker, 0.3, SkillSystem.GHOST_COLORS.RED);
+                        SkillSystem.createGhost(attacker, 0.35, SkillSystem.GHOST_COLORS.RED);
                     }
                     
-                    gsap.to(posTarget, { 
-                        x: chaseX, 
-                        duration: 0.1, 
-                        ease: 'power2.out'
+                    // ★ 추격 시 앞으로 찌르는 느낌
+                    gsap.to(posTarget, { x: chaseX, duration: 0.08, ease: 'power2.out' });
+                    gsap.to(scaleTarget.scale, { 
+                        x: baseScale * 1.15, 
+                        y: baseScale * 0.9, 
+                        duration: 0.06 
                     });
                 }
                 
                 // 넉백 완료 대기
                 await knockbackPromise;
                 
-                // ★ 실제 적 위치로 미세 조정 (빠르게)
+                // 실제 적 위치로 미세 조정
                 if (hitNum < hits - 1) {
                     const newTargetPos = this.getPositionTarget(target);
                     if (newTargetPos && posTarget && !posTarget.destroyed) {
-                        const finalChaseX = newTargetPos.x - (dashDirection * 25);
-                        gsap.to(posTarget, { 
-                            x: finalChaseX, 
-                            duration: 0.05, 
-                            ease: 'none'
-                        });
+                        const finalChaseX = newTargetPos.x - (dashDirection * 20);
+                        gsap.to(posTarget, { x: finalChaseX, duration: 0.04, ease: 'none' });
                     }
-                    // ★ 최소 대기 (파팍 느낌)
-                    await new Promise(r => setTimeout(r, 30));
+                    await new Promise(r => setTimeout(r, 25));
                 }
+            } else if (hitNum < hits - 1) {
+                // 넉백 없어도 다음 타격 진행
+                await new Promise(r => setTimeout(r, 40));
             }
         }
         
         if (onHit) onHit();
         
         // ====================================
-        // 3. 복귀
+        // 3. 복귀 (부드럽게)
         // ====================================
         if (posTarget && !posTarget.destroyed && scaleTarget && !scaleTarget.destroyed) {
             // 복귀 잔상
@@ -501,12 +534,70 @@ const UnitCombat = {
             
             await new Promise(resolve => {
                 gsap.timeline({ onComplete: resolve })
-                    .to(scaleTarget.scale, { x: baseScale, y: baseScale, duration: 0.15 })
-                    .to(posTarget, { x: startX, y: startY, duration: 0.25, ease: 'power2.out' }, '<');
+                    .to(scaleTarget.scale, { x: baseScale, y: baseScale, duration: 0.12, ease: 'elastic.out(1, 0.5)' })
+                    .to(posTarget, { x: startX, y: startY, duration: 0.2, ease: 'power2.out' }, '<');
             });
         }
         
+        console.log('[Rush] 돌진 완료!');
         if (attacker) attacker.isAnimating = false;
+    },
+    
+    // ★ 돌진 스피드라인 생성
+    createRushSpeedLines(x, y, direction) {
+        if (typeof CombatEffects === 'undefined' || !CombatEffects.container) return;
+        
+        for (let i = 0; i < 8; i++) {
+            const line = new PIXI.Graphics();
+            const offsetY = (Math.random() - 0.5) * 80;
+            const length = 60 + Math.random() * 80;
+            
+            line.moveTo(0, 0);
+            line.lineTo(-direction * length, 0);
+            line.stroke({ width: 2 + Math.random() * 3, color: 0xffaa44, alpha: 0.8 });
+            
+            line.x = x + direction * 20;
+            line.y = y + offsetY;
+            line.zIndex = 150;
+            CombatEffects.container.addChild(line);
+            
+            gsap.to(line, {
+                x: line.x + direction * 150,
+                alpha: 0,
+                duration: 0.2,
+                delay: i * 0.015,
+                ease: 'power2.out',
+                onComplete: () => { if (!line.destroyed) line.destroy(); }
+            });
+        }
+    },
+    
+    // ★ 밀어붙이기 임팩트 라인
+    createPushImpactLines(x, y, direction) {
+        if (typeof CombatEffects === 'undefined' || !CombatEffects.container) return;
+        
+        for (let i = 0; i < 5; i++) {
+            const line = new PIXI.Graphics();
+            const angle = (Math.random() - 0.5) * 0.6; // 약간의 각도 변화
+            const length = 40 + Math.random() * 50;
+            
+            line.moveTo(0, 0);
+            line.lineTo(direction * length, Math.tan(angle) * length);
+            line.stroke({ width: 3 + Math.random() * 2, color: 0xffcc66, alpha: 0.9 });
+            
+            line.x = x - direction * 10;
+            line.y = y - 30 + (Math.random() - 0.5) * 60;
+            line.zIndex = 150;
+            CombatEffects.container.addChild(line);
+            
+            gsap.to(line, {
+                x: line.x + direction * 80,
+                alpha: 0,
+                duration: 0.15,
+                ease: 'power2.out',
+                onComplete: () => { if (!line.destroyed) line.destroy(); }
+            });
+        }
     },
     
     // ==========================================
