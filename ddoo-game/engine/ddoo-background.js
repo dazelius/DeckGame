@@ -25,11 +25,11 @@ const DDOOBackground = {
     // Camera defaults - fit grid exactly, hide back edge
     cameraDefaults: {
         posX: 5,       // Center of arena (X axis)
-        posY: 2.8,     // ★ 더 낮게
-        posZ: 3.8,     // ★ 15% 더 확대! (4.5 → 3.8)
+        posY: 2.2,     // ★ 더 낮게 (오프셋 내림)
+        posZ: 3.2,     // ★ 확대! (3.8 → 3.2)
         lookAtX: 5,    // Look at arena center
-        lookAtY: 0,    // Look at floor level
-        lookAtZ: 1.0   // ★ 조금 더 앞쪽
+        lookAtY: -0.3, // ★ 아래쪽 보기
+        lookAtZ: 0.8   // ★ 더 앞쪽
     },
     
     // Auto zoom settings
