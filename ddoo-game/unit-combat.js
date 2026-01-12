@@ -1012,9 +1012,13 @@ const UnitCombat = {
         gsap.to(flash, {
             alpha: 0,
             duration: 0.15,
+            onUpdate: function() { if (flash.destroyed) this.kill(); },
             onComplete: () => { if (!flash.destroyed) flash.destroy(); }
         });
-        gsap.to(flash.scale, { x: 2, y: 2, duration: 0.15 });
+        gsap.to(flash.scale, { 
+            x: 2, y: 2, duration: 0.15,
+            onUpdate: function() { if (flash.destroyed) this.kill(); }
+        });
         
         // 전기 링
         for (let r = 0; r < 3; r++) {
@@ -1026,13 +1030,15 @@ const UnitCombat = {
             gsap.to(ring, {
                 alpha: 0,
                 duration: 0.3,
-                delay: r * 0.05
+                delay: r * 0.05,
+                onUpdate: function() { if (ring.destroyed) this.kill(); }
             });
             gsap.to(ring.scale, {
                 x: 2 + r * 0.5,
                 y: 2 + r * 0.5,
                 duration: 0.3,
                 delay: r * 0.05,
+                onUpdate: function() { if (ring.destroyed) this.kill(); },
                 onComplete: () => { if (!ring.destroyed) ring.destroy(); }
             });
         }
@@ -1052,11 +1058,14 @@ const UnitCombat = {
             container.addChild(spark);
             
             const speed = 80 + Math.random() * 120;
+            const targetX = spark.x + Math.cos(angle) * speed;
+            const targetY = spark.y + Math.sin(angle) * speed;
             gsap.to(spark, {
-                x: spark.x + Math.cos(angle) * speed,
-                y: spark.y + Math.sin(angle) * speed,
+                x: targetX,
+                y: targetY,
                 alpha: 0,
                 duration: 0.25 + Math.random() * 0.15,
+                onUpdate: function() { if (spark.destroyed) this.kill(); },
                 ease: 'power2.out',
                 onComplete: () => { if (!spark.destroyed) spark.destroy(); }
             });
@@ -1078,6 +1087,7 @@ const UnitCombat = {
                 alpha: 0,
                 duration: 0.3,
                 ease: 'power2.out',
+                onUpdate: function() { if (ball.destroyed) this.kill(); },
                 onComplete: () => { if (!ball.destroyed) ball.destroy(); }
             });
         }
@@ -1151,6 +1161,7 @@ const UnitCombat = {
             alpha: 0,
             duration: 0.08,
             delay: 0.02,
+            onUpdate: function() { if (container.destroyed) this.kill(); },
             onComplete: () => {
                 if (!container.destroyed) container.destroy({ children: true });
             }
@@ -1193,12 +1204,14 @@ const UnitCombat = {
                 duration: 0.15 + Math.random() * 0.1,
                 delay: i * 0.01,
                 ease: 'power3.in',
+                onUpdate: function() { if (spark.destroyed) this.kill(); },
                 onComplete: () => { if (!spark.destroyed) spark.destroy(); }
             });
             
             gsap.to(spark, {
                 rotation: Math.random() * Math.PI * 4,
-                duration: 0.2
+                duration: 0.2,
+                onUpdate: function() { if (spark.destroyed) this.kill(); }
             });
         }
         
@@ -1211,17 +1224,21 @@ const UnitCombat = {
         gsap.to(core, {
             alpha: 1,
             duration: 0.15,
-            delay: 0.1
+            delay: 0.1,
+            onUpdate: function() { if (core.destroyed) this.kill(); }
         });
         gsap.to(core.scale, {
             x: 3,
             y: 3,
             duration: 0.1,
             delay: 0.15,
+            onUpdate: function() { if (core.destroyed) this.kill(); },
             onComplete: () => {
+                if (core.destroyed) return;
                 gsap.to(core, {
                     alpha: 0,
                     duration: 0.05,
+                    onUpdate: function() { if (core.destroyed) this.kill(); },
                     onComplete: () => {
                         if (!core.destroyed) core.destroy();
                     }
