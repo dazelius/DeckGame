@@ -189,6 +189,11 @@ const Game = {
             BloodEffect.init(this.app, this.containers.gameWorld);
         }
         
+        // ★ Monster Dialogue System (몬스터 대사)
+        if (typeof MonsterDialogue !== 'undefined') {
+            MonsterDialogue.init(this.app);
+        }
+        
         // Grid AOE System
         if (typeof GridAOE !== 'undefined') {
             GridAOE.init(this, this.app);
@@ -2484,6 +2489,11 @@ const Game = {
                     }
                 }
             });
+            
+            // ★ 피격 대사 (적만)
+            if (!target.isHero && remainingDamage > 0 && typeof MonsterDialogue !== 'undefined') {
+                MonsterDialogue.onHit(target, remainingDamage);
+            }
         }
         
         if (target.hp <= 0) {
@@ -3335,6 +3345,11 @@ const Game = {
                 this.createEnemyIntent(unit);
             }
             
+            // ★ 등장 대사
+            if (typeof MonsterDialogue !== 'undefined') {
+                MonsterDialogue.onSpawn(unit);
+            }
+            
             console.log(`[Game] ✅ 적 소환 완료: ${monsterType} at (${targetX}, ${targetZ})`);
         }
         
@@ -3731,6 +3746,11 @@ const Game = {
         const target = this.findEnemyTarget(enemy);
         if (!target) return;
         
+        // ★ 행동 대사
+        if (typeof MonsterDialogue !== 'undefined') {
+            MonsterDialogue.onAction(enemy, intent);
+        }
+        
         // MonsterPatterns가 있으면 위임
         if (typeof MonsterPatterns !== 'undefined') {
             await MonsterPatterns.executeIntent(enemy, target, this);
@@ -4084,6 +4104,11 @@ const Game = {
     
     killUnit(unit) {
         console.log(`[Game] ${unit.type} died!`);
+        
+        // ★ 사망 대사 (적만)
+        if (!unit.isHero && typeof MonsterDialogue !== 'undefined') {
+            MonsterDialogue.onDeath(unit);
+        }
         
         // ★ 플로터는 딜레이 후 정리 (사망 대미지 표시 시간 확보)
         const unitPos = this.getUnitPosition(unit);

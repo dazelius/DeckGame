@@ -294,6 +294,11 @@ const MonsterPatterns = {
                 BreakSystem.onIntentSelected(enemy, intent);
             }
             
+            // ★ 인텐트 선택 대사
+            if (typeof MonsterDialogue !== 'undefined') {
+                MonsterDialogue.onIntentSelected(enemy, intent);
+            }
+            
             console.log(`[MonsterPatterns] ${enemy.name || enemy.type}: ${intent.name || intent.type} (${intent.damage || '-'})`);
         });
     },

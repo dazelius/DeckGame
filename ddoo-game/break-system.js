@@ -256,6 +256,11 @@ const BreakSystem = {
         
         console.log(`[BreakSystem] 🔥 ${enemy.name || enemy.type} BREAK!!! +취약 ${vulnerableTurns}턴`);
         
+        // ★ 브레이크 대사!
+        if (typeof MonsterDialogue !== 'undefined') {
+            MonsterDialogue.onBreak(enemy);
+        }
+        
         // 브레이크 이펙트
         this.showBreakEffect(enemy);
         
