@@ -392,7 +392,7 @@ const UnitCombat = {
         }
         
         // ====================================
-        // 2. 연속 밀어붙이기 (hits 만큼)
+        // 2. 연속 밀어붙이기 (파파팍!)
         // ====================================
         for (let hitNum = 0; hitNum < hits; hitNum++) {
             // 타겟 사망 체크
@@ -407,21 +407,22 @@ const UnitCombat = {
             const targetX = currentTargetPos.x;
             const targetCenter = currentTargetPos.y - (target.sprite?.height || 60) / 2;
             
-            // 짧은 히트스톱
+            // ★ 아주 짧은 히트스톱 (빠른 연타감)
             if (typeof CombatEffects !== 'undefined') {
-                await CombatEffects.hitStop(40);
+                await CombatEffects.hitStop(15);
             }
             
             // 타격 이펙트 (점점 강해짐)
             if (typeof CombatEffects !== 'undefined') {
-                const intensity = 1 + hitNum * 0.3;
-                CombatEffects.heavySlash(targetX, targetCenter, -20 + hitNum * 10, 0xff6600);
-                CombatEffects.screenShake(8 + hitNum * 4, 100);
-                CombatEffects.burstParticles(targetX, targetCenter, 0xff8844, 6 + hitNum * 2);
+                CombatEffects.slashEffect(targetX, targetCenter, -30 + hitNum * 20, 0xff6600);
+                CombatEffects.screenShake(6 + hitNum * 3, 60);
+                CombatEffects.burstParticles(targetX, targetCenter, 0xff8844, 4 + hitNum * 2);
                 
                 if (hitNum === hits - 1) {
                     // 마지막 타격은 더 강하게!
-                    CombatEffects.screenFlash('#ff4400', 80, 0.25);
+                    CombatEffects.heavySlash(targetX, targetCenter, 0, 0xff4400);
+                    CombatEffects.screenFlash('#ff4400', 60, 0.3);
+                    CombatEffects.screenShake(12, 120);
                 }
             }
             
@@ -444,36 +445,46 @@ const UnitCombat = {
                 BreakSystem.onAttack(target, options.cardDef, 1, hitNum);
             }
             
-            // 넉백 + 추격!
+            // ★ 넉백 + 추격을 동시에! (더 부드럽게)
             if (target.hp > 0 && typeof KnockbackSystem !== 'undefined') {
-                await KnockbackSystem.knockback(target, dashDirection, knockbackPerHit);
+                // 넉백 시작 (await 없이!)
+                const knockbackPromise = KnockbackSystem.knockback(target, dashDirection, knockbackPerHit);
                 
-                // 적을 따라가기! (넉백 후 적 위치로 이동)
+                // 적을 따라가기 (넉백과 동시에!)
+                if (hitNum < hits - 1 && posTarget && !posTarget.destroyed) {
+                    // 예상 위치로 먼저 이동 시작
+                    const predictedX = currentTargetPos.x + (dashDirection * 60);
+                    const chaseX = predictedX - (dashDirection * 25);
+                    
+                    // 추격 잔상
+                    if (typeof SkillSystem !== 'undefined') {
+                        SkillSystem.createGhost(attacker, 0.3, SkillSystem.GHOST_COLORS.RED);
+                    }
+                    
+                    gsap.to(posTarget, { 
+                        x: chaseX, 
+                        duration: 0.1, 
+                        ease: 'power2.out'
+                    });
+                }
+                
+                // 넉백 완료 대기
+                await knockbackPromise;
+                
+                // ★ 실제 적 위치로 미세 조정 (빠르게)
                 if (hitNum < hits - 1) {
                     const newTargetPos = this.getPositionTarget(target);
                     if (newTargetPos && posTarget && !posTarget.destroyed) {
-                        const chaseX = newTargetPos.x - (dashDirection * 30);
-                        
-                        // 추격 잔상
-                        if (typeof SkillSystem !== 'undefined') {
-                            SkillSystem.createGhost(attacker, 0.4, SkillSystem.GHOST_COLORS.RED);
-                        }
-                        
-                        await new Promise(resolve => {
-                            gsap.to(posTarget, { 
-                                x: chaseX, 
-                                duration: 0.08, 
-                                ease: 'power2.out',
-                                onComplete: resolve
-                            });
+                        const finalChaseX = newTargetPos.x - (dashDirection * 25);
+                        gsap.to(posTarget, { 
+                            x: finalChaseX, 
+                            duration: 0.05, 
+                            ease: 'none'
                         });
                     }
+                    // ★ 최소 대기 (파팍 느낌)
+                    await new Promise(r => setTimeout(r, 30));
                 }
-            }
-            
-            // 다음 타격 전 짧은 대기
-            if (hitNum < hits - 1) {
-                await new Promise(r => setTimeout(r, 80));
             }
         }
         
