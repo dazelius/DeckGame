@@ -62,6 +62,13 @@ const BloodEffect = {
         
         this.initialized = true;
         console.log('[BloodEffect] 🩸 피 효과 시스템 초기화 완료');
+        
+        // ★ 디버그: 테스트 원 그리기 (화면에 고정 빨간 원 표시)
+        this.testCircle = new PIXI.Graphics();
+        this.testCircle.circle(400, 300, 30);
+        this.testCircle.fill({ color: 0xFF0000, alpha: 1 });
+        this.container.addChild(this.testCircle);
+        console.log('[BloodEffect] 테스트 원 추가됨 at (400, 300)');
     },
     
     // 파티클 풀 초기화
