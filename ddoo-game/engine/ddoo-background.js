@@ -32,6 +32,13 @@ const DDOOBackground = {
         lookAtZ: 0.5   // 가까이
     },
     
+    // ★ 탑뷰 모드 (카드 드래그용)
+    topViewMode: {
+        active: false,
+        posY: 2.2,      // 높이 올림
+        lookAtY: 0.3,   // 아래로 내려다봄
+    },
+    
     // Auto zoom settings
     autoZoom: {
         enabled: true,
@@ -569,15 +576,25 @@ const DDOOBackground = {
         const currentZ = this.autoZoom.currentZ;
         const currentX = this.autoZoom.currentX;
         
+        // ★ 탑뷰 모드 적용
+        const targetPosY = this.topViewMode.active ? this.topViewMode.posY : this.cameraDefaults.posY;
+        const targetLookY = this.topViewMode.active ? this.topViewMode.lookAtY : this.cameraDefaults.lookAtY;
+        
+        // 부드러운 전환
+        const currentPosY = this._currentPosY || this.cameraDefaults.posY;
+        const currentLookY = this._currentLookY || this.cameraDefaults.lookAtY;
+        this._currentPosY = currentPosY + (targetPosY - currentPosY) * 0.1;
+        this._currentLookY = currentLookY + (targetLookY - currentLookY) * 0.1;
+        
         // Camera position (arena view with subtle parallax)
         this.camera.position.x = this.cameraDefaults.posX + this.mouse.x * this.config.mouseX * 0.3;
-        this.camera.position.y = this.cameraDefaults.posY + this.mouse.y * this.config.mouseY * 0.2;
+        this.camera.position.y = this._currentPosY + this.mouse.y * this.config.mouseY * 0.2;
         this.camera.position.z = currentZ;
         
         // Look at arena center
         this.camera.lookAt(
             this.cameraDefaults.lookAtX + this.mouse.x * 0.15,
-            this.cameraDefaults.lookAtY,
+            this._currentLookY,
             this.cameraDefaults.lookAtZ
         );
         
@@ -680,6 +697,13 @@ const DDOOBackground = {
     // ==========================================
     // 카메라 제어
     // ==========================================
+    
+    // ★ 탑뷰 모드 (카드 드래그 시)
+    setTopView(enabled) {
+        this.topViewMode.active = enabled;
+        console.log(`[Camera] 탑뷰 모드: ${enabled ? 'ON' : 'OFF'}`);
+    },
+    
     setZoom(level) {
         const baseZ = this.cameraDefaults.posZ;
         this.autoZoom.targetZ = baseZ * level;

@@ -88,6 +88,11 @@ const CardDrag = {
         const cardDef = this.game.getCard(cardId);
         if (!cardDef) return;
         
+        // ★ 탑뷰 모드 활성화
+        if (typeof DDOOBackground !== 'undefined' && DDOOBackground.setTopView) {
+            DDOOBackground.setTopView(true);
+        }
+        
         const isSummon = cardDef.type === 'summon';
         const touch = e.touches ? e.touches[0] : e;
         
@@ -318,6 +323,11 @@ const CardDrag = {
             success = this.handleAttackDrop(touch, cardId, handIndex, cardDef);
         } else {
             success = this.handleSkillDrop(touch, cardId, handIndex, cardDef);
+        }
+        
+        // ★ 탑뷰 모드 비활성화
+        if (typeof DDOOBackground !== 'undefined' && DDOOBackground.setTopView) {
+            DDOOBackground.setTopView(false);
         }
         
         // Reset state
