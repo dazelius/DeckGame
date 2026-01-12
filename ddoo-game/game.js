@@ -391,8 +391,11 @@ const Game = {
         const topCenter = DDOOBackground.project3DToScreen(centerX, 0, 0);
         const bottomCenter = DDOOBackground.project3DToScreen(centerX, 0, this.arena.depth);
         if (topCenter && bottomCenter) {
-            graphics.moveTo(topCenter.screenX, topCenter.screenY);
-            graphics.lineTo(bottomCenter.screenX, bottomCenter.screenY);
+            // ★ 스케일/오프셋 보정
+            const topLocal = this.globalToLocal(topCenter.screenX, topCenter.screenY);
+            const bottomLocal = this.globalToLocal(bottomCenter.screenX, bottomCenter.screenY);
+            graphics.moveTo(topLocal.x, topLocal.y);
+            graphics.lineTo(bottomLocal.x, bottomLocal.y);
             graphics.stroke({ color: 0xffcc00, width: 3, alpha: 0.8 });
         }
         
@@ -407,12 +410,13 @@ const Game = {
         
         if (!tl || !tr || !br || !bl) return null;
         
-        return [
-            { x: tl.screenX, y: tl.screenY },
-            { x: tr.screenX, y: tr.screenY },
-            { x: br.screenX, y: br.screenY },
-            { x: bl.screenX, y: bl.screenY }
-        ];
+        // ★ gameWorld 컨테이너의 스케일/오프셋 보정 (getCellCenter와 동일)
+        const tlLocal = this.globalToLocal(tl.screenX, tl.screenY);
+        const trLocal = this.globalToLocal(tr.screenX, tr.screenY);
+        const brLocal = this.globalToLocal(br.screenX, br.screenY);
+        const blLocal = this.globalToLocal(bl.screenX, bl.screenY);
+        
+        return [tlLocal, trLocal, brLocal, blLocal];
     },
     
     getCellCenter(gridX, gridZ) {
