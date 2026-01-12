@@ -537,9 +537,7 @@ const MonsterPatterns = {
             CombatEffects.screenShake(10, 150);
         }
         
-        await new Promise(r => setTimeout(r, 200));
-        
-        // 3. 미니 슬라임 소환!
+        // 3. ★★★ 베지어 곡선으로 슬라임 분열 연출! ★★★
         const spawnedMinis = [];
         
         // miniSlime 패턴이 로드되어 있는지 확인, 없으면 로드
@@ -547,46 +545,129 @@ const MonsterPatterns = {
             await this.addMonster(summonType);
         }
         
+        // 원본 위치 저장
+        const startX = enemyPos.x;
+        const startY = enemyPos.y - 30;
+        
+        // 미니 슬라임 위치 계산
+        const spawnPositions = [];
         for (let i = 0; i < summonCount; i++) {
-            // 원본 위치 근처에 소환 (같은 레인, 좌우로)
-            const offsetX = i === 0 ? 0 : 1; // 첫번째는 같은 위치, 두번째는 오른쪽
+            const offsetX = i === 0 ? 0 : 1;
             let targetZ = enemy.gridZ;
             let targetX = enemy.gridX + offsetX;
-            
-            // 범위 체크
             targetX = Math.max(0, Math.min(9, targetX));
             
-            console.log(`[Split] 미니 슬라임 ${i+1} 소환: gridX=${targetX}, gridZ=${targetZ}`);
+            const targetCenter = game.getCellCenter ? game.getCellCenter(targetX, targetZ) : null;
+            spawnPositions.push({
+                gridX: targetX,
+                gridZ: targetZ,
+                screenX: targetCenter?.x || startX + (i === 0 ? -60 : 60),
+                screenY: targetCenter?.y || startY
+            });
+        }
+        
+        // ★ 분열 슬라임 공 발사! (베지어 곡선)
+        const slimeBalls = [];
+        for (let i = 0; i < summonCount; i++) {
+            const ball = new PIXI.Graphics();
+            ball.circle(0, 0, 20);
+            ball.fill({ color: 0x44ddff, alpha: 0.9 });
+            ball.x = startX;
+            ball.y = startY;
+            ball.zIndex = 250;
+            CombatEffects.container.addChild(ball);
+            slimeBalls.push(ball);
+            
+            const target = spawnPositions[i];
+            const direction = i === 0 ? -1 : 1;
+            
+            // 베지어 곡선 컨트롤 포인트 (위로 볼록하게)
+            const cpX = startX + direction * 50;
+            const cpY = startY - 100 - Math.random() * 50;
+            
+            // 베지어 애니메이션
+            const duration = 0.5;
+            const startTime = Date.now();
+            
+            const animateBall = () => {
+                if (ball.destroyed) return;
+                
+                const elapsed = (Date.now() - startTime) / 1000;
+                const t = Math.min(elapsed / duration, 1);
+                
+                // 2차 베지어 곡선
+                const u = 1 - t;
+                ball.x = u * u * startX + 2 * u * t * cpX + t * t * target.screenX;
+                ball.y = u * u * startY + 2 * u * t * cpY + t * t * target.screenY;
+                
+                // 크기 변화 (통통)
+                const scale = 1 + Math.sin(t * Math.PI) * 0.3;
+                ball.scale.set(scale);
+                
+                // 트레일 파티클
+                if (Math.random() > 0.5) {
+                    const trail = new PIXI.Graphics();
+                    trail.circle(0, 0, 5 + Math.random() * 5);
+                    trail.fill({ color: 0x88eeff, alpha: 0.6 });
+                    trail.x = ball.x + (Math.random() - 0.5) * 10;
+                    trail.y = ball.y + (Math.random() - 0.5) * 10;
+                    trail.zIndex = 245;
+                    CombatEffects.container.addChild(trail);
+                    
+                    gsap.to(trail, {
+                        alpha: 0,
+                        duration: 0.3,
+                        onUpdate: function() { if (trail.destroyed) this.kill(); },
+                        onComplete: () => { if (!trail.destroyed) trail.destroy(); }
+                    });
+                    gsap.to(trail.scale, {
+                        x: 0.3, y: 0.3,
+                        duration: 0.3
+                    });
+                }
+                
+                if (t < 1) {
+                    requestAnimationFrame(animateBall);
+                } else {
+                    // 착지 이펙트
+                    CombatEffects.impactEffect(target.screenX, target.screenY, 0x44ddff, 0.8);
+                    ball.destroy();
+                }
+            };
+            
+            animateBall();
+        }
+        
+        // 슬라임 볼 이동 대기
+        await new Promise(r => setTimeout(r, 550));
+        
+        // 4. 미니 슬라임 실제 소환
+        for (let i = 0; i < summonCount; i++) {
+            const pos = spawnPositions[i];
+            console.log(`[Split] 미니 슬라임 ${i+1} 소환: gridX=${pos.gridX}, gridZ=${pos.gridZ}`);
             
             if (typeof game.spawnEnemy === 'function') {
-                const mini = await game.spawnEnemy(summonType, targetZ, targetX);
+                const mini = await game.spawnEnemy(summonType, pos.gridZ, pos.gridX);
                 if (mini) {
                     spawnedMinis.push(mini);
                     
-                    // 소환 연출
+                    // 팝업 연출
                     if (mini.sprite) {
-                        mini.sprite.alpha = 0;
+                        const targetScale = mini.baseScale || 0.6;
                         mini.sprite.scale.set(0.1);
                         
-                        gsap.to(mini.sprite, {
-                            alpha: 1,
-                            duration: 0.3,
-                            ease: 'back.out(2)'
-                        });
                         gsap.to(mini.sprite.scale, {
-                            x: mini.baseScale || 0.25,
-                            y: mini.baseScale || 0.25,
-                            duration: 0.3,
-                            ease: 'back.out(2)'
+                            x: targetScale,
+                            y: targetScale,
+                            duration: 0.25,
+                            ease: 'back.out(3)'
                         });
                     }
                 }
             }
-            
-            await new Promise(r => setTimeout(r, 150));
         }
         
-        // 4. ★★★ 원본 슬라임 제거! (분열 = 1→2) ★★★
+        // 5. ★★★ 원본 슬라임 제거! (분열 = 1→2) ★★★
         console.log(`[Split] 원본 슬라임 제거!`);
         
         // 원본 슬라임 사망 처리
@@ -595,8 +676,8 @@ const MonsterPatterns = {
             gsap.to(enemy.sprite.scale, {
                 x: 0,
                 y: 0,
-                duration: 0.2,
-                ease: 'back.in(2)',
+                duration: 0.15,
+                ease: 'back.in(3)',
                 onComplete: () => {
                     if (enemy.sprite && !enemy.sprite.destroyed) {
                         enemy.sprite.visible = false;
@@ -610,10 +691,9 @@ const MonsterPatterns = {
         
         // 게임에서 유닛 제거
         if (typeof game.killUnit === 'function') {
-            // 약간의 딜레이 후 제거 (연출 완료 후)
             setTimeout(() => {
                 game.killUnit(enemy);
-            }, 250);
+            }, 200);
         }
         
         console.log(`[Split] 분열 완료! 원본 제거, ${spawnedMinis.length}개 미니 슬라임 소환`);
