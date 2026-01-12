@@ -711,25 +711,25 @@ const KnockbackSystem = {
             });
         }
         
-        // ★ 5. 먼지 폭발 (크고 오래 지속)
+        // ★ 5. 먼지 폭발 (적당한 크기)
         for (let i = 0; i < 8; i++) {
             const dust = new PIXI.Graphics();
-            const size = 30 + Math.random() * 40;
+            const size = 12 + Math.random() * 18;
             dust.circle(0, 0, size);
-            dust.fill({ color: 0xddccaa, alpha: 0.8 });
+            dust.fill({ color: 0xddccaa, alpha: 0.6 });
             dust.x = (Math.random() - 0.5) * 30;
             dust.y = (Math.random() - 0.5) * 40;
             container.addChild(dust);
             
             gsap.to(dust, {
-                x: dust.x - 100 - Math.random() * 150,
-                y: dust.y + Math.random() * 60,
+                x: dust.x - 60 - Math.random() * 80,
+                y: dust.y + Math.random() * 40,
                 alpha: 0,
-                duration: 0.8 + Math.random() * 0.4,
+                duration: 0.6 + Math.random() * 0.3,
                 ease: 'power2.out',
                 onComplete: () => { if (!dust.destroyed) dust.destroy(); }
             });
-            gsap.to(dust.scale, { x: 4, y: 3, duration: 0.8 });
+            gsap.to(dust.scale, { x: 2, y: 1.5, duration: 0.6 });
         }
         
         // 컨테이너 정리
