@@ -2823,6 +2823,12 @@ const CombatEffects = {
         
         const sprite = unit.sprite;
         
+        // 텍스처가 없으면 리턴
+        if (!sprite.texture || sprite.texture === PIXI.Texture.EMPTY) {
+            console.warn('[ShieldGlow] 스프라이트에 텍스처 없음');
+            return;
+        }
+        
         // 이미 글로우가 있으면 강화만
         if (unit.shieldGlow) {
             this.pulseShieldGlow(unit);
@@ -2831,7 +2837,6 @@ const CombatEffects = {
         
         // ★ 스프라이트 복제로 외곽선 생성
         const glowLayers = [];
-        const baseColor = 0x44aaff;
         
         // 여러 겹의 글로우 레이어 (큰 것부터)
         const layerConfigs = [
@@ -2840,11 +2845,17 @@ const CombatEffects = {
             { scale: 1.04, alpha: 0.6, tint: 0x66ccff },
         ];
         
+        // 스프라이트 속성 안전하게 가져오기
+        const anchorX = sprite.anchor?.x ?? 0.5;
+        const anchorY = sprite.anchor?.y ?? 1;
+        const scaleX = sprite.scale?.x ?? 1;
+        const scaleY = sprite.scale?.y ?? 1;
+        
         for (const config of layerConfigs) {
             // 스프라이트 복제
             const glowSprite = new PIXI.Sprite(sprite.texture);
-            glowSprite.anchor.set(sprite.anchor.x, sprite.anchor.y);
-            glowSprite.scale.set(sprite.scale.x * config.scale, sprite.scale.y * config.scale);
+            glowSprite.anchor.set(anchorX, anchorY);
+            glowSprite.scale.set(scaleX * config.scale, scaleY * config.scale);
             glowSprite.tint = config.tint;
             glowSprite.alpha = config.alpha;
             glowSprite.zIndex = -1;
@@ -2890,8 +2901,8 @@ const CombatEffects = {
         const sprite = unit.sprite;
         if (!sprite) return;
         
-        const baseScaleX = sprite.scale.x;
-        const baseScaleY = sprite.scale.y;
+        const baseScaleX = sprite.scale?.x ?? 1;
+        const baseScaleY = sprite.scale?.y ?? 1;
         
         // 각 레이어에 펄스 효과
         unit.shieldGlowLayers.forEach((layer, i) => {
@@ -2943,8 +2954,8 @@ const CombatEffects = {
             unit.shieldBreathTween.kill();
         }
         
-        const baseScaleX = sprite.scale.x;
-        const baseScaleY = sprite.scale.y;
+        const baseScaleX = sprite.scale?.x ?? 1;
+        const baseScaleY = sprite.scale?.y ?? 1;
         const baseAlphas = [0.2, 0.35, 0.6];
         const baseScales = [1.12, 1.08, 1.04];
         
