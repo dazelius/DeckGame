@@ -2569,20 +2569,13 @@ const Game = {
                         break;
                     
                     case 'rush':
-                        // ★ 돌진: 밀어붙이기 × hits (매 히트마다 넉백!)
-                        for (let hitNum = 0; hitNum < hits; hitNum++) {
-                            if (targetEnemy.hp <= 0) break;
-                            if (typeof BreakSystem !== 'undefined') {
-                                BreakSystem.onAttack(targetEnemy, cardDef, 1, hitNum);
-                            }
-                            // 짧은 타격
-                            await UnitCombat.bashAttack(hero, targetEnemy, cardDef.damage, { 
-                                isEnemy: false,
-                                knockback: cardDef.knockbackPerHit || 1
-                            });
-                            // 각 히트 후 대기
-                            if (hitNum < hits - 1) await new Promise(r => setTimeout(r, 150));
-                        }
+                        // ★ 돌진: 한 번 대쉬 후 밀어붙이기!
+                        await UnitCombat.rushAttack(hero, targetEnemy, cardDef.damage, { 
+                            hits: cardDef.hits || 3,
+                            knockbackPerHit: cardDef.knockbackPerHit || 1,
+                            isEnemy: false,
+                            cardDef: cardDef
+                        });
                         break;
                         
                     case 'bash':

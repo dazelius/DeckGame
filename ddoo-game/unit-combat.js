@@ -325,6 +325,180 @@ const UnitCombat = {
     },
     
     // ==========================================
+    // ★ 돌진 공격 (Rush) - 밀어붙이기!
+    // 한 번 돌진 후 적을 따라가며 연속 타격
+    // ==========================================
+    async rushAttack(attacker, target, damage, options = {}) {
+        const { hits = 3, knockbackPerHit = 1, isEnemy = false, onHit = null } = options;
+        
+        if (!target || target.hp <= 0 || !target.sprite) {
+            if (attacker) attacker.isAnimating = false;
+            return;
+        }
+        
+        attacker.isAnimating = true;
+        
+        const posTarget = this.getPositionTarget(attacker);
+        const scaleTarget = this.getScaleTarget(attacker);
+        const baseScale = attacker.baseScale || scaleTarget?.baseScale || 1;
+        
+        if (!posTarget || !scaleTarget) {
+            if (attacker) attacker.isAnimating = false;
+            return;
+        }
+        
+        const startX = posTarget.x;
+        const startY = posTarget.y;
+        const dashDirection = isEnemy ? -1 : 1;
+        
+        // ====================================
+        // 1. 초기 돌진 (한 번만!)
+        // ====================================
+        const initialTargetPos = this.getPositionTarget(target);
+        if (!initialTargetPos) {
+            if (attacker) attacker.isAnimating = false;
+            return;
+        }
+        
+        const initialDashX = initialTargetPos.x - (dashDirection * 30);
+        
+        // 잔상 효과
+        if (typeof SkillSystem !== 'undefined') {
+            SkillSystem.createGhost(attacker, 0.6, SkillSystem.GHOST_COLORS.RED);
+        }
+        
+        // 윈드업
+        await new Promise(resolve => {
+            gsap.timeline({ onComplete: resolve })
+                .to(posTarget, { x: startX - (dashDirection * 30), duration: 0.12, ease: 'power2.in' })
+                .to(scaleTarget.scale, { x: baseScale * 0.8, y: baseScale * 1.3, duration: 0.12 }, '<');
+        });
+        
+        // 대쉬 트레일
+        let trailTimer = null;
+        if (typeof SkillSystem !== 'undefined') {
+            trailTimer = SkillSystem.startSandevistanTrail(attacker, 8, SkillSystem.GHOST_COLORS.RED, 10);
+        }
+        
+        // 돌진!
+        await new Promise(resolve => {
+            gsap.timeline({ onComplete: resolve })
+                .to(posTarget, { x: initialDashX, duration: 0.1, ease: 'power3.out' })
+                .to(scaleTarget.scale, { x: baseScale * 1.3, y: baseScale * 0.8, duration: 0.08 }, '<');
+        });
+        
+        if (trailTimer && typeof SkillSystem !== 'undefined') {
+            SkillSystem.stopSandevistanTrail(trailTimer);
+        }
+        
+        // ====================================
+        // 2. 연속 밀어붙이기 (hits 만큼)
+        // ====================================
+        for (let hitNum = 0; hitNum < hits; hitNum++) {
+            // 타겟 사망 체크
+            if (!target || target.hp <= 0 || !target.sprite || target.sprite.destroyed) {
+                break;
+            }
+            
+            // 현재 타겟 위치
+            const currentTargetPos = this.getPositionTarget(target);
+            if (!currentTargetPos) break;
+            
+            const targetX = currentTargetPos.x;
+            const targetCenter = currentTargetPos.y - (target.sprite?.height || 60) / 2;
+            
+            // 짧은 히트스톱
+            if (typeof CombatEffects !== 'undefined') {
+                await CombatEffects.hitStop(40);
+            }
+            
+            // 타격 이펙트 (점점 강해짐)
+            if (typeof CombatEffects !== 'undefined') {
+                const intensity = 1 + hitNum * 0.3;
+                CombatEffects.heavySlash(targetX, targetCenter, -20 + hitNum * 10, 0xff6600);
+                CombatEffects.screenShake(8 + hitNum * 4, 100);
+                CombatEffects.burstParticles(targetX, targetCenter, 0xff8844, 6 + hitNum * 2);
+                
+                if (hitNum === hits - 1) {
+                    // 마지막 타격은 더 강하게!
+                    CombatEffects.screenFlash('#ff4400', 80, 0.25);
+                }
+            }
+            
+            // 피격
+            if (target.sprite && !target.sprite.destroyed) {
+                if (typeof CombatEffects !== 'undefined') {
+                    CombatEffects.hitEffect(target.sprite);
+                }
+            }
+            
+            // 대미지
+            if (isEnemy) {
+                this.game.dealDamageToTarget(target, damage);
+            } else {
+                this.game.dealDamage(target, damage);
+            }
+            
+            // 브레이크 시스템
+            if (typeof BreakSystem !== 'undefined' && options.cardDef) {
+                BreakSystem.onAttack(target, options.cardDef, 1, hitNum);
+            }
+            
+            // 넉백 + 추격!
+            if (target.hp > 0 && typeof KnockbackSystem !== 'undefined') {
+                await KnockbackSystem.knockback(target, dashDirection, knockbackPerHit);
+                
+                // 적을 따라가기! (넉백 후 적 위치로 이동)
+                if (hitNum < hits - 1) {
+                    const newTargetPos = this.getPositionTarget(target);
+                    if (newTargetPos && posTarget && !posTarget.destroyed) {
+                        const chaseX = newTargetPos.x - (dashDirection * 30);
+                        
+                        // 추격 잔상
+                        if (typeof SkillSystem !== 'undefined') {
+                            SkillSystem.createGhost(attacker, 0.4, SkillSystem.GHOST_COLORS.RED);
+                        }
+                        
+                        await new Promise(resolve => {
+                            gsap.to(posTarget, { 
+                                x: chaseX, 
+                                duration: 0.08, 
+                                ease: 'power2.out',
+                                onComplete: resolve
+                            });
+                        });
+                    }
+                }
+            }
+            
+            // 다음 타격 전 짧은 대기
+            if (hitNum < hits - 1) {
+                await new Promise(r => setTimeout(r, 80));
+            }
+        }
+        
+        if (onHit) onHit();
+        
+        // ====================================
+        // 3. 복귀
+        // ====================================
+        if (posTarget && !posTarget.destroyed && scaleTarget && !scaleTarget.destroyed) {
+            // 복귀 잔상
+            if (typeof SkillSystem !== 'undefined') {
+                SkillSystem.createGhost(attacker, 0.5, SkillSystem.GHOST_COLORS.MAGENTA);
+            }
+            
+            await new Promise(resolve => {
+                gsap.timeline({ onComplete: resolve })
+                    .to(scaleTarget.scale, { x: baseScale, y: baseScale, duration: 0.15 })
+                    .to(posTarget, { x: startX, y: startY, duration: 0.25, ease: 'power2.out' }, '<');
+            });
+        }
+        
+        if (attacker) attacker.isAnimating = false;
+    },
+    
+    // ==========================================
     // 연속 찌르기 공격 (Flurry) - 빠른 3연타
     // ==========================================
     async flurryAttack(attacker, target, damage, options = {}) {
