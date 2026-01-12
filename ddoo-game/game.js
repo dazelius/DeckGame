@@ -3896,16 +3896,21 @@ const Game = {
             
             console.log(`[AI] ${enemy.type} 후퇴: (${posTarget?.x}, ${startY}) → (${newPos?.x}, ${newPos?.y})`);
             
+            // ★ scaleTarget과 scale이 유효한지 체크
+            const hasScale = scaleTarget && scaleTarget.scale && !scaleTarget.destroyed;
+            
             await new Promise(resolve => {
                 const tl = gsap.timeline({ onComplete: resolve });
                 
                 // 1. 준비 자세 (살짝 움츠림)
-                tl.to(scaleTarget.scale, {
-                    x: baseScale * 0.9,
-                    y: baseScale * 1.1,
-                    duration: 0.08,
-                    ease: 'power1.in'
-                });
+                if (hasScale) {
+                    tl.to(scaleTarget.scale, {
+                        x: baseScale * 0.9,
+                        y: baseScale * 1.1,
+                        duration: 0.08,
+                        ease: 'power1.in'
+                    });
+                }
                 
                 // 2. 점프하면서 뒤로 이동
                 tl.to(posTarget, {
@@ -3913,13 +3918,15 @@ const Game = {
                     y: startY - 40,  // 위로 점프
                     duration: 0.15,
                     ease: 'power2.out'
-                }, '<0.05');
+                }, hasScale ? '<0.05' : 0);
                 
-                tl.to(scaleTarget.scale, {
-                    x: baseScale * 1.05,
-                    y: baseScale * 0.95,
-                    duration: 0.15
-                }, '<');
+                if (hasScale) {
+                    tl.to(scaleTarget.scale, {
+                        x: baseScale * 1.05,
+                        y: baseScale * 0.95,
+                        duration: 0.15
+                    }, '<');
+                }
                 
                 // 3. 착지
                 tl.to(posTarget, {
@@ -3928,12 +3935,14 @@ const Game = {
                     ease: 'bounce.out'
                 });
                 
-                tl.to(scaleTarget.scale, {
-                    x: baseScale,
-                    y: baseScale,
-                    duration: 0.1,
-                    ease: 'power2.out'
-                }, '<0.05');
+                if (hasScale) {
+                    tl.to(scaleTarget.scale, {
+                        x: baseScale,
+                        y: baseScale,
+                        duration: 0.1,
+                        ease: 'power2.out'
+                    }, '<0.05');
+                }
                 
                 // 4. 먼지 이펙트 (착지 시)
                 tl.call(() => {

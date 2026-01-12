@@ -524,7 +524,6 @@ const MonsterPatterns = {
                             const baseScale = enemy.baseScale || scaleTarget?.scale?.x || 1;
                             
                             const newPos = game.getCellCenter(targetX, enemy.gridZ);
-                            const startY = posTarget?.y || 0;
                             
                             if (posTarget && newPos) {
                                 console.log(`[MonsterPatterns] 전진 애니메이션: (${posTarget.x}, ${posTarget.y}) → (${newPos.x}, ${newPos.y})`);
@@ -532,13 +531,18 @@ const MonsterPatterns = {
                                 await new Promise(resolve => {
                                     const tl = gsap.timeline({ onComplete: resolve });
                                     
+                                    // ★ scaleTarget과 scale이 유효한 경우에만 스케일 애니메이션
+                                    const hasScale = scaleTarget && scaleTarget.scale && !scaleTarget.destroyed;
+                                    
                                     // 1. 준비 자세 (방패 들기)
-                                    tl.to(scaleTarget.scale, {
-                                        x: baseScale * 0.95,
-                                        y: baseScale * 1.05,
-                                        duration: 0.08,
-                                        ease: 'power1.in'
-                                    });
+                                    if (hasScale) {
+                                        tl.to(scaleTarget.scale, {
+                                            x: baseScale * 0.95,
+                                            y: baseScale * 1.05,
+                                            duration: 0.08,
+                                            ease: 'power1.in'
+                                        });
+                                    }
                                     
                                     // 2. 전진! (묵직하게)
                                     tl.to(posTarget, {
@@ -548,19 +552,21 @@ const MonsterPatterns = {
                                         ease: 'power2.inOut'
                                     });
                                     
-                                    tl.to(scaleTarget.scale, {
-                                        x: baseScale * 1.1,
-                                        y: baseScale * 0.9,
-                                        duration: 0.15
-                                    }, '<');
-                                    
-                                    // 3. 착지 (안정)
-                                    tl.to(scaleTarget.scale, {
-                                        x: baseScale,
-                                        y: baseScale,
-                                        duration: 0.1,
-                                        ease: 'power2.out'
-                                    });
+                                    if (hasScale) {
+                                        tl.to(scaleTarget.scale, {
+                                            x: baseScale * 1.1,
+                                            y: baseScale * 0.9,
+                                            duration: 0.15
+                                        }, '<');
+                                        
+                                        // 3. 착지 (안정)
+                                        tl.to(scaleTarget.scale, {
+                                            x: baseScale,
+                                            y: baseScale,
+                                            duration: 0.1,
+                                            ease: 'power2.out'
+                                        });
+                                    }
                                 });
                                 
                                 enemy.gridX = targetX;
