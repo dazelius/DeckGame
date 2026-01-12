@@ -2696,7 +2696,12 @@ const CombatEffects = {
         
         // 시작/도착 위치 계산
         const attackerPos = attacker.sprite.getGlobalPosition();
-        const targetPos = target.sprite.getGlobalPosition();
+        const targetPosRaw = target.sprite.getGlobalPosition();
+        // ★ 타겟 Y 좌표를 상체로 조정 (스프라이트 중심보다 위)
+        const targetPos = {
+            x: targetPosRaw.x,
+            y: targetPosRaw.y - 50  // 지면 위로 올림
+        };
         
         // ★ 그리드 거리 계산 (한 칸당 파워업!)
         const gridDistance = Math.abs(target.gridX - attacker.gridX);
