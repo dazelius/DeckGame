@@ -2604,14 +2604,6 @@ const Game = {
                         });
                         // 출혈은 sneakAttack 내부에서 처리
                         break;
-                    
-                    case 'lightning':
-                        // ★ 번개: 연쇄 번개!
-                        await UnitCombat.lightningAttack(hero, targetEnemy, cardDef.damage, { 
-                            chainReduction: cardDef.chainDamageReduction || 2,
-                            isEnemy: false
-                        });
-                        break;
                         
                     case 'bash':
                         // 강타: bashAttack
@@ -2676,6 +2668,16 @@ const Game = {
             }
         } else {
             // Ranged: Attack from current position
+            
+            // ★★★ 번개 공격! (원거리지만 특별 처리) ★★★
+            if (cardId === 'lightning') {
+                console.log(`[Game] ⚡ 번개 공격! damage=${cardDef.damage}`);
+                await UnitCombat.lightningAttack(hero, targetEnemy, cardDef.damage, { 
+                    chainReduction: cardDef.chainDamageReduction || 2,
+                    isEnemy: false
+                });
+                return; // 번개는 여기서 완료!
+            }
             
             // ★ 스피어 투척 (거리 보너스가 있는 원거리 공격, 다른 레인 타겟 가능!)
             if (cardDef.distanceBonus) {
