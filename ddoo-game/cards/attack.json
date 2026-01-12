@@ -104,5 +104,17 @@
         "pull": 99,
         "crashDamage": 2,
         "element": "physical"
+    },
+    "kick": {
+        "name": "Kick",
+        "cost": 0,
+        "type": "attack",
+        "damage": 0,
+        "target": "enemy",
+        "melee": true,
+        "frontOnly": true,
+        "knockback": 2,
+        "aoe": { "width": 1, "depth": 1 },
+        "element": "physical"
     }
 }

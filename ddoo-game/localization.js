@@ -171,6 +171,10 @@ const Localization = {
                 name: '갈고리',
                 desc: '4 피해. 적을 맨 앞으로 당김. 충돌 시 2 피해.'
             },
+            kick: {
+                name: '킥',
+                desc: '적을 2칸 뒤로 밀침. 넉백 피해만.'
+            },
             
             // 스킬 카드
             defend: {
@@ -233,6 +237,10 @@ const Localization = {
                 name: 'Hook',
                 desc: '4 damage. Pull enemy to front. 2 crash damage on collision.'
             },
+            kick: {
+                name: 'Kick',
+                desc: 'Push enemy 2 cells back. Knockback damage only.'
+            },
             defend: {
                 name: 'Defend',
                 desc: 'Gain 5 Block'
@@ -290,6 +298,10 @@ const Localization = {
             hook: {
                 name: 'フック',
                 desc: '4ダメージ。敵を最前線に引く。衝突時2ダメージ。'
+            },
+            kick: {
+                name: 'キック',
+                desc: '敵を2マス後ろに押す。ノックバックダメージのみ。'
             },
             defend: {
                 name: '防御',
