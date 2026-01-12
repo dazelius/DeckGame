@@ -119,17 +119,23 @@ const BloodEffect = {
     // 🩸 메인 API - 대미지 기반 피 효과
     // ==========================================
     onDamage(x, y, damage, options = {}) {
-        console.log(`[BloodEffect] onDamage 호출: x=${x}, y=${y}, damage=${damage}`);
-        
         if (!this.initialized) {
             console.log('[BloodEffect] 초기화되지 않음!');
             return;
         }
         
         if (!this.config.enabled || damage < this.config.minDamageForBlood) {
-            console.log('[BloodEffect] 비활성화 또는 최소 대미지 미달');
             return;
         }
+        
+        // ★ 글로벌 좌표 → 로컬 좌표 변환
+        if (typeof game !== 'undefined' && game.globalToLocal) {
+            const local = game.globalToLocal(x, y);
+            x = local.x;
+            y = local.y;
+        }
+        
+        console.log(`[BloodEffect] 피 생성: x=${x.toFixed(0)}, y=${y.toFixed(0)}, damage=${damage}`);
         
         const {
             direction = null,     // 피격 방향 (라디안, null이면 랜덤)
