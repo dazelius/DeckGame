@@ -546,25 +546,8 @@ const Game = {
             GridAOE.processTurnStart('enemy');
         }
         
-        // Reset block at start of turn
-        this.state.heroBlock = 0;
-        if (this.state.hero) {
-            this.state.hero.block = 0;
-            // ★ 쉴드 글로우 제거
-            if (typeof CombatEffects !== 'undefined') {
-                CombatEffects.removeShieldGlow(this.state.hero);
-            }
-        }
-        
-        // ★ 적들의 쉴드도 턴 시작 시 리셋
-        this.state.enemyUnits.forEach(enemy => {
-            if (enemy.block > 0) {
-                enemy.block = 0;
-                if (typeof CombatEffects !== 'undefined') {
-                    CombatEffects.removeShieldGlow(enemy);
-                }
-            }
-        });
+        // ★ 쉴드는 턴 시작 시 리셋하지 않음! (피격으로 소진될 때까지 유지)
+        // 쉴드가 남아있으면 글로우도 유지됨
         
         // Draw 5 cards
         this.drawCards(5);

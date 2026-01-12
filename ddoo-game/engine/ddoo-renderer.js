@@ -1014,40 +1014,40 @@ const DDOORenderer = {
             const scaleX = mainSprite.scale.x;
             const scaleY = mainSprite.scale.y;
             
-            // ★ 1. 외곽 글로우 (blur 강하게, 넓게 퍼짐)
+            // ★ 1. 외곽 글로우 (blur 강하게, 넓게 퍼짐) - 더 강하게!
             const glowSprite = new PIXI.Sprite(mainSprite.texture);
             glowSprite.anchor.set(anchorX, anchorY);
-            glowSprite.scale.set(scaleX * 1.08, scaleY * 1.08);
+            glowSprite.scale.set(scaleX * 1.15, scaleY * 1.15);
             glowSprite.tint = color;
-            glowSprite.alpha = 0.8;
+            glowSprite.alpha = 1;
             glowSprite.zIndex = mainSprite.zIndex - 2;
             glowSprite.label = 'glow';
             
             const blurFilter = new PIXI.BlurFilter();
-            blurFilter.blur = 12;
-            blurFilter.quality = 3;
+            blurFilter.blur = 16;
+            blurFilter.quality = 4;
             glowSprite.filters = [blurFilter];
             
             container.addChild(glowSprite);
             container._glowSprite = glowSprite;
             container._glowBlur = blurFilter;
             
-            // ★ 2. 선명한 스트로크 (blur 없이, 약간 크게)
+            // ★ 2. 선명한 스트로크 (blur 없이, 약간 크게) - 더 선명하게!
             const strokeSprite = new PIXI.Sprite(mainSprite.texture);
             strokeSprite.anchor.set(anchorX, anchorY);
-            strokeSprite.scale.set(scaleX * 1.03, scaleY * 1.03);
-            strokeSprite.tint = 0x88eeff;  // 더 밝은 시안
-            strokeSprite.alpha = 0.9;
+            strokeSprite.scale.set(scaleX * 1.04, scaleY * 1.04);
+            strokeSprite.tint = 0xaaffff;  // 밝은 시안
+            strokeSprite.alpha = 1;
             strokeSprite.zIndex = mainSprite.zIndex - 1;
             strokeSprite.label = 'stroke';
             
             container.addChild(strokeSprite);
             container._strokeSprite = strokeSprite;
             
-            // 펄스 애니메이션
+            // 펄스 애니메이션 - 더 강하게!
             container._glowTween = gsap.to({ val: 0 }, {
                 val: Math.PI * 2,
-                duration: 1.8,
+                duration: 1.5,
                 repeat: -1,
                 ease: 'none',
                 onUpdate: function() {
@@ -1056,12 +1056,12 @@ const DDOORenderer = {
                         return;
                     }
                     const v = this.targets()[0].val;
-                    // 글로우 펄스
-                    glowSprite.alpha = 0.6 + Math.sin(v) * 0.4;  // 0.2 ~ 1.0
-                    blurFilter.blur = 10 + Math.sin(v) * 5;  // 5 ~ 15
+                    // 글로우 펄스 (강하게)
+                    glowSprite.alpha = 0.7 + Math.sin(v) * 0.3;  // 0.4 ~ 1.0
+                    blurFilter.blur = 12 + Math.sin(v) * 6;  // 6 ~ 18
                     // 스트로크 펄스
                     if (strokeSprite && !strokeSprite.destroyed) {
-                        strokeSprite.alpha = 0.7 + Math.sin(v * 1.5) * 0.3;  // 0.4 ~ 1.0
+                        strokeSprite.alpha = 0.8 + Math.sin(v * 1.5) * 0.2;  // 0.6 ~ 1.0
                     }
                 }
             });
