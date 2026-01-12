@@ -2805,6 +2805,237 @@ const CombatEffects = {
         // 이펙트도 추가
         const pos = this.getUnitPosition(unit);
         if (pos) this.blockEffect(pos.x, pos.y);
+        
+        // ★ 쉴드 글로우 추가/강화
+        this.addShieldGlow(unit);
+    },
+    
+    // ==========================================
+    // ★ 쉴드 외곽선 글로우 시스템
+    // ==========================================
+    
+    /**
+     * 유닛에 쉴드 글로우 추가
+     * @param {Object} unit - 유닛 객체
+     */
+    addShieldGlow(unit) {
+        if (!unit || !unit.sprite) return;
+        
+        const sprite = unit.sprite;
+        const container = unit.container || sprite;
+        
+        // 이미 글로우가 있으면 강화만
+        if (unit.shieldGlow) {
+            this.pulseShieldGlow(unit);
+            return;
+        }
+        
+        // 글로우 컨테이너 생성
+        const glowContainer = new PIXI.Container();
+        glowContainer.zIndex = -5;  // 스프라이트 뒤에
+        glowContainer.isShieldGlow = true;
+        
+        // 외곽선 글로우 (여러 겹으로)
+        const glowLayers = [];
+        const baseColor = 0x4488ff;
+        const glowSizes = [1.15, 1.10, 1.05];
+        const glowAlphas = [0.15, 0.25, 0.4];
+        
+        for (let i = 0; i < glowSizes.length; i++) {
+            const glow = new PIXI.Graphics();
+            
+            // 스프라이트 크기에 맞춰 외곽선 생성
+            const spriteWidth = sprite.width || 100;
+            const spriteHeight = sprite.height || 100;
+            const scale = glowSizes[i];
+            
+            // 둥근 사각형으로 외곽선
+            glow.roundRect(
+                -spriteWidth * scale / 2,
+                -spriteHeight * scale / 2,
+                spriteWidth * scale,
+                spriteHeight * scale,
+                15
+            );
+            glow.fill({ color: baseColor, alpha: glowAlphas[i] });
+            
+            glow.y = -spriteHeight / 2 + 10;  // 스프라이트 중심으로
+            glowLayers.push(glow);
+            glowContainer.addChild(glow);
+        }
+        
+        // 외곽 라인 (실제 외곽선)
+        const outline = new PIXI.Graphics();
+        const spriteWidth = sprite.width || 100;
+        const spriteHeight = sprite.height || 100;
+        
+        outline.roundRect(
+            -spriteWidth * 1.02 / 2,
+            -spriteHeight * 1.02 / 2,
+            spriteWidth * 1.02,
+            spriteHeight * 1.02,
+            12
+        );
+        outline.stroke({ color: 0x66ccff, width: 3, alpha: 0.8 });
+        outline.y = -spriteHeight / 2 + 10;
+        glowContainer.addChild(outline);
+        
+        // 컨테이너에 추가
+        if (container !== sprite) {
+            container.addChildAt(glowContainer, 0);  // 맨 뒤에
+        } else {
+            // sprite만 있는 경우 부모에 추가
+            const parent = sprite.parent;
+            if (parent) {
+                const idx = parent.getChildIndex(sprite);
+                parent.addChildAt(glowContainer, idx);
+                glowContainer.x = sprite.x;
+                glowContainer.y = sprite.y;
+            }
+        }
+        
+        unit.shieldGlow = glowContainer;
+        unit.shieldGlowLayers = glowLayers;
+        unit.shieldGlowOutline = outline;
+        
+        // 등장 애니메이션
+        glowContainer.alpha = 0;
+        glowContainer.scale.set(0.8);
+        
+        gsap.to(glowContainer, {
+            alpha: 1,
+            duration: 0.3,
+            ease: 'power2.out'
+        });
+        gsap.to(glowContainer.scale, {
+            x: 1, y: 1,
+            duration: 0.3,
+            ease: 'back.out(2)'
+        });
+        
+        // 숨쉬기 애니메이션 시작
+        this.startShieldBreathing(unit);
+        
+        // 강조 펄스
+        this.pulseShieldGlow(unit);
+    },
+    
+    /**
+     * 쉴드 글로우 펄스 효과 (획득 시)
+     */
+    pulseShieldGlow(unit) {
+        if (!unit.shieldGlow || !unit.shieldGlowOutline) return;
+        
+        const outline = unit.shieldGlowOutline;
+        
+        // 밝게 펄스
+        gsap.timeline()
+            .to(unit.shieldGlow, {
+                alpha: 1.5,
+                duration: 0.15,
+                ease: 'power2.out'
+            })
+            .to(unit.shieldGlow, {
+                alpha: 1,
+                duration: 0.3,
+                ease: 'power2.inOut'
+            });
+        
+        // 외곽선 확대 펄스
+        gsap.timeline()
+            .to(unit.shieldGlow.scale, {
+                x: 1.15, y: 1.15,
+                duration: 0.15,
+                ease: 'power2.out'
+            })
+            .to(unit.shieldGlow.scale, {
+                x: 1, y: 1,
+                duration: 0.25,
+                ease: 'power2.inOut'
+            });
+    },
+    
+    /**
+     * 쉴드 숨쉬기 애니메이션
+     */
+    startShieldBreathing(unit) {
+        if (!unit.shieldGlow) return;
+        
+        // 기존 애니메이션 정리
+        if (unit.shieldBreathTween) {
+            unit.shieldBreathTween.kill();
+        }
+        
+        // 숨쉬기 (글로우 크기 변화)
+        unit.shieldBreathTween = gsap.to({ val: 0 }, {
+            val: Math.PI * 2,
+            duration: 2,
+            repeat: -1,
+            ease: 'none',
+            onUpdate: function() {
+                if (!unit.shieldGlow || unit.shieldGlow.destroyed) {
+                    this.kill();
+                    return;
+                }
+                const v = this.targets()[0].val;
+                const breathScale = 1 + Math.sin(v) * 0.03;
+                const breathAlpha = 0.85 + Math.sin(v) * 0.15;
+                
+                unit.shieldGlow.scale.set(breathScale);
+                unit.shieldGlow.alpha = breathAlpha;
+            }
+        });
+    },
+    
+    /**
+     * 쉴드 글로우 제거
+     */
+    removeShieldGlow(unit) {
+        if (!unit.shieldGlow) return;
+        
+        const glow = unit.shieldGlow;
+        
+        // 애니메이션 정리
+        if (unit.shieldBreathTween) {
+            unit.shieldBreathTween.kill();
+            unit.shieldBreathTween = null;
+        }
+        
+        // 페이드 아웃 후 제거
+        gsap.to(glow, {
+            alpha: 0,
+            duration: 0.3,
+            ease: 'power2.in',
+            onComplete: () => {
+                if (glow && !glow.destroyed) {
+                    glow.destroy({ children: true });
+                }
+            }
+        });
+        gsap.to(glow.scale, {
+            x: 0.8, y: 0.8,
+            duration: 0.3,
+            ease: 'power2.in'
+        });
+        
+        unit.shieldGlow = null;
+        unit.shieldGlowLayers = null;
+        unit.shieldGlowOutline = null;
+    },
+    
+    /**
+     * 쉴드 상태 업데이트 (block 값에 따라)
+     */
+    updateShieldGlow(unit) {
+        if (!unit) return;
+        
+        const hasBlock = (unit.block || 0) > 0;
+        
+        if (hasBlock && !unit.shieldGlow) {
+            this.addShieldGlow(unit);
+        } else if (!hasBlock && unit.shieldGlow) {
+            this.removeShieldGlow(unit);
+        }
     },
     
     // ★ 슬라임 분열 경고 VFX

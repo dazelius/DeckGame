@@ -548,6 +548,23 @@ const Game = {
         
         // Reset block at start of turn
         this.state.heroBlock = 0;
+        if (this.state.hero) {
+            this.state.hero.block = 0;
+            // ★ 쉴드 글로우 제거
+            if (typeof CombatEffects !== 'undefined') {
+                CombatEffects.removeShieldGlow(this.state.hero);
+            }
+        }
+        
+        // ★ 적들의 쉴드도 턴 시작 시 리셋
+        this.state.enemyUnits.forEach(enemy => {
+            if (enemy.block > 0) {
+                enemy.block = 0;
+                if (typeof CombatEffects !== 'undefined') {
+                    CombatEffects.removeShieldGlow(enemy);
+                }
+            }
+        });
         
         // Draw 5 cards
         this.drawCards(5);
@@ -2388,6 +2405,10 @@ const Game = {
                 if (typeof ShieldVFX !== 'undefined') {
                     ShieldVFX.breakAtUnit(target, block);
                 }
+                // ★ 쉴드 글로우 제거
+                if (typeof CombatEffects !== 'undefined') {
+                    CombatEffects.removeShieldGlow(target);
+                }
             }
             
             if (typeof HPBarSystem !== 'undefined') {
@@ -4064,8 +4085,14 @@ const Game = {
             damage -= blocked;
             
             // ★ 유닛 실드 완전 파괴 연출
-            if (prevBlock > 0 && target.block === 0 && typeof ShieldVFX !== 'undefined') {
-                ShieldVFX.breakAtUnit(target, prevBlock);
+            if (prevBlock > 0 && target.block === 0) {
+                if (typeof ShieldVFX !== 'undefined') {
+                    ShieldVFX.breakAtUnit(target, prevBlock);
+                }
+                // ★ 쉴드 글로우 제거
+                if (typeof CombatEffects !== 'undefined') {
+                    CombatEffects.removeShieldGlow(target);
+                }
             }
         }
         
