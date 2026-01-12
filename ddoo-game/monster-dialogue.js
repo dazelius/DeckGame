@@ -9,7 +9,7 @@ const MonsterDialogue = {
         onSpawn: 0.8,       // 등장 시
         onIntent: 0.5,      // 인텐트 선택 시
         onAction: 0.6,      // 행동 실행 시
-        onHit: 0.4,         // 피격 시
+        onHit: 0.7,         // 피격 시 (★ 40% → 70%)
         onDeath: 1.0,       // 사망 시
         onBreak: 0.9,       // 브레이크 시
         random: 0.1         // 매 턴 랜덤
