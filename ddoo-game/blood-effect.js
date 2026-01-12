@@ -62,6 +62,13 @@ const BloodEffect = {
     update(delta) {
         const dt = Math.min(delta / 60, 0.05);  // 최대 50ms
         
+        // ★ 디버그: update 호출 확인
+        if (this.particles.length > 0 && !this._loggedOnce) {
+            console.log(`[BloodEffect] update 호출됨! 파티클 수: ${this.particles.length}`);
+            this._loggedOnce = true;
+            setTimeout(() => { this._loggedOnce = false; }, 500);
+        }
+        
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const p = this.particles[i];
             
@@ -384,6 +391,9 @@ const BloodEffect = {
             rotationSpeed: config.rotationSpeed || 0,
             shape: config.shape || null,
         };
+        
+        // ★ 생성 즉시 그리기!
+        this.drawParticle(particle);
         
         this.particles.push(particle);
         return particle;
