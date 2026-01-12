@@ -549,29 +549,45 @@ const MonsterPatterns = {
         const startX = enemyPos.x;
         const startY = enemyPos.y - 30;
         
-        // 미니 슬라임 위치 계산
+        // 미니 슬라임 위치 계산 (위/아래 레인으로 분산!)
         const spawnPositions = [];
         for (let i = 0; i < summonCount; i++) {
-            const offsetX = i === 0 ? 0 : 1;
-            let targetZ = enemy.gridZ;
-            let targetX = enemy.gridX + offsetX;
-            targetX = Math.max(0, Math.min(9, targetX));
+            // 위/아래 레인으로 분산 (0번은 위, 1번은 아래)
+            const offsetZ = i === 0 ? -1 : 1;
+            let targetZ = enemy.gridZ + offsetZ;
+            let targetX = enemy.gridX;
+            
+            // 범위 체크
+            targetZ = Math.max(0, Math.min(2, targetZ));
+            
+            // 같은 레인에 겹치면 X축으로 분산
+            if (targetZ === enemy.gridZ) {
+                targetX = enemy.gridX + (i === 0 ? -1 : 1);
+                targetX = Math.max(game.arena?.playerZoneX || 5, Math.min(9, targetX));
+            }
             
             const targetCenter = game.getCellCenter ? game.getCellCenter(targetX, targetZ) : null;
             spawnPositions.push({
                 gridX: targetX,
                 gridZ: targetZ,
-                screenX: targetCenter?.x || startX + (i === 0 ? -60 : 60),
-                screenY: targetCenter?.y || startY
+                screenX: targetCenter?.x || startX,
+                screenY: targetCenter?.y || startY + (i === 0 ? -80 : 80),
+                directionY: i === 0 ? -1 : 1  // 위/아래 방향
             });
         }
+        
+        console.log(`[Split] 분열 위치:`, spawnPositions.map(p => `(${p.gridX},${p.gridZ})`));
         
         // ★ 분열 슬라임 공 발사! (베지어 곡선)
         const slimeBalls = [];
         for (let i = 0; i < summonCount; i++) {
             const ball = new PIXI.Graphics();
-            ball.circle(0, 0, 20);
+            ball.circle(0, 0, 25);
             ball.fill({ color: 0x44ddff, alpha: 0.9 });
+            // 눈 그리기
+            ball.circle(-8, -5, 5);
+            ball.circle(8, -5, 5);
+            ball.fill({ color: 0xffee88, alpha: 1 });
             ball.x = startX;
             ball.y = startY;
             ball.zIndex = 250;
@@ -579,11 +595,11 @@ const MonsterPatterns = {
             slimeBalls.push(ball);
             
             const target = spawnPositions[i];
-            const direction = i === 0 ? -1 : 1;
+            const dirY = target.directionY;
             
-            // 베지어 곡선 컨트롤 포인트 (위로 볼록하게)
-            const cpX = startX + direction * 50;
-            const cpY = startY - 100 - Math.random() * 50;
+            // 베지어 곡선 컨트롤 포인트 (위/아래로 볼록하게!)
+            const cpX = (startX + target.screenX) / 2 + (Math.random() - 0.5) * 40;
+            const cpY = startY + dirY * (80 + Math.random() * 40);
             
             // 베지어 애니메이션
             const duration = 0.5;
