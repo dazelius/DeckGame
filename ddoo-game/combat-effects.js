@@ -831,10 +831,10 @@ const CombatEffects = {
             let currentPower = 0;
             const maxPower = Math.min(5, gridDistance);
             
-            // ★ 스핀 속도 (파워에 따라 증가)
-            let spinSpeed = 0;  // 초당 회전수 (라디안)
+            // ★ 스핀 강도 (파워에 따라 증가) - 드릴처럼 축 회전!
+            let spinIntensity = 0;  // 스핀 강도 (시각 효과용)
             const baseAngle = Math.atan2(endY - startY, endX - startX);
-            let totalSpin = 0;  // 누적 회전량
+            let spinPhase = 0;  // 스핀 애니메이션 위상
             
             // 파워 레벨별 색상
             const powerColors = [
@@ -907,13 +907,13 @@ const CombatEffects = {
             }
             let passedCheckpoints = 0;
             
-            // ★ 파워업 함수 (스핀 속도 증가!)
+            // ★ 파워업 함수 (스핀 강도 증가!)
             const powerUp = (power) => {
                 currentPower = power;
                 const colors = powerColors[Math.min(power, 5)];
                 
-                // ★ 스핀 속도 증가! (파워 1당 +8 rad/s)
-                spinSpeed = power * 12;
+                // ★ 스핀 강도 증가! (드릴 회전 효과)
+                spinIntensity = power;
                 
                 // 글로우 업데이트
                 glowContainer.removeChildren();
@@ -955,54 +955,51 @@ const CombatEffects = {
                 );
             };
             
-            // === 나선형 트레일 (스핀 표현!) ===
+            // === 드릴 스핀 트레일 (축 방향 회전!) ===
             const createSpinTrail = () => {
                 if (spearContainer.destroyed) return;
                 
                 const trail = new PIXI.Container();
                 trail.x = spearContainer.x;
                 trail.y = spearContainer.y;
+                trail.rotation = baseAngle;  // 항상 발사 방향 유지
                 trail.zIndex = 149;
                 
                 const colors = powerColors[Math.min(currentPower, 5)];
                 const trailLength = spearLength/2 + currentPower * 8;
                 const trailWidth = 3 + currentPower * 1.2;
                 
-                // ★ 스핀이 있으면 나선형으로!
-                if (currentPower >= 1) {
-                    // 나선 잔상 여러 개
-                    const spiralCount = Math.min(3, currentPower);
-                    for (let i = 0; i < spiralCount; i++) {
-                        const spiralTrail = new PIXI.Graphics();
-                        const offsetAngle = spear.rotation + (Math.PI * 2 / spiralCount) * i;
-                        spiralTrail.rotation = offsetAngle;
+                // 메인 트레일 (직선)
+                const mainTrail = new PIXI.Graphics();
+                mainTrail.rect(-spearLength/3, -trailWidth/2, trailLength, trailWidth);
+                mainTrail.fill({ color: colors.trail, alpha: 0.4 + currentPower * 0.05 });
+                trail.addChild(mainTrail);
+                
+                // ★ 스핀이 있으면 드릴 오라 효과!
+                if (currentPower >= 1 && colors.glow) {
+                    // 회전하는 오라 링 (축 방향 스핀 표현)
+                    const ringCount = Math.min(3, currentPower);
+                    for (let i = 0; i < ringCount; i++) {
+                        const ring = new PIXI.Graphics();
+                        const offset = -10 + i * 15;  // 창 축을 따라 배치
+                        const ringSize = 6 + currentPower * 2 - i * 2;
                         
-                        spiralTrail.rect(-spearLength/3, -trailWidth/2, trailLength, trailWidth);
-                        spiralTrail.fill({ color: colors.trail, alpha: (0.3 + currentPower * 0.05) / (i + 1) });
+                        // 타원으로 3D 회전 느낌
+                        const phase = spinPhase + (Math.PI * 2 / ringCount) * i;
+                        const scaleY = 0.3 + Math.abs(Math.sin(phase)) * 0.4;
                         
-                        if (colors.glow) {
-                            spiralTrail.rect(-spearLength/4, -trailWidth/3, trailLength * 0.6, trailWidth * 0.5);
-                            spiralTrail.fill({ color: colors.glow, alpha: 0.2 / (i + 1) });
-                        }
-                        
-                        trail.addChild(spiralTrail);
+                        ring.ellipse(offset, 0, ringSize, ringSize * scaleY);
+                        ring.stroke({ width: 1.5, color: colors.glow, alpha: 0.4 - i * 0.1 });
+                        trail.addChild(ring);
                     }
-                } else {
-                    // 기본 직선 트레일
-                    const mainTrail = new PIXI.Graphics();
-                    mainTrail.rotation = spear.rotation;
-                    mainTrail.rect(-spearLength/3, -trailWidth/2, trailLength, trailWidth);
-                    mainTrail.fill({ color: colors.trail, alpha: 0.4 });
-                    trail.addChild(mainTrail);
                 }
                 
                 this.container.addChild(trail);
                 
                 gsap.to(trail, {
                     alpha: 0,
-                    scaleX: 0.6,
-                    scaleY: 0.6,
-                    duration: 0.12 + currentPower * 0.02,
+                    scaleX: 0.7,
+                    duration: 0.1 + currentPower * 0.015,
                     onComplete: () => { if (!trail.destroyed) trail.destroy(); }
                 });
             };
@@ -1058,7 +1055,7 @@ const CombatEffects = {
             const trailInterval = setInterval(createSpinTrail, 16);
             const particleInterval = setInterval(createParticle, currentPower >= 2 ? 12 : 30);
             
-            // === 직선 비행 + 스핀 애니메이션 ===
+            // === 직선 비행 + 드릴 스핀 애니메이션 ===
             let lastTime = Date.now();
             const progress = { t: 0 };
             
@@ -1073,13 +1070,16 @@ const CombatEffects = {
                     spearContainer.x = startX + (endX - startX) * progress.t;
                     spearContainer.y = startY + (endY - startY) * progress.t;
                     
-                    // ★ 스핀 업데이트 (시간 기반)
+                    // ★ 드릴 스핀 위상 업데이트 (창은 회전 안 함!)
                     const now = Date.now();
                     const dt = (now - lastTime) / 1000;
                     lastTime = now;
                     
-                    totalSpin += spinSpeed * dt;
-                    spear.rotation = baseAngle + totalSpin;
+                    // 스핀 강도에 따라 위상 속도 증가
+                    spinPhase += spinIntensity * 15 * dt;
+                    
+                    // 창은 항상 발사 방향 유지!
+                    spear.rotation = baseAngle;
                     
                     // ★ 체크포인트 통과 확인 (파워업!)
                     while (passedCheckpoints < checkpoints.length && progress.t >= checkpoints[passedCheckpoints]) {
@@ -1093,8 +1093,8 @@ const CombatEffects = {
                     clearInterval(trailInterval);
                     clearInterval(particleInterval);
                     
-                    // ★ 착탄 이펙트 (파워 레벨 + 스핀 반영)
-                    this.spearImpactEffect(endX, endY, baseAngle, currentPower, totalSpin);
+                    // ★ 착탄 이펙트 (파워 레벨 + 스핀 강도 반영)
+                    this.spearImpactEffect(endX, endY, baseAngle, currentPower, spinIntensity);
                     
                     spearContainer.destroy();
                     resolve();
@@ -1161,52 +1161,46 @@ const CombatEffects = {
         });
     },
     
-    // ★ 스핀 부스트 이펙트 (회전 강화 표현)
+    // ★ 스핀 부스트 이펙트 (드릴 회전 강화 표현)
     spearSpinBoostEffect(x, y, power) {
         if (!this.app) return;
         
         const powerColors = [0xddcc88, 0xffcc00, 0xff8800, 0xff4400, 0xff2200, 0xff0000];
         const color = powerColors[Math.min(power, 5)];
         
-        // ★ 회전하는 나선 이펙트
-        const spiralCount = 3;
-        for (let i = 0; i < spiralCount; i++) {
-            const spiral = new PIXI.Graphics();
+        // ★ 드릴 링 이펙트 (축 방향 회전 표현)
+        const ringCount = 2 + power;
+        for (let i = 0; i < ringCount; i++) {
+            const ring = new PIXI.Graphics();
+            const ringSize = 15 + power * 3;
             
-            // 나선형 선 그리기
-            spiral.moveTo(0, 0);
-            const arcLength = 30 + power * 10;
-            for (let j = 0; j < 10; j++) {
-                const t = j / 10;
-                const r = t * arcLength;
-                const a = t * Math.PI * 1.5 + (Math.PI * 2 / spiralCount) * i;
-                spiral.lineTo(Math.cos(a) * r, Math.sin(a) * r);
-            }
-            spiral.stroke({ width: 2 + power * 0.5, color: color, alpha: 0.6 });
+            // 타원으로 3D 회전 느낌
+            ring.ellipse(0, 0, ringSize, ringSize * 0.4);
+            ring.stroke({ width: 2 + power * 0.3, color: color, alpha: 0.6 });
             
-            spiral.x = x;
-            spiral.y = y;
-            spiral.zIndex = 161;
-            this.container.addChild(spiral);
+            ring.x = x;
+            ring.y = y;
+            ring.rotation = (Math.PI / ringCount) * i;
+            ring.zIndex = 161;
+            this.container.addChild(ring);
             
-            // 회전하면서 확대되고 사라짐
-            gsap.to(spiral, {
-                rotation: Math.PI * 2,
-                scaleX: 1.5,
-                scaleY: 1.5,
+            // 확대되면서 회전하고 사라짐
+            gsap.to(ring, {
+                scaleX: 2,
+                scaleY: 2,
                 alpha: 0,
-                duration: 0.25,
+                duration: 0.2 + i * 0.03,
                 ease: 'power2.out',
-                onComplete: () => { if (!spiral.destroyed) spiral.destroy(); }
+                onComplete: () => { if (!ring.destroyed) ring.destroy(); }
             });
         }
         
-        // "SPIN!" 텍스트 (파워 2 이상)
+        // "DRILL!" 텍스트 (파워 2 이상)
         if (power >= 2) {
             const spinText = new PIXI.Text({
-                text: power >= 4 ? '💫 MAX SPIN!' : `🌀 SPIN x${power}`,
+                text: power >= 4 ? '🔥 MAX DRILL!' : `⚡ DRILL x${power}`,
                 style: {
-                    fontSize: 12 + power * 2,
+                    fontSize: 11 + power * 2,
                     fontWeight: 'bold',
                     fill: color,
                     stroke: { color: 0x000000, width: 3 }
@@ -1219,55 +1213,49 @@ const CombatEffects = {
             this.container.addChild(spinText);
             
             gsap.to(spinText, {
-                y: y - 45,
+                y: y - 40,
                 alpha: 0,
-                duration: 0.4,
+                duration: 0.35,
                 ease: 'power2.out',
                 onComplete: () => { if (!spinText.destroyed) spinText.destroy(); }
             });
         }
     },
     
-    // 스피어 착탄 이펙트 (★ 파워 레벨 + 스핀 반영)
-    spearImpactEffect(x, y, angle, power = 0, totalSpin = 0) {
+    // 스피어 착탄 이펙트 (★ 파워 레벨 + 드릴 스핀 반영)
+    spearImpactEffect(x, y, angle, power = 0, spinIntensity = 0) {
         if (!this.app) return;
         
         const powerColors = [0xffffff, 0xffcc00, 0xff8800, 0xff4400, 0xff2200, 0xff0000];
         const impactColor = powerColors[Math.min(power, 5)];
         
-        // ★ 스핀이 강할수록 나선형 충격파!
+        // ★ 드릴 스핀이 강할수록 관통 이펙트!
         if (power >= 2) {
-            // 나선형 충격파
-            const spiralWave = new PIXI.Graphics();
-            for (let i = 0; i < 3; i++) {
-                spiralWave.moveTo(0, 0);
-                const arcLength = 25 + power * 8;
-                for (let j = 0; j <= 15; j++) {
-                    const t = j / 15;
-                    const r = t * arcLength;
-                    const a = t * Math.PI * 2 + (Math.PI * 2 / 3) * i;
-                    if (j === 0) {
-                        spiralWave.moveTo(Math.cos(a) * r, Math.sin(a) * r);
-                    } else {
-                        spiralWave.lineTo(Math.cos(a) * r, Math.sin(a) * r);
-                    }
-                }
+            // 드릴링 효과 (동심원 링들)
+            const drillRingCount = power + 1;
+            for (let i = 0; i < drillRingCount; i++) {
+                const drillRing = new PIXI.Graphics();
+                const ringSize = 12 + power * 4;
+                
+                // 3D 드릴링 느낌의 타원
+                drillRing.ellipse(0, 0, ringSize, ringSize * 0.35);
+                drillRing.stroke({ width: 2 + power * 0.5, color: impactColor, alpha: 0.6 });
+                drillRing.rotation = angle;  // 창 방향으로 정렬
+                drillRing.x = x;
+                drillRing.y = y;
+                drillRing.zIndex = 201;
+                this.container.addChild(drillRing);
+                
+                gsap.to(drillRing, {
+                    scaleX: 2.5 + i * 0.3,
+                    scaleY: 2.5 + i * 0.3,
+                    alpha: 0,
+                    duration: 0.2 + i * 0.05,
+                    delay: i * 0.03,
+                    ease: 'power2.out',
+                    onComplete: () => { if (!drillRing.destroyed) drillRing.destroy(); }
+                });
             }
-            spiralWave.stroke({ width: 2 + power, color: impactColor, alpha: 0.7 });
-            spiralWave.x = x;
-            spiralWave.y = y;
-            spiralWave.zIndex = 201;
-            this.container.addChild(spiralWave);
-            
-            gsap.to(spiralWave, {
-                rotation: Math.PI * 2,
-                scaleX: 2 + power * 0.4,
-                scaleY: 2 + power * 0.4,
-                alpha: 0,
-                duration: 0.3,
-                ease: 'power2.out',
-                onComplete: () => { if (!spiralWave.destroyed) spiralWave.destroy(); }
-            });
         }
         
         // 충격파 (파워에 따라 크기 증가)
@@ -1288,7 +1276,7 @@ const CombatEffects = {
             onComplete: () => shockwave.destroy()
         });
         
-        // ★ 회전하며 튀는 파편 (스핀 반영)
+        // ★ 드릴 파편 (창 방향 + 방사형)
         const sparkCount = 8 + power * 3;
         for (let i = 0; i < sparkCount; i++) {
             const spark = new PIXI.Graphics();
@@ -1299,15 +1287,14 @@ const CombatEffects = {
             spark.zIndex = 199;
             this.container.addChild(spark);
             
-            // ★ 스핀 방향으로 튀어나감
+            // 방사형으로 퍼짐
             const sparkAngle = angle + Math.PI + (Math.PI * 2 / sparkCount) * i;
             const dist = 20 + Math.random() * (30 + power * 8);
-            const spinRotation = totalSpin + Math.random() * Math.PI * 4;
             
             gsap.to(spark, {
                 x: x + Math.cos(sparkAngle) * dist,
                 y: y + Math.sin(sparkAngle) * dist,
-                rotation: spinRotation,
+                rotation: Math.random() * Math.PI * 4,
                 alpha: 0,
                 duration: 0.3,
                 ease: 'power2.out',
