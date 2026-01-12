@@ -138,7 +138,7 @@
         "target": "enemy",
         "melee": true,
         "frontOnly": true,
-        "bleed": 1,
+        "bleed": 2,
         "aoe": { "width": 1, "depth": 1 },
         "element": "physical"
     }

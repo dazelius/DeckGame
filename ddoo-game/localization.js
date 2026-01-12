@@ -181,7 +181,7 @@ const Localization = {
             },
             sneakAttack: {
                 name: '비열한 습격',
-                desc: '5 피해. 1 출혈 부여.'
+                desc: '5 피해. 2 출혈 부여.'
             },
             
             // 스킬 카드
@@ -255,7 +255,7 @@ const Localization = {
             },
             sneakAttack: {
                 name: 'Sneak Attack',
-                desc: '5 damage. Apply 1 Bleed.'
+                desc: '5 damage. Apply 2 Bleed.'
             },
             defend: {
                 name: 'Defend',
@@ -325,7 +325,7 @@ const Localization = {
             },
             sneakAttack: {
                 name: '卑劣な襲撃',
-                desc: '5ダメージ。1出血を付与。'
+                desc: '5ダメージ。2出血を付与。'
             },
             defend: {
                 name: '防御',

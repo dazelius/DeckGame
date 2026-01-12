@@ -601,6 +601,255 @@ const UnitCombat = {
     },
     
     // ==========================================
+    // ★ 비열한 습격 (Sneak Attack) - 뒤치기 + 출혈!
+    // ==========================================
+    async sneakAttack(attacker, target, damage, options = {}) {
+        const { bleed = 2, isEnemy = false, onHit = null } = options;
+        
+        console.log(`[SneakAttack] 비열한 습격! damage=${damage}, bleed=${bleed}`);
+        
+        if (!target || target.hp <= 0 || !target.sprite) {
+            if (attacker) attacker.isAnimating = false;
+            return;
+        }
+        
+        attacker.isAnimating = true;
+        
+        const posTarget = this.getPositionTarget(attacker);
+        const scaleTarget = this.getScaleTarget(attacker);
+        const targetPosTarget = this.getPositionTarget(target);
+        const baseScale = attacker.baseScale || scaleTarget?.baseScale || 1;
+        
+        if (!posTarget || !scaleTarget || !targetPosTarget) {
+            if (attacker) attacker.isAnimating = false;
+            return;
+        }
+        
+        const startX = posTarget.x;
+        const startY = posTarget.y;
+        const targetX = targetPosTarget.x;
+        const targetY = targetPosTarget.y;
+        const targetCenter = targetY - (target.sprite?.height || 60) / 2;
+        const dashDirection = isEnemy ? -1 : 1;
+        
+        // ====================================
+        // 1. 그림자처럼 사라짐 (페이드아웃)
+        // ====================================
+        if (typeof SkillSystem !== 'undefined') {
+            SkillSystem.createGhost(attacker, 0.8, 0x440044);
+        }
+        
+        await new Promise(resolve => {
+            gsap.timeline({ onComplete: resolve })
+                .to(scaleTarget, { alpha: 0.3, duration: 0.1 })
+                .to(posTarget, { y: startY - 20, duration: 0.1 }, '<');
+        });
+        
+        // ====================================
+        // 2. 적 뒤로 순간이동! (암살자 느낌)
+        // ====================================
+        const behindX = targetX + (dashDirection * 50); // 적 뒤쪽
+        
+        // 잠시 사라짐
+        if (scaleTarget && !scaleTarget.destroyed) {
+            scaleTarget.alpha = 0;
+        }
+        
+        // 그림자 파티클
+        this.createShadowParticles(startX, startY);
+        
+        await new Promise(r => setTimeout(r, 80));
+        
+        // 뒤에서 등장!
+        if (posTarget && !posTarget.destroyed) {
+            posTarget.x = behindX;
+            posTarget.y = targetY;
+        }
+        
+        // 등장 그림자 파티클
+        this.createShadowParticles(behindX, targetY);
+        
+        await new Promise(resolve => {
+            gsap.timeline({ onComplete: resolve })
+                .to(scaleTarget, { alpha: 1, duration: 0.08 })
+                .to(scaleTarget.scale, { x: baseScale * 1.2, y: baseScale * 0.85, duration: 0.06 }, '<');
+        });
+        
+        // ====================================
+        // 3. 뒤치기! (빠른 찌르기)
+        // ====================================
+        // 히트스톱
+        if (typeof CombatEffects !== 'undefined') {
+            await CombatEffects.hitStop(30);
+        }
+        
+        // 찌르기 동작
+        await new Promise(resolve => {
+            gsap.timeline({ onComplete: resolve })
+                .to(posTarget, { x: targetX + (dashDirection * 10), duration: 0.05, ease: 'power3.out' })
+                .to(scaleTarget.scale, { x: baseScale * 1.4, y: baseScale * 0.7, duration: 0.04 }, '<');
+        });
+        
+        // ★ VFX: 피 튀김 + 찌르기 이펙트
+        if (typeof CombatEffects !== 'undefined') {
+            // 어둠의 찌르기
+            this.createSneakSlash(targetX, targetCenter, dashDirection);
+            
+            // 피 튀김
+            CombatEffects.burstParticles(targetX, targetCenter, 0xcc0000, 12);
+            
+            // 화면 효과
+            CombatEffects.screenShake(10, 120);
+            CombatEffects.screenFlash('#880044', 60, 0.25);
+        }
+        
+        // 피격
+        if (target.sprite && !target.sprite.destroyed) {
+            if (typeof CombatEffects !== 'undefined') {
+                CombatEffects.hitEffect(target.sprite);
+            }
+        }
+        
+        // 대미지
+        if (isEnemy) {
+            this.game.dealDamageToTarget(target, damage);
+        } else {
+            this.game.dealDamage(target, damage);
+        }
+        
+        // ★ 출혈 부여!
+        if (bleed > 0 && target.hp > 0 && typeof BleedSystem !== 'undefined') {
+            BleedSystem.applyBleed(target, bleed);
+        }
+        
+        if (onHit) onHit();
+        
+        // ====================================
+        // 4. 그림자처럼 복귀
+        // ====================================
+        // 다시 사라짐
+        await new Promise(resolve => {
+            gsap.timeline({ onComplete: resolve })
+                .to(scaleTarget, { alpha: 0.3, duration: 0.08 })
+                .to(scaleTarget.scale, { x: baseScale, y: baseScale, duration: 0.08 }, '<');
+        });
+        
+        this.createShadowParticles(posTarget.x, posTarget.y);
+        
+        await new Promise(r => setTimeout(r, 60));
+        
+        // 원위치 등장
+        if (posTarget && !posTarget.destroyed) {
+            posTarget.x = startX;
+            posTarget.y = startY;
+        }
+        
+        this.createShadowParticles(startX, startY);
+        
+        await new Promise(resolve => {
+            gsap.timeline({ onComplete: resolve })
+                .to(scaleTarget, { alpha: 1, duration: 0.1 })
+                .to(scaleTarget.scale, { x: baseScale, y: baseScale, duration: 0.1, ease: 'back.out(1.5)' }, '<');
+        });
+        
+        console.log('[SneakAttack] 비열한 습격 완료!');
+        if (attacker) attacker.isAnimating = false;
+    },
+    
+    // ★ 그림자 파티클 생성
+    createShadowParticles(x, y) {
+        if (typeof CombatEffects === 'undefined' || !CombatEffects.container) return;
+        
+        for (let i = 0; i < 10; i++) {
+            const particle = new PIXI.Graphics();
+            const size = 5 + Math.random() * 10;
+            particle.circle(0, 0, size);
+            particle.fill({ color: 0x220022, alpha: 0.8 });
+            
+            particle.x = x + (Math.random() - 0.5) * 40;
+            particle.y = y + (Math.random() - 0.5) * 60;
+            particle.zIndex = 150;
+            CombatEffects.container.addChild(particle);
+            
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 30 + Math.random() * 50;
+            
+            gsap.to(particle, {
+                x: particle.x + Math.cos(angle) * speed,
+                y: particle.y + Math.sin(angle) * speed - 20,
+                alpha: 0,
+                duration: 0.4 + Math.random() * 0.2,
+                ease: 'power2.out',
+                onComplete: () => { if (!particle.destroyed) particle.destroy(); }
+            });
+            
+            gsap.to(particle.scale, {
+                x: 0.3,
+                y: 0.3,
+                duration: 0.4,
+                ease: 'power2.in'
+            });
+        }
+    },
+    
+    // ★ 비열한 찌르기 이펙트
+    createSneakSlash(x, y, direction) {
+        if (typeof CombatEffects === 'undefined' || !CombatEffects.container) return;
+        
+        const container = new PIXI.Container();
+        container.x = x;
+        container.y = y;
+        container.zIndex = 200;
+        CombatEffects.container.addChild(container);
+        
+        // 어둠의 찌르기 라인
+        const slash = new PIXI.Graphics();
+        slash.moveTo(-direction * 60, 0);
+        slash.lineTo(direction * 80, 0);
+        slash.stroke({ width: 8, color: 0x880044, alpha: 0.9 });
+        
+        // 코어 라인
+        const core = new PIXI.Graphics();
+        core.moveTo(-direction * 50, 0);
+        core.lineTo(direction * 70, 0);
+        core.stroke({ width: 3, color: 0xff4488, alpha: 1 });
+        
+        container.addChild(slash);
+        container.addChild(core);
+        
+        // 피 방울들
+        for (let i = 0; i < 6; i++) {
+            const drop = new PIXI.Graphics();
+            drop.circle(0, 0, 3 + Math.random() * 4);
+            drop.fill({ color: 0xcc0000, alpha: 0.9 });
+            drop.x = direction * (20 + i * 15);
+            drop.y = (Math.random() - 0.5) * 20;
+            container.addChild(drop);
+            
+            gsap.to(drop, {
+                y: drop.y + 40 + Math.random() * 30,
+                alpha: 0,
+                duration: 0.4 + Math.random() * 0.2,
+                delay: i * 0.02,
+                ease: 'power2.in',
+                onComplete: () => { if (!drop.destroyed) drop.destroy(); }
+            });
+        }
+        
+        // 애니메이션
+        container.alpha = 0;
+        container.scale.set(0.5, 1);
+        
+        gsap.timeline()
+            .to(container, { alpha: 1, duration: 0.05 })
+            .to(container.scale, { x: 1, y: 1, duration: 0.08, ease: 'power2.out' }, '<')
+            .to(container, { alpha: 0, duration: 0.15, delay: 0.1 })
+            .add(() => {
+                if (!container.destroyed) container.destroy({ children: true });
+            });
+    },
+    
+    // ==========================================
     // 연속 찌르기 공격 (Flurry) - 빠른 3연타
     // ==========================================
     async flurryAttack(attacker, target, damage, options = {}) {

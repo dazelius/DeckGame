@@ -2595,6 +2595,15 @@ const Game = {
                             cardDef: cardDef
                         });
                         break;
+                    
+                    case 'sneakAttack':
+                        // ★ 비열한 습격: 뒤치기 + 출혈!
+                        await UnitCombat.sneakAttack(hero, targetEnemy, cardDef.damage, { 
+                            bleed: cardDef.bleed || 2,
+                            isEnemy: false
+                        });
+                        // 출혈은 sneakAttack 내부에서 처리
+                        break;
                         
                     case 'bash':
                         // 강타: bashAttack
@@ -2640,8 +2649,8 @@ const Game = {
                 KnockbackSystem.knockback(targetEnemy, 1, cardDef.knockback);
             }
             
-            // ★ 출혈 부여
-            if (cardDef.bleed && targetEnemy.hp > 0 && typeof BleedSystem !== 'undefined') {
+            // ★ 출혈 부여 (sneakAttack은 내부에서 처리)
+            if (cardDef.bleed && cardId !== 'sneakAttack' && targetEnemy.hp > 0 && typeof BleedSystem !== 'undefined') {
                 BleedSystem.applyBleed(targetEnemy, cardDef.bleed);
             }
             
