@@ -18,7 +18,7 @@ const GoreVFX = {
     loadFallbackImage() {
         if (this.fallbackLoaded) return;
         this.fallbackImage = new Image();
-        this.fallbackImage.src = 'meat.png';
+        this.fallbackImage.src = 'image/meat.png';
         this.fallbackImage.onload = () => {
             this.fallbackLoaded = true;
             console.log('[GoreVFX] 🥩 meat.png 폴백 이미지 로드 완료');
