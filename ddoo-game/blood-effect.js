@@ -62,13 +62,6 @@ const BloodEffect = {
         
         this.initialized = true;
         console.log('[BloodEffect] 🩸 피 효과 시스템 초기화 완료');
-        
-        // ★ 디버그: 테스트 원 그리기 (화면에 고정 빨간 원 표시)
-        this.testCircle = new PIXI.Graphics();
-        this.testCircle.circle(400, 300, 30);
-        this.testCircle.fill({ color: 0xFF0000, alpha: 1 });
-        this.container.addChild(this.testCircle);
-        console.log('[BloodEffect] 테스트 원 추가됨 at (400, 300)');
     },
     
     // 파티클 풀 초기화
@@ -110,6 +103,25 @@ const BloodEffect = {
             if (!p.active) {
                 p.active = true;
                 p.visible = true;
+                p.clear();
+                // ★ 파티클 데이터 리셋
+                const d = p.particleData;
+                d.vx = 0;
+                d.vy = 0;
+                d.gravity = 800;
+                d.life = 1;
+                d.maxLife = 1;
+                d.size = 5;
+                d.originalSize = 5;
+                d.type = 'drop';
+                d.trail = [];
+                d.rotation = 0;
+                d.rotationSpeed = 0;
+                d.airResistance = 0.98;
+                d.groundY = 9999;
+                d.bounced = false;
+                d.stretch = 1;
+                d.color = 0xCC0000;
                 return p;
             }
         }
@@ -369,12 +381,6 @@ const BloodEffect = {
     // 업데이트 루프
     // ==========================================
     update(delta) {
-        if (this.activeParticles.length > 0 && !this._loggedUpdate) {
-            const p = this.activeParticles[0];
-            console.log(`[BloodEffect] update: ${this.activeParticles.length}개, 첫번째 파티클 위치: (${p.x.toFixed(0)}, ${p.y.toFixed(0)}), visible: ${p.visible}, container.visible: ${this.container.visible}, container.parent: ${this.container.parent?.constructor.name}`);
-            this._loggedUpdate = true;
-            setTimeout(() => { this._loggedUpdate = false; }, 1000);
-        }
         
         const dt = delta / 60;  // 60fps 기준
         
@@ -382,8 +388,9 @@ const BloodEffect = {
             const p = this.activeParticles[i];
             const d = p.particleData;
             
-            // 생명 감소
-            d.life -= dt / d.maxLife;
+            // 생명 감소 (maxLife가 0이면 기본값 사용)
+            const maxLife = d.maxLife || 1;
+            d.life -= dt / maxLife;
             
             if (d.life <= 0) {
                 // 파티클 비활성화
@@ -394,23 +401,16 @@ const BloodEffect = {
                 continue;
             }
             
-            // ★ NaN 체크 - 값이 없으면 기본값 사용
-            if (!d.gravity) d.gravity = 800;
-            if (!d.airResistance) d.airResistance = 0.98;
-            if (!d.vx) d.vx = 0;
-            if (!d.vy) d.vy = 0;
-            
             // 물리 시뮬레이션
-            d.vy += d.gravity * dt;
-            d.vx *= d.airResistance;
-            d.vy *= d.airResistance;
+            const gravity = d.gravity || 800;
+            const airResistance = d.airResistance || 0.98;
+            
+            d.vy += gravity * dt;
+            d.vx *= airResistance;
+            d.vy *= airResistance;
             
             p.x += d.vx * dt;
             p.y += d.vy * dt;
-            
-            // ★ NaN 방지
-            if (isNaN(p.x)) p.x = 0;
-            if (isNaN(p.y)) p.y = 0;
             
             // 트레일 (string 타입)
             if (d.type === 'string' && d.trail) {
