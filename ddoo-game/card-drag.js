@@ -318,17 +318,7 @@ const CardDrag = {
         const handIndex = this.dragState.handIndex;
         const cardDef = this.game.getCard(cardId);
         
-        let success = false;
-        
-        if (this.dragState.isSummon) {
-            success = this.handleSummonDrop(touch, cardId, handIndex, cardDef);
-        } else if (cardDef && cardDef.type === 'attack') {
-            success = this.handleAttackDrop(touch, cardId, handIndex, cardDef);
-        } else {
-            success = this.handleSkillDrop(touch, cardId, handIndex, cardDef);
-        }
-        
-        // ★ 탑뷰 모드 비활성화 + 그리드 숨김
+        // ★ 먼저 카메라 원래대로 + 그리드 숨김
         if (typeof DDOOBackground !== 'undefined' && DDOOBackground.setTopView) {
             DDOOBackground.setTopView(false);
         }
@@ -336,12 +326,25 @@ const CardDrag = {
             this.game.containers.grid.visible = false;
         }
         
-        // Reset state
+        // Reset drag state first
         this.resetDragState();
         
-        if (success) {
-            this.game.renderHand(false);
-        }
+        // ★ 카메라 전환 후 액션 실행 (짧은 딜레이)
+        setTimeout(() => {
+            let success = false;
+            
+            if (cardDef && cardDef.type === 'summon') {
+                success = this.handleSummonDrop(touch, cardId, handIndex, cardDef);
+            } else if (cardDef && cardDef.type === 'attack') {
+                success = this.handleAttackDrop(touch, cardId, handIndex, cardDef);
+            } else {
+                success = this.handleSkillDrop(touch, cardId, handIndex, cardDef);
+            }
+            
+            if (success) {
+                this.game.renderHand(false);
+            }
+        }, 50);  // 50ms 딜레이 (카메라 복귀 후)
     },
     
     // ==========================================
