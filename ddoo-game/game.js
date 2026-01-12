@@ -3883,7 +3883,6 @@ const Game = {
         
         if (newX <= maxX && !isOccupied) {
             const oldX = enemy.gridX;
-            enemy.gridX = newX;
             
             const newPos = this.getCellCenter(newX, enemy.gridZ);
             // ★ UnitCombat 헬퍼 사용
@@ -3895,6 +3894,9 @@ const Game = {
             const startY = posTarget?.y || 0;
             
             console.log(`[AI] ${enemy.type} 후퇴: (${posTarget?.x}, ${startY}) → (${newPos?.x}, ${newPos?.y})`);
+            
+            // ★★★ 중요: 애니메이션 중 위치 덮어쓰기 방지!
+            enemy.isAnimating = true;
             
             // ★ scaleTarget과 scale이 유효한지 체크
             const hasScale = scaleTarget && scaleTarget.scale && !scaleTarget.destroyed;
@@ -3949,6 +3951,10 @@ const Game = {
                     this.createLandingDust(newPos.x, newPos.y);
                 }, null, '-=0.05');
             });
+            
+            // ★ 그리드 위치 업데이트 후 애니메이션 플래그 해제
+            enemy.gridX = newX;
+            enemy.isAnimating = false;
             
             console.log(`[AI] ${enemy.type} 백스텝: ${oldX} -> ${newX}`);
         }

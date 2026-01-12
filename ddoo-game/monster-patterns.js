@@ -528,6 +528,9 @@ const MonsterPatterns = {
                             if (posTarget && newPos) {
                                 console.log(`[MonsterPatterns] 전진 애니메이션: (${posTarget.x}, ${posTarget.y}) → (${newPos.x}, ${newPos.y})`);
                                 
+                                // ★★★ 중요: 애니메이션 중 위치 덮어쓰기 방지!
+                                enemy.isAnimating = true;
+                                
                                 await new Promise(resolve => {
                                     const tl = gsap.timeline({ onComplete: resolve });
                                     
@@ -569,7 +572,9 @@ const MonsterPatterns = {
                                     }
                                 });
                                 
+                                // ★ 그리드 위치 업데이트 후 애니메이션 플래그 해제
                                 enemy.gridX = targetX;
+                                enemy.isAnimating = false;
                             }
                         }
                     }
