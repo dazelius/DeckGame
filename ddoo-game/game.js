@@ -2724,6 +2724,7 @@ const Game = {
                         projectileType: 'spear',
                         projectileColor: 0xccaa77,
                         projectileSize: 12,
+                        gridDistance: distance,  // ★ 그리드 거리 전달 (파워업용)
                         isEnemy: false,
                         onHit: (hitTarget) => {
                             if (typeof BreakSystem !== 'undefined') {

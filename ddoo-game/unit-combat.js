@@ -1567,9 +1567,10 @@ const UnitCombat = {
                 console.log('[UnitCombat] 🔥 파이어볼 이펙트 실행!');
                 await CombatEffects.fireballEffect(startX, startY, endX, endY);
             } else if (projectileType === 'spear') {
-                // ★ 스피어 이펙트 (직선 투척)
-                console.log('[UnitCombat] 🗡️ 스피어 이펙트 실행!');
-                await CombatEffects.spearEffect(startX, startY, endX, endY, { isEnemy });
+                // ★ 스피어 이펙트 (직선 투척, 거리 파워업!)
+                const gridDist = options.gridDistance || 1;
+                console.log('[UnitCombat] 🗡️ 스피어 이펙트 실행! 그리드 거리:', gridDist);
+                await CombatEffects.spearEffect(startX, startY, endX, endY, { isEnemy, gridDistance: gridDist });
                 CombatEffects.hitEffect(target.sprite);
             } else if (projectileType === 'arrow') {
                 // ★ 화살 이펙트 (곡사)
