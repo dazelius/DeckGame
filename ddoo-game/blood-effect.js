@@ -358,6 +358,12 @@ const BloodEffect = {
     // 업데이트 루프
     // ==========================================
     update(delta) {
+        if (this.activeParticles.length > 0 && !this._loggedUpdate) {
+            console.log(`[BloodEffect] update 실행 중: ${this.activeParticles.length}개 파티클`);
+            this._loggedUpdate = true;
+            setTimeout(() => { this._loggedUpdate = false; }, 1000);
+        }
+        
         const dt = delta / 60;  // 60fps 기준
         
         for (let i = this.activeParticles.length - 1; i >= 0; i--) {
