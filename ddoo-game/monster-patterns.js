@@ -15,7 +15,8 @@ const MonsterPatterns = {
         'orc',
         'skeletonMage',
         'slime',
-        'skeleton'
+        'skeleton',
+        'miniSlime'
     ],
     
     // ==========================================
@@ -218,6 +219,19 @@ const MonsterPatterns = {
             };
         }
         
+        // ★★★ 슬라임 분열 체크! ★★★
+        if (pattern.splitIntent && pattern.ai?.splitOnLowHP && !enemy.hasSplit) {
+            const threshold = pattern.ai.splitThreshold || 0.5;
+            const maxHp = pattern.stats?.hp || enemy.maxHp || 20;
+            
+            // HP가 절반 이하면 분열!
+            if (enemy.hp <= maxHp * threshold) {
+                console.log(`[MonsterPatterns] 🔮 ${enemy.name || enemy.type} 분열 조건 충족! HP: ${enemy.hp}/${maxHp}`);
+                enemy.hasSplit = true; // 한 번만 분열
+                return { ...pattern.splitIntent };
+            }
+        }
+        
         // ★ 첫 턴(1턴)에는 브레이크 레시피가 있는 강력한 공격 제외
         const currentTurn = this.game?.state?.turn || 1;
         const isFirstTurn = currentTurn <= 1;
@@ -336,6 +350,16 @@ const MonsterPatterns = {
                 color = '#44aaff';
                 text = '';
                 break;
+            case 'split':
+                icon = '💧';
+                color = '#44ddff';
+                text = '분열!';
+                break;
+            case 'heal':
+                icon = '💚';
+                color = '#44ff88';
+                text = intent.healAmount ? `+${intent.healAmount}` : '';
+                break;
         }
         
         return {
@@ -415,12 +439,165 @@ const MonsterPatterns = {
                 break;
                 
             case 'summon':
-                // TODO: 소환 구현
+                // 소환
                 if (typeof CombatEffects !== 'undefined') {
                     CombatEffects.showBuff(enemy, 'Summon!');
                 }
+                if (intent.summonType && typeof game.spawnEnemy === 'function') {
+                    const count = intent.summonCount || 1;
+                    for (let i = 0; i < count; i++) {
+                        await game.spawnEnemy(intent.summonType, enemy.gridZ, enemy.gridX + 1 + i);
+                    }
+                }
+                break;
+                
+            case 'split':
+                // ★★★ 슬라임 분열! ★★★
+                console.log(`[MonsterPatterns] 🔮 ${enemy.name || enemy.type} 분열 실행!`);
+                
+                // 분열 VFX
+                await this.executeSplit(enemy, intent, game);
+                break;
+                
+            case 'heal':
+                // 회복
+                const healAmount = intent.healAmount || 3;
+                enemy.hp = Math.min((enemy.maxHp || 20), enemy.hp + healAmount);
+                if (typeof game.updateUnitHPBar === 'function') {
+                    game.updateUnitHPBar(enemy);
+                }
+                if (typeof CombatEffects !== 'undefined') {
+                    CombatEffects.showHeal(enemy, healAmount);
+                }
                 break;
         }
+    },
+    
+    // ==========================================
+    // ★★★ 슬라임 분열 실행! ★★★
+    // ==========================================
+    async executeSplit(enemy, intent, game) {
+        const summonType = intent.summonType || 'miniSlime';
+        const summonCount = intent.summonCount || 2;
+        
+        // 1. 분열 전조 연출
+        if (typeof CombatEffects !== 'undefined') {
+            CombatEffects.screenFlash('#44aaff', 100, 0.3);
+            
+            // 부풀어오르는 효과
+            if (enemy.sprite && !enemy.sprite.destroyed) {
+                const baseScale = enemy.baseScale || enemy.sprite.baseScale || 0.35;
+                await new Promise(resolve => {
+                    gsap.timeline({ onComplete: resolve })
+                        .to(enemy.sprite.scale, { 
+                            x: baseScale * 1.5, 
+                            y: baseScale * 1.5, 
+                            duration: 0.3,
+                            ease: 'power2.out'
+                        })
+                        .to(enemy.sprite.scale, {
+                            x: baseScale * 0.8,
+                            y: baseScale * 0.8,
+                            duration: 0.15,
+                            ease: 'power2.in'
+                        });
+                });
+            }
+        }
+        
+        // 2. 분열 파티클 이펙트
+        const enemyPos = game.getUnitPosition ? game.getUnitPosition(enemy) : 
+            { x: enemy.sprite?.x || 400, y: enemy.sprite?.y || 300 };
+            
+        if (typeof CombatEffects !== 'undefined') {
+            // 슬라임 조각들이 튀는 효과
+            for (let i = 0; i < 15; i++) {
+                const particle = new PIXI.Graphics();
+                particle.circle(0, 0, 5 + Math.random() * 8);
+                particle.fill({ color: 0x44aaff, alpha: 0.8 });
+                particle.x = enemyPos.x;
+                particle.y = enemyPos.y - 30;
+                particle.zIndex = 200;
+                CombatEffects.container.addChild(particle);
+                
+                const angle = (i / 15) * Math.PI * 2;
+                const dist = 50 + Math.random() * 80;
+                
+                gsap.to(particle, {
+                    x: particle.x + Math.cos(angle) * dist,
+                    y: particle.y + Math.sin(angle) * dist,
+                    alpha: 0,
+                    duration: 0.5,
+                    ease: 'power2.out',
+                    onUpdate: function() { if (particle.destroyed) this.kill(); },
+                    onComplete: () => { if (!particle.destroyed) particle.destroy(); }
+                });
+            }
+            
+            CombatEffects.screenShake(10, 150);
+        }
+        
+        await new Promise(r => setTimeout(r, 200));
+        
+        // 3. 미니 슬라임 소환!
+        const spawnedMinis = [];
+        
+        // miniSlime 패턴이 로드되어 있는지 확인, 없으면 로드
+        if (!this.patterns[summonType]) {
+            await this.addMonster(summonType);
+        }
+        
+        for (let i = 0; i < summonCount; i++) {
+            // 주변 빈 칸에 소환
+            const offsetZ = i === 0 ? -1 : 1; // 위/아래 레인에
+            let targetZ = enemy.gridZ + offsetZ;
+            let targetX = enemy.gridX;
+            
+            // 범위 체크
+            targetZ = Math.max(0, Math.min(2, targetZ));
+            
+            console.log(`[Split] 미니 슬라임 ${i+1} 소환: gridX=${targetX}, gridZ=${targetZ}`);
+            
+            if (typeof game.spawnEnemy === 'function') {
+                const mini = await game.spawnEnemy(summonType, targetZ, targetX);
+                if (mini) {
+                    spawnedMinis.push(mini);
+                    
+                    // 소환 연출
+                    if (mini.sprite) {
+                        mini.sprite.alpha = 0;
+                        mini.sprite.scale.set(0.1);
+                        
+                        gsap.to(mini.sprite, {
+                            alpha: 1,
+                            duration: 0.3,
+                            ease: 'back.out(2)'
+                        });
+                        gsap.to(mini.sprite.scale, {
+                            x: mini.baseScale || 0.25,
+                            y: mini.baseScale || 0.25,
+                            duration: 0.3,
+                            ease: 'back.out(2)'
+                        });
+                    }
+                }
+            }
+            
+            await new Promise(r => setTimeout(r, 150));
+        }
+        
+        // 4. 원본 슬라임 복원
+        if (enemy.sprite && !enemy.sprite.destroyed) {
+            const baseScale = enemy.baseScale || enemy.sprite.baseScale || 0.35;
+            gsap.to(enemy.sprite.scale, {
+                x: baseScale,
+                y: baseScale,
+                duration: 0.2,
+                ease: 'elastic.out(1, 0.5)'
+            });
+        }
+        
+        console.log(`[Split] 분열 완료! ${spawnedMinis.length}개 미니 슬라임 소환`);
     }
 };
 

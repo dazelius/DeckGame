@@ -3159,13 +3159,80 @@ const Game = {
         this.createUnitHPBar(unit);
         
         console.log(`[Game] Placed ${unitType} at (${gridX}, ${gridZ}) for ${team}`);
+        
+        return unit; // ★ unit 반환 추가
+    },
+    
+    // ==========================================
+    // ★★★ 동적 적 소환 (슬라임 분열 등) ★★★
+    // ==========================================
+    async spawnEnemy(monsterType, gridZ, gridX) {
+        console.log(`[Game] 🔮 적 소환 시작: ${monsterType} at (${gridX}, ${gridZ})`);
+        
+        // 빈 칸 찾기
+        let targetX = gridX;
+        let targetZ = gridZ;
+        
+        // 범위 체크
+        targetZ = Math.max(0, Math.min(this.arena.depth - 1, targetZ));
+        targetX = Math.max(this.arena.playerZoneX, Math.min(this.arena.width - 1, targetX));
+        
+        // 해당 위치가 점유되어 있으면 빈 칸 찾기
+        const isOccupied = (x, z) => {
+            return this.state.enemyUnits.some(u => u.hp > 0 && u.gridX === x && u.gridZ === z) ||
+                   this.state.playerUnits.some(u => u.hp > 0 && u.gridX === x && u.gridZ === z);
+        };
+        
+        if (isOccupied(targetX, targetZ)) {
+            // 주변 8방향에서 빈 칸 찾기
+            const directions = [
+                [0, -1], [0, 1], [-1, 0], [1, 0],
+                [-1, -1], [1, -1], [-1, 1], [1, 1]
+            ];
+            
+            let found = false;
+            for (const [dx, dz] of directions) {
+                const newX = gridX + dx;
+                const newZ = gridZ + dz;
+                
+                if (newX >= this.arena.playerZoneX && newX < this.arena.width &&
+                    newZ >= 0 && newZ < this.arena.depth &&
+                    !isOccupied(newX, newZ)) {
+                    targetX = newX;
+                    targetZ = newZ;
+                    found = true;
+                    break;
+                }
+            }
+            
+            if (!found) {
+                console.warn(`[Game] 소환 실패: 빈 칸 없음`);
+                return null;
+            }
+        }
+        
+        // 적 생성
+        const unit = await this.placeUnit(monsterType, targetX, targetZ, 'enemy');
+        
+        if (unit) {
+            // ★ 인텐트 즉시 설정
+            if (typeof MonsterPatterns !== 'undefined') {
+                const intent = MonsterPatterns.rollIntent(unit);
+                unit.intent = intent;
+                this.createEnemyIntent(unit);
+            }
+            
+            console.log(`[Game] ✅ 적 소환 완료: ${monsterType} at (${targetX}, ${targetZ})`);
+        }
+        
+        return unit;
     },
     
     async generateEnemyUnits() {
         // Generate enemies based on turn
         const turn = this.state.turn;
         const enemyCount = Math.min(1 + Math.floor(turn / 2), 6);
-        const types = ['goblin', 'goblinArcher'];
+        const types = ['goblin', 'goblinArcher', 'slime'];
         
         for (let i = 0; i < enemyCount; i++) {
             const type = types[Math.floor(Math.random() * types.length)];

@@ -4,11 +4,11 @@
     "nameKo": "슬라임",
     
     "stats": {
-        "hp": 12,
+        "hp": 20,
         "damage": 5,
         "range": 1,
         "sprite": "slime.png",
-        "scale": 0.3
+        "scale": 0.35
     },
     
     "ai": {
@@ -16,7 +16,8 @@
         "preferredDistance": 1,
         "retreatBeforeAttack": false,
         "splitOnLowHP": true,
-        "splitThreshold": 0.5
+        "splitThreshold": 0.5,
+        "hasSplit": false
     },
     
     "weaknesses": ["fire", "ice", "lightning"],
@@ -31,21 +32,29 @@
             "weight": 50
         },
         { 
-            "id": "split",
-            "name": "분열",
-            "nameEn": "Split",
-            "type": "summon",
-            "summonType": "slime_small",
-            "weight": 20,
-            "breakRecipe": 2
-        },
-        { 
             "id": "goo_shield",
             "name": "점액 방어",
             "nameEn": "Goo Shield",
             "type": "defend", 
             "block": 4,
             "weight": 30
+        },
+        { 
+            "id": "absorb",
+            "name": "흡수",
+            "nameEn": "Absorb",
+            "type": "heal", 
+            "healAmount": 3,
+            "weight": 20
         }
-    ]
+    ],
+    
+    "splitIntent": {
+        "id": "split",
+        "name": "분열!",
+        "nameEn": "Split!",
+        "type": "split",
+        "summonType": "miniSlime",
+        "summonCount": 2
+    }
 }
