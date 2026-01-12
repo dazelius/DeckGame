@@ -2444,6 +2444,10 @@ const Game = {
                 if (typeof ShieldVFX !== 'undefined') {
                     ShieldVFX.breakAtUnit(target, block);
                 }
+                // ★ 쉴드 글로우 제거
+                if (typeof CombatEffects !== 'undefined') {
+                    CombatEffects.removeShieldGlow(target);
+                }
             }
             
             // ★ 쉴드 피격 연출
