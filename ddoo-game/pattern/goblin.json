@@ -22,41 +22,12 @@
     
     "intents": [
         { 
-            "id": "slash",
-            "name": "베기",
-            "nameEn": "Slash",
+            "id": "stab",
+            "name": "찌르기",
+            "nameEn": "Stab",
             "type": "attack", 
-            "damage": 8,
-            "weight": 40,
-            "breakRecipe": 3,
-            "cooldown": 2
-        },
-        { 
-            "id": "wild_swing",
-            "name": "난폭한 휘두르기",
-            "nameEn": "Wild Swing",
-            "type": "attack", 
-            "damage": 12,
-            "weight": 25,
-            "breakRecipe": 2,
-            "cooldown": 2
-        },
-        { 
-            "id": "defend",
-            "name": "방어 태세",
-            "nameEn": "Defensive Stance",
-            "type": "defend", 
-            "block": 6,
-            "weight": 20
-        },
-        { 
-            "id": "prepare",
-            "name": "준비",
-            "nameEn": "Prepare",
-            "type": "buff", 
-            "buffType": "strength",
-            "buffValue": 2,
-            "weight": 10
+            "damage": 6,
+            "weight": 50
         },
         { 
             "id": "flurry",
@@ -66,9 +37,17 @@
             "attackStyle": "flurry",
             "damage": 2,
             "hits": 3,
-            "weight": 25,
+            "weight": 30,
             "breakRecipe": 2,
             "cooldown": 2
+        },
+        { 
+            "id": "defend",
+            "name": "방어 태세",
+            "nameEn": "Defensive Stance",
+            "type": "defend", 
+            "block": 5,
+            "weight": 20
         }
     ],
     
@@ -138,15 +117,10 @@
             "배고파..."
         ],
         "intents": {
-            "slash": [
-                "베어버려!",
-                "찢어!",
-                "칼맛 봐라!"
-            ],
-            "wild_swing": [
-                "으아아아!!",
-                "다 부숴버려!",
-                "힘껏!!"
+            "stab": [
+                "찔러!",
+                "죽어!",
+                "키힉!"
             ],
             "flurry": [
                 "찔러찔러찔러!",

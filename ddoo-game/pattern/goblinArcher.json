@@ -28,7 +28,7 @@
             "nameEn": "Arrow",
             "type": "attack", 
             "damage": 6,
-            "weight": 45
+            "weight": 60
         },
         { 
             "id": "double_shot",
@@ -37,30 +37,9 @@
             "type": "attack", 
             "damage": 4,
             "hits": 2,
-            "weight": 25,
+            "weight": 40,
             "breakRecipe": 2,
             "cooldown": 2
-        },
-        { 
-            "id": "poison_arrow",
-            "name": "독화살",
-            "nameEn": "Poison Arrow",
-            "type": "attack", 
-            "damage": 3,
-            "poison": 4,
-            "weight": 20,
-            "breakRecipe": 2,
-            "cooldown": 2
-        },
-        { 
-            "id": "aim",
-            "name": "조준",
-            "nameEn": "Aim",
-            "type": "buff", 
-            "buffType": "accuracy",
-            "buffValue": 1,
-            "nextDamageBonus": 6,
-            "weight": 10
         }
     ],
     

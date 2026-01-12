@@ -31,7 +31,7 @@
             "element": "fire",
             "projectile": "fireball",
             "createZone": true,
-            "weight": 45
+            "weight": 60
         },
         { 
             "id": "hex",
@@ -39,26 +39,9 @@
             "nameEn": "Hex",
             "type": "debuff",
             "vulnerable": 2,
-            "weight": 25,
+            "weight": 40,
             "breakRecipe": 2,
             "cooldown": 2
-        },
-        { 
-            "id": "tribal_ward",
-            "name": "부족의 수호",
-            "nameEn": "Tribal Ward",
-            "type": "defend", 
-            "block": 5,
-            "weight": 20
-        },
-        { 
-            "id": "heal_ally",
-            "name": "치유의 손길",
-            "nameEn": "Healing Touch",
-            "type": "buff",
-            "buffType": "healAlly",
-            "buffValue": 5,
-            "weight": 10
         }
     ],
     

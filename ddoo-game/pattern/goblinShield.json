@@ -23,33 +23,12 @@
     
     "intents": [
         { 
-            "id": "shield_bash",
-            "name": "방패 밀치기",
+            "id": "bash",
+            "name": "방패 타격",
             "nameEn": "Shield Bash",
             "type": "attack", 
-            "damage": 4,
-            "hits": 1,
-            "knockbackPerHit": 1,
-            "weight": 30,
-            "breakRecipe": 2,
-            "cooldown": 2
-        },
-        { 
-            "id": "defend",
-            "name": "방패 방어",
-            "nameEn": "Shield Block",
-            "type": "defend", 
-            "block": 8,
-            "moveForward": 1,
-            "weight": 25
-        },
-        { 
-            "id": "fortify",
-            "name": "견고한 방어",
-            "nameEn": "Fortify",
-            "type": "defend", 
-            "block": 12,
-            "weight": 10
+            "damage": 5,
+            "weight": 35
         },
         { 
             "id": "charge",
@@ -59,9 +38,18 @@
             "damage": 0,
             "hits": 3,
             "knockbackPerHit": 1,
-            "weight": 35,
+            "weight": 30,
             "breakRecipe": 3,
             "cooldown": 3
+        },
+        { 
+            "id": "defend",
+            "name": "전진 방어",
+            "nameEn": "Advance Guard",
+            "type": "defend", 
+            "block": 8,
+            "moveForward": 1,
+            "weight": 35
         }
     ],
     
@@ -112,30 +100,20 @@
             "뚫리다니!"
         ],
         "intents": {
-            "shield_bash": [
-                "방패로 밀어!",
-                "돌진이다!",
-                "꺼져라!"
-            ],
-            "defend": [
-                "전진! 막는다!",
-                "앞으로!",
-                "밀어붙여!"
-            ],
-            "fortify": [
-                "더 단단하게!",
-                "뚫지 못해!",
-                "완벽한 방어!"
+            "bash": [
+                "받아라!",
+                "끼익!",
+                "덤벼!"
             ],
             "charge": [
                 "돌진이다!!",
                 "밀어버려!",
                 "꺼져라아!"
             ],
-            "taunt": [
-                "이쪽이다!",
-                "나를 노려라!",
-                "덤벼!"
+            "defend": [
+                "전진! 막는다!",
+                "앞으로!",
+                "버텨!"
             ]
         }
     }
