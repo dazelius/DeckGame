@@ -113,7 +113,7 @@
         "target": "enemy",
         "melee": true,
         "frontOnly": true,
-        "knockback": 2,
+        "knockback": 1,
         "aoe": { "width": 1, "depth": 1 },
         "element": "physical"
     }

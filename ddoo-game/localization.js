@@ -173,7 +173,7 @@ const Localization = {
             },
             kick: {
                 name: '킥',
-                desc: '적을 2칸 뒤로 밀침. 넉백 피해만.'
+                desc: '적을 1칸 뒤로 밀침. 넉백 피해만.'
             },
             
             // 스킬 카드
@@ -239,7 +239,7 @@ const Localization = {
             },
             kick: {
                 name: 'Kick',
-                desc: 'Push enemy 2 cells back. Knockback damage only.'
+                desc: 'Push enemy 1 cell back. Knockback damage only.'
             },
             defend: {
                 name: 'Defend',
@@ -301,7 +301,7 @@ const Localization = {
             },
             kick: {
                 name: 'キック',
-                desc: '敵を2マス後ろに押す。ノックバックダメージのみ。'
+                desc: '敵を1マス後ろに押す。ノックバックダメージのみ。'
             },
             defend: {
                 name: '防御',
