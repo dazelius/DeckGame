@@ -404,6 +404,17 @@ const MonsterPatterns = {
                     await game.moveEnemyToLine(enemy, target.gridZ);
                 }
                 
+                // ★★★ 돌진 공격 (넉백 포함) ★★★
+                if (intent.knockbackPerHit && typeof UnitCombat !== 'undefined') {
+                    console.log(`[MonsterPatterns] ${enemy.name || enemy.type}: 돌진 공격! hits=${hits}, knockback=${intent.knockbackPerHit}`);
+                    await UnitCombat.rushAttack(enemy, target, intent.damage || 0, {
+                        hits: hits,
+                        knockbackPerHit: intent.knockbackPerHit,
+                        isEnemy: true
+                    });
+                    break;
+                }
+                
                 for (let i = 0; i < hits; i++) {
                     if (target.hp <= 0) break;
                     

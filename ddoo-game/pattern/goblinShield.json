@@ -59,10 +59,12 @@
         },
         { 
             "id": "charge",
-            "name": "돌격",
+            "name": "돌진",
             "nameEn": "Charge",
             "type": "attack", 
-            "damage": 10,
+            "damage": 0,
+            "hits": 3,
+            "knockbackPerHit": 1,
             "weight": 10,
             "breakRecipe": 3
         }
@@ -131,9 +133,9 @@
                 "완벽한 방어!"
             ],
             "charge": [
-                "돌격이다!!",
-                "전진!",
-                "밀어붙여!"
+                "돌진이다!!",
+                "밀어버려!",
+                "꺼져라아!"
             ],
             "taunt": [
                 "이쪽이다!",
