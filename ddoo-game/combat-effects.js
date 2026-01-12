@@ -822,11 +822,11 @@ const CombatEffects = {
             this.container.addChild(fireball);
             
             // ========================================
-            // 3D 파티클 시스템 - 궤도 파티클들
+            // 3D 파티클 시스템 - 궤도 파티클들 (경량화)
             // ========================================
             const orbitParticles = [];
-            const NUM_ORBITS = 3;  // 궤도 레이어 수
-            const PARTICLES_PER_ORBIT = 8;
+            const NUM_ORBITS = 2;  // 궤도 레이어 수 (3→2)
+            const PARTICLES_PER_ORBIT = 5;  // 궤도당 파티클 (8→5)
             
             // 각 궤도 레이어 생성
             for (let orbit = 0; orbit < NUM_ORBITS; orbit++) {
@@ -1047,10 +1047,10 @@ const CombatEffects = {
                 });
             };
             
-            // 파티클 생성 인터벌
-            const trailInterval = setInterval(createVolumetricTrail, 15);
-            const sparkInterval = setInterval(createSpark, 12);
-            const smokeInterval = setInterval(createVolumetricSmoke, 60);
+            // 파티클 생성 인터벌 (경량화: 빈도 낮춤)
+            const trailInterval = setInterval(createVolumetricTrail, 30);   // 15→30
+            const sparkInterval = setInterval(createSpark, 25);             // 12→25
+            const smokeInterval = setInterval(createVolumetricSmoke, 100);  // 60→100
             
             // === 비행 애니메이션 ===
             const flightDuration = Math.max(0.3, distance / 700);
@@ -1193,9 +1193,9 @@ const CombatEffects = {
         }
         
         // ========================================
-        // 3D 화염 파편 (깊이별 레이어)
+        // 3D 화염 파편 (깊이별 레이어) - 경량화
         // ========================================
-        const NUM_DEBRIS = 36;
+        const NUM_DEBRIS = 18;  // 36→18
         for (let i = 0; i < NUM_DEBRIS; i++) {
             const debris = new PIXI.Container();
             debris.x = x;
@@ -1255,9 +1255,9 @@ const CombatEffects = {
         }
         
         // ========================================
-        // 3D 연기 볼륨
+        // 3D 연기 볼륨 (경량화)
         // ========================================
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 5; i++) {  // 10→5
             const smokeContainer = new PIXI.Container();
             const offsetX = (Math.random() - 0.5) * 70;
             const offsetY = (Math.random() - 0.5) * 40;
@@ -1296,9 +1296,9 @@ const CombatEffects = {
         }
         
         // ========================================
-        // 떠오르는 불씨 파티클
+        // 떠오르는 불씨 파티클 (경량화)
         // ========================================
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 10; i++) {  // 20→10
             setTimeout(() => {
                 if (!this.app || !this.container) return;
                 
@@ -1336,16 +1336,16 @@ const CombatEffects = {
         }
         
         // ========================================
-        // 바닥 스콜치 마크 (잔여 효과)
+        // 바닥 스콜치 마크 (잔여 효과) - 20% 축소
         // ========================================
         const scorch = new PIXI.Graphics();
         scorch.x = x;
         scorch.y = y + 20;  // 바닥 쪽
         scorch.zIndex = 180;
         
-        // 타원형 스콜치
-        scorch.ellipse(0, 0, 50, 20);
-        scorch.fill({ color: 0x111111, alpha: 0.4 });
+        // 타원형 스콜치 (50,20 → 40,16 = 20% 축소)
+        scorch.ellipse(0, 0, 40, 16);
+        scorch.fill({ color: 0x111111, alpha: 0.35 });
         this.container.addChild(scorch);
         
         scorch.scale.set(0.5);
