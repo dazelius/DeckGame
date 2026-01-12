@@ -26,6 +26,9 @@ const KnockbackSystem = {
         return unit?.container || unit?.sprite || null;
     },
     
+    // 넉백 중인 유닛 추적 (무한 재귀 방지)
+    _knockbackInProgress: new Set(),
+    
     // ==========================================
     // 넉백 실행 (1칸씩 반복 처리)
     // ==========================================
@@ -34,6 +37,14 @@ const KnockbackSystem = {
         if (!posTarget || unit.hp <= 0) return false;
         if (!this.game) return false;
         
+        // ★ 무한 재귀 방지: 이미 넉백 중인 유닛이면 실패
+        if (this._knockbackInProgress.has(unit)) {
+            console.log(`[Knockback] ${unit.type} 이미 넉백 중 - 스킵`);
+            return false;
+        }
+        
+        this._knockbackInProgress.add(unit);
+        
         const isEnemy = unit.team === 'enemy';
         const knockbackDir = isEnemy ? direction : -direction; // Enemies go right (+X), allies go left (-X)
         
@@ -41,51 +52,56 @@ const KnockbackSystem = {
         let hitWall = false;
         let hitUnit = false;
         
-        // ★ 1칸씩 반복 처리 (2칸 이상 넉백도 제대로 처리)
-        for (let i = 0; i < cells; i++) {
-            if (unit.hp <= 0) break;  // 사망 체크
-            
-            const nextGridX = unit.gridX + knockbackDir;
-            
-            // 벽 체크
-            if (nextGridX < 0 || nextGridX >= this.game.arena.width) {
-                hitWall = true;
-                break;
-            }
-            
-            // 유닛 충돌 체크
-            const allUnits = [...this.game.state.playerUnits, ...this.game.state.enemyUnits];
-            const blockingUnit = allUnits.find(u => 
-                u !== unit && u.hp > 0 && u.gridX === nextGridX && u.gridZ === unit.gridZ
-            );
-            
-            if (blockingUnit) {
-                // Chain knockback - push the blocking unit 1 cell
-                const chainSuccess = await this.knockback(blockingUnit, direction, 1);
-                if (!chainSuccess) {
-                    // Blocking unit couldn't move, collision!
-                    await this.collisionImpact(unit, blockingUnit);
-                    this.dealKnockbackDamage(unit, this.COLLISION_DAMAGE, 'collision');
-                    this.dealKnockbackDamage(blockingUnit, this.COLLISION_DAMAGE, 'collision');
-                    hitUnit = true;
+        try {
+            // ★ 1칸씩 반복 처리 (2칸 이상 넉백도 제대로 처리)
+            for (let i = 0; i < cells; i++) {
+                if (unit.hp <= 0) break;  // 사망 체크
+                
+                const nextGridX = unit.gridX + knockbackDir;
+                
+                // 벽 체크
+                if (nextGridX < 0 || nextGridX >= this.game.arena.width) {
+                    hitWall = true;
                     break;
                 }
+                
+                // 유닛 충돌 체크
+                const allUnits = [...this.game.state.playerUnits, ...this.game.state.enemyUnits];
+                const blockingUnit = allUnits.find(u => 
+                    u !== unit && u.hp > 0 && u.gridX === nextGridX && u.gridZ === unit.gridZ
+                );
+                
+                if (blockingUnit) {
+                    // Chain knockback - push the blocking unit 1 cell
+                    const chainSuccess = await this.knockback(blockingUnit, direction, 1);
+                    if (!chainSuccess) {
+                        // Blocking unit couldn't move, collision!
+                        await this.collisionImpact(unit, blockingUnit);
+                        this.dealKnockbackDamage(unit, this.COLLISION_DAMAGE, 'collision');
+                        this.dealKnockbackDamage(blockingUnit, this.COLLISION_DAMAGE, 'collision');
+                        hitUnit = true;
+                        break;
+                    }
+                }
+                
+                // 1칸 이동
+                await this.executeKnockback(unit, nextGridX);
+                movedCells++;
             }
             
-            // 1칸 이동
-            await this.executeKnockback(unit, nextGridX);
-            movedCells++;
-        }
-        
-        // 벽에 충돌
-        if (hitWall) {
-            await this.wallImpact(unit);
-            this.dealKnockbackDamage(unit, this.WALL_DAMAGE, 'wall');
-        }
-        
-        // 이동한 칸만큼 넉백 대미지 (이동 안했으면 0)
-        if (movedCells > 0) {
-            this.dealKnockbackDamage(unit, this.KNOCKBACK_DAMAGE * movedCells, 'knockback');
+            // 벽에 충돌
+            if (hitWall) {
+                await this.wallImpact(unit);
+                this.dealKnockbackDamage(unit, this.WALL_DAMAGE, 'wall');
+            }
+            
+            // 이동한 칸만큼 넉백 대미지 (이동 안했으면 0)
+            if (movedCells > 0) {
+                this.dealKnockbackDamage(unit, this.KNOCKBACK_DAMAGE * movedCells, 'knockback');
+            }
+        } finally {
+            // ★ 넉백 완료 후 Set에서 제거
+            this._knockbackInProgress.delete(unit);
         }
         
         console.log(`[Knockback] ${unit.type}: ${movedCells}/${cells}칸 이동, wall=${hitWall}, unit=${hitUnit}`);
