@@ -179,6 +179,10 @@ const Localization = {
                 name: '돌진',
                 desc: '3번 밀어붙임! 넉백 피해만.'
             },
+            sneakAttack: {
+                name: '비열한 습격',
+                desc: '5 피해. 1 출혈 부여.'
+            },
             
             // 스킬 카드
             defend: {
@@ -249,6 +253,10 @@ const Localization = {
                 name: 'Rush',
                 desc: 'Push 3 times! Knockback damage only.'
             },
+            sneakAttack: {
+                name: 'Sneak Attack',
+                desc: '5 damage. Apply 1 Bleed.'
+            },
             defend: {
                 name: 'Defend',
                 desc: 'Gain 5 Block'
@@ -314,6 +322,10 @@ const Localization = {
             rush: {
                 name: '突進',
                 desc: '3回押す！ノックバックダメージのみ。'
+            },
+            sneakAttack: {
+                name: '卑劣な襲撃',
+                desc: '5ダメージ。1出血を付与。'
             },
             defend: {
                 name: '防御',

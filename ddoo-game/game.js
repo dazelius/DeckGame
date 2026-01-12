@@ -174,6 +174,11 @@ const Game = {
             KnockbackSystem.init(this);
         }
         
+        // ★ Bleed System (출혈)
+        if (typeof BleedSystem !== 'undefined') {
+            BleedSystem.init(this);
+        }
+        
         // Grid AOE System
         if (typeof GridAOE !== 'undefined') {
             GridAOE.init(this, this.app);
@@ -2378,6 +2383,14 @@ const Game = {
         // 실제 HP 피해가 있을 때만 데미지 표시
         if (remainingDamage > 0) {
             this.showDamage(target, remainingDamage);
+            
+            // ★ 출혈 추가 피해!
+            if (typeof BleedSystem !== 'undefined') {
+                const bleedDamage = BleedSystem.onDamageTaken(target, remainingDamage);
+                if (bleedDamage > 0 && target.hp > 0) {
+                    target.hp -= bleedDamage;
+                }
+            }
         }
         
         // Update HP bar (쉴드 변화도 반영)
@@ -2620,6 +2633,11 @@ const Game = {
             // 넉백 처리
             if (cardDef.knockback && targetEnemy.hp > 0 && typeof KnockbackSystem !== 'undefined') {
                 KnockbackSystem.knockback(targetEnemy, 1, cardDef.knockback);
+            }
+            
+            // ★ 출혈 부여
+            if (cardDef.bleed && targetEnemy.hp > 0 && typeof BleedSystem !== 'undefined') {
+                BleedSystem.applyBleed(targetEnemy, cardDef.bleed);
             }
             
             console.log(`[Game] 스킬 완료: ${cardId}`);
@@ -4242,6 +4260,11 @@ const Game = {
             this.state.enemyUnits.forEach(enemy => {
                 BreakSystem.onTurnEnd(enemy);
             });
+        }
+        
+        // ★ 턴 종료 시 출혈 감소
+        if (typeof BleedSystem !== 'undefined') {
+            BleedSystem.onTurnEnd(this.state.enemyUnits);
         }
         
         // Check victory - all enemies dead (handled by checkVictory)

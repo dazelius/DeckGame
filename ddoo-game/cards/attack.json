@@ -129,5 +129,17 @@
         "knockbackPerHit": 1,
         "aoe": { "width": 1, "depth": 1 },
         "element": "physical"
+    },
+    "sneakAttack": {
+        "name": "Sneak Attack",
+        "cost": 1,
+        "type": "attack",
+        "damage": 5,
+        "target": "enemy",
+        "melee": true,
+        "frontOnly": true,
+        "bleed": 1,
+        "aoe": { "width": 1, "depth": 1 },
+        "element": "physical"
     }
 }

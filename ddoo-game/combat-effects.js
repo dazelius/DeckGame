@@ -1681,6 +1681,12 @@ const CombatEffects = {
                 stroke: '#002244',
                 fontSize: 38,
                 prefix: ''
+            },
+            bleed: { 
+                fill: '#cc0000',
+                stroke: '#330000',
+                fontSize: 42,
+                prefix: '🩸'
             }
         };
         
