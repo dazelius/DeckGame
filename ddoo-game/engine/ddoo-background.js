@@ -25,8 +25,8 @@ const DDOOBackground = {
     // Camera defaults - fit grid exactly, hide back edge
     cameraDefaults: {
         posX: 5,       // Center of arena (X axis)
-        posY: 3.2,     // Slightly lower for better view
-        posZ: 4.8,     // Closer for better visibility
+        posY: 3.0,     // Slightly lower for better view
+        posZ: 4.5,     // ★ 5% 확대 (4.8 → 4.5)
         lookAtX: 5,    // Look at arena center
         lookAtY: 0,    // Look at floor level
         lookAtZ: 1.2   // Look slightly forward to hide back edge
