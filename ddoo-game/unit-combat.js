@@ -828,10 +828,13 @@ const UnitCombat = {
                 .to(posTarget, { y: startY - 10, duration: 0.15 }, '<');
         });
         
-        // 시전 이펙트
+        // ★ 시전 이펙트 (전기 수렴!)
+        this.createLightningCharge(startX, startY - 30);
         if (typeof CombatEffects !== 'undefined') {
             CombatEffects.screenFlash('#4488ff', 50, 0.2);
         }
+        
+        await new Promise(r => setTimeout(r, 200));
         
         // ====================================
         // 2. 연쇄 번개 처리
@@ -926,7 +929,7 @@ const UnitCombat = {
         return adjacent;
     },
     
-    // ★ 번개 발사 VFX
+    // ★ 번개 발사 VFX (강화!)
     async fireLightningBolt(from, to, damage, isFirst = false) {
         if (typeof CombatEffects === 'undefined' || !CombatEffects.container) return;
         
@@ -941,18 +944,28 @@ const UnitCombat = {
         const endY = toPos.y - (to.sprite?.height || 60) / 2;
         
         // 첫 번째 번개는 위에서 내려옴
-        const actualStartX = isFirst ? endX : startX;
-        const actualStartY = isFirst ? -50 : startY;
+        const actualStartX = isFirst ? endX + (Math.random() - 0.5) * 30 : startX;
+        const actualStartY = isFirst ? -100 : startY;
         
-        // 번개 생성
-        this.createLightningBolt(actualStartX, actualStartY, endX, endY, damage);
+        // ★ 강화된 화면 효과 (먼저!)
+        if (typeof CombatEffects !== 'undefined') {
+            // 흰색 플래시 (번개 느낌)
+            CombatEffects.screenFlash('#ffffff', 30, 0.5);
+        }
+        
+        // ★ 번개 3번 깜빡임 (리얼한 번개 느낌)
+        for (let flash = 0; flash < 3; flash++) {
+            this.createLightningBolt(actualStartX, actualStartY, endX, endY, damage, flash === 0);
+            await new Promise(r => setTimeout(r, 30));
+        }
+        
+        // ★ 착탄 임팩트!
+        this.createLightningImpact(endX, endY, damage);
         
         // 화면 효과
         if (typeof CombatEffects !== 'undefined') {
-            CombatEffects.screenShake(6 + damage / 2, 100);
-            CombatEffects.screenFlash('#88ccff', 40, 0.3);
-            CombatEffects.impactEffect(endX, endY, 0x4488ff, 1.0);
-            CombatEffects.burstParticles(endX, endY, 0x88ccff, 8);
+            CombatEffects.screenShake(10 + damage, 150);
+            CombatEffects.screenFlash('#88ccff', 60, 0.4);
         }
         
         // 피격 효과
@@ -960,42 +973,150 @@ const UnitCombat = {
             if (typeof CombatEffects !== 'undefined') {
                 CombatEffects.hitEffect(to.sprite);
             }
-            // 전기 틴트
-            to.sprite.tint = 0x88ccff;
-            gsap.to({}, {
-                duration: 0.2,
-                onComplete: () => {
-                    if (to.sprite && !to.sprite.destroyed) {
-                        to.sprite.tint = 0xffffff;
-                    }
+            // 전기 깜빡임
+            const originalTint = to.sprite.tint || 0xffffff;
+            let flickerCount = 0;
+            const flickerInterval = setInterval(() => {
+                if (!to.sprite || to.sprite.destroyed || flickerCount >= 6) {
+                    clearInterval(flickerInterval);
+                    if (to.sprite && !to.sprite.destroyed) to.sprite.tint = originalTint;
+                    return;
                 }
-            });
+                to.sprite.tint = flickerCount % 2 === 0 ? 0x88ccff : 0xffffff;
+                flickerCount++;
+            }, 40);
         }
         
         // 히트스톱
         if (typeof CombatEffects !== 'undefined') {
-            await CombatEffects.hitStop(20);
+            await CombatEffects.hitStop(30);
         }
     },
     
-    // ★ 번개 볼트 그래픽
-    createLightningBolt(x1, y1, x2, y2, damage) {
+    // ★ 번개 착탄 임팩트
+    createLightningImpact(x, y, damage) {
+        if (typeof CombatEffects === 'undefined' || !CombatEffects.container) return;
+        
+        const container = new PIXI.Container();
+        container.x = x;
+        container.y = y;
+        container.zIndex = 350;
+        CombatEffects.container.addChild(container);
+        
+        // 중앙 플래시
+        const flash = new PIXI.Graphics();
+        flash.circle(0, 0, 60);
+        flash.fill({ color: 0xffffff, alpha: 1 });
+        container.addChild(flash);
+        
+        gsap.to(flash, {
+            alpha: 0,
+            duration: 0.15,
+            onComplete: () => { if (!flash.destroyed) flash.destroy(); }
+        });
+        gsap.to(flash.scale, { x: 2, y: 2, duration: 0.15 });
+        
+        // 전기 링
+        for (let r = 0; r < 3; r++) {
+            const ring = new PIXI.Graphics();
+            ring.circle(0, 0, 20 + r * 15);
+            ring.stroke({ width: 3 - r, color: 0x88ccff, alpha: 0.8 });
+            container.addChild(ring);
+            
+            gsap.to(ring, {
+                alpha: 0,
+                duration: 0.3,
+                delay: r * 0.05
+            });
+            gsap.to(ring.scale, {
+                x: 2 + r * 0.5,
+                y: 2 + r * 0.5,
+                duration: 0.3,
+                delay: r * 0.05,
+                onComplete: () => { if (!ring.destroyed) ring.destroy(); }
+            });
+        }
+        
+        // 전기 스파크 (많이!)
+        for (let i = 0; i < 15 + damage; i++) {
+            const spark = new PIXI.Graphics();
+            const len = 8 + Math.random() * 20;
+            const angle = Math.random() * Math.PI * 2;
+            
+            spark.moveTo(0, 0);
+            spark.lineTo(Math.cos(angle) * len, Math.sin(angle) * len);
+            spark.stroke({ width: 2 + Math.random() * 2, color: 0xffffff, alpha: 1 });
+            
+            spark.x = (Math.random() - 0.5) * 30;
+            spark.y = (Math.random() - 0.5) * 30;
+            container.addChild(spark);
+            
+            const speed = 80 + Math.random() * 120;
+            gsap.to(spark, {
+                x: spark.x + Math.cos(angle) * speed,
+                y: spark.y + Math.sin(angle) * speed,
+                alpha: 0,
+                duration: 0.25 + Math.random() * 0.15,
+                ease: 'power2.out',
+                onComplete: () => { if (!spark.destroyed) spark.destroy(); }
+            });
+        }
+        
+        // 전기 볼 파티클
+        for (let i = 0; i < 8; i++) {
+            const ball = new PIXI.Graphics();
+            ball.circle(0, 0, 3 + Math.random() * 5);
+            ball.fill({ color: i % 2 === 0 ? 0x88ccff : 0xffffff, alpha: 1 });
+            container.addChild(ball);
+            
+            const angle = (i / 8) * Math.PI * 2;
+            const speed = 60 + Math.random() * 80;
+            
+            gsap.to(ball, {
+                x: Math.cos(angle) * speed,
+                y: Math.sin(angle) * speed,
+                alpha: 0,
+                duration: 0.3,
+                ease: 'power2.out',
+                onComplete: () => { if (!ball.destroyed) ball.destroy(); }
+            });
+        }
+        
+        // 컨테이너 정리
+        setTimeout(() => {
+            if (!container.destroyed) container.destroy({ children: true });
+        }, 500);
+    },
+    
+    // ★ 번개 볼트 그래픽 (강화!)
+    createLightningBolt(x1, y1, x2, y2, damage, isMain = true) {
         if (typeof CombatEffects === 'undefined' || !CombatEffects.container) return;
         
         const container = new PIXI.Container();
         container.zIndex = 300;
         CombatEffects.container.addChild(container);
         
-        // 번개 경로 생성 (지그재그)
-        const points = this.generateLightningPath(x1, y1, x2, y2);
+        // 번개 경로 생성 (더 많은 세그먼트)
+        const points = this.generateLightningPath(x1, y1, x2, y2, isMain ? 10 : 6);
         
-        // 글로우 레이어 (두꺼운)
+        // ★ 외부 글로우 (가장 두꺼운)
+        if (isMain) {
+            const outerGlow = new PIXI.Graphics();
+            outerGlow.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) {
+                outerGlow.lineTo(points[i].x, points[i].y);
+            }
+            outerGlow.stroke({ width: 30 + damage, color: 0x4488ff, alpha: 0.2 });
+            container.addChild(outerGlow);
+        }
+        
+        // 글로우 레이어
         const glow = new PIXI.Graphics();
         glow.moveTo(points[0].x, points[0].y);
         for (let i = 1; i < points.length; i++) {
             glow.lineTo(points[i].x, points[i].y);
         }
-        glow.stroke({ width: 12 + damage / 2, color: 0x4488ff, alpha: 0.4 });
+        glow.stroke({ width: 16 + damage / 2, color: 0x4488ff, alpha: 0.5 });
         container.addChild(glow);
         
         // 메인 번개
@@ -1004,7 +1125,7 @@ const UnitCombat = {
         for (let i = 1; i < points.length; i++) {
             main.lineTo(points[i].x, points[i].y);
         }
-        main.stroke({ width: 4 + damage / 4, color: 0x88ccff, alpha: 0.9 });
+        main.stroke({ width: 6 + damage / 3, color: 0x88ccff, alpha: 0.95 });
         container.addChild(main);
         
         // 코어 (가장 밝은)
@@ -1013,70 +1134,152 @@ const UnitCombat = {
         for (let i = 1; i < points.length; i++) {
             core.lineTo(points[i].x, points[i].y);
         }
-        core.stroke({ width: 2, color: 0xffffff, alpha: 1 });
+        core.stroke({ width: 3, color: 0xffffff, alpha: 1 });
         container.addChild(core);
         
-        // 분기 번개 (작은 가지들)
-        for (let i = 1; i < points.length - 1; i += 2) {
-            if (Math.random() > 0.5) {
-                const branch = new PIXI.Graphics();
-                const bx = points[i].x;
-                const by = points[i].y;
-                const bLen = 15 + Math.random() * 25;
-                const bAngle = Math.random() * Math.PI * 2;
-                
-                branch.moveTo(bx, by);
-                branch.lineTo(
-                    bx + Math.cos(bAngle) * bLen,
-                    by + Math.sin(bAngle) * bLen
-                );
-                branch.stroke({ width: 2, color: 0x88ccff, alpha: 0.7 });
-                container.addChild(branch);
+        // ★ 분기 번개 (더 많이!)
+        if (isMain) {
+            for (let i = 1; i < points.length - 1; i++) {
+                if (Math.random() > 0.3) {
+                    this.createLightningBranch(container, points[i].x, points[i].y, damage);
+                }
             }
         }
         
-        // 스파크 파티클
-        for (let i = 0; i < 6; i++) {
-            const spark = new PIXI.Graphics();
-            spark.circle(0, 0, 2 + Math.random() * 3);
-            spark.fill({ color: 0xffffff, alpha: 1 });
-            
-            const idx = Math.floor(Math.random() * points.length);
-            spark.x = points[idx].x;
-            spark.y = points[idx].y;
-            container.addChild(spark);
-            
-            gsap.to(spark, {
-                x: spark.x + (Math.random() - 0.5) * 40,
-                y: spark.y + (Math.random() - 0.5) * 40,
-                alpha: 0,
-                duration: 0.2 + Math.random() * 0.2,
-                onComplete: () => { if (!spark.destroyed) spark.destroy(); }
-            });
-        }
-        
-        // 페이드아웃
+        // 빠른 페이드아웃 (깜빡임 효과)
         gsap.to(container, {
             alpha: 0,
-            duration: 0.15,
-            delay: 0.05,
+            duration: 0.08,
+            delay: 0.02,
             onComplete: () => {
                 if (!container.destroyed) container.destroy({ children: true });
             }
         });
     },
     
+    // ★ 시전시 전기 수렴 효과
+    createLightningCharge(x, y) {
+        if (typeof CombatEffects === 'undefined' || !CombatEffects.container) return;
+        
+        const container = new PIXI.Container();
+        container.x = x;
+        container.y = y;
+        container.zIndex = 280;
+        CombatEffects.container.addChild(container);
+        
+        // 전기 파티클이 모여드는 효과
+        for (let i = 0; i < 20; i++) {
+            const spark = new PIXI.Graphics();
+            const size = 3 + Math.random() * 5;
+            
+            // 멀리서 시작
+            const angle = (i / 20) * Math.PI * 2 + Math.random() * 0.3;
+            const dist = 80 + Math.random() * 60;
+            spark.x = Math.cos(angle) * dist;
+            spark.y = Math.sin(angle) * dist;
+            
+            // 선 형태로 그리기
+            spark.moveTo(-size, 0);
+            spark.lineTo(size, 0);
+            spark.stroke({ width: 2, color: i % 2 === 0 ? 0x88ccff : 0xffffff, alpha: 0.9 });
+            
+            container.addChild(spark);
+            
+            // 중앙으로 수렴!
+            gsap.to(spark, {
+                x: (Math.random() - 0.5) * 10,
+                y: (Math.random() - 0.5) * 10,
+                alpha: 0,
+                duration: 0.15 + Math.random() * 0.1,
+                delay: i * 0.01,
+                ease: 'power3.in',
+                onComplete: () => { if (!spark.destroyed) spark.destroy(); }
+            });
+            
+            gsap.to(spark, {
+                rotation: Math.random() * Math.PI * 4,
+                duration: 0.2
+            });
+        }
+        
+        // 중앙 전기 구체
+        const core = new PIXI.Graphics();
+        core.circle(0, 0, 5);
+        core.fill({ color: 0xffffff, alpha: 0 });
+        container.addChild(core);
+        
+        gsap.to(core, {
+            alpha: 1,
+            duration: 0.15,
+            delay: 0.1
+        });
+        gsap.to(core.scale, {
+            x: 3,
+            y: 3,
+            duration: 0.1,
+            delay: 0.15,
+            onComplete: () => {
+                gsap.to(core, {
+                    alpha: 0,
+                    duration: 0.05,
+                    onComplete: () => {
+                        if (!core.destroyed) core.destroy();
+                    }
+                });
+            }
+        });
+        
+        // 컨테이너 정리
+        setTimeout(() => {
+            if (!container.destroyed) container.destroy({ children: true });
+        }, 400);
+    },
+    
+    // ★ 번개 분기
+    createLightningBranch(parent, x, y, damage) {
+        const branch = new PIXI.Graphics();
+        const segments = 3 + Math.floor(Math.random() * 3);
+        const angle = Math.random() * Math.PI * 2;
+        const length = 20 + Math.random() * 40;
+        
+        let curX = x;
+        let curY = y;
+        
+        branch.moveTo(curX, curY);
+        
+        for (let i = 0; i < segments; i++) {
+            const segLen = length / segments;
+            const offsetAngle = angle + (Math.random() - 0.5) * 0.8;
+            curX += Math.cos(offsetAngle) * segLen;
+            curY += Math.sin(offsetAngle) * segLen;
+            branch.lineTo(curX, curY);
+        }
+        
+        branch.stroke({ width: 2 + Math.random() * 2, color: 0x88ccff, alpha: 0.7 });
+        parent.addChild(branch);
+        
+        // 분기 끝에 스파크
+        const spark = new PIXI.Graphics();
+        spark.circle(curX, curY, 2 + Math.random() * 3);
+        spark.fill({ color: 0xffffff, alpha: 0.8 });
+        parent.addChild(spark);
+    },
+    
     // ★ 번개 경로 생성 (지그재그)
-    generateLightningPath(x1, y1, x2, y2) {
+    generateLightningPath(x1, y1, x2, y2, numSegments = 8) {
         const points = [{ x: x1, y: y1 }];
-        const segments = 6 + Math.floor(Math.random() * 4);
+        const segments = numSegments + Math.floor(Math.random() * 4);
         
         const dx = (x2 - x1) / segments;
         const dy = (y2 - y1) / segments;
         
+        // 거리에 비례한 오프셋
+        const dist = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+        const maxOffset = Math.min(50, dist * 0.15);
+        
         for (let i = 1; i < segments; i++) {
-            const offsetX = (Math.random() - 0.5) * 30;
-            const offsetY = (Math.random() - 0.5) * 20;
+            const offsetX = (Math.random() - 0.5) * maxOffset;
+            const offsetY = (Math.random() - 0.5) * maxOffset * 0.7;
             
             points.push({
                 x: x1 + dx * i + offsetX,
