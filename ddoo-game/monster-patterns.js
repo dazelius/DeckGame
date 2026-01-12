@@ -672,6 +672,9 @@ const MonsterPatterns = {
                 if (mini) {
                     spawnedMinis.push(mini);
                     
+                    // ★★★ 새로 생성된 유닛은 이번 턴에 행동하지 않음!
+                    mini.intentChangedThisTurn = true;
+                    
                     // 팝업 연출
                     if (mini.sprite) {
                         const targetScale = mini.baseScale || 0.6;

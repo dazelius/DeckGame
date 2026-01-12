@@ -632,6 +632,9 @@ const Game = {
             if (pattern?.splitIntent) {
                 unit.intent = { ...pattern.splitIntent };
                 
+                // ★★★ 이번 턴에 인텐트가 바뀌었으므로 행동하지 않음 표시!
+                unit.intentChangedThisTurn = true;
+                
                 // ★ 인텐트 UI 실시간 업데이트
                 this.createEnemyIntent(unit);
                 
@@ -3713,6 +3716,13 @@ const Game = {
         
         // ★ 차징 이펙트 정리 (인텐트 실행 시)
         this.clearChargingEffect(enemy);
+        
+        // ★★★ 이번 턴에 인텐트가 바뀌었으면 행동하지 않음! (분열 등)
+        if (enemy.intentChangedThisTurn) {
+            console.log(`[Game] ${enemy.name || enemy.type} - 인텐트가 이번 턴에 변경됨, 행동 스킵!`);
+            delete enemy.intentChangedThisTurn; // 플래그 제거 (다음 턴에는 행동)
+            return;
+        }
         
         // 브레이크 상태면 행동 불가
         if (typeof BreakSystem !== 'undefined' && !BreakSystem.canAct(enemy)) {
