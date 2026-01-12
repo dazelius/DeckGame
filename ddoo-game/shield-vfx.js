@@ -9,10 +9,14 @@ const ShieldVFX = {
     // ==========================================
     // 초기화
     // ==========================================
-    init(app, container) {
+    init(app, stage) {
         this.app = app;
-        this.container = container || app?.stage;
-        console.log('[ShieldVFX] 실드 VFX 시스템 초기화');
+        // ★ 유닛보다 앞에 그려지도록 별도의 높은 zIndex 컨테이너 생성
+        this.container = new PIXI.Container();
+        this.container.zIndex = 800;  // 유닛(10), effects(20)보다 훨씬 높게
+        this.container.sortableChildren = true;
+        stage.addChild(this.container);
+        console.log('[ShieldVFX] 실드 VFX 시스템 초기화 (zIndex: 800)');
     },
     
     // ==========================================
