@@ -495,87 +495,130 @@ const MonsterPatterns = {
                 break;
                 
             case 'defend':
-                // ★★★ 방어하면서 전진! ★★★
+                // ★★★ 방어하면서 전진 또는 레인 변경! ★★★
                 if (intent.moveForward && intent.moveForward > 0) {
-                    const moveDir = -1; // 적은 왼쪽(플레이어 쪽)으로 전진
-                    let targetX = enemy.gridX + (moveDir * intent.moveForward);
-                    
-                    // ★ 플레이어 진영 침범 금지 (적은 자기 진영에서만 이동)
                     const minX = game.arena?.playerZoneX || 5;
-                    targetX = Math.max(minX, targetX);
+                    const maxZ = game.arena?.depth - 1 || 2;
                     
-                    // 이동 가능 범위 체크 (이미 최소 위치에 있으면 이동 안함)
-                    if (targetX < enemy.gridX && targetX < game.arena.width) {
-                        // 해당 위치에 다른 유닛이 없는지 체크
-                        const allUnits = [...game.state.playerUnits, ...game.state.enemyUnits];
-                        const blocked = allUnits.some(u => 
-                            u !== enemy && u.hp > 0 && u.gridX === targetX && u.gridZ === enemy.gridZ
-                        );
+                    // 유닛 점유 체크 함수
+                    const allUnits = [...game.state.playerUnits, ...game.state.enemyUnits];
+                    const isOccupied = (x, z) => allUnits.some(u => 
+                        u !== enemy && u.hp > 0 && u.gridX === x && u.gridZ === z
+                    );
+                    
+                    // ★ 목표 위치 결정
+                    let targetX = enemy.gridX;
+                    let targetZ = enemy.gridZ;
+                    let moved = false;
+                    
+                    // 1순위: 앞으로 전진 (플레이어 진영 침범 금지)
+                    const forwardX = enemy.gridX - intent.moveForward;
+                    if (forwardX >= minX && !isOccupied(forwardX, enemy.gridZ)) {
+                        targetX = forwardX;
+                        moved = true;
+                        console.log(`[MonsterPatterns] ${enemy.name || enemy.type}: 전진 방어 선택 → 앞으로 (${enemy.gridX} → ${targetX})`);
+                    } else {
+                        // 2순위: 앞으로 못가면 레인 변경 시도
+                        const laneOptions = [];
                         
-                        if (!blocked) {
-                            const oldX = enemy.gridX;
-                            console.log(`[MonsterPatterns] ${enemy.name || enemy.type}: 전진 방어! ${oldX} → ${targetX}`);
+                        // 위 레인 체크
+                        if (enemy.gridZ > 0 && !isOccupied(enemy.gridX, enemy.gridZ - 1)) {
+                            laneOptions.push({ z: enemy.gridZ - 1, priority: 1 });
+                        }
+                        // 아래 레인 체크
+                        if (enemy.gridZ < maxZ && !isOccupied(enemy.gridX, enemy.gridZ + 1)) {
+                            laneOptions.push({ z: enemy.gridZ + 1, priority: 1 });
+                        }
+                        // 대각선 앞쪽도 체크 (더 좋은 포지션)
+                        if (forwardX >= minX) {
+                            if (enemy.gridZ > 0 && !isOccupied(forwardX, enemy.gridZ - 1)) {
+                                laneOptions.push({ x: forwardX, z: enemy.gridZ - 1, priority: 2 });
+                            }
+                            if (enemy.gridZ < maxZ && !isOccupied(forwardX, enemy.gridZ + 1)) {
+                                laneOptions.push({ x: forwardX, z: enemy.gridZ + 1, priority: 2 });
+                            }
+                        }
+                        
+                        if (laneOptions.length > 0) {
+                            // 대각선 전진 우선, 그다음 레인 변경
+                            laneOptions.sort((a, b) => b.priority - a.priority);
+                            const choice = laneOptions[0];
+                            targetX = choice.x !== undefined ? choice.x : enemy.gridX;
+                            targetZ = choice.z;
+                            moved = true;
+                            console.log(`[MonsterPatterns] ${enemy.name || enemy.type}: 전진 방어 선택 → 레인 변경 (${enemy.gridZ} → ${targetZ}), X: ${enemy.gridX} → ${targetX}`);
+                        } else {
+                            console.log(`[MonsterPatterns] ${enemy.name || enemy.type}: 전진 불가 - 갈 곳이 없음!`);
+                        }
+                    }
+                    
+                    if (moved) {
+                        const oldX = enemy.gridX;
+                        const oldZ = enemy.gridZ;
+                        
+                        // ★ UnitCombat 헬퍼 사용
+                        const posTarget = typeof UnitCombat !== 'undefined' 
+                            ? UnitCombat.getPositionTarget(enemy) 
+                            : (enemy.container || enemy.sprite);
+                        const scaleTarget = enemy.sprite;
+                        const baseScale = enemy.baseScale || scaleTarget?.scale?.x || 1;
+                        
+                        const newPos = game.getCellCenter(targetX, targetZ);
+                        
+                        if (posTarget && newPos) {
+                            console.log(`[MonsterPatterns] 전진 애니메이션: (${posTarget.x}, ${posTarget.y}) → (${newPos.x}, ${newPos.y})`);
                             
-                            // ★ UnitCombat 헬퍼 사용
-                            const posTarget = typeof UnitCombat !== 'undefined' 
-                                ? UnitCombat.getPositionTarget(enemy) 
-                                : (enemy.container || enemy.sprite);
-                            const scaleTarget = enemy.sprite;
-                            const baseScale = enemy.baseScale || scaleTarget?.scale?.x || 1;
+                            // ★★★ 중요: 애니메이션 중 위치 덮어쓰기 방지!
+                            enemy.isAnimating = true;
                             
-                            const newPos = game.getCellCenter(targetX, enemy.gridZ);
-                            
-                            if (posTarget && newPos) {
-                                console.log(`[MonsterPatterns] 전진 애니메이션: (${posTarget.x}, ${posTarget.y}) → (${newPos.x}, ${newPos.y})`);
+                            await new Promise(resolve => {
+                                const tl = gsap.timeline({ onComplete: resolve });
                                 
-                                // ★★★ 중요: 애니메이션 중 위치 덮어쓰기 방지!
-                                enemy.isAnimating = true;
+                                // ★ scaleTarget과 scale이 유효한 경우에만 스케일 애니메이션
+                                const hasScale = scaleTarget && scaleTarget.scale && !scaleTarget.destroyed;
                                 
-                                await new Promise(resolve => {
-                                    const tl = gsap.timeline({ onComplete: resolve });
-                                    
-                                    // ★ scaleTarget과 scale이 유효한 경우에만 스케일 애니메이션
-                                    const hasScale = scaleTarget && scaleTarget.scale && !scaleTarget.destroyed;
-                                    
-                                    // 1. 준비 자세 (방패 들기)
-                                    if (hasScale) {
-                                        tl.to(scaleTarget.scale, {
-                                            x: baseScale * 0.95,
-                                            y: baseScale * 1.05,
-                                            duration: 0.08,
-                                            ease: 'power1.in'
-                                        });
-                                    }
-                                    
-                                    // 2. 전진! (묵직하게)
-                                    tl.to(posTarget, {
-                                        x: newPos.x,
-                                        y: newPos.y,
-                                        duration: 0.25,
-                                        ease: 'power2.inOut'
+                                // 1. 준비 자세 (방패 들기)
+                                if (hasScale) {
+                                    tl.to(scaleTarget.scale, {
+                                        x: baseScale * 0.95,
+                                        y: baseScale * 1.05,
+                                        duration: 0.08,
+                                        ease: 'power1.in'
                                     });
-                                    
-                                    if (hasScale) {
-                                        tl.to(scaleTarget.scale, {
-                                            x: baseScale * 1.1,
-                                            y: baseScale * 0.9,
-                                            duration: 0.15
-                                        }, '<');
-                                        
-                                        // 3. 착지 (안정)
-                                        tl.to(scaleTarget.scale, {
-                                            x: baseScale,
-                                            y: baseScale,
-                                            duration: 0.1,
-                                            ease: 'power2.out'
-                                        });
-                                    }
+                                }
+                                
+                                // 2. 전진! (묵직하게)
+                                tl.to(posTarget, {
+                                    x: newPos.x,
+                                    y: newPos.y,
+                                    duration: 0.25,
+                                    ease: 'power2.inOut'
                                 });
                                 
-                                // ★ 그리드 위치 업데이트 후 애니메이션 플래그 해제
-                                enemy.gridX = targetX;
-                                enemy.isAnimating = false;
-                            }
+                                if (hasScale) {
+                                    tl.to(scaleTarget.scale, {
+                                        x: baseScale * 1.1,
+                                        y: baseScale * 0.9,
+                                        duration: 0.15
+                                    }, '<');
+                                    
+                                    // 3. 착지 (안정)
+                                    tl.to(scaleTarget.scale, {
+                                        x: baseScale,
+                                        y: baseScale,
+                                        duration: 0.1,
+                                        ease: 'power2.out'
+                                    });
+                                }
+                            });
+                            
+                            // ★ 그리드 위치 업데이트 후 애니메이션 플래그 해제
+                            enemy.gridX = targetX;
+                            enemy.gridZ = targetZ;
+                            enemy.z = targetZ + 0.5;
+                            enemy.isAnimating = false;
+                            
+                            console.log(`[MonsterPatterns] ${enemy.name || enemy.type}: 전진 완료 (${oldX},${oldZ}) → (${targetX},${targetZ})`);
                         }
                     }
                 }
