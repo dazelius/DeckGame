@@ -314,6 +314,11 @@ const BloodEffect = {
             d.rotation = 0;
             d.rotationSpeed = 0;
             
+            // 즉시 그리기
+            p.clear();
+            p.circle(0, 0, Math.max(10, d.size));
+            p.fill({ color: d.color, alpha: 0.5 });
+            
             this.activeParticles.push(p);
         }
     },
@@ -349,6 +354,11 @@ const BloodEffect = {
             d.maxTrailLength = 8 + Math.floor(Math.random() * 8);
             d.stretch = 1;
             
+            // 즉시 그리기
+            p.clear();
+            p.circle(0, 0, Math.max(3, d.size));
+            p.fill({ color: d.color, alpha: 1 });
+            
             this.activeParticles.push(p);
         }
     },
@@ -383,10 +393,10 @@ const BloodEffect = {
     },
     
     // ==========================================
-    // 업데이트 루프 (단순화)
+    // 업데이트 루프 (단순화 + NaN 방지)
     // ==========================================
     update(delta) {
-        const dt = delta / 60;
+        const dt = Math.min(delta / 60, 0.1);  // 최대 0.1초로 제한
         
         for (let i = this.activeParticles.length - 1; i >= 0; i--) {
             const p = this.activeParticles[i];
@@ -396,6 +406,15 @@ const BloodEffect = {
             }
             
             const d = p.particleData;
+            
+            // ★ NaN 방지 - 값이 이상하면 스킵
+            if (isNaN(p.x) || isNaN(p.y) || isNaN(d.vx) || isNaN(d.vy)) {
+                p.active = false;
+                p.visible = false;
+                p.clear();
+                this.activeParticles.splice(i, 1);
+                continue;
+            }
             
             // 생명 감소
             d.life -= dt * 0.7;
@@ -409,16 +428,18 @@ const BloodEffect = {
             }
             
             // 간단한 물리
-            d.vy += 500 * dt;
-            p.x += d.vx * dt;
+            const vx = d.vx || 0;
+            const vy = d.vy || 0;
+            d.vy = vy + 500 * dt;
+            p.x += vx * dt;
             p.y += d.vy * dt;
             
-            // 그리기 - 매우 단순하게
+            // 그리기
             p.clear();
-            const size = Math.max(5, d.size * d.life);
+            const size = Math.max(5, (d.size || 5) * d.life);
             const alpha = Math.min(1, d.life * 1.5);
             p.circle(0, 0, size);
-            p.fill({ color: 0xCC0000, alpha: alpha });
+            p.fill({ color: d.color || 0xCC0000, alpha: alpha });
         }
     },
     
