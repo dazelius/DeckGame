@@ -38,6 +38,7 @@
             "nameEn": "Shield Block",
             "type": "defend", 
             "block": 8,
+            "moveForward": 1,
             "weight": 35
         },
         { 
@@ -123,9 +124,9 @@
                 "꺼져라!"
             ],
             "defend": [
-                "막는다!",
-                "철벽!",
-                "버텨!"
+                "전진! 막는다!",
+                "앞으로!",
+                "밀어붙여!"
             ],
             "fortify": [
                 "더 단단하게!",

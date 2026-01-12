@@ -433,6 +433,42 @@ const MonsterPatterns = {
                 break;
                 
             case 'defend':
+                // ★★★ 방어하면서 전진! ★★★
+                if (intent.moveForward && intent.moveForward > 0) {
+                    const moveDir = -1; // 적은 왼쪽(플레이어 쪽)으로 전진
+                    const targetX = enemy.gridX + (moveDir * intent.moveForward);
+                    
+                    // 이동 가능 범위 체크
+                    if (targetX >= 0 && targetX < game.arena.width) {
+                        // 해당 위치에 다른 유닛이 없는지 체크
+                        const allUnits = [...game.state.playerUnits, ...game.state.enemyUnits];
+                        const blocked = allUnits.some(u => 
+                            u !== enemy && u.hp > 0 && u.gridX === targetX && u.gridZ === enemy.gridZ
+                        );
+                        
+                        if (!blocked) {
+                            console.log(`[MonsterPatterns] ${enemy.name || enemy.type}: 전진 방어! ${enemy.gridX} → ${targetX}`);
+                            
+                            // 이동 애니메이션
+                            const newPos = game.getCellCenter(targetX, enemy.gridZ);
+                            const posTarget = enemy.container || enemy.sprite;
+                            
+                            if (posTarget && newPos) {
+                                await new Promise(resolve => {
+                                    gsap.to(posTarget, {
+                                        x: newPos.x,
+                                        y: newPos.y,
+                                        duration: 0.3,
+                                        ease: 'power2.out',
+                                        onComplete: resolve
+                                    });
+                                });
+                                enemy.gridX = targetX;
+                            }
+                        }
+                    }
+                }
+                
                 enemy.block = (enemy.block || 0) + (intent.block || 0);
                 if (typeof game.updateUnitHPBar === 'function') {
                     game.updateUnitHPBar(enemy); // ★ HP 바에 쉴드 반영
