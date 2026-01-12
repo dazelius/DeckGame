@@ -1,34 +1,53 @@
 // ==========================================
 // Monster Dialogue System
 // 몬스터 대사 시스템
+// @see types.js - Unit, Intent, MonsterDialogues 타입 정의
 // ==========================================
 
+/**
+ * 몬스터 대사 시스템
+ * @namespace MonsterDialogue
+ */
 const MonsterDialogue = {
-    // 대사 표시 확률 (0~1)
+    /** @type {PIXI.Application} */
+    app: null,
+    
+    /** 
+     * 대사 표시 확률 (0~1)
+     * @type {Object.<string, number>}
+     */
     showChance: {
         onSpawn: 0.8,       // 등장 시
         onIntent: 0.5,      // 인텐트 선택 시
         onAction: 0.6,      // 행동 실행 시
-        onHit: 0.7,         // 피격 시 (★ 40% → 70%)
+        onHit: 0.7,         // 피격 시
         onDeath: 1.0,       // 사망 시
         onBreak: 0.9,       // 브레이크 시
         random: 0.1         // 매 턴 랜덤
     },
     
-    // 활성 대사 풍선 관리
+    /** 
+     * 활성 대사 풍선 관리
+     * @type {Map<Unit, PIXI.Container>}
+     */
     activeBubbles: new Map(),
     
-    // ==========================================
-    // 초기화
-    // ==========================================
+    /**
+     * 초기화
+     * @param {PIXI.Application} app - PIXI 앱 인스턴스
+     */
     init(app) {
         this.app = app;
         console.log('[MonsterDialogue] 다이얼로그 시스템 초기화');
     },
     
-    // ==========================================
-    // 대사 가져오기
-    // ==========================================
+    /**
+     * 대사 가져오기
+     * @param {Unit} unit - 유닛
+     * @param {'spawn'|'intent'|'attack'|'defend'|'hit'|'death'|'break'|'buff'|'random'} type - 대사 타입
+     * @param {string} [intentId] - 특정 인텐트 ID
+     * @returns {string|null} 대사 문자열 또는 null
+     */
     getDialogue(unit, type, intentId = null) {
         // MonsterPatterns에서 패턴 가져오기
         const pattern = typeof MonsterPatterns !== 'undefined' 
@@ -86,9 +105,12 @@ const MonsterDialogue = {
         return pool[Math.floor(Math.random() * pool.length)];
     },
     
-    // ==========================================
-    // 대사 표시 (확률 체크 포함)
-    // ==========================================
+    /**
+     * 대사 표시 시도 (확률 체크 포함)
+     * @param {Unit} unit - 유닛
+     * @param {'spawn'|'intent'|'attack'|'defend'|'hit'|'death'|'break'|'buff'|'random'} type - 대사 타입
+     * @param {string} [intentId] - 특정 인텐트 ID
+     */
     tryShow(unit, type, intentId = null) {
         const chance = this.showChance[type] || 0.5;
         if (Math.random() > chance) return;
@@ -99,9 +121,12 @@ const MonsterDialogue = {
         this.showBubble(unit, dialogue);
     },
     
-    // ==========================================
-    // 말풍선 표시
-    // ==========================================
+    /**
+     * 말풍선 표시
+     * @param {Unit} unit - 유닛
+     * @param {string} text - 대사 텍스트
+     * @param {number} [duration=2000] - 표시 시간 (ms)
+     */
     showBubble(unit, text, duration = 2000) {
         if (!unit.sprite || unit.sprite.destroyed) return;
         if (!this.app) return;
@@ -193,9 +218,10 @@ const MonsterDialogue = {
         console.log(`[Dialogue] ${unit.name || unit.type}: "${text}"`);
     },
     
-    // ==========================================
-    // 말풍선 숨기기
-    // ==========================================
+    /**
+     * 말풍선 숨기기
+     * @param {Unit} unit - 유닛
+     */
     hideBubble(unit) {
         const bubble = this.activeBubbles.get(unit) || unit.dialogueBubble;
         if (!bubble || bubble.destroyed) return;
@@ -213,9 +239,9 @@ const MonsterDialogue = {
         unit.dialogueBubble = null;
     },
     
-    // ==========================================
-    // 모든 말풍선 제거
-    // ==========================================
+    /**
+     * 모든 말풍선 제거
+     */
     hideAll() {
         this.activeBubbles.forEach((bubble, unit) => {
             if (!bubble.destroyed) bubble.destroy({ children: true });
@@ -226,14 +252,29 @@ const MonsterDialogue = {
     // ==========================================
     // 이벤트 핸들러
     // ==========================================
+    
+    /**
+     * 유닛 등장 시 호출
+     * @param {Unit} unit - 유닛
+     */
     onSpawn(unit) {
         setTimeout(() => this.tryShow(unit, 'spawn'), 500);
     },
     
+    /**
+     * 인텐트 선택 시 호출
+     * @param {Unit} unit - 유닛
+     * @param {Intent} intent - 선택된 인텐트
+     */
     onIntentSelected(unit, intent) {
         this.tryShow(unit, 'intent', intent?.id);
     },
     
+    /**
+     * 행동 실행 시 호출
+     * @param {Unit} unit - 유닛
+     * @param {Intent} intent - 실행할 인텐트
+     */
     onAction(unit, intent) {
         const type = intent?.type === 'defend' ? 'defend' 
                    : intent?.type === 'buff' ? 'buff'
@@ -241,14 +282,27 @@ const MonsterDialogue = {
         this.tryShow(unit, type, intent?.id);
     },
     
+    /**
+     * 피격 시 호출
+     * @param {Unit} unit - 유닛
+     * @param {number} damage - 받은 데미지
+     */
     onHit(unit, damage) {
         this.tryShow(unit, 'hit');
     },
     
+    /**
+     * 사망 시 호출
+     * @param {Unit} unit - 유닛
+     */
     onDeath(unit) {
         this.tryShow(unit, 'death');
     },
     
+    /**
+     * 브레이크 시 호출
+     * @param {Unit} unit - 유닛
+     */
     onBreak(unit) {
         this.tryShow(unit, 'break');
     }

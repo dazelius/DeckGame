@@ -1,37 +1,53 @@
 // =====================================================
 // Knockback System - 넉백 시스템
+// @see types.js - Unit 타입 정의
 // =====================================================
 
+/**
+ * 넉백 시스템
+ * @namespace KnockbackSystem
+ */
 const KnockbackSystem = {
+    /** @type {Object} */
     game: null,
     
-    // 넉백 대미지 설정
-    KNOCKBACK_DAMAGE: 2,      // 기본 넉백 대미지
-    WALL_DAMAGE: 5,           // 벽 충돌 대미지
-    COLLISION_DAMAGE: 3,      // 유닛 충돌 대미지 (양쪽)
-    PULL_CRASH_DAMAGE: 2,     // 당기기 충돌 대미지
+    /** @type {number} 기본 넉백 대미지 */
+    KNOCKBACK_DAMAGE: 2,
+    /** @type {number} 벽 충돌 대미지 */
+    WALL_DAMAGE: 5,
+    /** @type {number} 유닛 충돌 대미지 (양쪽) */
+    COLLISION_DAMAGE: 3,
+    /** @type {number} 당기기 충돌 대미지 */
+    PULL_CRASH_DAMAGE: 2,
     
-    // ==========================================
-    // 초기화
-    // ==========================================
+    /**
+     * 초기화
+     * @param {Object} gameRef - Game 객체 참조
+     */
     init(gameRef) {
         this.game = gameRef;
         console.log('[KnockbackSystem] 초기화 완료');
     },
     
-    // ==========================================
-    // 유틸: 위치용 타겟 (container || sprite)
-    // ==========================================
+    /**
+     * 유틸: 위치용 타겟 (container || sprite)
+     * @param {Unit} unit - 유닛
+     * @returns {PIXI.Container|PIXI.Sprite|null}
+     */
     getPositionTarget(unit) {
         return unit?.container || unit?.sprite || null;
     },
     
-    // 넉백 중인 유닛 추적 (무한 재귀 방지)
+    /** @type {Set<Unit>} 넉백 중인 유닛 추적 (무한 재귀 방지) */
     _knockbackInProgress: new Set(),
     
-    // ==========================================
-    // 넉백 실행 (1칸씩 반복 처리)
-    // ==========================================
+    /**
+     * 넉백 실행 (1칸씩 반복 처리)
+     * @param {Unit} unit - 넉백할 유닛
+     * @param {number} [direction=1] - 넉백 방향 (1: 적 기준 뒤로, -1: 앞으로)
+     * @param {number} [cells=1] - 넉백 거리 (칸)
+     * @returns {Promise<boolean>} 넉백 성공 여부
+     */
     async knockback(unit, direction = 1, cells = 1) {
         const posTarget = this.getPositionTarget(unit);
         if (!posTarget || unit.hp <= 0) return false;

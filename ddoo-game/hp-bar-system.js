@@ -1,7 +1,12 @@
 // ============================================================
 // HP Bar System - 유닛 HP 바 및 쉴드 UI 관리
+// @see types.js - Unit 타입 정의
 // ============================================================
 
+/**
+ * HP 바 시스템
+ * @namespace HPBarSystem
+ */
 const HPBarSystem = {
     // ==========================================
     // 설정
@@ -53,9 +58,11 @@ const HPBarSystem = {
         }
     },
 
-    // ==========================================
-    // 유닛 HP 바 생성
-    // ==========================================
+    /**
+     * 유닛 HP 바 생성
+     * @param {Unit} unit - HP 바를 생성할 유닛
+     * @returns {PIXI.Container|null} HP 바 컨테이너 또는 null
+     */
     create(unit) {
         const parent = unit.container || unit.sprite;
         if (!parent) return null;

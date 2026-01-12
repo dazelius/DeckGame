@@ -1,24 +1,33 @@
 // =====================================================
 // Bleed System - 출혈 상태이상 시스템
+// @see types.js - Unit 타입 정의
 // =====================================================
 // 출혈: 피해를 받을 때마다 출혈 스택만큼 추가 피해
 // 매 턴 종료 시 출혈 스택 1 감소
 // =====================================================
 
+/**
+ * 출혈 시스템
+ * @namespace BleedSystem
+ */
 const BleedSystem = {
+    /** @type {Object} */
     game: null,
     
-    // ==========================================
-    // 초기화
-    // ==========================================
+    /**
+     * 초기화
+     * @param {Object} gameRef - Game 객체 참조
+     */
     init(gameRef) {
         this.game = gameRef;
         console.log('[BleedSystem] 출혈 시스템 초기화 완료');
     },
     
-    // ==========================================
-    // 출혈 부여
-    // ==========================================
+    /**
+     * 출혈 부여
+     * @param {Unit} target - 대상 유닛
+     * @param {number} [stacks=1] - 출혈 스택 수
+     */
     applyBleed(target, stacks = 1) {
         if (!target || target.hp <= 0) return;
         
@@ -42,9 +51,12 @@ const BleedSystem = {
         this.updateBleedUI(target);
     },
     
-    // ==========================================
-    // 출혈 피해 처리 (피해를 받을 때 호출)
-    // ==========================================
+    /**
+     * 출혈 피해 처리 (피해를 받을 때 호출)
+     * @param {Unit} target - 대상 유닛
+     * @param {number} baseDamage - 기본 피해량
+     * @returns {number} 출혈 추가 피해량
+     */
     onDamageTaken(target, baseDamage) {
         if (!target || target.hp <= 0) return 0;
         
@@ -59,9 +71,10 @@ const BleedSystem = {
         return bleedStacks;
     },
     
-    // ==========================================
-    // 턴 종료 시 출혈 감소
-    // ==========================================
+    /**
+     * 턴 종료 시 출혈 감소
+     * @param {Unit[]} units - 유닛 배열
+     */
     onTurnEnd(units) {
         if (!units || !Array.isArray(units)) return;
         
