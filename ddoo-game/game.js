@@ -1785,25 +1785,6 @@ const Game = {
         }
     },
     
-    // ★ 스피어 투척 애니메이션 (그리드 거리 기반 파워업!)
-    async heroSpearThrowAnimation(hero, target, baseDamage, distanceBonus = 0, options = {}) {
-        // 그리드 거리 계산
-        const gridDistance = Math.abs(target.gridX - hero.gridX);
-        const totalDamage = baseDamage + distanceBonus;
-        console.log(`[Spear Animation] 그리드 거리: ${gridDistance}, 기본: ${baseDamage}, 보너스: ${distanceBonus}, 총: ${totalDamage}`);
-        console.log(`[Spear Animation] 타겟 HP: ${target.hp} → ${target.hp - totalDamage}`);
-        
-        if (typeof CombatEffects !== 'undefined') {
-            await CombatEffects.spearThrowEffect(hero, target, baseDamage, distanceBonus, this, options.onHit);
-        } else {
-            // 폴백: onHit 먼저 실행 후 대미지
-            if (typeof options.onHit === 'function') {
-                options.onHit(target);
-            }
-            this.dealDamage(target, totalDamage);
-        }
-    },
-    
     // ★★★ Flurry: 연속찌르기 애니메이션 ★★★
     async heroFlurryAnimation(hero, target, cardDef) {
         const posTarget = hero.container || hero.sprite;
@@ -2732,19 +2713,41 @@ const Game = {
                 const distance = Math.abs(targetEnemy.gridX - hero.gridX);
                 const distanceBonus = cardDef.distanceBonus * distance;
                 const baseDamage = cardDef.damage;
+                const totalDamage = baseDamage + distanceBonus;
                 
-                console.log(`[Game] 스피어 투척! 거리: ${distance}, 기본 대미지: ${baseDamage}, 거리 보너스: ${distanceBonus}`);
+                console.log(`[Game] 스피어 투척! 거리: ${distance}, 기본: ${baseDamage}, 보너스: ${distanceBonus}, 총: ${totalDamage}`);
                 
-                // 스피어 발사 애니메이션 (★ 브레이크는 타격 시점에 처리!)
+                // ★ UnitCombat.rangedAttack 사용 (일반 발사체와 동일한 방식)
                 const gameRef = this;
-                await this.heroSpearThrowAnimation(hero, targetEnemy, baseDamage, distanceBonus, {
-                    onHit: (hitTarget) => {
-                        if (typeof BreakSystem !== 'undefined') {
-                            BreakSystem.onAttack(hitTarget, cardDef, 1, 0);
-                            gameRef.createEnemyIntent(hitTarget);
+                if (typeof UnitCombat !== 'undefined') {
+                    await UnitCombat.rangedAttack(hero, targetEnemy, totalDamage, {
+                        projectileType: 'spear',
+                        projectileColor: 0xccaa77,
+                        projectileSize: 12,
+                        isEnemy: false,
+                        onHit: (hitTarget) => {
+                            if (typeof BreakSystem !== 'undefined') {
+                                BreakSystem.onAttack(hitTarget, cardDef, 1, 0);
+                                gameRef.createEnemyIntent(hitTarget);
+                            }
                         }
+                    });
+                    
+                    // ★ 거리 보너스 별도 플로터 (있을 경우)
+                    if (distanceBonus > 0 && typeof CombatEffects !== 'undefined') {
+                        const targetPos = targetEnemy.container || targetEnemy.sprite;
+                        setTimeout(() => {
+                            CombatEffects.showDamageNumber(
+                                targetPos.x + 30, 
+                                targetPos.y - 60, 
+                                distanceBonus, 
+                                'distance'
+                            );
+                        }, 100);
                     }
-                });
+                } else {
+                    this.dealDamage(targetEnemy, totalDamage);
+                }
             }
             // ★★★ 갈고리 (Hook) - 적을 앞으로 당김! ★★★
             else if (cardDef.pull) {
