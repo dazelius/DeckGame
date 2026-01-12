@@ -204,35 +204,32 @@ const GridAOE = {
     },
     
     // ==========================================
-    // 화염 지대 전용 시각화 - 3D 볼류메트릭 파티클 시스템
+    // 화염 지대 전용 시각화 - 절제된 볼류메트릭 시스템
     // ==========================================
     createFireZoneVisual(zone, container) {
         const cellSize = this.getApproxCellSize();
-        const size = Math.max(cellSize * 1.2, 120);
+        const size = Math.max(cellSize * 1.0, 100);
         zone.zoneSize = size;
         
         // ========================================
         // Layer 1: 바닥 스콜치 마크 (그을음)
         // ========================================
         const scorch = new PIXI.Graphics();
-        scorch.beginFill(0x110500, 0.4);
-        scorch.drawEllipse(0, 8, size * 0.75, size * 0.35);
-        scorch.endFill();
-        scorch.beginFill(0x220800, 0.3);
-        scorch.drawEllipse(0, 5, size * 0.6, size * 0.28);
+        scorch.beginFill(0x110500, 0.35);
+        scorch.drawEllipse(0, 6, size * 0.65, size * 0.3);
         scorch.endFill();
         container.addChild(scorch);
         zone.scorch = scorch;
         
         // ========================================
-        // Layer 2: 3D 볼류메트릭 열기 (다중 글로우)
+        // Layer 2: 열기 글로우 (3레이어로 축소)
         // ========================================
         const heatLayers = [];
-        for (let i = 4; i >= 0; i--) {
+        for (let i = 2; i >= 0; i--) {
             const heat = new PIXI.Graphics();
-            const layerSize = 0.5 + i * 0.12;
-            const colors = [0xffffcc, 0xffcc44, 0xff8822, 0xff4400, 0xff2200];
-            const alphas = [0.08, 0.12, 0.15, 0.12, 0.08];
+            const layerSize = 0.4 + i * 0.1;
+            const colors = [0xffcc44, 0xff6622, 0xff3300];
+            const alphas = [0.12, 0.1, 0.08];
             
             heat.beginFill(colors[i], alphas[i]);
             heat.drawEllipse(0, -i * 2, size * layerSize, size * layerSize * 0.5);
@@ -246,15 +243,15 @@ const GridAOE = {
         zone.heatLayers = heatLayers;
         
         // ========================================
-        // Layer 3: 3D 궤도 화염 파티클
+        // Layer 3: 궤도 화염 파티클 (2궤도 x 4개 = 8개)
         // ========================================
         const orbitContainer = new PIXI.Container();
         container.addChild(orbitContainer);
         zone.orbitContainer = orbitContainer;
         
         zone.orbitFlames = [];
-        const NUM_ORBITS = 3;
-        const FLAMES_PER_ORBIT = 6;
+        const NUM_ORBITS = 2;
+        const FLAMES_PER_ORBIT = 4;
         
         for (let orbit = 0; orbit < NUM_ORBITS; orbit++) {
             const orbitRadius = size * (0.2 + orbit * 0.15);
@@ -265,10 +262,10 @@ const GridAOE = {
                 
                 flame._angle = angle;
                 flame._orbit = orbitRadius;
-                flame._orbitY = orbitRadius * 0.5; // Y축 압축 (원근)
-                flame._speed = 0.8 + Math.random() * 0.4 - orbit * 0.15;
+                flame._orbitY = orbitRadius * 0.5;
+                flame._speed = 0.6 + Math.random() * 0.3;
                 flame._zPhase = Math.random() * Math.PI * 2;
-                flame._baseScale = 0.7 + Math.random() * 0.4;
+                flame._baseScale = 0.6 + Math.random() * 0.3;
                 flame._orbitIndex = orbit;
                 
                 orbitContainer.addChild(flame);
@@ -277,18 +274,17 @@ const GridAOE = {
         }
         
         // ========================================
-        // Layer 4: 중앙 핫스팟 (3D 코어)
+        // Layer 4: 중앙 핫스팟 (2레이어)
         // ========================================
         const coreContainer = new PIXI.Container();
         container.addChild(coreContainer);
         zone.coreContainer = coreContainer;
         
-        // 다층 코어 (밝은 중심)
-        for (let i = 3; i >= 0; i--) {
+        for (let i = 1; i >= 0; i--) {
             const core = new PIXI.Graphics();
-            const coreSize = size * (0.08 + i * 0.05);
-            const colors = [0xffffff, 0xffffcc, 0xffdd66, 0xffaa33];
-            const alphas = [0.9, 0.7, 0.5, 0.4];
+            const coreSize = size * (0.06 + i * 0.04);
+            const colors = [0xffffcc, 0xffaa33];
+            const alphas = [0.8, 0.5];
             
             core.beginFill(colors[i], alphas[i]);
             core.drawEllipse(0, 0, coreSize, coreSize * 0.6);
@@ -300,55 +296,53 @@ const GridAOE = {
         zone.cores = coreContainer.children;
         
         // ========================================
-        // Layer 5: 수직 불꽃 기둥들
+        // Layer 5: 불꽃 기둥 (5개로 축소)
         // ========================================
         const pillarContainer = new PIXI.Container();
         container.addChild(pillarContainer);
         zone.pillarContainer = pillarContainer;
         
         zone.flamePillars = [];
-        const NUM_PILLARS = 8;
+        const NUM_PILLARS = 5;
         
         for (let i = 0; i < NUM_PILLARS; i++) {
             const pillar = this.create3DFlamePillar(size);
-            const angle = (i / NUM_PILLARS) * Math.PI * 2 + Math.random() * 0.3;
-            const dist = size * (0.15 + Math.random() * 0.25);
+            const angle = (i / NUM_PILLARS) * Math.PI * 2 + Math.random() * 0.2;
+            const dist = size * (0.12 + Math.random() * 0.2);
             
             pillar.x = Math.cos(angle) * dist;
             pillar.y = Math.sin(angle) * dist * 0.5;
             pillar._baseX = pillar.x;
             pillar._baseY = pillar.y;
             pillar._phase = Math.random() * Math.PI * 2;
-            pillar._speed = 2 + Math.random() * 2;
-            pillar._swayAmount = 3 + Math.random() * 5;
+            pillar._speed = 2 + Math.random() * 1.5;
+            pillar._swayAmount = 2 + Math.random() * 3;
             
             pillarContainer.addChild(pillar);
             zone.flamePillars.push(pillar);
         }
         
         // ========================================
-        // Layer 6: 3D 불씨/스파크 시스템
+        // Layer 6: 불씨 (12개로 축소)
         // ========================================
         const emberContainer = new PIXI.Container();
         container.addChild(emberContainer);
         zone.emberContainer = emberContainer;
         zone.embers = [];
         
-        // 초기 불씨 생성
-        for (let i = 0; i < 30; i++) {
+        for (let i = 0; i < 12; i++) {
             this.spawn3DFireEmber(zone);
         }
         
         // ========================================
-        // Layer 7: 연기/아지랑이
+        // Layer 7: 연기 (3개로 축소)
         // ========================================
         const smokeContainer = new PIXI.Container();
         container.addChild(smokeContainer);
         zone.smokeContainer = smokeContainer;
         zone.smokeParticles = [];
         
-        // 초기 연기
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 3; i++) {
             this.spawn3DSmoke(zone);
         }
         
