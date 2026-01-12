@@ -54,7 +54,18 @@
             "type": "buff", 
             "buffType": "strength",
             "buffValue": 2,
-            "weight": 15
+            "weight": 10
+        },
+        { 
+            "id": "flurry",
+            "name": "단검 연속찌르기",
+            "nameEn": "Dagger Flurry",
+            "type": "attack", 
+            "attackStyle": "flurry",
+            "damage": 2,
+            "hits": 3,
+            "weight": 25,
+            "breakRecipe": 2
         }
     ],
     
@@ -133,6 +144,12 @@
                 "으아아아!!",
                 "다 부숴버려!",
                 "힘껏!!"
+            ],
+            "flurry": [
+                "찔러찔러찔러!",
+                "찍찍찍!",
+                "빠르게! 빠르게!",
+                "키히히히!"
             ]
         }
     }

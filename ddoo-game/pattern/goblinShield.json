@@ -8,7 +8,7 @@
         "damage": 6,
         "range": 1,
         "sprite": "goblinshield.png",
-        "scale": 0.38
+        "scale": 0.32
     },
     
     "ai": {

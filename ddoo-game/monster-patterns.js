@@ -415,6 +415,26 @@ const MonsterPatterns = {
                     break;
                 }
                 
+                // ★★★ 연속찌르기 (flurry) ★★★
+                if (intent.attackStyle === 'flurry' && typeof UnitCombat !== 'undefined') {
+                    console.log(`[MonsterPatterns] ${enemy.name || enemy.type}: 연속찌르기! hits=${hits}, damage=${intent.damage}`);
+                    for (let i = 0; i < hits; i++) {
+                        if (target.hp <= 0) break;
+                        
+                        // 브레이크 처리
+                        if (typeof BreakSystem !== 'undefined' && intent.breakRecipe) {
+                            BreakSystem.onAttack(target, { breakRecipe: intent.breakRecipe }, 1, i);
+                        }
+                        
+                        await UnitCombat.flurryAttack(enemy, target, intent.damage, { isEnemy: true });
+                        
+                        if (i < hits - 1) {
+                            await new Promise(r => setTimeout(r, 50));
+                        }
+                    }
+                    break;
+                }
+                
                 for (let i = 0; i < hits; i++) {
                     if (target.hp <= 0) break;
                     
