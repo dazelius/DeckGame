@@ -1259,7 +1259,7 @@ const CardDrag = {
         // 레인 변경 가이드 그래픽 생성
         if (!this._laneGuide) {
             this._laneGuide = new PIXI.Container();
-            this._laneGuide.zIndex = 50;
+            this._laneGuide.zIndex = 150;  // 유닛 위에 표시
             this.game.containers.effects.addChild(this._laneGuide);
         }
         
@@ -1279,31 +1279,31 @@ const CardDrag = {
         // 점선 경로 (히어로 → 타겟 레인)
         const startY = heroPos.y;
         const endY = targetLaneY;
-        const dashLength = 8;
+        const dashLength = 10;
         const gapLength = 6;
         let currentY = startY;
         
-        pathGraphic.lineStyle({ width: 3, color: 0x44aaff, alpha: 0.8 });
-        
+        // ★ PixiJS v8: 점선을 개별 선분으로 그림
         while ((direction > 0 && currentY < endY) || (direction < 0 && currentY > endY)) {
             const nextY = currentY + direction * dashLength;
             const clampedNextY = direction > 0 ? Math.min(nextY, endY) : Math.max(nextY, endY);
             
             pathGraphic.moveTo(heroPos.x, currentY);
             pathGraphic.lineTo(heroPos.x, clampedNextY);
+            pathGraphic.stroke({ width: 4, color: 0x44aaff, alpha: 0.9 });
             
             currentY = clampedNextY + direction * gapLength;
         }
         
-        // 화살표 머리
-        const arrowSize = 12;
-        const arrowY = endY - direction * 5;
-        pathGraphic.beginFill(0x44aaff, 0.9);
-        pathGraphic.moveTo(heroPos.x, endY);
-        pathGraphic.lineTo(heroPos.x - arrowSize, arrowY);
-        pathGraphic.lineTo(heroPos.x + arrowSize, arrowY);
-        pathGraphic.closePath();
-        pathGraphic.endFill();
+        // 화살표 머리 (삼각형)
+        const arrowSize = 14;
+        const arrowY = endY - direction * 8;
+        pathGraphic.poly([
+            { x: heroPos.x, y: endY },
+            { x: heroPos.x - arrowSize, y: arrowY },
+            { x: heroPos.x + arrowSize, y: arrowY }
+        ]);
+        pathGraphic.fill({ color: 0x44aaff, alpha: 0.9 });
         
         this._laneGuide.addChild(pathGraphic);
         
@@ -1311,23 +1311,23 @@ const CardDrag = {
         const laneText = new PIXI.Text({
             text: direction > 0 ? `▼ ${laneDiff}레인` : `▲ ${laneDiff}레인`,
             style: {
-                fontSize: 14,
+                fontSize: 16,
                 fontWeight: 'bold',
                 fill: '#44aaff',
-                stroke: { color: '#000000', width: 3 }
+                stroke: { color: '#000000', width: 4 }
             }
         });
         laneText.anchor.set(0.5);
-        laneText.x = heroPos.x + 40;
+        laneText.x = heroPos.x + 50;
         laneText.y = (startY + endY) / 2;
         this._laneGuide.addChild(laneText);
         
-        // 히어로 이동 위치 원
+        // 히어로 이동 위치 원 (도착점)
         const moveIndicator = new PIXI.Graphics();
-        moveIndicator.circle(heroPos.x, endY, 15);
-        moveIndicator.stroke({ color: 0x44aaff, width: 2, alpha: 0.6 });
-        moveIndicator.circle(heroPos.x, endY, 8);
-        moveIndicator.fill({ color: 0x44aaff, alpha: 0.3 });
+        moveIndicator.circle(heroPos.x, endY, 18);
+        moveIndicator.stroke({ color: 0x44aaff, width: 3, alpha: 0.8 });
+        moveIndicator.circle(heroPos.x, endY, 10);
+        moveIndicator.fill({ color: 0x44aaff, alpha: 0.4 });
         this._laneGuide.addChild(moveIndicator);
     },
     
