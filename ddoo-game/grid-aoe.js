@@ -253,8 +253,8 @@ const GridAOE = {
         zone.orbitContainer = orbitContainer;
         
         zone.orbitFlames = [];
-        const NUM_ORBITS = 3;
-        const FLAMES_PER_ORBIT = 6;
+        const NUM_ORBITS = 2;        // 3→2 경량화
+        const FLAMES_PER_ORBIT = 4;  // 6→4 경량화
         
         for (let orbit = 0; orbit < NUM_ORBITS; orbit++) {
             const orbitRadius = size * (0.2 + orbit * 0.15);
@@ -307,7 +307,7 @@ const GridAOE = {
         zone.pillarContainer = pillarContainer;
         
         zone.flamePillars = [];
-        const NUM_PILLARS = 8;
+        const NUM_PILLARS = 5;  // 8→5 경량화
         
         for (let i = 0; i < NUM_PILLARS; i++) {
             const pillar = this.create3DFlamePillar(size);
@@ -334,8 +334,8 @@ const GridAOE = {
         zone.emberContainer = emberContainer;
         zone.embers = [];
         
-        // 초기 불씨 생성
-        for (let i = 0; i < 30; i++) {
+        // 초기 불씨 생성 (경량화: 30→15)
+        for (let i = 0; i < 15; i++) {
             this.spawn3DFireEmber(zone);
         }
         
@@ -347,8 +347,8 @@ const GridAOE = {
         zone.smokeContainer = smokeContainer;
         zone.smokeParticles = [];
         
-        // 초기 연기
-        for (let i = 0; i < 5; i++) {
+        // 초기 연기 (경량화: 5→3)
+        for (let i = 0; i < 3; i++) {
             this.spawn3DSmoke(zone);
         }
         
@@ -574,8 +574,8 @@ const GridAOE = {
             CombatEffects.screenShake(12, 250);
         }
         
-        // Burst particles - more and bigger
-        for (let i = 0; i < 25; i++) {
+        // Burst particles (경량화: 25→12)
+        for (let i = 0; i < 12; i++) {
             const particle = new PIXI.Graphics();
             const size = 5 + Math.random() * 10;
             
@@ -916,8 +916,8 @@ const GridAOE = {
                 this.spawn3DFireEmber(zone);
             }
             
-            // 추가 불씨 (확률적)
-            if (Math.random() < 0.1) {
+            // 추가 불씨 (확률적, 경량화: 0.1→0.05)
+            if (Math.random() < 0.05) {
                 this.spawn3DFireEmber(zone);
             }
         }
