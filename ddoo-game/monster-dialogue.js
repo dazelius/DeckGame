@@ -109,14 +109,19 @@ const MonsterDialogue = {
         // 기존 말풍선 제거
         this.hideBubble(unit);
         
-        // 컨테이너 생성
-        const container = new PIXI.Container();
-        container.zIndex = 500;
+        // ★ 유닛 컨테이너에 직접 추가 (유닛과 함께 움직임)
+        const unitContainer = unit.container || unit.sprite.parent;
+        if (!unitContainer || unitContainer.destroyed) return;
         
-        // 유닛 위치
-        const pos = unit.container || unit.sprite;
-        container.x = pos.x;
-        container.y = pos.y - 100; // 머리 위
+        // 컨테이너 생성
+        const bubbleContainer = new PIXI.Container();
+        bubbleContainer.zIndex = 500;
+        
+        // ★ 유닛 컨테이너 기준 상대 위치 (머리 위)
+        // 스프라이트 높이를 기반으로 위치 계산
+        const spriteHeight = unit.sprite.height || 100;
+        bubbleContainer.x = 0;  // 유닛 중심
+        bubbleContainer.y = -spriteHeight - 30;  // 머리 위
         
         // 말풍선 배경
         const bubble = new PIXI.Graphics();
@@ -155,28 +160,26 @@ const MonsterDialogue = {
         bubble.lineTo(5, bubbleHeight / 2);
         bubble.fill({ color: 0x2a2a3a, alpha: 0.9 });
         
-        container.addChild(bubble);
-        container.addChild(textObj);
+        bubbleContainer.addChild(bubble);
+        bubbleContainer.addChild(textObj);
         
-        // 게임 월드에 추가
-        if (typeof Game !== 'undefined' && Game.gameWorld) {
-            Game.gameWorld.addChild(container);
-        } else if (this.app.stage) {
-            this.app.stage.addChild(container);
-        }
+        // ★ 유닛 컨테이너에 추가!
+        unitContainer.addChild(bubbleContainer);
         
-        this.activeBubbles.set(unit, container);
+        // 말풍선 참조 저장
+        unit.dialogueBubble = bubbleContainer;
+        this.activeBubbles.set(unit, bubbleContainer);
         
         // 등장 애니메이션
-        container.alpha = 0;
-        container.scale.set(0.5);
+        bubbleContainer.alpha = 0;
+        bubbleContainer.scale.set(0.5);
         
-        gsap.to(container, {
+        gsap.to(bubbleContainer, {
             alpha: 1,
             duration: 0.2,
             ease: 'back.out(2)'
         });
-        gsap.to(container.scale, {
+        gsap.to(bubbleContainer.scale, {
             x: 1, y: 1,
             duration: 0.3,
             ease: 'back.out(2)'
@@ -194,7 +197,7 @@ const MonsterDialogue = {
     // 말풍선 숨기기
     // ==========================================
     hideBubble(unit) {
-        const bubble = this.activeBubbles.get(unit);
+        const bubble = this.activeBubbles.get(unit) || unit.dialogueBubble;
         if (!bubble || bubble.destroyed) return;
         
         gsap.to(bubble, {
@@ -207,6 +210,7 @@ const MonsterDialogue = {
         });
         
         this.activeBubbles.delete(unit);
+        unit.dialogueBubble = null;
     },
     
     // ==========================================
