@@ -1,0 +1,145 @@
+{
+    "id": "goblinShield",
+    "name": "Goblin Shield",
+    "nameKo": "고블린 방패병",
+    
+    "stats": {
+        "hp": 30,
+        "damage": 6,
+        "range": 1,
+        "sprite": "goblinshield.png",
+        "scale": 0.38
+    },
+    
+    "ai": {
+        "attackType": "melee",
+        "preferredDistance": 1,
+        "retreatBeforeAttack": false,
+        "aggressive": false,
+        "defensive": true
+    },
+    
+    "weaknesses": ["fire", "lightning"],
+    
+    "intents": [
+        { 
+            "id": "shield_bash",
+            "name": "방패 돌진",
+            "nameEn": "Shield Bash",
+            "type": "attack", 
+            "damage": 6,
+            "knockback": 1,
+            "weight": 25,
+            "breakRecipe": 2
+        },
+        { 
+            "id": "defend",
+            "name": "방패 방어",
+            "nameEn": "Shield Block",
+            "type": "defend", 
+            "block": 8,
+            "weight": 35
+        },
+        { 
+            "id": "fortify",
+            "name": "견고한 방어",
+            "nameEn": "Fortify",
+            "type": "defend", 
+            "block": 12,
+            "weight": 20
+        },
+        { 
+            "id": "taunt",
+            "name": "도발",
+            "nameEn": "Taunt",
+            "type": "buff", 
+            "buffType": "taunt",
+            "buffValue": 1,
+            "weight": 10
+        },
+        { 
+            "id": "charge",
+            "name": "돌격",
+            "nameEn": "Charge",
+            "type": "attack", 
+            "damage": 10,
+            "weight": 10,
+            "breakRecipe": 3
+        }
+    ],
+    
+    "dialogues": {
+        "spawn": [
+            "막아라!",
+            "방어 태세!",
+            "뚫을 수 없다!",
+            "끼익, 준비!"
+        ],
+        "intent": [
+            "막아주지...",
+            "끄윽... 버텨야해",
+            "방패가 있다!"
+        ],
+        "attack": [
+            "돌격!",
+            "밀어버려!",
+            "끼야앗!",
+            "방패로!"
+        ],
+        "defend": [
+            "막는다!",
+            "튼튼해!",
+            "뚫지 못해!",
+            "철벽!"
+        ],
+        "buff": [
+            "이쪽이다!",
+            "나를 봐라!",
+            "덤벼!"
+        ],
+        "hit": [
+            "끄윽!",
+            "방패가...!",
+            "아직이다!",
+            "으윽!",
+            "버틴다!"
+        ],
+        "death": [
+            "방패가... 뚫렸다...",
+            "지켜내지... 못했다...",
+            "끼익..."
+        ],
+        "break": [
+            "방패가?!",
+            "안돼!",
+            "뚫리다니!"
+        ],
+        "intents": {
+            "shield_bash": [
+                "방패로 밀어!",
+                "돌진이다!",
+                "꺼져라!"
+            ],
+            "defend": [
+                "막는다!",
+                "철벽!",
+                "버텨!"
+            ],
+            "fortify": [
+                "더 단단하게!",
+                "뚫지 못해!",
+                "완벽한 방어!"
+            ],
+            "charge": [
+                "돌격이다!!",
+                "전진!",
+                "밀어붙여!"
+            ],
+            "taunt": [
+                "이쪽이다!",
+                "나를 노려라!",
+                "덤벼!"
+            ]
+        }
+    }
+}

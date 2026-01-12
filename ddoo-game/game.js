@@ -3360,7 +3360,7 @@ const Game = {
         // Generate enemies based on turn
         const turn = this.state.turn;
         const enemyCount = Math.max(1, Math.min(1 + Math.floor(turn / 2), 6)); // 최소 1마리
-        const types = ['goblin', 'goblinArcher', 'slime', 'goblinShaman'];
+        const types = ['goblin', 'goblinArcher', 'slime', 'goblinShaman', 'goblinShield'];
         
         // ★ 사용 가능한 빈 칸 목록 만들기
         const availableCells = [];

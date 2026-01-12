@@ -13,6 +13,7 @@ const MonsterPatterns = {
         'goblin',
         'goblinArcher',
         'goblinShaman',
+        'goblinShield',
         'orc',
         'skeletonMage',
         'slime',
