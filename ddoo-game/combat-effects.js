@@ -812,7 +812,7 @@ const CombatEffects = {
     },
     
     // ==========================================
-    // ★★★ 스피어 이펙트 (직선 투척, 거리에 따라 파워업!) ★★★
+    // ★★★ 스피어 이펙트 (직선 투척, 스핀 파워업!) ★★★
     // ==========================================
     async spearEffect(startX, startY, endX, endY, options = {}) {
         if (!this.app) return;
@@ -831,6 +831,11 @@ const CombatEffects = {
             let currentPower = 0;
             const maxPower = Math.min(5, gridDistance);
             
+            // ★ 스핀 속도 (파워에 따라 증가)
+            let spinSpeed = 0;  // 초당 회전수 (라디안)
+            const baseAngle = Math.atan2(endY - startY, endX - startX);
+            let totalSpin = 0;  // 누적 회전량
+            
             // 파워 레벨별 색상
             const powerColors = [
                 { trail: 0xddccaa, glow: null },           // 0: 기본
@@ -841,11 +846,15 @@ const CombatEffects = {
                 { trail: 0xff2211, glow: 0xff0000 },       // 5: 지옥불
             ];
             
-            // 스피어 컨테이너
+            // 스피어 컨테이너 (위치용)
+            const spearContainer = new PIXI.Container();
+            spearContainer.x = startX;
+            spearContainer.y = startY;
+            spearContainer.zIndex = 150;
+            
+            // 스피어 본체 (회전용)
             const spear = new PIXI.Container();
-            spear.x = startX;
-            spear.y = startY;
-            spear.zIndex = 150;
+            spearContainer.addChild(spear);
             
             // === 글로우 컨테이너 (파워업용) ===
             const glowContainer = new PIXI.Container();
@@ -883,10 +892,9 @@ const CombatEffects = {
             spear.addChild(pommel);
             
             // 초기 각도 설정 (발사 방향)
-            const angle = Math.atan2(endY - startY, endX - startX);
-            spear.rotation = angle;
+            spear.rotation = baseAngle;
             
-            this.container.addChild(spear);
+            this.container.addChild(spearContainer);
             
             // 비행 시간
             const pixelDistance = Math.hypot(endX - startX, endY - startY);
@@ -899,10 +907,13 @@ const CombatEffects = {
             }
             let passedCheckpoints = 0;
             
-            // ★ 파워업 함수
+            // ★ 파워업 함수 (스핀 속도 증가!)
             const powerUp = (power) => {
                 currentPower = power;
                 const colors = powerColors[Math.min(power, 5)];
+                
+                // ★ 스핀 속도 증가! (파워 1당 +8 rad/s)
+                spinSpeed = power * 12;
                 
                 // 글로우 업데이트
                 glowContainer.removeChildren();
@@ -922,17 +933,20 @@ const CombatEffects = {
                     // 펄스 애니메이션
                     gsap.to(coreGlow, {
                         alpha: 0.1,
-                        duration: 0.1,
+                        duration: 0.08,
                         repeat: -1,
                         yoyo: true,
                         onUpdate: function() {
-                            if (spear.destroyed) this.kill();
+                            if (spearContainer.destroyed) this.kill();
                         }
                     });
                 }
                 
-                // 파워업 이펙트 (불씨 폭발)
-                this.spearPowerUpEffect(spear.x, spear.y, power);
+                // 파워업 이펙트 (스핀 강화 + 불씨 폭발)
+                this.spearPowerUpEffect(spearContainer.x, spearContainer.y, power);
+                
+                // 스핀 강화 연출
+                this.spearSpinBoostEffect(spearContainer.x, spearContainer.y, power);
                 
                 // 스케일 펀치
                 gsap.fromTo(spear.scale, 
@@ -941,60 +955,81 @@ const CombatEffects = {
                 );
             };
             
-            // === 잔상 트레일 (파워 레벨 반영) ===
-            const createTrail = () => {
-                if (spear.destroyed) return;
+            // === 나선형 트레일 (스핀 표현!) ===
+            const createSpinTrail = () => {
+                if (spearContainer.destroyed) return;
                 
-                const trail = new PIXI.Graphics();
-                trail.x = spear.x;
-                trail.y = spear.y;
-                trail.rotation = spear.rotation;
+                const trail = new PIXI.Container();
+                trail.x = spearContainer.x;
+                trail.y = spearContainer.y;
                 trail.zIndex = 149;
                 
                 const colors = powerColors[Math.min(currentPower, 5)];
-                const trailLength = spearLength/2 + currentPower * 10;
-                const trailWidth = 3 + currentPower * 1.5;
+                const trailLength = spearLength/2 + currentPower * 8;
+                const trailWidth = 3 + currentPower * 1.2;
                 
-                // 메인 트레일
-                trail.rect(-spearLength/3, -trailWidth/2, trailLength, trailWidth);
-                trail.fill({ color: colors.trail, alpha: 0.4 + currentPower * 0.08 });
-                
-                // 파워 1 이상: 글로우 트레일
-                if (currentPower >= 1 && colors.glow) {
-                    trail.rect(-spearLength/4, -trailWidth/3, trailLength * 0.7, trailWidth * 0.6);
-                    trail.fill({ color: colors.glow, alpha: 0.25 + currentPower * 0.05 });
+                // ★ 스핀이 있으면 나선형으로!
+                if (currentPower >= 1) {
+                    // 나선 잔상 여러 개
+                    const spiralCount = Math.min(3, currentPower);
+                    for (let i = 0; i < spiralCount; i++) {
+                        const spiralTrail = new PIXI.Graphics();
+                        const offsetAngle = spear.rotation + (Math.PI * 2 / spiralCount) * i;
+                        spiralTrail.rotation = offsetAngle;
+                        
+                        spiralTrail.rect(-spearLength/3, -trailWidth/2, trailLength, trailWidth);
+                        spiralTrail.fill({ color: colors.trail, alpha: (0.3 + currentPower * 0.05) / (i + 1) });
+                        
+                        if (colors.glow) {
+                            spiralTrail.rect(-spearLength/4, -trailWidth/3, trailLength * 0.6, trailWidth * 0.5);
+                            spiralTrail.fill({ color: colors.glow, alpha: 0.2 / (i + 1) });
+                        }
+                        
+                        trail.addChild(spiralTrail);
+                    }
+                } else {
+                    // 기본 직선 트레일
+                    const mainTrail = new PIXI.Graphics();
+                    mainTrail.rotation = spear.rotation;
+                    mainTrail.rect(-spearLength/3, -trailWidth/2, trailLength, trailWidth);
+                    mainTrail.fill({ color: colors.trail, alpha: 0.4 });
+                    trail.addChild(mainTrail);
                 }
                 
                 this.container.addChild(trail);
                 
                 gsap.to(trail, {
                     alpha: 0,
-                    scaleX: 0.5,
-                    duration: 0.1 + currentPower * 0.02,
+                    scaleX: 0.6,
+                    scaleY: 0.6,
+                    duration: 0.12 + currentPower * 0.02,
                     onComplete: () => { if (!trail.destroyed) trail.destroy(); }
                 });
             };
             
-            // === 바람/불씨 파티클 (파워 레벨 반영) ===
+            // === 바람/불씨 파티클 (스핀 방향으로!) ===
             const createParticle = () => {
-                if (spear.destroyed) return;
+                if (spearContainer.destroyed) return;
                 
                 const colors = powerColors[Math.min(currentPower, 5)];
                 
                 if (currentPower >= 2) {
-                    // 불씨 파티클
+                    // ★ 스핀하는 불씨 파티클
                     const ember = new PIXI.Graphics();
                     const size = 1.5 + Math.random() * (1 + currentPower * 0.4);
                     ember.circle(0, 0, size);
                     ember.fill({ color: colors.glow || 0xffaa00, alpha: 0.8 });
-                    ember.x = spear.x + (Math.random() - 0.5) * 20;
-                    ember.y = spear.y + (Math.random() - 0.5) * 15;
+                    
+                    // 스핀 방향으로 튀어나감
+                    const spinAngle = spear.rotation + (Math.random() - 0.5) * Math.PI;
+                    ember.x = spearContainer.x + Math.cos(spinAngle) * 10;
+                    ember.y = spearContainer.y + Math.sin(spinAngle) * 10;
                     ember.zIndex = 148;
                     this.container.addChild(ember);
                     
                     gsap.to(ember, {
-                        x: ember.x - Math.cos(angle) * (20 + Math.random() * 15),
-                        y: ember.y - Math.sin(angle) * 10 + (Math.random() - 0.5) * 20,
+                        x: ember.x + Math.cos(spinAngle) * (15 + Math.random() * 15),
+                        y: ember.y + Math.sin(spinAngle) * (15 + Math.random() * 15),
                         alpha: 0,
                         duration: 0.15 + Math.random() * 0.1,
                         onComplete: () => { if (!ember.destroyed) ember.destroy(); }
@@ -1005,14 +1040,14 @@ const CombatEffects = {
                     wind.moveTo(0, 0);
                     wind.lineTo(-15 - Math.random() * 10, 0);
                     wind.stroke({ width: 1 + Math.random(), color: 0xffffff, alpha: 0.3 });
-                    wind.x = spear.x + (Math.random() - 0.5) * 20;
-                    wind.y = spear.y + (Math.random() - 0.5) * 15;
-                    wind.rotation = angle + (Math.random() - 0.5) * 0.3;
+                    wind.x = spearContainer.x + (Math.random() - 0.5) * 20;
+                    wind.y = spearContainer.y + (Math.random() - 0.5) * 15;
+                    wind.rotation = baseAngle + (Math.random() - 0.5) * 0.3;
                     wind.zIndex = 148;
                     this.container.addChild(wind);
                     
                     gsap.to(wind, {
-                        x: wind.x - Math.cos(angle) * 30,
+                        x: wind.x - Math.cos(baseAngle) * 30,
                         alpha: 0,
                         duration: 0.1,
                         onComplete: () => { if (!wind.destroyed) wind.destroy(); }
@@ -1020,21 +1055,31 @@ const CombatEffects = {
                 }
             };
             
-            const trailInterval = setInterval(createTrail, 18);
-            const particleInterval = setInterval(createParticle, currentPower >= 2 ? 15 : 30);
+            const trailInterval = setInterval(createSpinTrail, 16);
+            const particleInterval = setInterval(createParticle, currentPower >= 2 ? 12 : 30);
             
-            // === 직선 비행 애니메이션 ===
+            // === 직선 비행 + 스핀 애니메이션 ===
+            let lastTime = Date.now();
             const progress = { t: 0 };
+            
             gsap.to(progress, {
                 t: 1,
                 duration: duration,
                 ease: 'power1.in',
                 onUpdate: () => {
-                    if (spear.destroyed) return;
+                    if (spearContainer.destroyed) return;
                     
                     // 위치 업데이트
-                    spear.x = startX + (endX - startX) * progress.t;
-                    spear.y = startY + (endY - startY) * progress.t;
+                    spearContainer.x = startX + (endX - startX) * progress.t;
+                    spearContainer.y = startY + (endY - startY) * progress.t;
+                    
+                    // ★ 스핀 업데이트 (시간 기반)
+                    const now = Date.now();
+                    const dt = (now - lastTime) / 1000;
+                    lastTime = now;
+                    
+                    totalSpin += spinSpeed * dt;
+                    spear.rotation = baseAngle + totalSpin;
                     
                     // ★ 체크포인트 통과 확인 (파워업!)
                     while (passedCheckpoints < checkpoints.length && progress.t >= checkpoints[passedCheckpoints]) {
@@ -1048,10 +1093,10 @@ const CombatEffects = {
                     clearInterval(trailInterval);
                     clearInterval(particleInterval);
                     
-                    // ★ 착탄 이펙트 (파워 레벨 반영)
-                    this.spearImpactEffect(endX, endY, angle, currentPower);
+                    // ★ 착탄 이펙트 (파워 레벨 + 스핀 반영)
+                    this.spearImpactEffect(endX, endY, baseAngle, currentPower, totalSpin);
                     
-                    spear.destroy();
+                    spearContainer.destroy();
                     resolve();
                 }
             });
@@ -1116,12 +1161,114 @@ const CombatEffects = {
         });
     },
     
-    // 스피어 착탄 이펙트 (★ 파워 레벨 반영)
-    spearImpactEffect(x, y, angle, power = 0) {
+    // ★ 스핀 부스트 이펙트 (회전 강화 표현)
+    spearSpinBoostEffect(x, y, power) {
+        if (!this.app) return;
+        
+        const powerColors = [0xddcc88, 0xffcc00, 0xff8800, 0xff4400, 0xff2200, 0xff0000];
+        const color = powerColors[Math.min(power, 5)];
+        
+        // ★ 회전하는 나선 이펙트
+        const spiralCount = 3;
+        for (let i = 0; i < spiralCount; i++) {
+            const spiral = new PIXI.Graphics();
+            
+            // 나선형 선 그리기
+            spiral.moveTo(0, 0);
+            const arcLength = 30 + power * 10;
+            for (let j = 0; j < 10; j++) {
+                const t = j / 10;
+                const r = t * arcLength;
+                const a = t * Math.PI * 1.5 + (Math.PI * 2 / spiralCount) * i;
+                spiral.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+            }
+            spiral.stroke({ width: 2 + power * 0.5, color: color, alpha: 0.6 });
+            
+            spiral.x = x;
+            spiral.y = y;
+            spiral.zIndex = 161;
+            this.container.addChild(spiral);
+            
+            // 회전하면서 확대되고 사라짐
+            gsap.to(spiral, {
+                rotation: Math.PI * 2,
+                scaleX: 1.5,
+                scaleY: 1.5,
+                alpha: 0,
+                duration: 0.25,
+                ease: 'power2.out',
+                onComplete: () => { if (!spiral.destroyed) spiral.destroy(); }
+            });
+        }
+        
+        // "SPIN!" 텍스트 (파워 2 이상)
+        if (power >= 2) {
+            const spinText = new PIXI.Text({
+                text: power >= 4 ? '💫 MAX SPIN!' : `🌀 SPIN x${power}`,
+                style: {
+                    fontSize: 12 + power * 2,
+                    fontWeight: 'bold',
+                    fill: color,
+                    stroke: { color: 0x000000, width: 3 }
+                }
+            });
+            spinText.anchor.set(0.5);
+            spinText.x = x;
+            spinText.y = y - 25;
+            spinText.zIndex = 162;
+            this.container.addChild(spinText);
+            
+            gsap.to(spinText, {
+                y: y - 45,
+                alpha: 0,
+                duration: 0.4,
+                ease: 'power2.out',
+                onComplete: () => { if (!spinText.destroyed) spinText.destroy(); }
+            });
+        }
+    },
+    
+    // 스피어 착탄 이펙트 (★ 파워 레벨 + 스핀 반영)
+    spearImpactEffect(x, y, angle, power = 0, totalSpin = 0) {
         if (!this.app) return;
         
         const powerColors = [0xffffff, 0xffcc00, 0xff8800, 0xff4400, 0xff2200, 0xff0000];
         const impactColor = powerColors[Math.min(power, 5)];
+        
+        // ★ 스핀이 강할수록 나선형 충격파!
+        if (power >= 2) {
+            // 나선형 충격파
+            const spiralWave = new PIXI.Graphics();
+            for (let i = 0; i < 3; i++) {
+                spiralWave.moveTo(0, 0);
+                const arcLength = 25 + power * 8;
+                for (let j = 0; j <= 15; j++) {
+                    const t = j / 15;
+                    const r = t * arcLength;
+                    const a = t * Math.PI * 2 + (Math.PI * 2 / 3) * i;
+                    if (j === 0) {
+                        spiralWave.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+                    } else {
+                        spiralWave.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+                    }
+                }
+            }
+            spiralWave.stroke({ width: 2 + power, color: impactColor, alpha: 0.7 });
+            spiralWave.x = x;
+            spiralWave.y = y;
+            spiralWave.zIndex = 201;
+            this.container.addChild(spiralWave);
+            
+            gsap.to(spiralWave, {
+                rotation: Math.PI * 2,
+                scaleX: 2 + power * 0.4,
+                scaleY: 2 + power * 0.4,
+                alpha: 0,
+                duration: 0.3,
+                ease: 'power2.out',
+                onComplete: () => { if (!spiralWave.destroyed) spiralWave.destroy(); }
+            });
+        }
         
         // 충격파 (파워에 따라 크기 증가)
         const shockwave = new PIXI.Graphics();
@@ -1141,7 +1288,7 @@ const CombatEffects = {
             onComplete: () => shockwave.destroy()
         });
         
-        // 금속 파편 (파워에 따라 수 증가)
+        // ★ 회전하며 튀는 파편 (스핀 반영)
         const sparkCount = 8 + power * 3;
         for (let i = 0; i < sparkCount; i++) {
             const spark = new PIXI.Graphics();
@@ -1152,13 +1299,15 @@ const CombatEffects = {
             spark.zIndex = 199;
             this.container.addChild(spark);
             
-            const sparkAngle = angle + Math.PI + (Math.random() - 0.5) * Math.PI;
+            // ★ 스핀 방향으로 튀어나감
+            const sparkAngle = angle + Math.PI + (Math.PI * 2 / sparkCount) * i;
             const dist = 20 + Math.random() * (30 + power * 8);
+            const spinRotation = totalSpin + Math.random() * Math.PI * 4;
             
             gsap.to(spark, {
                 x: x + Math.cos(sparkAngle) * dist,
                 y: y + Math.sin(sparkAngle) * dist,
-                rotation: Math.random() * Math.PI * 4,
+                rotation: spinRotation,
                 alpha: 0,
                 duration: 0.3,
                 ease: 'power2.out',
