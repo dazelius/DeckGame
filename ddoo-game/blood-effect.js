@@ -359,7 +359,8 @@ const BloodEffect = {
     // ==========================================
     update(delta) {
         if (this.activeParticles.length > 0 && !this._loggedUpdate) {
-            console.log(`[BloodEffect] update 실행 중: ${this.activeParticles.length}개 파티클`);
+            const p = this.activeParticles[0];
+            console.log(`[BloodEffect] update: ${this.activeParticles.length}개, 첫번째 파티클 위치: (${p.x.toFixed(0)}, ${p.y.toFixed(0)}), visible: ${p.visible}, container.visible: ${this.container.visible}, container.parent: ${this.container.parent?.constructor.name}`);
             this._loggedUpdate = true;
             setTimeout(() => { this._loggedUpdate = false; }, 1000);
         }
@@ -426,22 +427,11 @@ const BloodEffect = {
         p.clear();
         
         const alpha = Math.min(1, d.life * 1.5);
+        const size = d.size * (0.5 + d.life * 0.5);
         
-        switch (d.type) {
-            case 'spray':
-            case 'drop':
-                this.drawDrop(p, d, alpha);
-                break;
-            case 'glob':
-                this.drawGlob(p, d, alpha);
-                break;
-            case 'string':
-                this.drawString(p, d, alpha);
-                break;
-            case 'mist':
-                this.drawMist(p, d, alpha);
-                break;
-        }
+        // ★ 간단하게 원만 그리기 (디버그)
+        p.circle(0, 0, Math.max(3, size));
+        p.fill({ color: d.color || 0xCC0000, alpha: alpha });
     },
     
     // 물방울 그리기 (PixiJS v8)
