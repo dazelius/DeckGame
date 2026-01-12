@@ -851,11 +851,11 @@ const Game = {
             spriteTopY = -actualHeight * anchorY;
             
             // 최소 높이 보장 (너무 낮으면 스프라이트와 겹침)
-            spriteTopY = Math.min(spriteTopY, -70);
+            spriteTopY = Math.min(spriteTopY, -60);
         }
         
-        // 인텐트를 스프라이트 머리 바로 위에 배치
-        const margin = 10;
+        // 인텐트를 스프라이트 머리 바로 위에 배치 (더 가깝게!)
+        const margin = 5;
         container.y = spriteTopY - margin;
         
         // ★ 새 구조: enemy.container에 추가

@@ -143,16 +143,16 @@ const MonsterDialogue = {
         bubbleContainer.zIndex = 500;
         
         // ★ 인텐트 위치 기준으로 말풍선 배치!
-        let intentY = -100;  // 기본값
+        let intentY = -80;  // 기본값
         
         // 인텐트가 있으면 그 위치 기준
         if (unit.intentContainer && !unit.intentContainer.destroyed) {
             intentY = unit.intentContainer.y;
         }
         
-        // 말풍선은 인텐트보다 50px 위에
-        bubbleContainer.x = 0;  // 유닛 중심
-        bubbleContainer.y = intentY - 50;
+        // 말풍선은 인텐트보다 40px 위, 살짝 앞쪽 (x: -20)
+        bubbleContainer.x = -20;  // 살짝 앞으로 (왼쪽)
+        bubbleContainer.y = intentY - 40;
         
         // 말풍선 배경
         const bubble = new PIXI.Graphics();
