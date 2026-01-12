@@ -581,13 +581,14 @@ const MonsterPatterns = {
         // ★ 분열 슬라임 공 발사! (베지어 곡선)
         const slimeBalls = [];
         for (let i = 0; i < summonCount; i++) {
-            const ball = new PIXI.Graphics();
-            ball.circle(0, 0, 25);
-            ball.fill({ color: 0x44ddff, alpha: 0.9 });
-            // 눈 그리기
-            ball.circle(-8, -5, 5);
-            ball.circle(8, -5, 5);
-            ball.fill({ color: 0xffee88, alpha: 1 });
+            // waterball.png 스프라이트 사용
+            const imagePath = typeof DDOOConfig !== 'undefined' 
+                ? DDOOConfig.getImagePath('waterball.png') 
+                : 'image/waterball.png';
+            
+            const ball = PIXI.Sprite.from(imagePath);
+            ball.anchor.set(0.5);
+            ball.scale.set(0.5);  // 적절한 크기로 조절
             ball.x = startX;
             ball.y = startY;
             ball.zIndex = 250;
@@ -617,7 +618,8 @@ const MonsterPatterns = {
                 ball.y = u * u * startY + 2 * u * t * cpY + t * t * target.screenY;
                 
                 // 크기 변화 (통통)
-                const scale = 1 + Math.sin(t * Math.PI) * 0.3;
+                const baseScale = 0.5;
+                const scale = baseScale * (1 + Math.sin(t * Math.PI) * 0.3);
                 ball.scale.set(scale);
                 
                 // 트레일 파티클
