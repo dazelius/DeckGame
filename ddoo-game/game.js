@@ -3060,8 +3060,29 @@ const Game = {
     },
     
     async placeUnit(unitType, gridX, gridZ, team) {
-        const unitDef = this.unitTypes[unitType];
-        if (!unitDef) return;
+        // ★ unitTypes에서 먼저 찾고, 없으면 MonsterPatterns에서 가져오기
+        let unitDef = this.unitTypes[unitType];
+        
+        if (!unitDef && typeof MonsterPatterns !== 'undefined') {
+            const pattern = MonsterPatterns.getPattern(unitType);
+            if (pattern) {
+                unitDef = {
+                    name: pattern.nameKo || pattern.name || unitType,
+                    cost: 0,
+                    hp: pattern.stats?.hp || 20,
+                    damage: pattern.stats?.damage || 5,
+                    range: pattern.stats?.range || 1,
+                    sprite: pattern.stats?.sprite || `${unitType}.png`,
+                    scale: pattern.stats?.scale || 0.35
+                };
+                console.log(`[Game] MonsterPatterns에서 ${unitType} 로드:`, unitDef);
+            }
+        }
+        
+        if (!unitDef) {
+            console.error(`[Game] 유닛 정의를 찾을 수 없음: ${unitType}`);
+            return;
+        }
         
         // Check cost
         if (team === 'player' && this.state.cost < unitDef.cost) {
