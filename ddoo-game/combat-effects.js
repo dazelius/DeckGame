@@ -1627,6 +1627,12 @@ const CombatEffects = {
     showDamageNumber(x, y, damage, type = 'normal') {
         if (!this.app) return;
         
+        // ★ 피 효과 자동 발생 (대미지 타입일 때만)
+        const damageTypes = ['normal', 'critical', 'bash', 'flurry', 'burn', 'poison', 'dot', 'bleed'];
+        if (typeof BloodEffect !== 'undefined' && damageTypes.includes(type) && damage > 0) {
+            BloodEffect.onDamage(x, y, damage, { type: type });
+        }
+        
         const styles = {
             normal: { 
                 fill: '#ff4444',

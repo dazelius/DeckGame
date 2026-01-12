@@ -184,6 +184,11 @@ const Game = {
             StatusIndicator.init(this);
         }
         
+        // ★ Blood Effect System (피 효과)
+        if (typeof BloodEffect !== 'undefined') {
+            BloodEffect.init(this.app);
+        }
+        
         // Grid AOE System
         if (typeof GridAOE !== 'undefined') {
             GridAOE.init(this, this.app);
