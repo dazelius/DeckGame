@@ -1267,7 +1267,12 @@ const CardDrag = {
         this._laneGuide.removeChildren();
         
         const heroPos = hero.sprite.getGlobalPosition();
-        const targetLaneY = this.game.gridToScreen(hero.gridX, targetEnemy.gridZ).y;
+        const targetLanePos = this.game.getCellCenter(hero.gridX, targetEnemy.gridZ);
+        if (!targetLanePos) {
+            this.clearLaneChangeGuide();
+            return;
+        }
+        const targetLaneY = targetLanePos.y;
         const direction = targetEnemy.gridZ > hero.gridZ ? 1 : -1;  // 아래(+1) 또는 위(-1)
         
         // 레인 차이
