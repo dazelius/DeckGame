@@ -35,8 +35,8 @@ const DDOOBackground = {
     // ★ 탑뷰 모드 (카드 드래그용)
     topViewMode: {
         active: false,
-        posY: 2.2,      // 높이 올림
-        lookAtY: 0.3,   // 아래로 내려다봄
+        posY: 3.0,      // ★ 더 높이 올림
+        lookAtY: -0.2,  // ★ 더 아래로 내려다봄 (거의 수직)
     },
     
     // Auto zoom settings
@@ -701,6 +701,12 @@ const DDOOBackground = {
     // ★ 탑뷰 모드 (카드 드래그 시)
     setTopView(enabled) {
         this.topViewMode.active = enabled;
+        
+        // ★ 그리드 표시/숨김
+        if (typeof game !== 'undefined' && game.containers && game.containers.grid) {
+            game.containers.grid.visible = enabled;
+        }
+        
         console.log(`[Camera] 탑뷰 모드: ${enabled ? 'ON' : 'OFF'}`);
     },
     

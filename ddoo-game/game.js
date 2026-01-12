@@ -334,6 +334,7 @@ const Game = {
         // 하위 컨테이너들 (gameWorld 안에 추가)
         this.containers.grid = new PIXI.Container();
         this.containers.grid.zIndex = 1;
+        this.containers.grid.visible = false;  // ★ 기본 숨김 (드래그 시에만 표시)
         this.containers.gameWorld.addChild(this.containers.grid);
         
         // 바닥 이펙트 (불길 등) - 유닛보다 아래
