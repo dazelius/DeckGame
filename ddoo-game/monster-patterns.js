@@ -436,10 +436,14 @@ const MonsterPatterns = {
                 // ★★★ 방어하면서 전진! ★★★
                 if (intent.moveForward && intent.moveForward > 0) {
                     const moveDir = -1; // 적은 왼쪽(플레이어 쪽)으로 전진
-                    const targetX = enemy.gridX + (moveDir * intent.moveForward);
+                    let targetX = enemy.gridX + (moveDir * intent.moveForward);
                     
-                    // 이동 가능 범위 체크
-                    if (targetX >= 0 && targetX < game.arena.width) {
+                    // ★ 플레이어 진영 침범 금지 (적은 자기 진영에서만 이동)
+                    const minX = game.arena?.playerZoneX || 5;
+                    targetX = Math.max(minX, targetX);
+                    
+                    // 이동 가능 범위 체크 (이미 최소 위치에 있으면 이동 안함)
+                    if (targetX < enemy.gridX && targetX < game.arena.width) {
                         // 해당 위치에 다른 유닛이 없는지 체크
                         const allUnits = [...game.state.playerUnits, ...game.state.enemyUnits];
                         const blocked = allUnits.some(u => 
