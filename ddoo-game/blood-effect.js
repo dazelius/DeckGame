@@ -269,7 +269,18 @@ const BloodEffect = {
             d.trail = [];
             d.stretch = 1;
             
+            // ★ 즉시 그리기 (첫 프레임에 보이도록)
+            p.clear();
+            p.circle(0, 0, Math.max(5, size));
+            p.fill({ color: d.color, alpha: 1 });
+            
             this.activeParticles.push(p);
+        }
+        
+        // ★ 디버그: 첫 파티클 상태 확인
+        if (this.activeParticles.length > 0) {
+            const first = this.activeParticles[0];
+            console.log(`[BloodEffect] 첫 파티클: x=${first.x.toFixed(0)}, y=${first.y.toFixed(0)}, visible=${first.visible}, parent=${first.parent?.constructor.name}`);
         }
     },
     
