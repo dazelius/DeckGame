@@ -3231,23 +3231,38 @@ const Game = {
     async generateEnemyUnits() {
         // Generate enemies based on turn
         const turn = this.state.turn;
-        const enemyCount = Math.min(1 + Math.floor(turn / 2), 6);
+        const enemyCount = Math.max(1, Math.min(1 + Math.floor(turn / 2), 6)); // 최소 1마리
         const types = ['goblin', 'goblinArcher', 'slime'];
         
-        for (let i = 0; i < enemyCount; i++) {
-            const type = types[Math.floor(Math.random() * types.length)];
-            // Spawn on RIGHT side (X: 5-9)
-            const x = this.arena.playerZoneX + Math.floor(Math.random() * this.arena.enemyZoneX);
-            const z = Math.floor(Math.random() * this.arena.depth);
-            
-            // Check if cell is occupied
-            const occupied = this.state.enemyUnits.some(u => u.gridX === x && u.gridZ === z);
-            if (!occupied) {
-                await this.placeUnit(type, x, z, 'enemy');
+        // ★ 사용 가능한 빈 칸 목록 만들기
+        const availableCells = [];
+        for (let x = this.arena.playerZoneX; x < this.arena.width; x++) {
+            for (let z = 0; z < this.arena.depth; z++) {
+                availableCells.push({ x, z });
             }
         }
         
-        console.log(`[Game] Generated ${this.state.enemyUnits.length} enemies`);
+        // 이미 점유된 칸 제외
+        const occupiedCells = new Set(
+            this.state.enemyUnits.map(u => `${u.gridX},${u.gridZ}`)
+        );
+        const freeCells = availableCells.filter(c => !occupiedCells.has(`${c.x},${c.z}`));
+        
+        // 빈 칸 섞기 (랜덤 배치)
+        for (let i = freeCells.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [freeCells[i], freeCells[j]] = [freeCells[j], freeCells[i]];
+        }
+        
+        // 적 생성
+        const spawnCount = Math.min(enemyCount, freeCells.length);
+        for (let i = 0; i < spawnCount; i++) {
+            const type = types[Math.floor(Math.random() * types.length)];
+            const cell = freeCells[i];
+            await this.placeUnit(type, cell.x, cell.z, 'enemy');
+        }
+        
+        console.log(`[Game] Generated ${spawnCount} enemies (requested: ${enemyCount})`);
     },
     
     // ==================== BATTLE PHASE (Turn-Based) ====================
