@@ -2815,7 +2815,7 @@ const CombatEffects = {
     // ==========================================
     
     /**
-     * 유닛에 쉴드 효과 추가 (외곽선 파란색으로 변경)
+     * 유닛에 쉴드 효과 추가 (외곽선 파란색 글로우)
      * @param {Object} unit - 유닛 객체
      */
     addShieldGlow(unit) {
@@ -2824,13 +2824,12 @@ const CombatEffects = {
         // 이미 쉴드 외곽선이면 스킵
         if (unit.hasShieldOutline) return;
         
-        // DDOORenderer의 외곽선 색상을 파란색으로 변경
+        // DDOORenderer의 글로우 효과 활성화
         if (typeof DDOORenderer !== 'undefined') {
-            DDOORenderer.setOutlineColor(unit.sprite, 0x44aaff);
+            DDOORenderer.setOutlineGlow(unit.sprite, true, 0x44aaff);
         }
         
         unit.hasShieldOutline = true;
-        console.log(`[ShieldGlow] ${unit.type || 'unit'} 쉴드 외곽선 ON`);
     },
     
     /**
@@ -2840,13 +2839,12 @@ const CombatEffects = {
         if (!unit || !unit.sprite) return;
         if (!unit.hasShieldOutline) return;
         
-        // 원래 외곽선 색상으로 복원 (검은색)
+        // 글로우 효과 비활성화
         if (typeof DDOORenderer !== 'undefined') {
-            DDOORenderer.setOutlineColor(unit.sprite, 0x000000);
+            DDOORenderer.setOutlineGlow(unit.sprite, false);
         }
         
         unit.hasShieldOutline = false;
-        console.log(`[ShieldGlow] ${unit.type || 'unit'} 쉴드 외곽선 OFF`);
     },
     
     /**

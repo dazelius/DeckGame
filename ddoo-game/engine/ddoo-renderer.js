@@ -982,6 +982,66 @@ const DDOORenderer = {
     },
     
     /**
+     * 아웃라인 글로우 효과 (쉴드용)
+     * @param {PIXI.Container} container - DDOORenderer 컨테이너
+     * @param {boolean} enabled - 글로우 활성화 여부
+     * @param {number} color - 글로우 색상 (기본: 파란색)
+     */
+    setOutlineGlow(container, enabled, color = 0x44aaff) {
+        if (!container) return;
+        
+        const outlines = container.children.filter(child => child.isOutline);
+        if (outlines.length === 0) return;
+        
+        // 기존 글로우 애니메이션 정리
+        if (container._glowTween) {
+            container._glowTween.kill();
+            container._glowTween = null;
+        }
+        
+        if (enabled) {
+            // 글로우 ON: 파란색 + 두껍게 + 펄스
+            outlines.forEach(outline => {
+                outline.tint = color;
+                outline.alpha = 1;
+                // 약간 확대해서 두껍게
+                const baseScale = outline.scale.x;
+                outline._baseScale = baseScale;
+                outline.scale.set(baseScale * 1.15);
+            });
+            
+            // 펄스 애니메이션 (숨쉬기)
+            container._glowTween = gsap.to({ val: 0 }, {
+                val: Math.PI * 2,
+                duration: 1.5,
+                repeat: -1,
+                ease: 'none',
+                onUpdate: function() {
+                    const v = this.targets()[0].val;
+                    const pulse = 0.8 + Math.sin(v) * 0.2;  // 0.6 ~ 1.0
+                    const scalePulse = 1.1 + Math.sin(v) * 0.05;  // 1.05 ~ 1.15
+                    
+                    outlines.forEach(outline => {
+                        if (outline && !outline.destroyed) {
+                            outline.alpha = pulse;
+                            const base = outline._baseScale || 1;
+                            outline.scale.set(base * scalePulse);
+                        }
+                    });
+                }
+            });
+        } else {
+            // 글로우 OFF: 원래대로 복원
+            outlines.forEach(outline => {
+                outline.tint = 0x000000;  // 검은색
+                outline.alpha = 1;
+                const baseScale = outline._baseScale || outline.scale.x / 1.15;
+                outline.scale.set(baseScale);
+            });
+        }
+    },
+    
+    /**
      * 아웃라인 표시/숨김
      */
     setOutlineVisible(container, visible) {
