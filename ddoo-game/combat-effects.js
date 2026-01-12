@@ -2815,14 +2815,13 @@ const CombatEffects = {
     // ==========================================
     
     /**
-     * 유닛에 쉴드 글로우 추가
+     * 유닛에 쉴드 글로우 추가 (스프라이트 외곽선)
      * @param {Object} unit - 유닛 객체
      */
     addShieldGlow(unit) {
         if (!unit || !unit.sprite) return;
         
         const sprite = unit.sprite;
-        const container = unit.container || sprite;
         
         // 이미 글로우가 있으면 강화만
         if (unit.shieldGlow) {
@@ -2830,87 +2829,49 @@ const CombatEffects = {
             return;
         }
         
-        // 글로우 컨테이너 생성
-        const glowContainer = new PIXI.Container();
-        glowContainer.zIndex = -5;  // 스프라이트 뒤에
-        glowContainer.isShieldGlow = true;
-        
-        // 외곽선 글로우 (여러 겹으로)
+        // ★ 스프라이트 복제로 외곽선 생성
         const glowLayers = [];
-        const baseColor = 0x4488ff;
-        const glowSizes = [1.15, 1.10, 1.05];
-        const glowAlphas = [0.15, 0.25, 0.4];
+        const baseColor = 0x44aaff;
         
-        for (let i = 0; i < glowSizes.length; i++) {
-            const glow = new PIXI.Graphics();
+        // 여러 겹의 글로우 레이어 (큰 것부터)
+        const layerConfigs = [
+            { scale: 1.12, alpha: 0.2, tint: 0x2266ff },
+            { scale: 1.08, alpha: 0.35, tint: 0x44aaff },
+            { scale: 1.04, alpha: 0.6, tint: 0x66ccff },
+        ];
+        
+        for (const config of layerConfigs) {
+            // 스프라이트 복제
+            const glowSprite = new PIXI.Sprite(sprite.texture);
+            glowSprite.anchor.set(sprite.anchor.x, sprite.anchor.y);
+            glowSprite.scale.set(sprite.scale.x * config.scale, sprite.scale.y * config.scale);
+            glowSprite.tint = config.tint;
+            glowSprite.alpha = config.alpha;
+            glowSprite.zIndex = -1;
+            glowSprite.isShieldGlow = true;
             
-            // 스프라이트 크기에 맞춰 외곽선 생성
-            const spriteWidth = sprite.width || 100;
-            const spriteHeight = sprite.height || 100;
-            const scale = glowSizes[i];
-            
-            // 둥근 사각형으로 외곽선
-            glow.roundRect(
-                -spriteWidth * scale / 2,
-                -spriteHeight * scale / 2,
-                spriteWidth * scale,
-                spriteHeight * scale,
-                15
-            );
-            glow.fill({ color: baseColor, alpha: glowAlphas[i] });
-            
-            glow.y = -spriteHeight / 2 + 10;  // 스프라이트 중심으로
-            glowLayers.push(glow);
-            glowContainer.addChild(glow);
-        }
-        
-        // 외곽 라인 (실제 외곽선)
-        const outline = new PIXI.Graphics();
-        const spriteWidth = sprite.width || 100;
-        const spriteHeight = sprite.height || 100;
-        
-        outline.roundRect(
-            -spriteWidth * 1.02 / 2,
-            -spriteHeight * 1.02 / 2,
-            spriteWidth * 1.02,
-            spriteHeight * 1.02,
-            12
-        );
-        outline.stroke({ color: 0x66ccff, width: 3, alpha: 0.8 });
-        outline.y = -spriteHeight / 2 + 10;
-        glowContainer.addChild(outline);
-        
-        // 컨테이너에 추가
-        if (container !== sprite) {
-            container.addChildAt(glowContainer, 0);  // 맨 뒤에
-        } else {
-            // sprite만 있는 경우 부모에 추가
+            // 스프라이트 뒤에 추가
             const parent = sprite.parent;
             if (parent) {
                 const idx = parent.getChildIndex(sprite);
-                parent.addChildAt(glowContainer, idx);
-                glowContainer.x = sprite.x;
-                glowContainer.y = sprite.y;
+                parent.addChildAt(glowSprite, idx);
             }
+            
+            glowLayers.push(glowSprite);
         }
         
-        unit.shieldGlow = glowContainer;
+        unit.shieldGlow = glowLayers[0];  // 대표 레이어
         unit.shieldGlowLayers = glowLayers;
-        unit.shieldGlowOutline = outline;
         
         // 등장 애니메이션
-        glowContainer.alpha = 0;
-        glowContainer.scale.set(0.8);
-        
-        gsap.to(glowContainer, {
-            alpha: 1,
-            duration: 0.3,
-            ease: 'power2.out'
-        });
-        gsap.to(glowContainer.scale, {
-            x: 1, y: 1,
-            duration: 0.3,
-            ease: 'back.out(2)'
+        glowLayers.forEach((layer, i) => {
+            layer.alpha = 0;
+            gsap.to(layer, {
+                alpha: layerConfigs[i].alpha,
+                duration: 0.3,
+                delay: i * 0.05,
+                ease: 'power2.out'
+            });
         });
         
         // 숨쉬기 애니메이션 시작
@@ -2924,65 +2885,93 @@ const CombatEffects = {
      * 쉴드 글로우 펄스 효과 (획득 시)
      */
     pulseShieldGlow(unit) {
-        if (!unit.shieldGlow || !unit.shieldGlowOutline) return;
+        if (!unit.shieldGlowLayers || unit.shieldGlowLayers.length === 0) return;
         
-        const outline = unit.shieldGlowOutline;
+        const sprite = unit.sprite;
+        if (!sprite) return;
         
-        // 밝게 펄스
-        gsap.timeline()
-            .to(unit.shieldGlow, {
-                alpha: 1.5,
-                duration: 0.15,
-                ease: 'power2.out'
-            })
-            .to(unit.shieldGlow, {
-                alpha: 1,
-                duration: 0.3,
-                ease: 'power2.inOut'
-            });
+        const baseScaleX = sprite.scale.x;
+        const baseScaleY = sprite.scale.y;
         
-        // 외곽선 확대 펄스
-        gsap.timeline()
-            .to(unit.shieldGlow.scale, {
-                x: 1.15, y: 1.15,
-                duration: 0.15,
-                ease: 'power2.out'
-            })
-            .to(unit.shieldGlow.scale, {
-                x: 1, y: 1,
-                duration: 0.25,
-                ease: 'power2.inOut'
-            });
+        // 각 레이어에 펄스 효과
+        unit.shieldGlowLayers.forEach((layer, i) => {
+            if (!layer || layer.destroyed) return;
+            
+            const targetScale = 1.04 + (2 - i) * 0.04;  // 1.12, 1.08, 1.04
+            const pulseScale = targetScale + 0.08;
+            
+            gsap.timeline()
+                .to(layer.scale, {
+                    x: baseScaleX * pulseScale,
+                    y: baseScaleY * pulseScale,
+                    duration: 0.12,
+                    ease: 'power2.out'
+                })
+                .to(layer.scale, {
+                    x: baseScaleX * targetScale,
+                    y: baseScaleY * targetScale,
+                    duration: 0.2,
+                    ease: 'power2.inOut'
+                });
+            
+            // 밝기 펄스
+            gsap.timeline()
+                .to(layer, {
+                    alpha: 0.8,
+                    duration: 0.1,
+                    ease: 'power2.out'
+                })
+                .to(layer, {
+                    alpha: [0.2, 0.35, 0.6][i],
+                    duration: 0.25,
+                    ease: 'power2.inOut'
+                });
+        });
     },
     
     /**
      * 쉴드 숨쉬기 애니메이션
      */
     startShieldBreathing(unit) {
-        if (!unit.shieldGlow) return;
+        if (!unit.shieldGlowLayers || unit.shieldGlowLayers.length === 0) return;
+        
+        const sprite = unit.sprite;
+        if (!sprite) return;
         
         // 기존 애니메이션 정리
         if (unit.shieldBreathTween) {
             unit.shieldBreathTween.kill();
         }
         
-        // 숨쉬기 (글로우 크기 변화)
+        const baseScaleX = sprite.scale.x;
+        const baseScaleY = sprite.scale.y;
+        const baseAlphas = [0.2, 0.35, 0.6];
+        const baseScales = [1.12, 1.08, 1.04];
+        
+        // 숨쉬기 (글로우 크기/투명도 변화)
         unit.shieldBreathTween = gsap.to({ val: 0 }, {
             val: Math.PI * 2,
             duration: 2,
             repeat: -1,
             ease: 'none',
             onUpdate: function() {
-                if (!unit.shieldGlow || unit.shieldGlow.destroyed) {
+                if (!unit.shieldGlowLayers) {
                     this.kill();
                     return;
                 }
-                const v = this.targets()[0].val;
-                const breathScale = 1 + Math.sin(v) * 0.03;
-                const breathAlpha = 0.85 + Math.sin(v) * 0.15;
                 
-                unit.shieldGlow.scale.set(breathScale);
-                unit.shieldGlow.alpha = breathAlpha;
+                const v = this.targets()[0].val;
+                
+                unit.shieldGlowLayers.forEach((layer, i) => {
+                    if (!layer || layer.destroyed) return;
+                    
+                    const breathOffset = Math.sin(v + i * 0.5) * 0.02;
+                    const alphaOffset = Math.sin(v + i * 0.3) * 0.1;
+                    
+                    const targetScale = baseScales[i] + breathOffset;
+                    layer.scale.set(baseScaleX * targetScale, baseScaleY * targetScale);
+                    layer.alpha = Math.max(0.1, baseAlphas[i] + alphaOffset);
+                });
             }
         });
     },
@@ -2991,9 +2980,7 @@ const CombatEffects = {
      * 쉴드 글로우 제거
      */
     removeShieldGlow(unit) {
-        if (!unit.shieldGlow) return;
-        
-        const glow = unit.shieldGlow;
+        if (!unit.shieldGlowLayers || unit.shieldGlowLayers.length === 0) return;
         
         // 애니메이션 정리
         if (unit.shieldBreathTween) {
@@ -3001,26 +2988,33 @@ const CombatEffects = {
             unit.shieldBreathTween = null;
         }
         
-        // 페이드 아웃 후 제거
-        gsap.to(glow, {
-            alpha: 0,
-            duration: 0.3,
-            ease: 'power2.in',
-            onComplete: () => {
-                if (glow && !glow.destroyed) {
-                    glow.destroy({ children: true });
+        // 각 레이어 페이드 아웃 후 제거
+        unit.shieldGlowLayers.forEach((layer, i) => {
+            if (!layer || layer.destroyed) return;
+            
+            gsap.to(layer, {
+                alpha: 0,
+                duration: 0.25,
+                delay: i * 0.03,
+                ease: 'power2.in',
+                onComplete: () => {
+                    if (layer && !layer.destroyed) {
+                        layer.destroy();
+                    }
                 }
-            }
-        });
-        gsap.to(glow.scale, {
-            x: 0.8, y: 0.8,
-            duration: 0.3,
-            ease: 'power2.in'
+            });
+            
+            gsap.to(layer.scale, {
+                x: layer.scale.x * 0.9,
+                y: layer.scale.y * 0.9,
+                duration: 0.25,
+                delay: i * 0.03,
+                ease: 'power2.in'
+            });
         });
         
         unit.shieldGlow = null;
         unit.shieldGlowLayers = null;
-        unit.shieldGlowOutline = null;
     },
     
     /**
@@ -3030,10 +3024,11 @@ const CombatEffects = {
         if (!unit) return;
         
         const hasBlock = (unit.block || 0) > 0;
+        const hasGlow = unit.shieldGlowLayers && unit.shieldGlowLayers.length > 0;
         
-        if (hasBlock && !unit.shieldGlow) {
+        if (hasBlock && !hasGlow) {
             this.addShieldGlow(unit);
-        } else if (!hasBlock && unit.shieldGlow) {
+        } else if (!hasBlock && hasGlow) {
             this.removeShieldGlow(unit);
         }
     },
