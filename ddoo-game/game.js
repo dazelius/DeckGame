@@ -405,9 +405,13 @@ const Game = {
         const centerWorld = DDOOBackground.project3DToScreen(gridX + 0.5, 0, gridZ + 0.5);
         if (!centerWorld) return null;
         
+        // ★ containers.units의 스케일/오프셋 보정 (역변환)
+        const scale = this.containers?.units?.scale?.x || 1;
+        const offsetY = this.containers?.units?.y || 0;
+        
         return {
-            x: centerWorld.screenX,
-            y: centerWorld.screenY
+            x: centerWorld.screenX / scale,
+            y: (centerWorld.screenY - offsetY) / scale
         };
     },
     
