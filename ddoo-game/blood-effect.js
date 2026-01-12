@@ -34,21 +34,22 @@ const BloodEffect = {
     // ==========================================
     // 초기화
     // ==========================================
-    init(app) {
+    init(app, gameWorld = null) {
         this.app = app;
         
         // 피 전용 컨테이너 생성
         this.container = new PIXI.Container();
-        this.container.zIndex = 500;  // 유닛 위, UI 아래
+        this.container.zIndex = 15;  // units(10)와 effects(20) 사이
         this.container.sortableChildren = true;
         
-        // ★ 유닛 컨테이너와 같은 스케일/오프셋 적용
-        this.container.scale.set(1.25);
-        this.container.y = 60;
-        
-        if (app && app.stage) {
+        // ★ gameWorld가 있으면 그 안에 추가 (스케일/오프셋이 이미 적용됨)
+        // 없으면 stage에 추가 (폴백)
+        if (gameWorld) {
+            gameWorld.addChild(this.container);
+            console.log('[BloodEffect] 🩸 컨테이너를 gameWorld에 추가함');
+        } else if (app && app.stage) {
             app.stage.addChild(this.container);
-            console.log('[BloodEffect] 🩸 컨테이너를 stage에 추가함');
+            console.log('[BloodEffect] 🩸 컨테이너를 stage에 추가함 (폴백)');
         }
         
         // 파티클 풀 초기화

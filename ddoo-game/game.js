@@ -156,7 +156,7 @@ const Game = {
         
         // Combat Effects
         if (typeof CombatEffects !== 'undefined') {
-            CombatEffects.init(this.app);
+            CombatEffects.init(this.app, this.containers.gameWorld);
         }
         
         // Shield VFX
@@ -186,7 +186,7 @@ const Game = {
         
         // ★ Blood Effect System (피 효과)
         if (typeof BloodEffect !== 'undefined') {
-            BloodEffect.init(this.app);
+            BloodEffect.init(this.app, this.containers.gameWorld);
         }
         
         // Grid AOE System
@@ -319,28 +319,38 @@ const Game = {
         this.renderHand(false);
     },
     
+    // ★ 게임 컨테이너 스케일/오프셋 설정 (전역)
+    gameContainerScale: 1.25,
+    gameContainerOffsetY: 60,
+    
     setupContainers() {
+        // ★ 게임 콘텐츠를 담을 상위 컨테이너 (스케일/오프셋 적용)
+        this.containers.gameWorld = new PIXI.Container();
+        this.containers.gameWorld.scale.set(this.gameContainerScale);
+        this.containers.gameWorld.y = this.gameContainerOffsetY;
+        this.containers.gameWorld.sortableChildren = true;
+        this.app.stage.addChild(this.containers.gameWorld);
+        
+        // 하위 컨테이너들 (gameWorld 안에 추가)
         this.containers.grid = new PIXI.Container();
         this.containers.grid.zIndex = 1;
-        this.app.stage.addChild(this.containers.grid);
+        this.containers.gameWorld.addChild(this.containers.grid);
         
         // 바닥 이펙트 (불길 등) - 유닛보다 아래
         this.containers.ground = new PIXI.Container();
         this.containers.ground.zIndex = 5;
-        this.app.stage.addChild(this.containers.ground);
+        this.containers.gameWorld.addChild(this.containers.ground);
         
         this.containers.units = new PIXI.Container();
         this.containers.units.zIndex = 10;
         this.containers.units.sortableChildren = true;
-        // ★ 전체 유닛 확대 + 오프셋 조정
-        this.containers.units.scale.set(1.25);  // 25% 확대
-        this.containers.units.y = 60;  // 더 아래로 오프셋
-        this.app.stage.addChild(this.containers.units);
+        this.containers.gameWorld.addChild(this.containers.units);
         
         this.containers.effects = new PIXI.Container();
         this.containers.effects.zIndex = 20;
-        this.app.stage.addChild(this.containers.effects);
+        this.containers.gameWorld.addChild(this.containers.effects);
         
+        // UI 컨테이너는 stage에 직접 추가 (스케일 영향 안 받음)
         this.containers.ui = new PIXI.Container();
         this.containers.ui.zIndex = 100;
         this.app.stage.addChild(this.containers.ui);
@@ -410,9 +420,9 @@ const Game = {
         const centerWorld = DDOOBackground.project3DToScreen(gridX + 0.5, 0, gridZ + 0.5);
         if (!centerWorld) return null;
         
-        // ★ containers.units의 스케일/오프셋 보정 (역변환)
-        const scale = this.containers?.units?.scale?.x || 1;
-        const offsetY = this.containers?.units?.y || 0;
+        // ★ gameWorld 컨테이너의 스케일/오프셋 보정 (역변환)
+        const scale = this.gameContainerScale || 1;
+        const offsetY = this.gameContainerOffsetY || 0;
         
         return {
             x: centerWorld.screenX / scale,

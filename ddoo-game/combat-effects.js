@@ -9,13 +9,20 @@ const CombatEffects = {
     // ==========================================
     // 초기화
     // ==========================================
-    init(pixiApp) {
+    init(pixiApp, gameWorld = null) {
         this.app = pixiApp;
         this.container = new PIXI.Container();
-        this.container.zIndex = 500;
+        this.container.zIndex = 50;  // effects(20) 위
         this.container.sortableChildren = true;
-        pixiApp.stage.addChild(this.container);
-        console.log('[CombatEffects] 초기화 완료');
+        
+        // ★ gameWorld가 있으면 그 안에 추가 (좌표 동기화)
+        if (gameWorld) {
+            gameWorld.addChild(this.container);
+            console.log('[CombatEffects] 초기화 완료 (gameWorld)');
+        } else {
+            pixiApp.stage.addChild(this.container);
+            console.log('[CombatEffects] 초기화 완료 (stage)');
+        }
     },
     
     // ==========================================
