@@ -142,11 +142,14 @@ const MonsterDialogue = {
         const bubbleContainer = new PIXI.Container();
         bubbleContainer.zIndex = 500;
         
-        // ★ 유닛 컨테이너 기준 상대 위치 (머리 위)
+        // ★ 유닛 컨테이너 기준 상대 위치 (인텐트보다 위!)
         // 스프라이트 높이를 기반으로 위치 계산
-        const spriteHeight = unit.sprite.height || 100;
+        const baseScale = unit.baseScale || unit.sprite.scale?.y || 1;
+        const spriteHeight = (unit.sprite.height || 100) * baseScale;
+        
+        // 인텐트는 머리 위 ~10px, 말풍선은 인텐트 위에 +60px
         bubbleContainer.x = 0;  // 유닛 중심
-        bubbleContainer.y = -spriteHeight - 30;  // 머리 위
+        bubbleContainer.y = -spriteHeight - 70;  // 인텐트보다 위!
         
         // 말풍선 배경
         const bubble = new PIXI.Graphics();
