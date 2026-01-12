@@ -548,13 +548,13 @@ const MonsterPatterns = {
         }
         
         for (let i = 0; i < summonCount; i++) {
-            // 주변 빈 칸에 소환
-            const offsetZ = i === 0 ? -1 : 1; // 위/아래 레인에
-            let targetZ = enemy.gridZ + offsetZ;
-            let targetX = enemy.gridX;
+            // 원본 위치 근처에 소환 (같은 레인, 좌우로)
+            const offsetX = i === 0 ? 0 : 1; // 첫번째는 같은 위치, 두번째는 오른쪽
+            let targetZ = enemy.gridZ;
+            let targetX = enemy.gridX + offsetX;
             
             // 범위 체크
-            targetZ = Math.max(0, Math.min(2, targetZ));
+            targetX = Math.max(0, Math.min(9, targetX));
             
             console.log(`[Split] 미니 슬라임 ${i+1} 소환: gridX=${targetX}, gridZ=${targetZ}`);
             
@@ -586,18 +586,37 @@ const MonsterPatterns = {
             await new Promise(r => setTimeout(r, 150));
         }
         
-        // 4. 원본 슬라임 복원
+        // 4. ★★★ 원본 슬라임 제거! (분열 = 1→2) ★★★
+        console.log(`[Split] 원본 슬라임 제거!`);
+        
+        // 원본 슬라임 사망 처리
         if (enemy.sprite && !enemy.sprite.destroyed) {
-            const baseScale = enemy.baseScale || enemy.sprite.baseScale || 0.35;
+            // 터지는 연출
             gsap.to(enemy.sprite.scale, {
-                x: baseScale,
-                y: baseScale,
+                x: 0,
+                y: 0,
                 duration: 0.2,
-                ease: 'elastic.out(1, 0.5)'
+                ease: 'back.in(2)',
+                onComplete: () => {
+                    if (enemy.sprite && !enemy.sprite.destroyed) {
+                        enemy.sprite.visible = false;
+                    }
+                }
             });
         }
         
-        console.log(`[Split] 분열 완료! ${spawnedMinis.length}개 미니 슬라임 소환`);
+        // HP를 0으로 설정하여 사망 처리
+        enemy.hp = 0;
+        
+        // 게임에서 유닛 제거
+        if (typeof game.killUnit === 'function') {
+            // 약간의 딜레이 후 제거 (연출 완료 후)
+            setTimeout(() => {
+                game.killUnit(enemy);
+            }, 250);
+        }
+        
+        console.log(`[Split] 분열 완료! 원본 제거, ${spawnedMinis.length}개 미니 슬라임 소환`);
     }
 };
 
