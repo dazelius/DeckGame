@@ -1629,7 +1629,9 @@ const CombatEffects = {
         
         // ★ 피 효과 자동 발생 (대미지 타입일 때만)
         const damageTypes = ['normal', 'critical', 'bash', 'flurry', 'burn', 'poison', 'dot', 'bleed'];
+        console.log(`[CombatEffects] showDamageNumber: type=${type}, damage=${damage}, BloodEffect=${typeof BloodEffect}`);
         if (typeof BloodEffect !== 'undefined' && damageTypes.includes(type) && damage > 0) {
+            console.log('[CombatEffects] BloodEffect.onDamage 호출!');
             BloodEffect.onDamage(x, y, damage, { type: type });
         }
         

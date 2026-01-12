@@ -42,8 +42,13 @@ const BloodEffect = {
         this.container.zIndex = 500;  // 유닛 위, UI 아래
         this.container.sortableChildren = true;
         
+        // ★ 유닛 컨테이너와 같은 스케일/오프셋 적용
+        this.container.scale.set(1.25);
+        this.container.y = 60;
+        
         if (app && app.stage) {
             app.stage.addChild(this.container);
+            console.log('[BloodEffect] 🩸 컨테이너를 stage에 추가함');
         }
         
         // 파티클 풀 초기화
@@ -54,6 +59,7 @@ const BloodEffect = {
             app.ticker.add(this.update, this);
         }
         
+        this.initialized = true;
         console.log('[BloodEffect] 🩸 피 효과 시스템 초기화 완료');
     },
     
@@ -112,7 +118,17 @@ const BloodEffect = {
     // 🩸 메인 API - 대미지 기반 피 효과
     // ==========================================
     onDamage(x, y, damage, options = {}) {
-        if (!this.config.enabled || damage < this.config.minDamageForBlood) return;
+        console.log(`[BloodEffect] onDamage 호출: x=${x}, y=${y}, damage=${damage}`);
+        
+        if (!this.initialized) {
+            console.log('[BloodEffect] 초기화되지 않음!');
+            return;
+        }
+        
+        if (!this.config.enabled || damage < this.config.minDamageForBlood) {
+            console.log('[BloodEffect] 비활성화 또는 최소 대미지 미달');
+            return;
+        }
         
         const {
             direction = null,     // 피격 방향 (라디안, null이면 랜덤)
@@ -170,6 +186,8 @@ const BloodEffect = {
     // 🩸 피 분출 (메인)
     // ==========================================
     spawnBloodBurst(x, y, count, direction = null, customColor = null) {
+        console.log(`[BloodEffect] spawnBloodBurst: count=${count}, activeParticles=${this.activeParticles.length}`);
+        
         for (let i = 0; i < count; i++) {
             const p = this.getParticle();
             const d = p.particleData;
