@@ -31,7 +31,8 @@
             "hits": 1,
             "knockbackPerHit": 1,
             "weight": 30,
-            "breakRecipe": 2
+            "breakRecipe": 2,
+            "cooldown": 2
         },
         { 
             "id": "defend",
@@ -59,7 +60,8 @@
             "hits": 3,
             "knockbackPerHit": 1,
             "weight": 35,
-            "breakRecipe": 3
+            "breakRecipe": 3,
+            "cooldown": 3
         }
     ],
     

@@ -39,7 +39,8 @@
             "damage": 8,
             "heal": 4,
             "weight": 25,
-            "breakRecipe": 2
+            "breakRecipe": 2,
+            "cooldown": 2
         },
         { 
             "id": "curse",
@@ -48,7 +49,8 @@
             "type": "debuff", 
             "vulnerable": 2,
             "weight": 20,
-            "breakRecipe": 2
+            "breakRecipe": 2,
+            "cooldown": 2
         },
         { 
             "id": "summon_skeleton",

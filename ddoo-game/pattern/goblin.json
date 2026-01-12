@@ -28,7 +28,8 @@
             "type": "attack", 
             "damage": 8,
             "weight": 40,
-            "breakRecipe": 3
+            "breakRecipe": 3,
+            "cooldown": 2
         },
         { 
             "id": "wild_swing",
@@ -37,7 +38,8 @@
             "type": "attack", 
             "damage": 12,
             "weight": 25,
-            "breakRecipe": 2
+            "breakRecipe": 2,
+            "cooldown": 2
         },
         { 
             "id": "defend",
@@ -65,7 +67,8 @@
             "damage": 2,
             "hits": 3,
             "weight": 25,
-            "breakRecipe": 2
+            "breakRecipe": 2,
+            "cooldown": 2
         }
     ],
     

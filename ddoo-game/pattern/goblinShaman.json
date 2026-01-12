@@ -40,7 +40,8 @@
             "type": "debuff",
             "vulnerable": 2,
             "weight": 25,
-            "breakRecipe": 2
+            "breakRecipe": 2,
+            "cooldown": 2
         },
         { 
             "id": "tribal_ward",

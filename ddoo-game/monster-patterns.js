@@ -239,15 +239,29 @@ const MonsterPatterns = {
         const currentTurn = this.game?.state?.turn || 1;
         const isFirstTurn = currentTurn <= 1;
         
+        // ★★★ 쿨타임 초기화 (없으면 생성)
+        if (!enemy.intentCooldowns) {
+            enemy.intentCooldowns = {};
+        }
+        
         // 사용 가능한 인텐트 필터링
-        let availableIntents = pattern.intents;
-        if (isFirstTurn) {
-            // 첫 턴: 브레이크 레시피가 없는 인텐트만
-            const safeIntents = pattern.intents.filter(i => !i.breakRecipe);
-            if (safeIntents.length > 0) {
-                availableIntents = safeIntents;
+        let availableIntents = pattern.intents.filter(intent => {
+            // 쿨타임 중인 인텐트 제외
+            const cooldownRemaining = enemy.intentCooldowns[intent.id] || 0;
+            if (cooldownRemaining > 0) {
+                console.log(`[MonsterPatterns] ${enemy.name || enemy.type}: ${intent.id} 쿨타임 ${cooldownRemaining}턴 남음`);
+                return false;
             }
-            // 모든 인텐트가 브레이크 레시피가 있으면 어쩔 수 없이 원본 사용
+            // 첫 턴: 브레이크 레시피가 있는 인텐트 제외
+            if (isFirstTurn && intent.breakRecipe) {
+                return false;
+            }
+            return true;
+        });
+        
+        // 모든 인텐트가 쿨타임/제한이면 원본 사용 (폴백)
+        if (availableIntents.length === 0) {
+            availableIntents = pattern.intents;
         }
         
         // 가중치 합계
@@ -266,6 +280,13 @@ const MonsterPatterns = {
                     selectedIntent.damage = enemy.damage || 5;
                 }
                 
+                // ★★★ 쿨타임 설정 (breakRecipe가 있으면 자동 쿨타임)
+                if (selectedIntent.cooldown || selectedIntent.breakRecipe) {
+                    const cooldown = selectedIntent.cooldown || 2; // 기본 2턴 쿨타임
+                    enemy.intentCooldowns[selectedIntent.id] = cooldown;
+                    console.log(`[MonsterPatterns] ${enemy.name || enemy.type}: ${selectedIntent.id} 사용! 쿨타임 ${cooldown}턴 설정`);
+                }
+                
                 return selectedIntent;
             }
         }
@@ -275,9 +296,30 @@ const MonsterPatterns = {
     },
     
     // ==========================================
+    // 쿨타임 감소 (턴 시작 시 호출)
+    // ==========================================
+    tickCooldowns(enemies) {
+        enemies.forEach(enemy => {
+            if (enemy.hp <= 0 || !enemy.intentCooldowns) return;
+            
+            for (const intentId in enemy.intentCooldowns) {
+                if (enemy.intentCooldowns[intentId] > 0) {
+                    enemy.intentCooldowns[intentId]--;
+                    if (enemy.intentCooldowns[intentId] <= 0) {
+                        console.log(`[MonsterPatterns] ${enemy.name || enemy.type}: ${intentId} 쿨타임 종료!`);
+                    }
+                }
+            }
+        });
+    },
+    
+    // ==========================================
     // 모든 적 인텐트 롤링
     // ==========================================
     rollAllIntents(enemies) {
+        // ★ 먼저 쿨타임 감소
+        this.tickCooldowns(enemies);
+        
         enemies.forEach(enemy => {
             if (enemy.hp <= 0) return;
             

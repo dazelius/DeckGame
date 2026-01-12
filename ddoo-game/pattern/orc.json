@@ -29,7 +29,8 @@
             "type": "attack", 
             "damage": 15,
             "weight": 35,
-            "breakRecipe": 4
+            "breakRecipe": 4,
+            "cooldown": 2
         },
         { 
             "id": "rage_slam",
@@ -38,7 +39,8 @@
             "type": "attack", 
             "damage": 22,
             "weight": 15,
-            "breakRecipe": 3
+            "breakRecipe": 3,
+            "cooldown": 3
         },
         { 
             "id": "war_cry",
