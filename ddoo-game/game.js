@@ -3886,10 +3886,15 @@ const Game = {
             enemy.gridX = newX;
             
             const newPos = this.getCellCenter(newX, enemy.gridZ);
-            const posTarget = enemy.container || enemy.sprite;
+            // ★ UnitCombat 헬퍼 사용
+            const posTarget = typeof UnitCombat !== 'undefined' 
+                ? UnitCombat.getPositionTarget(enemy) 
+                : (enemy.container || enemy.sprite);
             const scaleTarget = enemy.sprite;
-            const baseScale = enemy.baseScale || scaleTarget.scale.x;
-            const startY = posTarget.y;
+            const baseScale = enemy.baseScale || scaleTarget?.scale?.x || 1;
+            const startY = posTarget?.y || 0;
+            
+            console.log(`[AI] ${enemy.type} 후퇴: (${posTarget?.x}, ${startY}) → (${newPos?.x}, ${newPos?.y})`);
             
             await new Promise(resolve => {
                 const tl = gsap.timeline({ onComplete: resolve });

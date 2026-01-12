@@ -513,22 +513,56 @@ const MonsterPatterns = {
                         );
                         
                         if (!blocked) {
-                            console.log(`[MonsterPatterns] ${enemy.name || enemy.type}: 전진 방어! ${enemy.gridX} → ${targetX}`);
+                            const oldX = enemy.gridX;
+                            console.log(`[MonsterPatterns] ${enemy.name || enemy.type}: 전진 방어! ${oldX} → ${targetX}`);
                             
-                            // 이동 애니메이션
+                            // ★ UnitCombat 헬퍼 사용
+                            const posTarget = typeof UnitCombat !== 'undefined' 
+                                ? UnitCombat.getPositionTarget(enemy) 
+                                : (enemy.container || enemy.sprite);
+                            const scaleTarget = enemy.sprite;
+                            const baseScale = enemy.baseScale || scaleTarget?.scale?.x || 1;
+                            
                             const newPos = game.getCellCenter(targetX, enemy.gridZ);
-                            const posTarget = enemy.container || enemy.sprite;
+                            const startY = posTarget?.y || 0;
                             
                             if (posTarget && newPos) {
+                                console.log(`[MonsterPatterns] 전진 애니메이션: (${posTarget.x}, ${posTarget.y}) → (${newPos.x}, ${newPos.y})`);
+                                
                                 await new Promise(resolve => {
-                                    gsap.to(posTarget, {
+                                    const tl = gsap.timeline({ onComplete: resolve });
+                                    
+                                    // 1. 준비 자세 (방패 들기)
+                                    tl.to(scaleTarget.scale, {
+                                        x: baseScale * 0.95,
+                                        y: baseScale * 1.05,
+                                        duration: 0.08,
+                                        ease: 'power1.in'
+                                    });
+                                    
+                                    // 2. 전진! (묵직하게)
+                                    tl.to(posTarget, {
                                         x: newPos.x,
                                         y: newPos.y,
-                                        duration: 0.3,
-                                        ease: 'power2.out',
-                                        onComplete: resolve
+                                        duration: 0.25,
+                                        ease: 'power2.inOut'
+                                    });
+                                    
+                                    tl.to(scaleTarget.scale, {
+                                        x: baseScale * 1.1,
+                                        y: baseScale * 0.9,
+                                        duration: 0.15
+                                    }, '<');
+                                    
+                                    // 3. 착지 (안정)
+                                    tl.to(scaleTarget.scale, {
+                                        x: baseScale,
+                                        y: baseScale,
+                                        duration: 0.1,
+                                        ease: 'power2.out'
                                     });
                                 });
+                                
                                 enemy.gridX = targetX;
                             }
                         }
