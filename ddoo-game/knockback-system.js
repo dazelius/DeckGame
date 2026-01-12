@@ -471,7 +471,7 @@ const KnockbackSystem = {
     },
     
     // ==========================================
-    // 벽 충돌 이펙트
+    // 벽 충돌 이펙트 - 벽에 부딪혀 튕겨나오는 연출
     // ==========================================
     async wallImpact(unit) {
         const posTarget = this.getPositionTarget(unit);
@@ -480,13 +480,11 @@ const KnockbackSystem = {
         
         unit.isAnimating = true;
         const originalX = posTarget.x;
+        const originalY = posTarget.y;
         const baseScale = unit.baseScale || scaleTarget?.baseScale || 1;
         
-        // Screen shake
-        if (typeof CombatEffects !== 'undefined') {
-            CombatEffects.screenShake(8, 150);
-            CombatEffects.screenFlash('#ff6600', 100, 0.2);
-        }
+        // ★ 벽 충돌 VFX 생성
+        this.createWallImpactVFX(originalX + 40, originalY);
         
         return new Promise(resolve => {
             if (!posTarget || posTarget.destroyed) {
@@ -496,33 +494,161 @@ const KnockbackSystem = {
             }
             
             gsap.timeline()
-                // Squash against wall (스케일은 scaleTarget)
-                .call(() => {
-                    if (scaleTarget) gsap.to(scaleTarget.scale, { x: baseScale * 0.6, y: baseScale * 1.4, duration: 0.08 });
-                })
+                // 1. 벽에 꽝! 부딪힘 (벽 쪽으로 밀려감)
                 .to(posTarget, { 
-                    x: originalX + 15, // Slight push toward wall
-                    duration: 0.08 
-                }, '<')
-                // Bounce back
-                .call(() => {
-                    if (scaleTarget) gsap.to(scaleTarget.scale, { x: baseScale * 1.1, y: baseScale * 0.9, duration: 0.1 });
+                    x: originalX + 35,
+                    duration: 0.06,
+                    ease: 'power2.in'
                 })
+                .call(() => {
+                    // 충돌 순간 - 찌그러짐 + 화면 효과
+                    if (scaleTarget && scaleTarget.scale) {
+                        gsap.to(scaleTarget.scale, { 
+                            x: baseScale * 0.5, 
+                            y: baseScale * 1.5, 
+                            duration: 0.05 
+                        });
+                    }
+                    if (typeof CombatEffects !== 'undefined') {
+                        CombatEffects.screenShake(12, 200);
+                        CombatEffects.screenFlash('#ff6600', 120, 0.3);
+                    }
+                })
+                // 잠시 벽에 붙어있음
+                .to({}, { duration: 0.08 })
+                
+                // 2. 벽에서 튕겨나옴! (반대 방향으로 크게)
+                .to(posTarget, { 
+                    x: originalX - 60,
+                    duration: 0.12,
+                    ease: 'power2.out'
+                })
+                .call(() => {
+                    // 튕겨나오며 스케일 복구 시작
+                    if (scaleTarget && scaleTarget.scale) {
+                        gsap.to(scaleTarget.scale, { 
+                            x: baseScale * 1.2, 
+                            y: baseScale * 0.8, 
+                            duration: 0.1 
+                        });
+                    }
+                }, null, '<')
+                
+                // 3. 다시 원래 자리로 돌아옴
                 .to(posTarget, { 
                     x: originalX, 
-                    duration: 0.15,
-                    ease: 'power2.out'
-                }, '<')
-                // Settle
-                .call(() => {
-                    if (scaleTarget) gsap.to(scaleTarget.scale, { x: baseScale, y: baseScale, duration: 0.1 });
+                    duration: 0.2,
+                    ease: 'power2.inOut'
                 })
+                .call(() => {
+                    if (scaleTarget && scaleTarget.scale) {
+                        gsap.to(scaleTarget.scale, { 
+                            x: baseScale, 
+                            y: baseScale, 
+                            duration: 0.15,
+                            ease: 'elastic.out(1, 0.5)'
+                        });
+                    }
+                }, null, '<')
+                
+                // 완료
                 .to({}, { duration: 0.1 })
                 .call(() => {
                     unit.isAnimating = false;
                     resolve();
                 });
         });
+    },
+    
+    // ★ 벽 충돌 VFX (파편, 먼지)
+    createWallImpactVFX(x, y) {
+        if (typeof CombatEffects === 'undefined' || !CombatEffects.container) return;
+        
+        const container = new PIXI.Container();
+        container.x = x;
+        container.y = y;
+        container.zIndex = 500;
+        CombatEffects.container.addChild(container);
+        
+        // 충격파 원
+        const shockwave = new PIXI.Graphics();
+        shockwave.circle(0, 0, 10);
+        shockwave.fill({ color: 0xffaa00, alpha: 0.8 });
+        container.addChild(shockwave);
+        
+        gsap.to(shockwave, {
+            alpha: 0,
+            duration: 0.3,
+            onUpdate: () => {
+                if (shockwave.destroyed) return;
+                shockwave.clear();
+                shockwave.circle(0, 0, 10 + (1 - shockwave.alpha) * 40);
+                shockwave.stroke({ width: 3 - shockwave.alpha * 3, color: 0xffaa00, alpha: shockwave.alpha });
+            },
+            onComplete: () => {
+                if (!shockwave.destroyed) shockwave.destroy();
+            }
+        });
+        
+        // 파편들
+        for (let i = 0; i < 8; i++) {
+            const debris = new PIXI.Graphics();
+            const size = 3 + Math.random() * 5;
+            debris.rect(-size/2, -size/2, size, size);
+            debris.fill({ color: 0xccaa88 });
+            debris.rotation = Math.random() * Math.PI;
+            container.addChild(debris);
+            
+            const angle = -Math.PI/2 + (Math.random() - 0.5) * Math.PI * 0.8; // 왼쪽으로 퍼짐
+            const speed = 80 + Math.random() * 120;
+            const targetX = Math.cos(angle) * speed;
+            const targetY = Math.sin(angle) * speed * 0.5 + 30; // 약간 아래로
+            
+            gsap.to(debris, {
+                x: targetX,
+                y: targetY,
+                rotation: debris.rotation + (Math.random() - 0.5) * 6,
+                alpha: 0,
+                duration: 0.4 + Math.random() * 0.2,
+                ease: 'power2.out',
+                onComplete: () => {
+                    if (!debris.destroyed) debris.destroy();
+                }
+            });
+        }
+        
+        // 먼지 구름
+        for (let i = 0; i < 5; i++) {
+            const dust = new PIXI.Graphics();
+            dust.circle(0, 0, 8 + Math.random() * 10);
+            dust.fill({ color: 0xddccbb, alpha: 0.6 });
+            dust.x = (Math.random() - 0.5) * 20;
+            dust.y = (Math.random() - 0.5) * 30;
+            container.addChild(dust);
+            
+            gsap.to(dust, {
+                x: dust.x - 30 - Math.random() * 40,
+                y: dust.y + Math.random() * 20,
+                alpha: 0,
+                duration: 0.5 + Math.random() * 0.3,
+                ease: 'power2.out',
+                onComplete: () => {
+                    if (!dust.destroyed) dust.destroy();
+                }
+            });
+            
+            gsap.to(dust.scale, {
+                x: 2 + Math.random(),
+                y: 2 + Math.random(),
+                duration: 0.5,
+                ease: 'power2.out'
+            });
+        }
+        
+        // 컨테이너 정리
+        setTimeout(() => {
+            if (!container.destroyed) container.destroy({ children: true });
+        }, 1000);
     },
     
     // ==========================================
