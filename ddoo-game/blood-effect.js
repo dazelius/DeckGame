@@ -147,13 +147,7 @@ const BloodEffect = {
             return;
         }
         
-        // ★ 글로벌 좌표 → 로컬 좌표 변환
-        if (typeof game !== 'undefined' && game.globalToLocal) {
-            const local = game.globalToLocal(x, y);
-            x = local.x;
-            y = local.y;
-        }
-        
+        // ★ 좌표는 이미 gameWorld 로컬 좌표로 전달됨 (변환 불필요)
         console.log(`[BloodEffect] 피 생성: x=${x.toFixed(0)}, y=${y.toFixed(0)}, damage=${damage}`);
         
         const {
@@ -448,11 +442,11 @@ const BloodEffect = {
         p.clear();
         
         const alpha = Math.min(1, d.life * 1.5);
-        const size = d.size * (0.5 + d.life * 0.5);
+        const size = Math.max(8, d.size * 2); // ★ 최소 8픽셀, 2배 크기
         
-        // ★ 간단하게 원만 그리기 (디버그)
-        p.circle(0, 0, Math.max(3, size));
-        p.fill({ color: d.color || 0xCC0000, alpha: alpha });
+        // ★ 파티클 위치에 직접 그리기 (p.x, p.y 사용)
+        p.circle(0, 0, size);
+        p.fill({ color: 0xFF0000, alpha: 1 }); // ★ 순수 빨강, 완전 불투명
     },
     
     // 물방울 그리기 (PixiJS v8)
