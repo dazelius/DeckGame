@@ -122,7 +122,7 @@ const BloodEffect = {
     },
     
     // ==========================================
-    // 파티클 그리기
+    // 파티클 그리기 (직접 좌표에 그리기)
     // ==========================================
     drawParticle(p) {
         const g = p.graphics;
@@ -131,44 +131,39 @@ const BloodEffect = {
         const alpha = Math.min(1, p.life * 1.5);
         if (alpha <= 0) return;
         
+        // ★ 모든 타입을 직접 좌표에 그리기 (테스트 원과 같은 방식)
         if (p.type === 'drop' || p.type === 'spray') {
-            // 속도에 따른 늘어남
             const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
-            const stretch = p.stuck ? 1 : Math.min(1 + speed / 300, 2.5);
-            const angle = Math.atan2(p.vy, p.vx);
-            
+            const stretch = p.stuck ? 1 : Math.min(1 + speed / 300, 2);
             const sizeX = p.size / stretch;
             const sizeY = p.size * stretch;
             
-            // 회전된 타원
-            g.rotation = angle;
-            g.ellipse(0, 0, sizeY, sizeX);
+            g.ellipse(p.x, p.y, sizeY, sizeX);
             g.fill({ color: p.color, alpha: alpha });
-            g.x = p.x;
-            g.y = p.y;
             
         } else if (p.type === 'chunk') {
-            // 불규칙한 덩어리
-            g.x = p.x;
-            g.y = p.y;
-            g.rotation = p.rotation;
-            
-            g.poly(p.shape);
+            // 덩어리 - 좌표 오프셋 적용
+            const rotatedShape = [];
+            for (let j = 0; j < p.shape.length; j += 2) {
+                const px = p.shape[j];
+                const py = p.shape[j + 1];
+                const rx = px * Math.cos(p.rotation) - py * Math.sin(p.rotation);
+                const ry = px * Math.sin(p.rotation) + py * Math.cos(p.rotation);
+                rotatedShape.push(p.x + rx, p.y + ry);
+            }
+            g.poly(rotatedShape);
             g.fill({ color: p.color, alpha: alpha });
             
-            // 회전 업데이트
             if (!p.stuck) {
                 p.rotation += p.rotationSpeed * 0.016;
             }
             
         } else if (p.type === 'mist') {
-            // 안개
             const size = p.size * (1 + (1 - p.life) * 0.5);
             g.circle(p.x, p.y, size);
             g.fill({ color: p.color, alpha: alpha * 0.4 });
             
         } else if (p.type === 'puddle') {
-            // 바닥 웅덩이
             const size = p.size * (1 + (1 - p.life) * 0.3);
             g.ellipse(p.x, p.y, size * 1.5, size * 0.4);
             g.fill({ color: p.color, alpha: alpha * 0.7 });
@@ -180,18 +175,6 @@ const BloodEffect = {
     // ==========================================
     onDamage(x, y, damage, options = {}) {
         if (!this.initialized || !this.config.enabled) return;
-        
-        console.log(`[BloodEffect] onDamage: x=${x?.toFixed?.(0) || x}, y=${y?.toFixed?.(0) || y}, damage=${damage}`);
-        
-        // ★ 디버그: 테스트 원 (이 위치에 피가 나와야 함)
-        const testG = new PIXI.Graphics();
-        testG.circle(x, y, 15);
-        testG.fill({ color: 0x00FF00, alpha: 1 });  // 초록색
-        this.container.addChild(testG);
-        setTimeout(() => {
-            if (testG.parent) testG.parent.removeChild(testG);
-            testG.destroy();
-        }, 1500);
         
         const { type = 'normal', direction = null } = options;
         const intensity = Math.min(damage / 8, 2) * this.config.intensity;
