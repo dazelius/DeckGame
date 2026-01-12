@@ -206,6 +206,13 @@ const CardDrag = {
             this.drawTargetingCurvesToEnemies(cursorX, cursorY, targetEnemy, cardDef.frontOnly || false);
         }
         
+        // ★ 근접 카드: 레인 변경 가이드 표시
+        if (cardDef.melee && targetEnemy) {
+            this.drawLaneChangeGuide(targetEnemy);
+        } else {
+            this.clearLaneChangeGuide();
+        }
+        
         if (targetEnemy) {
             // 십자가 패턴 처리
             if (cardDef.aoePattern === 'cross') {
@@ -404,6 +411,7 @@ const CardDrag = {
         this.clearAllyHighlights();
         this.clearAoeHighlight();
         this.clearTargetingCurve();
+        this.clearLaneChangeGuide();
         this.game.hideSummonZones();
         
         if (this.dragState.cardEl) {
@@ -1232,6 +1240,100 @@ const CardDrag = {
         if (this._spearLabel && !this._spearLabel.destroyed) {
             this._spearLabel.destroy();
             this._spearLabel = null;
+        }
+    },
+    
+    // ==========================================
+    // 레인 변경 가이드 (근접 카드용)
+    // ==========================================
+    drawLaneChangeGuide(targetEnemy) {
+        const hero = this.game.state.hero;
+        if (!hero || !hero.sprite || !targetEnemy) return;
+        
+        // 같은 레인이면 가이드 불필요
+        if (hero.gridZ === targetEnemy.gridZ) {
+            this.clearLaneChangeGuide();
+            return;
+        }
+        
+        // 레인 변경 가이드 그래픽 생성
+        if (!this._laneGuide) {
+            this._laneGuide = new PIXI.Container();
+            this._laneGuide.zIndex = 50;
+            this.game.containers.effects.addChild(this._laneGuide);
+        }
+        
+        // 이전 내용 제거
+        this._laneGuide.removeChildren();
+        
+        const heroPos = hero.sprite.getGlobalPosition();
+        const targetLaneY = this.game.gridToScreen(hero.gridX, targetEnemy.gridZ).y;
+        const direction = targetEnemy.gridZ > hero.gridZ ? 1 : -1;  // 아래(+1) 또는 위(-1)
+        
+        // 레인 차이
+        const laneDiff = Math.abs(targetEnemy.gridZ - hero.gridZ);
+        
+        // 경로 그래픽
+        const pathGraphic = new PIXI.Graphics();
+        
+        // 점선 경로 (히어로 → 타겟 레인)
+        const startY = heroPos.y;
+        const endY = targetLaneY;
+        const dashLength = 8;
+        const gapLength = 6;
+        let currentY = startY;
+        
+        pathGraphic.lineStyle({ width: 3, color: 0x44aaff, alpha: 0.8 });
+        
+        while ((direction > 0 && currentY < endY) || (direction < 0 && currentY > endY)) {
+            const nextY = currentY + direction * dashLength;
+            const clampedNextY = direction > 0 ? Math.min(nextY, endY) : Math.max(nextY, endY);
+            
+            pathGraphic.moveTo(heroPos.x, currentY);
+            pathGraphic.lineTo(heroPos.x, clampedNextY);
+            
+            currentY = clampedNextY + direction * gapLength;
+        }
+        
+        // 화살표 머리
+        const arrowSize = 12;
+        const arrowY = endY - direction * 5;
+        pathGraphic.beginFill(0x44aaff, 0.9);
+        pathGraphic.moveTo(heroPos.x, endY);
+        pathGraphic.lineTo(heroPos.x - arrowSize, arrowY);
+        pathGraphic.lineTo(heroPos.x + arrowSize, arrowY);
+        pathGraphic.closePath();
+        pathGraphic.endFill();
+        
+        this._laneGuide.addChild(pathGraphic);
+        
+        // 레인 변경 표시 텍스트
+        const laneText = new PIXI.Text({
+            text: direction > 0 ? `▼ ${laneDiff}레인` : `▲ ${laneDiff}레인`,
+            style: {
+                fontSize: 14,
+                fontWeight: 'bold',
+                fill: '#44aaff',
+                stroke: { color: '#000000', width: 3 }
+            }
+        });
+        laneText.anchor.set(0.5);
+        laneText.x = heroPos.x + 40;
+        laneText.y = (startY + endY) / 2;
+        this._laneGuide.addChild(laneText);
+        
+        // 히어로 이동 위치 원
+        const moveIndicator = new PIXI.Graphics();
+        moveIndicator.circle(heroPos.x, endY, 15);
+        moveIndicator.stroke({ color: 0x44aaff, width: 2, alpha: 0.6 });
+        moveIndicator.circle(heroPos.x, endY, 8);
+        moveIndicator.fill({ color: 0x44aaff, alpha: 0.3 });
+        this._laneGuide.addChild(moveIndicator);
+    },
+    
+    clearLaneChangeGuide() {
+        if (this._laneGuide) {
+            this._laneGuide.removeChildren();
         }
     },
     
