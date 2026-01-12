@@ -421,12 +421,26 @@ const Game = {
         if (!centerWorld) return null;
         
         // ★ gameWorld 컨테이너의 스케일/오프셋 보정 (역변환)
+        return this.globalToLocal(centerWorld.screenX, centerWorld.screenY);
+    },
+    
+    // ★ 글로벌 좌표 → gameWorld 로컬 좌표 변환
+    globalToLocal(globalX, globalY) {
         const scale = this.gameContainerScale || 1;
         const offsetY = this.gameContainerOffsetY || 0;
-        
         return {
-            x: centerWorld.screenX / scale,
-            y: (centerWorld.screenY - offsetY) / scale
+            x: globalX / scale,
+            y: (globalY - offsetY) / scale
+        };
+    },
+    
+    // ★ gameWorld 로컬 좌표 → 글로벌 좌표 변환
+    localToGlobal(localX, localY) {
+        const scale = this.gameContainerScale || 1;
+        const offsetY = this.gameContainerOffsetY || 0;
+        return {
+            x: localX * scale,
+            y: localY * scale + offsetY
         };
     },
     
