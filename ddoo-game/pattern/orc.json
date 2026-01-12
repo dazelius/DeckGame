@@ -19,7 +19,7 @@
         "chargeWhenFar": true
     },
     
-    "weaknesses": ["physical", "ice", "magic"],
+    "weaknesses": ["physical", "ice", "magic", "lightning"],
     
     "intents": [
         { 

@@ -19,7 +19,7 @@
         "keepDistance": true
     },
     
-    "weaknesses": ["physical", "fire"],
+    "weaknesses": ["physical", "fire", "lightning"],
     
     "intents": [
         { 

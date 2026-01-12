@@ -19,7 +19,7 @@
         "splitThreshold": 0.5
     },
     
-    "weaknesses": ["fire", "ice"],
+    "weaknesses": ["fire", "ice", "lightning"],
     
     "intents": [
         { 
