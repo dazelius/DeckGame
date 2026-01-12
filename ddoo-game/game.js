@@ -2604,6 +2604,14 @@ const Game = {
                         });
                         // 출혈은 sneakAttack 내부에서 처리
                         break;
+                    
+                    case 'lightning':
+                        // ★ 번개: 연쇄 번개!
+                        await UnitCombat.lightningAttack(hero, targetEnemy, cardDef.damage, { 
+                            chainReduction: cardDef.chainDamageReduction || 2,
+                            isEnemy: false
+                        });
+                        break;
                         
                     case 'bash':
                         // 강타: bashAttack

@@ -792,6 +792,303 @@ const UnitCombat = {
         }
     },
     
+    // ==========================================
+    // ★ 번개 공격 (Lightning) - 연쇄 번개!
+    // ==========================================
+    async lightningAttack(attacker, target, damage, options = {}) {
+        const { chainReduction = 2, isEnemy = false, onHit = null } = options;
+        
+        console.log(`[Lightning] 번개! damage=${damage}, chainReduction=${chainReduction}`);
+        
+        if (!target || target.hp <= 0 || !target.sprite) {
+            if (attacker) attacker.isAnimating = false;
+            return;
+        }
+        
+        attacker.isAnimating = true;
+        
+        const posTarget = this.getPositionTarget(attacker);
+        const scaleTarget = this.getScaleTarget(attacker);
+        const baseScale = attacker.baseScale || scaleTarget?.baseScale || 1;
+        
+        if (!posTarget || !scaleTarget) {
+            if (attacker) attacker.isAnimating = false;
+            return;
+        }
+        
+        const startX = posTarget.x;
+        const startY = posTarget.y;
+        
+        // ====================================
+        // 1. 시전 동작 (손 들어올리기)
+        // ====================================
+        await new Promise(resolve => {
+            gsap.timeline({ onComplete: resolve })
+                .to(scaleTarget.scale, { x: baseScale * 0.9, y: baseScale * 1.15, duration: 0.15 })
+                .to(posTarget, { y: startY - 10, duration: 0.15 }, '<');
+        });
+        
+        // 시전 이펙트
+        if (typeof CombatEffects !== 'undefined') {
+            CombatEffects.screenFlash('#4488ff', 50, 0.2);
+        }
+        
+        // ====================================
+        // 2. 연쇄 번개 처리
+        // ====================================
+        const hitTargets = new Set();
+        const chainQueue = [{ unit: target, damage: damage }];
+        
+        while (chainQueue.length > 0) {
+            const current = chainQueue.shift();
+            
+            if (!current.unit || current.unit.hp <= 0 || hitTargets.has(current.unit)) {
+                continue;
+            }
+            
+            if (current.damage <= 0) {
+                continue;
+            }
+            
+            hitTargets.add(current.unit);
+            
+            // 이전 타겟에서 현재 타겟으로 번개 발사
+            const prevTarget = hitTargets.size > 1 ? 
+                Array.from(hitTargets)[hitTargets.size - 2] : attacker;
+            
+            await this.fireLightningBolt(prevTarget, current.unit, current.damage, hitTargets.size === 1);
+            
+            // 대미지 적용
+            if (isEnemy) {
+                this.game.dealDamageToTarget(current.unit, current.damage);
+            } else {
+                this.game.dealDamage(current.unit, current.damage);
+            }
+            
+            // 다음 연쇄 대상 찾기 (8방향 1칸)
+            const nextDamage = current.damage - chainReduction;
+            if (nextDamage > 0) {
+                const neighbors = this.findAdjacentEnemies(current.unit, hitTargets);
+                for (const neighbor of neighbors) {
+                    chainQueue.push({ unit: neighbor, damage: nextDamage });
+                }
+            }
+            
+            // 연쇄 간 딜레이
+            if (chainQueue.length > 0) {
+                await new Promise(r => setTimeout(r, 100));
+            }
+        }
+        
+        if (onHit) onHit();
+        
+        // ====================================
+        // 3. 복귀
+        // ====================================
+        await new Promise(resolve => {
+            gsap.timeline({ onComplete: resolve })
+                .to(scaleTarget.scale, { x: baseScale, y: baseScale, duration: 0.15, ease: 'back.out(1.5)' })
+                .to(posTarget, { y: startY, duration: 0.15 }, '<');
+        });
+        
+        console.log(`[Lightning] 연쇄 완료! 총 ${hitTargets.size}명 피격`);
+        if (attacker) attacker.isAnimating = false;
+    },
+    
+    // ★ 인접 적 찾기 (8방향 1칸)
+    findAdjacentEnemies(unit, excludeSet) {
+        if (!this.game) return [];
+        
+        const enemies = this.game.state.enemyUnits || [];
+        const adjacent = [];
+        
+        const directions = [
+            [-1, -1], [0, -1], [1, -1],
+            [-1, 0],          [1, 0],
+            [-1, 1],  [0, 1],  [1, 1]
+        ];
+        
+        for (const enemy of enemies) {
+            if (enemy.hp <= 0 || excludeSet.has(enemy)) continue;
+            
+            const dx = enemy.gridX - unit.gridX;
+            const dz = enemy.gridZ - unit.gridZ;
+            
+            // 8방향 1칸 이내인지 확인
+            for (const [checkX, checkZ] of directions) {
+                if (dx === checkX && dz === checkZ) {
+                    adjacent.push(enemy);
+                    break;
+                }
+            }
+        }
+        
+        return adjacent;
+    },
+    
+    // ★ 번개 발사 VFX
+    async fireLightningBolt(from, to, damage, isFirst = false) {
+        if (typeof CombatEffects === 'undefined' || !CombatEffects.container) return;
+        
+        const fromPos = this.getPositionTarget(from);
+        const toPos = this.getPositionTarget(to);
+        
+        if (!fromPos || !toPos) return;
+        
+        const startX = fromPos.x;
+        const startY = fromPos.y - (from.sprite?.height || 60) / 2;
+        const endX = toPos.x;
+        const endY = toPos.y - (to.sprite?.height || 60) / 2;
+        
+        // 첫 번째 번개는 위에서 내려옴
+        const actualStartX = isFirst ? endX : startX;
+        const actualStartY = isFirst ? -50 : startY;
+        
+        // 번개 생성
+        this.createLightningBolt(actualStartX, actualStartY, endX, endY, damage);
+        
+        // 화면 효과
+        if (typeof CombatEffects !== 'undefined') {
+            CombatEffects.screenShake(6 + damage / 2, 100);
+            CombatEffects.screenFlash('#88ccff', 40, 0.3);
+            CombatEffects.impactEffect(endX, endY, 0x4488ff, 1.0);
+            CombatEffects.burstParticles(endX, endY, 0x88ccff, 8);
+        }
+        
+        // 피격 효과
+        if (to.sprite && !to.sprite.destroyed) {
+            if (typeof CombatEffects !== 'undefined') {
+                CombatEffects.hitEffect(to.sprite);
+            }
+            // 전기 틴트
+            to.sprite.tint = 0x88ccff;
+            gsap.to({}, {
+                duration: 0.2,
+                onComplete: () => {
+                    if (to.sprite && !to.sprite.destroyed) {
+                        to.sprite.tint = 0xffffff;
+                    }
+                }
+            });
+        }
+        
+        // 히트스톱
+        if (typeof CombatEffects !== 'undefined') {
+            await CombatEffects.hitStop(20);
+        }
+    },
+    
+    // ★ 번개 볼트 그래픽
+    createLightningBolt(x1, y1, x2, y2, damage) {
+        if (typeof CombatEffects === 'undefined' || !CombatEffects.container) return;
+        
+        const container = new PIXI.Container();
+        container.zIndex = 300;
+        CombatEffects.container.addChild(container);
+        
+        // 번개 경로 생성 (지그재그)
+        const points = this.generateLightningPath(x1, y1, x2, y2);
+        
+        // 글로우 레이어 (두꺼운)
+        const glow = new PIXI.Graphics();
+        glow.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) {
+            glow.lineTo(points[i].x, points[i].y);
+        }
+        glow.stroke({ width: 12 + damage / 2, color: 0x4488ff, alpha: 0.4 });
+        container.addChild(glow);
+        
+        // 메인 번개
+        const main = new PIXI.Graphics();
+        main.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) {
+            main.lineTo(points[i].x, points[i].y);
+        }
+        main.stroke({ width: 4 + damage / 4, color: 0x88ccff, alpha: 0.9 });
+        container.addChild(main);
+        
+        // 코어 (가장 밝은)
+        const core = new PIXI.Graphics();
+        core.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) {
+            core.lineTo(points[i].x, points[i].y);
+        }
+        core.stroke({ width: 2, color: 0xffffff, alpha: 1 });
+        container.addChild(core);
+        
+        // 분기 번개 (작은 가지들)
+        for (let i = 1; i < points.length - 1; i += 2) {
+            if (Math.random() > 0.5) {
+                const branch = new PIXI.Graphics();
+                const bx = points[i].x;
+                const by = points[i].y;
+                const bLen = 15 + Math.random() * 25;
+                const bAngle = Math.random() * Math.PI * 2;
+                
+                branch.moveTo(bx, by);
+                branch.lineTo(
+                    bx + Math.cos(bAngle) * bLen,
+                    by + Math.sin(bAngle) * bLen
+                );
+                branch.stroke({ width: 2, color: 0x88ccff, alpha: 0.7 });
+                container.addChild(branch);
+            }
+        }
+        
+        // 스파크 파티클
+        for (let i = 0; i < 6; i++) {
+            const spark = new PIXI.Graphics();
+            spark.circle(0, 0, 2 + Math.random() * 3);
+            spark.fill({ color: 0xffffff, alpha: 1 });
+            
+            const idx = Math.floor(Math.random() * points.length);
+            spark.x = points[idx].x;
+            spark.y = points[idx].y;
+            container.addChild(spark);
+            
+            gsap.to(spark, {
+                x: spark.x + (Math.random() - 0.5) * 40,
+                y: spark.y + (Math.random() - 0.5) * 40,
+                alpha: 0,
+                duration: 0.2 + Math.random() * 0.2,
+                onComplete: () => { if (!spark.destroyed) spark.destroy(); }
+            });
+        }
+        
+        // 페이드아웃
+        gsap.to(container, {
+            alpha: 0,
+            duration: 0.15,
+            delay: 0.05,
+            onComplete: () => {
+                if (!container.destroyed) container.destroy({ children: true });
+            }
+        });
+    },
+    
+    // ★ 번개 경로 생성 (지그재그)
+    generateLightningPath(x1, y1, x2, y2) {
+        const points = [{ x: x1, y: y1 }];
+        const segments = 6 + Math.floor(Math.random() * 4);
+        
+        const dx = (x2 - x1) / segments;
+        const dy = (y2 - y1) / segments;
+        
+        for (let i = 1; i < segments; i++) {
+            const offsetX = (Math.random() - 0.5) * 30;
+            const offsetY = (Math.random() - 0.5) * 20;
+            
+            points.push({
+                x: x1 + dx * i + offsetX,
+                y: y1 + dy * i + offsetY
+            });
+        }
+        
+        points.push({ x: x2, y: y2 });
+        
+        return points;
+    },
+    
     // ★ 비열한 찌르기 이펙트
     createSneakSlash(x, y, direction) {
         if (typeof CombatEffects === 'undefined' || !CombatEffects.container) return;

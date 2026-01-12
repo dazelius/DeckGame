@@ -141,5 +141,17 @@
         "bleed": 2,
         "aoe": { "width": 1, "depth": 1 },
         "element": "physical"
+    },
+    "lightning": {
+        "name": "Lightning",
+        "cost": 2,
+        "type": "attack",
+        "damage": 8,
+        "target": "enemy",
+        "melee": false,
+        "frontOnly": false,
+        "chainDamageReduction": 2,
+        "aoe": { "width": 1, "depth": 1 },
+        "element": "lightning"
     }
 }

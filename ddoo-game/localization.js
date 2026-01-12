@@ -183,6 +183,10 @@ const Localization = {
                 name: '비열한 습격',
                 desc: '5 피해. 2 출혈 부여.'
             },
+            lightning: {
+                name: '번개',
+                desc: '8 피해. 인접 적에게 연쇄. 연쇄당 -2 피해.'
+            },
             
             // 스킬 카드
             defend: {
@@ -257,6 +261,10 @@ const Localization = {
                 name: 'Sneak Attack',
                 desc: '5 damage. Apply 2 Bleed.'
             },
+            lightning: {
+                name: 'Lightning',
+                desc: '8 damage. Chains to adjacent enemies. -2 damage per chain.'
+            },
             defend: {
                 name: 'Defend',
                 desc: 'Gain 5 Block'
@@ -326,6 +334,10 @@ const Localization = {
             sneakAttack: {
                 name: '卑劣な襲撃',
                 desc: '5ダメージ。2出血を付与。'
+            },
+            lightning: {
+                name: '雷撃',
+                desc: '8ダメージ。隣接敵に連鎖。連鎖ごとに-2ダメージ。'
             },
             defend: {
                 name: '防御',
