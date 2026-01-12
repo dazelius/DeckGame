@@ -353,7 +353,11 @@ const UnitCombat = {
         
         const startX = posTarget.x;
         const startY = posTarget.y;
-        const dashDirection = isEnemy ? -1 : 1;
+        
+        // ★ 공격자→타겟 방향으로 밀어냄 (위치 기반)
+        // 공격자가 왼쪽에 있으면 오른쪽(+1)으로, 오른쪽에 있으면 왼쪽(-1)으로
+        const pushDirection = Math.sign(target.gridX - attacker.gridX) || (isEnemy ? -1 : 1);
+        const dashDirection = pushDirection; // 대쉬 방향 = 밀어내는 방향
         
         // ====================================
         // 1. 초기 돌진 (한 번만!) - 강력한 연출!

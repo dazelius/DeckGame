@@ -61,8 +61,8 @@ const KnockbackSystem = {
         
         this._knockbackInProgress.add(unit);
         
-        const isEnemy = unit.team === 'enemy';
-        const knockbackDir = isEnemy ? direction : -direction; // Enemies go right (+X), allies go left (-X)
+        // ★ direction은 절대 방향으로 사용 (+1: 오른쪽, -1: 왼쪽)
+        const knockbackDir = direction;
         
         let movedCells = 0;
         let hitWall = false;
