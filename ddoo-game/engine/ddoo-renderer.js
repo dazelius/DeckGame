@@ -982,54 +982,66 @@ const DDOORenderer = {
     },
     
     /**
-     * 아웃라인 글로우 효과 (쉴드용)
+     * 아웃라인 글로우 효과 (쉴드용) - 스프라이트 복제 + blur 방식
      * @param {PIXI.Container} container - DDOORenderer 컨테이너
      * @param {boolean} enabled - 글로우 활성화 여부
-     * @param {number} color - 글로우 색상 (기본: 파란색)
+     * @param {number} color - 글로우 색상 (기본: 시안)
      */
-    setOutlineGlow(container, enabled, color = 0x44aaff) {
+    setOutlineGlow(container, enabled, color = 0x44ddff) {
         if (!container) return;
         
-        const outlines = container.children.filter(child => child.isOutline);
-        if (outlines.length === 0) return;
-        
-        // 기존 글로우 애니메이션 정리
+        // 기존 글로우 정리
         if (container._glowTween) {
             container._glowTween.kill();
             container._glowTween = null;
         }
+        if (container._glowSprite) {
+            container._glowSprite.destroy();
+            container._glowSprite = null;
+        }
+        
+        // 메인 스프라이트 찾기
+        const mainSprite = container.children.find(c => c.label === 'main');
+        if (!mainSprite || !mainSprite.texture) return;
         
         if (enabled) {
-            // 글로우 ON: 파란색 + alpha 펄스만
-            outlines.forEach(outline => {
-                outline.tint = color;
-                outline.alpha = 1;
-            });
+            // ★ 글로우 스프라이트 생성 (원본 복제)
+            const glowSprite = new PIXI.Sprite(mainSprite.texture);
+            glowSprite.anchor.set(mainSprite.anchor.x, mainSprite.anchor.y);
+            glowSprite.scale.set(mainSprite.scale.x * 1.05, mainSprite.scale.y * 1.05);
+            glowSprite.tint = color;
+            glowSprite.alpha = 0.6;
+            glowSprite.zIndex = mainSprite.zIndex - 1;
+            glowSprite.label = 'glow';
             
-            // alpha 펄스 애니메이션 (글로우 느낌)
+            // ★ Blur 필터 적용
+            const blurFilter = new PIXI.BlurFilter();
+            blurFilter.blur = 8;
+            blurFilter.quality = 2;
+            glowSprite.filters = [blurFilter];
+            
+            container.addChild(glowSprite);
+            container._glowSprite = glowSprite;
+            container._glowBlur = blurFilter;
+            
+            // 펄스 애니메이션
             container._glowTween = gsap.to({ val: 0 }, {
                 val: Math.PI * 2,
-                duration: 1.5,
+                duration: 2,
                 repeat: -1,
                 ease: 'none',
                 onUpdate: function() {
+                    if (!glowSprite || glowSprite.destroyed) {
+                        this.kill();
+                        return;
+                    }
                     const v = this.targets()[0].val;
-                    const pulse = 0.7 + Math.sin(v) * 0.3;  // 0.4 ~ 1.0
-                    
-                    outlines.forEach(outline => {
-                        if (outline && !outline.destroyed) {
-                            outline.alpha = pulse;
-                        }
-                    });
+                    glowSprite.alpha = 0.4 + Math.sin(v) * 0.3;  // 0.1 ~ 0.7
+                    blurFilter.blur = 6 + Math.sin(v) * 3;  // 3 ~ 9
                 }
             });
-        } else {
-            // 글로우 OFF: 원래대로 복원
-            outlines.forEach(outline => {
-                outline.tint = 0x000000;  // 검은색
-                outline.alpha = 1;
-            });
         }
+        // enabled = false면 위에서 이미 정리됨
     },
     
     /**
