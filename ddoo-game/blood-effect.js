@@ -1,43 +1,44 @@
 // =====================================================
-// Blood Effect System - 모탈컴뱃 스타일 피 효과
-// 리얼하고 잔인한 피 표현
+// Blood Effect System - 모탈컴뱃 스타일 물리 기반 피 효과
+// 실시간 물리 시뮬레이션 (중력, 바운스, 바닥 충돌)
 // =====================================================
 
 const BloodEffect = {
     app: null,
     container: null,
-    game: null,
     initialized: false,
+    
+    // 물리 설정
+    physics: {
+        gravity: 1200,        // 중력 가속도
+        airResistance: 0.98,  // 공기 저항
+        bounceDecay: 0.3,     // 바운스 감쇠
+        groundY: 380,         // 바닥 Y 좌표
+    },
     
     // 설정
     config: {
         enabled: true,
-        intensity: 1.2,           // 전체 강도
-        particlesPerDamage: 4,    // 대미지 1당 파티클 수
-        maxActiveEffects: 200,    // 최대 동시 이펙트
+        intensity: 1.2,
     },
     
-    // 피 색상 팔레트 (모탈컴뱃 스타일)
+    // 피 색상 팔레트
     bloodColors: [
-        0xAA0000,  // 선명한 피
-        0x880000,  // 진한 빨강
-        0x660000,  // 다크 레드
-        0x990011,  // 검붉은색
-        0xBB1111,  // 밝은 피
-        0x770000,  // 어두운 피
+        0xAA0000, 0x880000, 0x660000,
+        0x990011, 0xBB1111, 0x770000,
     ],
     
-    activeEffects: [],
+    // 활성 파티클
+    particles: [],
     
     // ==========================================
     // 초기화
     // ==========================================
     init(app, gameWorld = null) {
         this.app = app;
-        this.game = typeof game !== 'undefined' ? game : null;
         
         this.container = new PIXI.Container();
-        this.container.zIndex = 25;  // 유닛 위에
+        this.container.zIndex = 25;
         this.container.sortableChildren = true;
         
         if (gameWorld) {
@@ -46,407 +47,351 @@ const BloodEffect = {
             app.stage.addChild(this.container);
         }
         
+        // 물리 업데이트 루프
+        if (app && app.ticker) {
+            app.ticker.add(this.update, this);
+        }
+        
         this.initialized = true;
-        console.log('[BloodEffect] 🩸 모탈컴뱃 스타일 피 시스템 초기화');
+        console.log('[BloodEffect] 🩸 물리 기반 피 시스템 초기화');
     },
     
     // ==========================================
-    // 🩸 메인 API - 대미지 기반 피 효과
+    // 물리 업데이트 (매 프레임)
+    // ==========================================
+    update(delta) {
+        const dt = Math.min(delta / 60, 0.05);  // 최대 50ms
+        
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+            
+            // 생명 감소
+            p.life -= dt * p.decay;
+            
+            if (p.life <= 0) {
+                if (p.graphics.parent) p.graphics.parent.removeChild(p.graphics);
+                p.graphics.destroy();
+                this.particles.splice(i, 1);
+                continue;
+            }
+            
+            // 물리 시뮬레이션
+            if (!p.stuck) {
+                // 중력
+                p.vy += this.physics.gravity * dt;
+                
+                // 공기 저항
+                p.vx *= Math.pow(this.physics.airResistance, dt * 60);
+                p.vy *= Math.pow(this.physics.airResistance, dt * 60);
+                
+                // 위치 업데이트
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                
+                // 바닥 충돌
+                if (p.y >= p.groundY) {
+                    p.y = p.groundY;
+                    
+                    if (Math.abs(p.vy) < 50) {
+                        // 바닥에 붙음
+                        p.stuck = true;
+                        p.decay *= 2;  // 빨리 사라짐
+                    } else {
+                        // 바운스
+                        p.vy = -p.vy * this.physics.bounceDecay * (0.5 + Math.random() * 0.5);
+                        p.vx *= 0.8;
+                        p.bounceCount++;
+                        
+                        // 바운스할 때 작은 방울 생성
+                        if (p.bounceCount === 1 && p.size > 3) {
+                            this.spawnSplash(p.x, p.y, Math.ceil(p.size / 2));
+                        }
+                        
+                        // 3번 이상 바운스하면 멈춤
+                        if (p.bounceCount >= 3) {
+                            p.stuck = true;
+                            p.decay *= 2;
+                        }
+                    }
+                }
+            }
+            
+            // 그리기
+            this.drawParticle(p);
+        }
+    },
+    
+    // ==========================================
+    // 파티클 그리기
+    // ==========================================
+    drawParticle(p) {
+        const g = p.graphics;
+        g.clear();
+        
+        const alpha = Math.min(1, p.life * 1.5);
+        if (alpha <= 0) return;
+        
+        if (p.type === 'drop' || p.type === 'spray') {
+            // 속도에 따른 늘어남
+            const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+            const stretch = p.stuck ? 1 : Math.min(1 + speed / 300, 2.5);
+            const angle = Math.atan2(p.vy, p.vx);
+            
+            const sizeX = p.size / stretch;
+            const sizeY = p.size * stretch;
+            
+            // 회전된 타원
+            g.rotation = angle;
+            g.ellipse(0, 0, sizeY, sizeX);
+            g.fill({ color: p.color, alpha: alpha });
+            g.x = p.x;
+            g.y = p.y;
+            
+        } else if (p.type === 'chunk') {
+            // 불규칙한 덩어리
+            g.x = p.x;
+            g.y = p.y;
+            g.rotation = p.rotation;
+            
+            g.poly(p.shape);
+            g.fill({ color: p.color, alpha: alpha });
+            
+            // 회전 업데이트
+            if (!p.stuck) {
+                p.rotation += p.rotationSpeed * 0.016;
+            }
+            
+        } else if (p.type === 'mist') {
+            // 안개
+            const size = p.size * (1 + (1 - p.life) * 0.5);
+            g.circle(p.x, p.y, size);
+            g.fill({ color: p.color, alpha: alpha * 0.4 });
+            
+        } else if (p.type === 'puddle') {
+            // 바닥 웅덩이
+            const size = p.size * (1 + (1 - p.life) * 0.3);
+            g.ellipse(p.x, p.y, size * 1.5, size * 0.4);
+            g.fill({ color: p.color, alpha: alpha * 0.7 });
+        }
+    },
+    
+    // ==========================================
+    // 🩸 메인 API
     // ==========================================
     onDamage(x, y, damage, options = {}) {
         if (!this.initialized || !this.config.enabled) return;
         
-        const {
-            direction = null,
-            type = 'normal',
-            color = null,
-        } = options;
-        
-        // 대미지 기반 강도 계산
-        const intensity = Math.min(damage / 10, 2) * this.config.intensity;
-        
-        // 타입별 효과
-        switch(type) {
-            case 'critical':
-                this.criticalBlood(x, y, damage, direction);
-                break;
-            case 'heavy':
-            case 'bash':
-                this.heavyBlood(x, y, damage, direction);
-                break;
-            case 'bleed':
-                this.bleedEffect(x, y, damage);
-                break;
-            default:
-                this.normalBlood(x, y, damage, direction);
-        }
-    },
-    
-    // ==========================================
-    // 일반 피 효과
-    // ==========================================
-    normalBlood(x, y, damage, direction = null) {
-        const count = Math.min(8 + damage * 3, 40);
+        const { type = 'normal', direction = null } = options;
+        const intensity = Math.min(damage / 8, 2) * this.config.intensity;
         
         // 피 스프레이
-        this.spawnSpray(x, y, count, direction);
+        const sprayCount = Math.floor(10 + damage * 3 * intensity);
+        this.spawnSpray(x, y, sprayCount, direction);
         
-        // 큰 방울 몇 개
-        this.spawnDroplets(x, y, Math.ceil(count / 4), direction);
+        // 큰 방울
+        const dropCount = Math.floor(3 + damage * intensity);
+        this.spawnDrops(x, y, dropCount, direction);
         
-        // 피 안개
+        // 안개
         if (damage >= 5) {
             this.spawnMist(x, y, Math.ceil(damage / 3));
         }
-    },
-    
-    // ==========================================
-    // 크리티컬 피 효과 (대량)
-    // ==========================================
-    criticalBlood(x, y, damage, direction = null) {
-        const count = Math.min(20 + damage * 4, 80);
         
-        // 대량 스프레이
-        this.spawnSpray(x, y, count, direction);
-        this.spawnSpray(x, y, count / 2, direction, { delay: 0.05 });
-        
-        // 큰 방울들
-        this.spawnDroplets(x, y, Math.ceil(count / 3), direction, { size: 1.5 });
-        
-        // 피 줄기
-        this.spawnStrings(x, y, 5 + Math.floor(damage / 3));
-        
-        // 피 안개
-        this.spawnMist(x, y, 8 + Math.floor(damage / 2));
-        
-        // 화면 효과
-        if (typeof CombatEffects !== 'undefined') {
-            CombatEffects.screenFlash('#ff0000', 100, 0.2);
+        // 크리티컬/강타면 덩어리 추가
+        if (type === 'critical' || type === 'heavy' || type === 'bash') {
+            this.spawnChunks(x, y, 2 + Math.floor(damage / 5));
+            
+            if (typeof CombatEffects !== 'undefined') {
+                CombatEffects.screenFlash('#ff0000', 80, 0.15);
+            }
         }
     },
     
     // ==========================================
-    // 강타 피 효과
+    // 피 스프레이 생성
     // ==========================================
-    heavyBlood(x, y, damage, direction = null) {
-        const count = Math.min(15 + damage * 3, 60);
-        
-        // 사방으로 튀는 스프레이
-        this.spawnSpray(x, y, count, null);  // 방향 무시, 전방위
-        
-        // 큰 덩어리들
-        this.spawnChunks(x, y, 3 + Math.floor(damage / 5));
-        
-        // 피 안개
-        this.spawnMist(x, y, 5 + Math.floor(damage / 3));
+    spawnSpray(x, y, count, direction = null) {
+        for (let i = 0; i < count; i++) {
+            let angle;
+            if (direction !== null) {
+                angle = direction + (Math.random() - 0.5) * Math.PI * 0.8;
+            } else {
+                angle = -Math.PI * 0.5 + (Math.random() - 0.5) * Math.PI * 1.2;
+            }
+            
+            const speed = 200 + Math.random() * 400;
+            const size = 2 + Math.random() * 4;
+            
+            this.createParticle({
+                x: x + (Math.random() - 0.5) * 20,
+                y: y + (Math.random() - 0.5) * 15,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 50,
+                size: size,
+                type: 'spray',
+                life: 1,
+                decay: 0.8 + Math.random() * 0.4,
+                groundY: y + 80 + Math.random() * 100,
+            });
+        }
     },
     
     // ==========================================
-    // 출혈 효과 (지속)
+    // 큰 피 방울 생성
     // ==========================================
-    bleedEffect(x, y, damage) {
-        // 소량의 피 흘림
-        this.spawnDroplets(x, y, 3 + damage, null, { 
-            size: 0.6, 
-            speed: 0.5,
-            gravity: 1.5 
+    spawnDrops(x, y, count, direction = null) {
+        for (let i = 0; i < count; i++) {
+            let angle;
+            if (direction !== null) {
+                angle = direction + (Math.random() - 0.5) * Math.PI * 0.5;
+            } else {
+                angle = -Math.PI * 0.5 + (Math.random() - 0.5) * Math.PI * 0.8;
+            }
+            
+            const speed = 150 + Math.random() * 300;
+            const size = 5 + Math.random() * 8;
+            
+            this.createParticle({
+                x: x + (Math.random() - 0.5) * 15,
+                y: y + (Math.random() - 0.5) * 10,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 80,
+                size: size,
+                type: 'drop',
+                life: 1,
+                decay: 0.5 + Math.random() * 0.3,
+                groundY: y + 100 + Math.random() * 80,
+            });
+        }
+    },
+    
+    // ==========================================
+    // 피 덩어리 생성
+    // ==========================================
+    spawnChunks(x, y, count) {
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 100 + Math.random() * 200;
+            const size = 8 + Math.random() * 10;
+            
+            // 불규칙한 모양 생성
+            const shape = [];
+            const points = 5 + Math.floor(Math.random() * 3);
+            for (let j = 0; j < points; j++) {
+                const a = (j / points) * Math.PI * 2;
+                const r = size * (0.6 + Math.random() * 0.8);
+                shape.push(Math.cos(a) * r, Math.sin(a) * r);
+            }
+            
+            this.createParticle({
+                x: x + (Math.random() - 0.5) * 20,
+                y: y + (Math.random() - 0.5) * 15,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 120,
+                size: size,
+                type: 'chunk',
+                shape: shape,
+                rotation: Math.random() * Math.PI * 2,
+                rotationSpeed: (Math.random() - 0.5) * 15,
+                life: 1,
+                decay: 0.4 + Math.random() * 0.2,
+                groundY: y + 100 + Math.random() * 60,
+            });
+        }
+    },
+    
+    // ==========================================
+    // 바운스 시 튀는 작은 방울
+    // ==========================================
+    spawnSplash(x, y, count) {
+        for (let i = 0; i < count; i++) {
+            const angle = -Math.PI * 0.5 + (Math.random() - 0.5) * Math.PI;
+            const speed = 50 + Math.random() * 100;
+            const size = 1 + Math.random() * 2;
+            
+            this.createParticle({
+                x: x + (Math.random() - 0.5) * 10,
+                y: y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 30,
+                size: size,
+                type: 'spray',
+                life: 0.8,
+                decay: 1.5,
+                groundY: y + 20 + Math.random() * 30,
+            });
+        }
+    },
+    
+    // ==========================================
+    // 피 안개 생성
+    // ==========================================
+    spawnMist(x, y, count) {
+        for (let i = 0; i < count; i++) {
+            const offsetX = (Math.random() - 0.5) * 50;
+            const offsetY = (Math.random() - 0.5) * 30;
+            
+            this.createParticle({
+                x: x + offsetX,
+                y: y + offsetY,
+                vx: (Math.random() - 0.5) * 30,
+                vy: -20 - Math.random() * 40,
+                size: 25 + Math.random() * 35,
+                type: 'mist',
+                life: 1,
+                decay: 1.5 + Math.random() * 0.5,
+                stuck: true,  // 안개는 바닥 충돌 안함
+                groundY: 9999,
+            });
+        }
+    },
+    
+    // ==========================================
+    // 바닥 웅덩이 생성
+    // ==========================================
+    spawnPuddle(x, y, size) {
+        this.createParticle({
+            x: x,
+            y: y,
+            vx: 0,
+            vy: 0,
+            size: size,
+            type: 'puddle',
+            life: 1,
+            decay: 0.1,  // 천천히 사라짐
+            stuck: true,
+            groundY: 9999,
         });
     },
     
     // ==========================================
-    // 🩸 피 스프레이 (작은 방울들)
+    // 파티클 생성 헬퍼
     // ==========================================
-    spawnSpray(x, y, count, direction = null, options = {}) {
-        const { delay = 0, size = 1 } = options;
+    createParticle(config) {
+        const g = new PIXI.Graphics();
+        this.container.addChild(g);
         
-        const spawn = () => {
-            for (let i = 0; i < count; i++) {
-                const g = new PIXI.Graphics();
-                
-                // 방향 계산
-                let angle;
-                if (direction !== null) {
-                    angle = direction + (Math.random() - 0.5) * Math.PI * 0.8;
-                } else {
-                    angle = Math.random() * Math.PI * 2;
-                }
-                
-                // 위쪽으로 편향
-                angle -= Math.PI * 0.3 * Math.random();
-                
-                const speed = (100 + Math.random() * 300) * size;
-                const particleSize = (2 + Math.random() * 4) * size;
-                const color = this.bloodColors[Math.floor(Math.random() * this.bloodColors.length)];
-                
-                const startX = x + (Math.random() - 0.5) * 15;
-                const startY = y + (Math.random() - 0.5) * 15;
-                const vx = Math.cos(angle) * speed;
-                const vy = Math.sin(angle) * speed - 50 - Math.random() * 80;
-                
-                // 초기 그리기
-                g.circle(startX, startY, particleSize);
-                g.fill({ color: color, alpha: 1 });
-                this.container.addChild(g);
-                
-                // 물리 애니메이션
-                const duration = 0.4 + Math.random() * 0.4;
-                const gravity = 600 + Math.random() * 300;
-                
-                gsap.to({}, {
-                    duration: duration,
-                    onUpdate: function() {
-                        const t = this.progress();
-                        const currentX = startX + vx * t;
-                        const currentY = startY + vy * t + 0.5 * gravity * t * t;
-                        const currentSize = particleSize * (1 - t * 0.3);
-                        const alpha = 1 - t * t;
-                        
-                        g.clear();
-                        if (currentSize > 0.5 && alpha > 0) {
-                            g.circle(currentX, currentY, currentSize);
-                            g.fill({ color: color, alpha: alpha });
-                        }
-                    },
-                    onComplete: () => {
-                        if (g.parent) g.parent.removeChild(g);
-                        g.destroy();
-                    }
-                });
-            }
+        const particle = {
+            graphics: g,
+            x: config.x,
+            y: config.y,
+            vx: config.vx || 0,
+            vy: config.vy || 0,
+            size: config.size || 5,
+            type: config.type || 'drop',
+            color: config.color || this.bloodColors[Math.floor(Math.random() * this.bloodColors.length)],
+            life: config.life || 1,
+            decay: config.decay || 1,
+            groundY: config.groundY || this.physics.groundY,
+            stuck: config.stuck || false,
+            bounceCount: 0,
+            rotation: config.rotation || 0,
+            rotationSpeed: config.rotationSpeed || 0,
+            shape: config.shape || null,
         };
         
-        if (delay > 0) {
-            setTimeout(spawn, delay * 1000);
-        } else {
-            spawn();
-        }
-    },
-    
-    // ==========================================
-    // 🩸 피 방울 (큰 것들)
-    // ==========================================
-    spawnDroplets(x, y, count, direction = null, options = {}) {
-        const { size = 1, speed = 1, gravity = 1 } = options;
-        
-        for (let i = 0; i < count; i++) {
-            const g = new PIXI.Graphics();
-            
-            let angle;
-            if (direction !== null) {
-                angle = direction + (Math.random() - 0.5) * Math.PI * 0.6;
-            } else {
-                angle = -Math.PI * 0.5 + (Math.random() - 0.5) * Math.PI;
-            }
-            
-            const dropSpeed = (80 + Math.random() * 200) * speed;
-            const dropSize = (5 + Math.random() * 8) * size;
-            const color = this.bloodColors[Math.floor(Math.random() * this.bloodColors.length)];
-            
-            const startX = x + (Math.random() - 0.5) * 10;
-            const startY = y + (Math.random() - 0.5) * 10;
-            const vx = Math.cos(angle) * dropSpeed;
-            const vy = Math.sin(angle) * dropSpeed - 60;
-            
-            g.circle(startX, startY, dropSize);
-            g.fill({ color: color, alpha: 1 });
-            this.container.addChild(g);
-            
-            const duration = 0.6 + Math.random() * 0.5;
-            const grav = (500 + Math.random() * 300) * gravity;
-            
-            gsap.to({}, {
-                duration: duration,
-                onUpdate: function() {
-                    const t = this.progress();
-                    const currentX = startX + vx * t;
-                    const currentY = startY + vy * t + 0.5 * grav * t * t;
-                    
-                    // 늘어나는 효과
-                    const stretch = 1 + t * 0.5;
-                    const currentSizeX = dropSize / stretch;
-                    const currentSizeY = dropSize * stretch;
-                    const alpha = 1 - t * 0.7;
-                    
-                    g.clear();
-                    if (alpha > 0) {
-                        g.ellipse(currentX, currentY, currentSizeX, currentSizeY);
-                        g.fill({ color: color, alpha: alpha });
-                    }
-                },
-                onComplete: () => {
-                    if (g.parent) g.parent.removeChild(g);
-                    g.destroy();
-                }
-            });
-        }
-    },
-    
-    // ==========================================
-    // 🩸 피 줄기 (늘어지는 효과)
-    // ==========================================
-    spawnStrings(x, y, count) {
-        for (let i = 0; i < count; i++) {
-            const g = new PIXI.Graphics();
-            
-            const angle = -Math.PI * 0.5 + (Math.random() - 0.5) * Math.PI * 0.8;
-            const speed = 200 + Math.random() * 250;
-            const color = this.bloodColors[Math.floor(Math.random() * this.bloodColors.length)];
-            
-            const startX = x + (Math.random() - 0.5) * 10;
-            const startY = y;
-            const vx = Math.cos(angle) * speed;
-            const vy = Math.sin(angle) * speed - 80;
-            
-            this.container.addChild(g);
-            
-            const duration = 0.8 + Math.random() * 0.4;
-            const gravity = 700 + Math.random() * 200;
-            const trail = [];
-            const maxTrail = 12;
-            
-            gsap.to({}, {
-                duration: duration,
-                onUpdate: function() {
-                    const t = this.progress();
-                    const currentX = startX + vx * t;
-                    const currentY = startY + vy * t + 0.5 * gravity * t * t;
-                    
-                    trail.push({ x: currentX, y: currentY, alpha: 1 - t });
-                    if (trail.length > maxTrail) trail.shift();
-                    
-                    g.clear();
-                    
-                    // 트레일 그리기
-                    for (let j = 1; j < trail.length; j++) {
-                        const p1 = trail[j - 1];
-                        const p2 = trail[j];
-                        const alpha = p2.alpha * (j / trail.length);
-                        const width = 3 * (j / trail.length);
-                        
-                        if (alpha > 0.1) {
-                            g.moveTo(p1.x, p1.y);
-                            g.lineTo(p2.x, p2.y);
-                            g.stroke({ width: width, color: color, alpha: alpha });
-                        }
-                    }
-                    
-                    // 끝 방울
-                    if (trail.length > 0 && (1 - t) > 0.1) {
-                        const last = trail[trail.length - 1];
-                        g.circle(last.x, last.y, 3);
-                        g.fill({ color: color, alpha: 1 - t });
-                    }
-                },
-                onComplete: () => {
-                    if (g.parent) g.parent.removeChild(g);
-                    g.destroy();
-                }
-            });
-        }
-    },
-    
-    // ==========================================
-    // 🩸 피 덩어리 (강타용)
-    // ==========================================
-    spawnChunks(x, y, count) {
-        for (let i = 0; i < count; i++) {
-            const g = new PIXI.Graphics();
-            
-            const angle = Math.random() * Math.PI * 2;
-            const speed = 100 + Math.random() * 150;
-            const size = 8 + Math.random() * 10;
-            const color = this.bloodColors[Math.floor(Math.random() * this.bloodColors.length)];
-            
-            const startX = x + (Math.random() - 0.5) * 20;
-            const startY = y + (Math.random() - 0.5) * 20;
-            const vx = Math.cos(angle) * speed;
-            const vy = Math.sin(angle) * speed - 100;
-            
-            // 불규칙한 모양
-            const points = [];
-            const numPoints = 5 + Math.floor(Math.random() * 3);
-            for (let j = 0; j < numPoints; j++) {
-                const a = (j / numPoints) * Math.PI * 2;
-                const r = size * (0.7 + Math.random() * 0.6);
-                points.push(Math.cos(a) * r, Math.sin(a) * r);
-            }
-            
-            this.container.addChild(g);
-            
-            const duration = 0.7 + Math.random() * 0.5;
-            const gravity = 600 + Math.random() * 200;
-            const rotation = (Math.random() - 0.5) * 10;
-            
-            gsap.to({}, {
-                duration: duration,
-                onUpdate: function() {
-                    const t = this.progress();
-                    const currentX = startX + vx * t;
-                    const currentY = startY + vy * t + 0.5 * gravity * t * t;
-                    const currentRotation = rotation * t;
-                    const alpha = 1 - t * 0.8;
-                    const scale = 1 - t * 0.3;
-                    
-                    g.clear();
-                    if (alpha > 0.1) {
-                        // 회전 적용된 다각형
-                        const rotatedPoints = [];
-                        for (let j = 0; j < points.length; j += 2) {
-                            const px = points[j] * scale;
-                            const py = points[j + 1] * scale;
-                            const rx = px * Math.cos(currentRotation) - py * Math.sin(currentRotation);
-                            const ry = px * Math.sin(currentRotation) + py * Math.cos(currentRotation);
-                            rotatedPoints.push(currentX + rx, currentY + ry);
-                        }
-                        
-                        g.poly(rotatedPoints);
-                        g.fill({ color: color, alpha: alpha });
-                    }
-                },
-                onComplete: () => {
-                    if (g.parent) g.parent.removeChild(g);
-                    g.destroy();
-                }
-            });
-        }
-    },
-    
-    // ==========================================
-    // 🌫️ 피 안개
-    // ==========================================
-    spawnMist(x, y, count) {
-        for (let i = 0; i < count; i++) {
-            const g = new PIXI.Graphics();
-            
-            const size = 20 + Math.random() * 40;
-            const offsetX = (Math.random() - 0.5) * 40;
-            const offsetY = (Math.random() - 0.5) * 30;
-            
-            this.container.addChild(g);
-            
-            const duration = 0.5 + Math.random() * 0.3;
-            
-            gsap.to({}, {
-                duration: duration,
-                onUpdate: function() {
-                    const t = this.progress();
-                    const currentX = x + offsetX + (Math.random() - 0.5) * 5;
-                    const currentY = y + offsetY - t * 30;
-                    const currentSize = size * (1 + t * 0.5);
-                    const alpha = 0.3 * (1 - t);
-                    
-                    g.clear();
-                    if (alpha > 0.02) {
-                        g.circle(currentX, currentY, currentSize);
-                        g.fill({ color: 0x660000, alpha: alpha });
-                    }
-                },
-                onComplete: () => {
-                    if (g.parent) g.parent.removeChild(g);
-                    g.destroy();
-                }
-            });
-        }
+        this.particles.push(particle);
+        return particle;
     },
     
     // ==========================================
@@ -456,38 +401,44 @@ const BloodEffect = {
         if (!this.initialized || !this.config.enabled) return;
         
         // 폭발적인 피 분출
-        this.spawnSpray(x, y, 60, null);
-        this.spawnSpray(x, y, 40, null, { delay: 0.05 });
-        this.spawnSpray(x, y, 30, null, { delay: 0.1 });
+        this.spawnSpray(x, y, 80, null);
+        setTimeout(() => this.spawnSpray(x, y, 50, null), 50);
+        setTimeout(() => this.spawnSpray(x, y, 30, null), 100);
         
         // 큰 방울들
-        this.spawnDroplets(x, y, 20, null, { size: 1.3 });
-        
-        // 피 줄기
-        this.spawnStrings(x, y, 10);
+        this.spawnDrops(x, y, 25, null);
         
         // 피 덩어리
-        this.spawnChunks(x, y, 5);
+        this.spawnChunks(x, y, 8);
         
-        // 대량 안개
-        this.spawnMist(x, y, 15);
+        // 안개
+        this.spawnMist(x, y, 12);
+        
+        // 바닥 웅덩이
+        setTimeout(() => {
+            this.spawnPuddle(x, y + 100, 40 + Math.random() * 30);
+        }, 400);
         
         // 화면 효과
         if (typeof CombatEffects !== 'undefined') {
-            CombatEffects.screenFlash('#ff0000', 150, 0.25);
-            CombatEffects.screenShake(12, 200);
+            CombatEffects.screenFlash('#ff0000', 150, 0.3);
+            CombatEffects.screenShake(15, 250);
         }
     },
     
     // ==========================================
     // 설정
     // ==========================================
+    setEnabled(enabled) {
+        this.config.enabled = enabled;
+    },
+    
     setIntensity(value) {
         this.config.intensity = Math.max(0, Math.min(3, value));
     },
     
-    setEnabled(enabled) {
-        this.config.enabled = enabled;
+    setGroundY(y) {
+        this.physics.groundY = y;
     }
 };
 
