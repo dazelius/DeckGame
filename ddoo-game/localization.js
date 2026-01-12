@@ -177,7 +177,7 @@ const Localization = {
             },
             rush: {
                 name: '돌진',
-                desc: '3 피해. 3번 밀어붙임!'
+                desc: '3번 밀어붙임! 넉백 피해만.'
             },
             
             // 스킬 카드
@@ -247,7 +247,7 @@ const Localization = {
             },
             rush: {
                 name: 'Rush',
-                desc: '3 damage. Push 3 times!'
+                desc: 'Push 3 times! Knockback damage only.'
             },
             defend: {
                 name: 'Defend',
@@ -313,7 +313,7 @@ const Localization = {
             },
             rush: {
                 name: '突進',
-                desc: '3ダメージ。3回押す！'
+                desc: '3回押す！ノックバックダメージのみ。'
             },
             defend: {
                 name: '防御',
