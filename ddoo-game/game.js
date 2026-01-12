@@ -3877,14 +3877,61 @@ const Game = {
         const maxX = this.arena.width - 1;
         
         // 맵 범위 체크 & 해당 위치에 다른 유닛이 없는지 체크
-        const isOccupied = this.state.enemyUnits.some(e => 
-            e !== enemy && e.hp > 0 && e.gridX === newX && e.gridZ === enemy.gridZ
+        const allUnits = [...this.state.playerUnits, ...this.state.enemyUnits];
+        const isOccupied = (x, z) => allUnits.some(u => 
+            u !== enemy && u.hp > 0 && u.gridX === x && u.gridZ === z
         );
         
-        if (newX <= maxX && !isOccupied) {
-            const oldX = enemy.gridX;
+        // ★ 목표 위치 결정 (뒤로 이동 또는 레인 변경)
+        let targetX = enemy.gridX;
+        let targetZ = enemy.gridZ;
+        let moved = false;
+        
+        if (newX <= maxX && !isOccupied(newX, enemy.gridZ)) {
+            // 1순위: 뒤로 이동 가능
+            targetX = newX;
+            moved = true;
+            console.log(`[AI] ${enemy.type} 후퇴 선택: 뒤로 이동 (${enemy.gridX} → ${targetX})`);
+        } else {
+            // 2순위: 뒤로 못가면 레인 변경 시도
+            const laneOptions = [];
             
-            const newPos = this.getCellCenter(newX, enemy.gridZ);
+            // 위 레인 체크
+            if (enemy.gridZ > 0 && !isOccupied(enemy.gridX, enemy.gridZ - 1)) {
+                laneOptions.push({ z: enemy.gridZ - 1, priority: 1 });
+            }
+            // 아래 레인 체크
+            if (enemy.gridZ < this.arena.depth - 1 && !isOccupied(enemy.gridX, enemy.gridZ + 1)) {
+                laneOptions.push({ z: enemy.gridZ + 1, priority: 1 });
+            }
+            // 대각선 뒤쪽도 체크 (더 좋은 포지션)
+            if (newX <= maxX) {
+                if (enemy.gridZ > 0 && !isOccupied(newX, enemy.gridZ - 1)) {
+                    laneOptions.push({ x: newX, z: enemy.gridZ - 1, priority: 2 });
+                }
+                if (enemy.gridZ < this.arena.depth - 1 && !isOccupied(newX, enemy.gridZ + 1)) {
+                    laneOptions.push({ x: newX, z: enemy.gridZ + 1, priority: 2 });
+                }
+            }
+            
+            if (laneOptions.length > 0) {
+                // 대각선 이동 우선, 그다음 레인 변경
+                laneOptions.sort((a, b) => b.priority - a.priority);
+                const choice = laneOptions[0];
+                targetX = choice.x !== undefined ? choice.x : enemy.gridX;
+                targetZ = choice.z;
+                moved = true;
+                console.log(`[AI] ${enemy.type} 후퇴 선택: 레인 변경 (${enemy.gridZ} → ${targetZ}), X: ${enemy.gridX} → ${targetX}`);
+            } else {
+                console.log(`[AI] ${enemy.type} 후퇴 불가: 갈 곳이 없음!`);
+            }
+        }
+        
+        if (moved) {
+            const oldX = enemy.gridX;
+            const oldZ = enemy.gridZ;
+            
+            const newPos = this.getCellCenter(targetX, targetZ);
             // ★ UnitCombat 헬퍼 사용
             const posTarget = typeof UnitCombat !== 'undefined' 
                 ? UnitCombat.getPositionTarget(enemy) 
@@ -3893,7 +3940,7 @@ const Game = {
             const baseScale = enemy.baseScale || scaleTarget?.scale?.x || 1;
             const startY = posTarget?.y || 0;
             
-            console.log(`[AI] ${enemy.type} 후퇴: (${posTarget?.x}, ${startY}) → (${newPos?.x}, ${newPos?.y})`);
+            console.log(`[AI] ${enemy.type} 후퇴 애니메이션: (${posTarget?.x}, ${startY}) → (${newPos?.x}, ${newPos?.y})`);
             
             // ★★★ 중요: 애니메이션 중 위치 덮어쓰기 방지!
             enemy.isAnimating = true;
@@ -3914,11 +3961,11 @@ const Game = {
                     });
                 }
                 
-                // 2. 점프하면서 뒤로 이동
+                // 2. 점프하면서 이동
                 tl.to(posTarget, {
                     x: newPos.x,
-                    y: startY - 40,  // 위로 점프
-                    duration: 0.15,
+                    y: startY - 50,  // 위로 점프 (레인 변경 시 더 높이)
+                    duration: 0.18,
                     ease: 'power2.out'
                 }, hasScale ? '<0.05' : 0);
                 
@@ -3953,10 +4000,12 @@ const Game = {
             });
             
             // ★ 그리드 위치 업데이트 후 애니메이션 플래그 해제
-            enemy.gridX = newX;
+            enemy.gridX = targetX;
+            enemy.gridZ = targetZ;
+            enemy.z = targetZ + 0.5;
             enemy.isAnimating = false;
             
-            console.log(`[AI] ${enemy.type} 백스텝: ${oldX} -> ${newX}`);
+            console.log(`[AI] ${enemy.type} 회피 완료: (${oldX},${oldZ}) → (${targetX},${targetZ})`);
         }
     },
     
