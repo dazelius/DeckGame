@@ -179,6 +179,11 @@ const Game = {
             BleedSystem.init(this);
         }
         
+        // ★ Status Indicator (상태이상 표시)
+        if (typeof StatusIndicator !== 'undefined') {
+            StatusIndicator.init(this);
+        }
+        
         // Grid AOE System
         if (typeof GridAOE !== 'undefined') {
             GridAOE.init(this, this.app);
@@ -3873,6 +3878,11 @@ const Game = {
         // ★ 브레이크 시스템 정리 (통합 정리 함수 사용)
         if (typeof BreakSystem !== 'undefined' && typeof BreakSystem.cleanupUnit === 'function') {
             BreakSystem.cleanupUnit(unit);
+        }
+        
+        // ★ 상태 인디케이터 정리
+        if (typeof StatusIndicator !== 'undefined') {
+            StatusIndicator.cleanupUnit(unit);
         }
         
         // ★ HP 바 삭제 연출 (페이드아웃 + 축소)

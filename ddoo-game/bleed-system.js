@@ -190,12 +190,12 @@ const BleedSystem = {
     },
     
     // ==========================================
-    // 출혈 UI 업데이트 (HP바 옆에 표시)
+    // 출혈 UI 업데이트 (인디케이터)
     // ==========================================
     updateBleedUI(target) {
-        // HP바 시스템에 출혈 표시 위임
-        if (typeof HPBarSystem !== 'undefined') {
-            HPBarSystem.updateStatusIcons?.(target);
+        // ★ StatusIndicator 시스템으로 업데이트
+        if (typeof StatusIndicator !== 'undefined') {
+            StatusIndicator.updateUnit(target);
         }
     },
     
