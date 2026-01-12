@@ -2836,8 +2836,16 @@ const CombatEffects = {
      * 쉴드 외곽선 제거 (원래 색상으로 복원)
      */
     removeShieldGlow(unit) {
-        if (!unit || !unit.sprite) return;
-        if (!unit.hasShieldOutline) return;
+        console.log(`[ShieldGlow] removeShieldGlow 호출: ${unit?.type}, hasOutline=${unit?.hasShieldOutline}`);
+        
+        if (!unit || !unit.sprite) {
+            console.warn('[ShieldGlow] unit 또는 sprite 없음');
+            return;
+        }
+        if (!unit.hasShieldOutline) {
+            console.log('[ShieldGlow] hasShieldOutline=false, 스킵');
+            return;
+        }
         
         // 글로우 효과 비활성화
         if (typeof DDOORenderer !== 'undefined') {
@@ -2845,6 +2853,7 @@ const CombatEffects = {
         }
         
         unit.hasShieldOutline = false;
+        console.log('[ShieldGlow] 쉴드 글로우 제거 완료');
     },
     
     /**

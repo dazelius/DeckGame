@@ -988,7 +988,12 @@ const DDOORenderer = {
      * @param {number} color - 글로우 색상 (기본: 시안)
      */
     setOutlineGlow(container, enabled, color = 0x44ddff) {
-        if (!container) return;
+        if (!container) {
+            console.warn('[ShieldGlow] container가 없음!');
+            return;
+        }
+        
+        console.log(`[ShieldGlow] setOutlineGlow: enabled=${enabled}, hasGlow=${!!container._glowSprite}, hasStroke=${!!container._strokeSprite}`);
         
         // 기존 글로우 정리
         if (container._glowTween) {
@@ -996,12 +1001,18 @@ const DDOORenderer = {
             container._glowTween = null;
         }
         if (container._glowSprite) {
-            container._glowSprite.destroy();
+            if (!container._glowSprite.destroyed) {
+                container._glowSprite.destroy();
+            }
             container._glowSprite = null;
+            console.log('[ShieldGlow] 글로우 스프라이트 제거됨');
         }
         if (container._strokeSprite) {
-            container._strokeSprite.destroy();
+            if (!container._strokeSprite.destroyed) {
+                container._strokeSprite.destroy();
+            }
             container._strokeSprite = null;
+            console.log('[ShieldGlow] 스트로크 스프라이트 제거됨');
         }
         
         // 메인 스프라이트 찾기
