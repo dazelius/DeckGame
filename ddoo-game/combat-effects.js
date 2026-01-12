@@ -2821,11 +2821,21 @@ const CombatEffects = {
     addShieldGlow(unit) {
         if (!unit || !unit.sprite) return;
         
-        const sprite = unit.sprite;
+        // ★ unit.sprite가 컨테이너일 수 있음 (DDOORenderer 구조)
+        // 실제 메인 스프라이트 찾기 (label='main' 또는 texture 있는 것)
+        let mainSprite = unit.sprite;
+        
+        // 컨테이너 내부에서 실제 스프라이트 찾기
+        if (unit.sprite.children && unit.sprite.children.length > 0) {
+            const found = unit.sprite.children.find(child => 
+                child.label === 'main' || (child.texture && child.texture !== PIXI.Texture.EMPTY)
+            );
+            if (found) mainSprite = found;
+        }
         
         // 텍스처가 없으면 리턴
-        if (!sprite.texture || sprite.texture === PIXI.Texture.EMPTY) {
-            console.warn('[ShieldGlow] 스프라이트에 텍스처 없음');
+        if (!mainSprite.texture || mainSprite.texture === PIXI.Texture.EMPTY) {
+            console.warn('[ShieldGlow] 메인 스프라이트에 텍스처 없음');
             return;
         }
         
@@ -2846,26 +2856,30 @@ const CombatEffects = {
         ];
         
         // 스프라이트 속성 안전하게 가져오기
-        const anchorX = sprite.anchor?.x ?? 0.5;
-        const anchorY = sprite.anchor?.y ?? 1;
-        const scaleX = sprite.scale?.x ?? 1;
-        const scaleY = sprite.scale?.y ?? 1;
+        const anchorX = mainSprite.anchor?.x ?? 0.5;
+        const anchorY = mainSprite.anchor?.y ?? 1;
+        const scaleX = mainSprite.scale?.x ?? 1;
+        const scaleY = mainSprite.scale?.y ?? 1;
+        
+        // unit.sprite의 컨테이너 스케일도 고려
+        const containerScaleX = unit.sprite.scale?.x ?? 1;
+        const containerScaleY = unit.sprite.scale?.y ?? 1;
         
         for (const config of layerConfigs) {
             // 스프라이트 복제
-            const glowSprite = new PIXI.Sprite(sprite.texture);
+            const glowSprite = new PIXI.Sprite(mainSprite.texture);
             glowSprite.anchor.set(anchorX, anchorY);
             glowSprite.scale.set(scaleX * config.scale, scaleY * config.scale);
             glowSprite.tint = config.tint;
             glowSprite.alpha = config.alpha;
-            glowSprite.zIndex = -1;
+            glowSprite.zIndex = -5;  // 메인 스프라이트 뒤에
             glowSprite.isShieldGlow = true;
             
-            // 스프라이트 뒤에 추가
-            const parent = sprite.parent;
+            // 메인 스프라이트와 같은 부모에 추가 (같은 컨테이너 내부)
+            const parent = mainSprite.parent;
             if (parent) {
-                const idx = parent.getChildIndex(sprite);
-                parent.addChildAt(glowSprite, idx);
+                const idx = parent.getChildIndex(mainSprite);
+                parent.addChildAt(glowSprite, Math.max(0, idx));
             }
             
             glowLayers.push(glowSprite);
@@ -2873,6 +2887,7 @@ const CombatEffects = {
         
         unit.shieldGlow = glowLayers[0];  // 대표 레이어
         unit.shieldGlowLayers = glowLayers;
+        unit.shieldGlowMainSprite = mainSprite;  // 참조 저장
         
         // 등장 애니메이션
         glowLayers.forEach((layer, i) => {
@@ -2898,11 +2913,11 @@ const CombatEffects = {
     pulseShieldGlow(unit) {
         if (!unit.shieldGlowLayers || unit.shieldGlowLayers.length === 0) return;
         
-        const sprite = unit.sprite;
-        if (!sprite) return;
+        const mainSprite = unit.shieldGlowMainSprite || unit.sprite;
+        if (!mainSprite) return;
         
-        const baseScaleX = sprite.scale?.x ?? 1;
-        const baseScaleY = sprite.scale?.y ?? 1;
+        const baseScaleX = mainSprite.scale?.x ?? 1;
+        const baseScaleY = mainSprite.scale?.y ?? 1;
         
         // 각 레이어에 펄스 효과
         unit.shieldGlowLayers.forEach((layer, i) => {
@@ -2946,16 +2961,16 @@ const CombatEffects = {
     startShieldBreathing(unit) {
         if (!unit.shieldGlowLayers || unit.shieldGlowLayers.length === 0) return;
         
-        const sprite = unit.sprite;
-        if (!sprite) return;
+        const mainSprite = unit.shieldGlowMainSprite || unit.sprite;
+        if (!mainSprite) return;
         
         // 기존 애니메이션 정리
         if (unit.shieldBreathTween) {
             unit.shieldBreathTween.kill();
         }
         
-        const baseScaleX = sprite.scale?.x ?? 1;
-        const baseScaleY = sprite.scale?.y ?? 1;
+        const baseScaleX = mainSprite.scale?.x ?? 1;
+        const baseScaleY = mainSprite.scale?.y ?? 1;
         const baseAlphas = [0.2, 0.35, 0.6];
         const baseScales = [1.12, 1.08, 1.04];
         
@@ -3026,6 +3041,7 @@ const CombatEffects = {
         
         unit.shieldGlow = null;
         unit.shieldGlowLayers = null;
+        unit.shieldGlowMainSprite = null;
     },
     
     /**
