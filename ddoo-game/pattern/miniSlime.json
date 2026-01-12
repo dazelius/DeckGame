@@ -8,7 +8,7 @@
         "damage": 3,
         "range": 1,
         "sprite": "minislime.png",
-        "scale": 0.32
+        "scale": 0.6
     },
     
     "ai": {
