@@ -485,6 +485,7 @@ const CheatSystem = {
             orc: '👹',
             skeleton: '💀',
             skeletonMage: '🧙',
+            bigSlime: '🫧',
             slime: '💧',
             miniSlime: '💦'
         };

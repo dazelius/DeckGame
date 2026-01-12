@@ -1,0 +1,60 @@
+{
+    "id": "bigSlime",
+    "name": "Big Slime",
+    "nameKo": "빅 슬라임",
+    
+    "stats": {
+        "hp": 35,
+        "damage": 8,
+        "range": 1,
+        "sprite": "bigslime.png",
+        "scale": 0.8
+    },
+    
+    "ai": {
+        "attackType": "melee",
+        "preferredDistance": 1,
+        "retreatBeforeAttack": false,
+        "splitOnLowHP": true,
+        "splitThreshold": 0.5,
+        "hasSplit": false
+    },
+    
+    "weaknesses": ["fire", "ice", "lightning"],
+    
+    "intents": [
+        { 
+            "id": "slam",
+            "name": "내려찍기",
+            "nameEn": "Slam",
+            "type": "attack", 
+            "damage": 8,
+            "weight": 45
+        },
+        { 
+            "id": "goo_shield",
+            "name": "점액 방어",
+            "nameEn": "Goo Shield",
+            "type": "defend", 
+            "block": 6,
+            "weight": 30
+        },
+        { 
+            "id": "absorb",
+            "name": "흡수",
+            "nameEn": "Absorb",
+            "type": "heal", 
+            "healAmount": 5,
+            "weight": 25
+        }
+    ],
+    
+    "splitIntent": {
+        "id": "split",
+        "name": "대분열!",
+        "nameEn": "Big Split!",
+        "type": "split",
+        "summonType": "slime",
+        "summonCount": 2
+    }
+}

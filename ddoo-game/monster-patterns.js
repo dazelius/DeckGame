@@ -16,7 +16,8 @@ const MonsterPatterns = {
         'skeletonMage',
         'slime',
         'skeleton',
-        'miniSlime'
+        'miniSlime',
+        'bigSlime'
     ],
     
     // ==========================================
