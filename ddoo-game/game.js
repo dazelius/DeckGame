@@ -2567,6 +2567,23 @@ const Game = {
                             if (hitNum < hits - 1) await new Promise(r => setTimeout(r, 50));
                         }
                         break;
+                    
+                    case 'rush':
+                        // ★ 돌진: 밀어붙이기 × hits (매 히트마다 넉백!)
+                        for (let hitNum = 0; hitNum < hits; hitNum++) {
+                            if (targetEnemy.hp <= 0) break;
+                            if (typeof BreakSystem !== 'undefined') {
+                                BreakSystem.onAttack(targetEnemy, cardDef, 1, hitNum);
+                            }
+                            // 짧은 타격
+                            await UnitCombat.bashAttack(hero, targetEnemy, cardDef.damage, { 
+                                isEnemy: false,
+                                knockback: cardDef.knockbackPerHit || 1
+                            });
+                            // 각 히트 후 대기
+                            if (hitNum < hits - 1) await new Promise(r => setTimeout(r, 150));
+                        }
+                        break;
                         
                     case 'bash':
                         // 강타: bashAttack

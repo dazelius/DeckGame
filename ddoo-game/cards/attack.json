@@ -116,5 +116,18 @@
         "knockback": 1,
         "aoe": { "width": 1, "depth": 1 },
         "element": "physical"
+    },
+    "rush": {
+        "name": "Rush",
+        "cost": 1,
+        "type": "attack",
+        "damage": 3,
+        "target": "enemy",
+        "melee": true,
+        "frontOnly": true,
+        "hits": 3,
+        "knockbackPerHit": 1,
+        "aoe": { "width": 1, "depth": 1 },
+        "element": "physical"
     }
 }

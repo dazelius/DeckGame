@@ -175,6 +175,10 @@ const Localization = {
                 name: '킥',
                 desc: '적을 1칸 뒤로 밀침. 넉백 피해만.'
             },
+            rush: {
+                name: '돌진',
+                desc: '3 피해. 3번 밀어붙임!'
+            },
             
             // 스킬 카드
             defend: {
@@ -241,6 +245,10 @@ const Localization = {
                 name: 'Kick',
                 desc: 'Push enemy 1 cell back. Knockback damage only.'
             },
+            rush: {
+                name: 'Rush',
+                desc: '3 damage. Push 3 times!'
+            },
             defend: {
                 name: 'Defend',
                 desc: 'Gain 5 Block'
@@ -302,6 +310,10 @@ const Localization = {
             kick: {
                 name: 'キック',
                 desc: '敵を1マス後ろに押す。ノックバックダメージのみ。'
+            },
+            rush: {
+                name: '突進',
+                desc: '3ダメージ。3回押す！'
             },
             defend: {
                 name: '防御',
