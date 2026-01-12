@@ -2807,6 +2807,69 @@ const CombatEffects = {
         if (pos) this.blockEffect(pos.x, pos.y);
     },
     
+    // ★ 슬라임 분열 경고 VFX
+    showSplitWarning(x, y) {
+        if (!this.app) return;
+        
+        // 경고 텍스트
+        const warningText = new PIXI.Text({
+            text: '💥 분열 준비!',
+            style: {
+                fontSize: 16,
+                fontWeight: 'bold',
+                fill: '#ff4444',
+                stroke: { color: '#000000', width: 4 }
+            }
+        });
+        warningText.anchor.set(0.5);
+        warningText.x = x;
+        warningText.y = y;
+        warningText.zIndex = 500;
+        this.container.addChild(warningText);
+        
+        // 애니메이션
+        gsap.fromTo(warningText, 
+            { y: y + 20, alpha: 0, scale: 0.5 },
+            { 
+                y: y - 10, 
+                alpha: 1, 
+                scale: 1.2,
+                duration: 0.3,
+                ease: 'back.out(2)',
+                onComplete: () => {
+                    gsap.to(warningText, {
+                        y: y - 30,
+                        alpha: 0,
+                        duration: 0.5,
+                        delay: 0.5,
+                        onComplete: () => { if (!warningText.destroyed) warningText.destroy(); }
+                    });
+                }
+            }
+        );
+        
+        // 위험 링 이펙트
+        for (let i = 0; i < 3; i++) {
+            const ring = new PIXI.Graphics();
+            ring.circle(0, 0, 20 + i * 10);
+            ring.stroke({ width: 2, color: 0xff4444, alpha: 0.6 });
+            ring.x = x;
+            ring.y = y + 30;
+            ring.zIndex = 499;
+            this.container.addChild(ring);
+            
+            gsap.to(ring, {
+                scaleX: 2,
+                scaleY: 2,
+                alpha: 0,
+                duration: 0.4,
+                delay: i * 0.1,
+                ease: 'power2.out',
+                onComplete: () => { if (!ring.destroyed) ring.destroy(); }
+            });
+        }
+    },
+    
     /**
      * 힐 플로터 (유닛 기반)
      * @param {Object} unit - 유닛 객체

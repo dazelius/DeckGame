@@ -600,6 +600,50 @@ const Game = {
         }, 700);
     },
     
+    // ★★★ 슬라임 분열 인텐트 실시간 체크 ★★★
+    checkSplitIntent(unit) {
+        if (!unit || unit.hp <= 0) return;
+        
+        // AI 설정에서 splitOnLowHP 확인
+        const ai = typeof MonsterPatterns !== 'undefined' && MonsterPatterns.loaded 
+            ? MonsterPatterns.getAI(unit.type)
+            : null;
+        
+        if (!ai || !ai.splitOnLowHP) return;
+        
+        // 이미 분열 인텐트면 스킵
+        if (unit.intent?.type === 'split') return;
+        
+        // 이미 분열했으면 스킵
+        if (unit.hasSplit) return;
+        
+        // HP 절반 이하 체크
+        const threshold = ai.splitThreshold || 0.5;
+        const maxHp = unit.maxHp || unit.originalHp || 20;
+        
+        if (unit.hp <= maxHp * threshold) {
+            console.log(`[Split Intent] ${unit.type}의 HP가 ${Math.round(threshold * 100)}% 이하! 분열 인텐트로 변경!`);
+            
+            // MonsterPatterns에서 분열 인텐트 가져오기
+            const pattern = typeof MonsterPatterns !== 'undefined' && MonsterPatterns.loaded
+                ? MonsterPatterns.getPattern(unit.type)
+                : null;
+            
+            if (pattern?.splitIntent) {
+                unit.intent = { ...pattern.splitIntent };
+                
+                // ★ 인텐트 UI 실시간 업데이트
+                this.createEnemyIntent(unit);
+                
+                // ★ 분열 경고 VFX
+                if (typeof CombatEffects !== 'undefined' && unit.sprite) {
+                    const pos = unit.container || unit.sprite;
+                    CombatEffects.showSplitWarning(pos.x, pos.y - 50);
+                }
+            }
+        }
+    },
+    
     createEnemyIntent(enemy) {
         if (!enemy.sprite || !enemy.intent) return;
         
@@ -2422,6 +2466,9 @@ const Game = {
         
         // Update HP bar (쉴드 변화도 반영)
         this.updateUnitHPBar(target);
+        
+        // ★★★ 슬라임 분열 인텐트 실시간 체크! ★★★
+        this.checkSplitIntent(target);
         
         // Hit effect (스프라이트 알파만 변경, 위치는 건드리지 않음)
         if (target.sprite && !target.sprite.destroyed) {
