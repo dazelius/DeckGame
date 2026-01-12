@@ -3694,7 +3694,7 @@ const Game = {
         }
     },
     
-    async enemyRangedAttack(enemy, target, intentDamage) {
+    async enemyRangedAttack(enemy, target, intentDamage, intent = {}) {
         // ★ AI 설정에 따른 후퇴 처리
         const ai = this.getEnemyAI(enemy);
         if (ai.retreatBeforeAttack) {
@@ -3702,12 +3702,33 @@ const Game = {
         }
         
         if (typeof UnitCombat !== 'undefined') {
-            // 궁수 타입이면 화살 VFX 사용
-            const isArcher = ai.attackType === 'ranged';
+            // ★★★ intent에 projectile 정보가 있으면 사용! ★★★
+            let projectileType = 'arrow';
+            let projectileColor = 0xff6600;
+            let createZone = null;
+            
+            if (intent.projectile === 'fireball') {
+                projectileType = 'fireball';
+                projectileColor = 0xff4400;
+                createZone = intent.createZone ? 'fire' : null;
+            } else if (intent.element === 'fire') {
+                projectileType = 'fireball';
+                projectileColor = 0xff4400;
+            } else if (intent.element === 'ice') {
+                projectileType = 'icebolt';
+                projectileColor = 0x44aaff;
+            } else if (intent.element === 'lightning') {
+                projectileType = 'lightning';
+                projectileColor = 0x88ccff;
+            }
+            
+            console.log(`[Game] 적 원거리 공격 - projectile: ${projectileType}, createZone: ${createZone}`);
+            
             await UnitCombat.rangedAttack(enemy, target, intentDamage, {
-                projectileType: isArcher ? 'arrow' : 'default',
-                projectileColor: 0xff6600,
+                projectileType: projectileType,
+                projectileColor: projectileColor,
                 projectileSize: 10,
+                createZone: createZone,
                 isEnemy: true
             });
         } else {

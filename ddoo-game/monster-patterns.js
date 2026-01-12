@@ -398,7 +398,8 @@ const MonsterPatterns = {
                     if (isMelee) {
                         await game.enemyMeleeAttack(enemy, target, intent.damage);
                     } else {
-                        await game.enemyRangedAttack(enemy, target, intent.damage);
+                        // ★ intent 정보 전달 (projectile, element, createZone 등)
+                        await game.enemyRangedAttack(enemy, target, intent.damage, intent);
                     }
                     
                     // 다중 공격 시 딜레이
