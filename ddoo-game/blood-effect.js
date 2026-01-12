@@ -183,6 +183,16 @@ const BloodEffect = {
         
         console.log(`[BloodEffect] onDamage: x=${x?.toFixed?.(0) || x}, y=${y?.toFixed?.(0) || y}, damage=${damage}`);
         
+        // ★ 디버그: 테스트 원 (이 위치에 피가 나와야 함)
+        const testG = new PIXI.Graphics();
+        testG.circle(x, y, 15);
+        testG.fill({ color: 0x00FF00, alpha: 1 });  // 초록색
+        this.container.addChild(testG);
+        setTimeout(() => {
+            if (testG.parent) testG.parent.removeChild(testG);
+            testG.destroy();
+        }, 1500);
+        
         const { type = 'normal', direction = null } = options;
         const intensity = Math.min(damage / 8, 2) * this.config.intensity;
         
