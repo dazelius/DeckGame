@@ -157,6 +157,51 @@ const BreakSystem = {
     },
     
     // ==========================================
+    // ★ 브레이크 시 스프라이트 변경
+    // ==========================================
+    async changeBreakSprite(enemy) {
+        if (!enemy || !enemy.sprite) return;
+        
+        // MonsterPatterns에서 breakSprite 확인
+        const pattern = typeof MonsterPatterns !== 'undefined' 
+            ? MonsterPatterns.getPattern(enemy.type) 
+            : null;
+        
+        const breakSprite = pattern?.stats?.breakSprite;
+        if (!breakSprite) return;
+        
+        console.log(`[BreakSystem] 🔄 스프라이트 변경: ${enemy.type} → ${breakSprite}`);
+        
+        // 메인 스프라이트 찾기 (DDOORenderer 구조)
+        const spriteContainer = enemy.sprite;
+        const mainSprite = spriteContainer.children?.find(c => c.label === 'main');
+        
+        if (!mainSprite) {
+            console.warn('[BreakSystem] 메인 스프라이트를 찾을 수 없음');
+            return;
+        }
+        
+        try {
+            // 새 텍스처 로드
+            const newTexture = await PIXI.Assets.load(`assets/${breakSprite}`);
+            
+            // 텍스처 변경
+            mainSprite.texture = newTexture;
+            
+            // 아웃라인 스프라이트들도 텍스처 변경
+            spriteContainer.children.forEach(child => {
+                if (child.isOutline && child.texture) {
+                    child.texture = newTexture;
+                }
+            });
+            
+            console.log(`[BreakSystem] ✅ 스프라이트 변경 완료!`);
+        } catch (e) {
+            console.error(`[BreakSystem] 스프라이트 변경 실패:`, e);
+        }
+    },
+    
+    // ==========================================
     // 공격 시 브레이크 진행
     // ==========================================
     onAttack(enemy, cardDef, hitCount = 1, hitNum = 0) {
@@ -260,6 +305,9 @@ const BreakSystem = {
         if (typeof MonsterDialogue !== 'undefined') {
             MonsterDialogue.onBreak(enemy);
         }
+        
+        // ★ 브레이크 시 스프라이트 변경 (breakSprite가 있으면)
+        this.changeBreakSprite(enemy);
         
         // 브레이크 이펙트
         this.showBreakEffect(enemy);
