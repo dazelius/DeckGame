@@ -560,160 +560,176 @@ const KnockbackSystem = {
         });
     },
     
-    // ★ 벽 충돌 VFX (강력한 임팩트!)
+    // ★ 벽 충돌 VFX (강력한 임팩트! - CombatEffects 연동)
     createWallImpactVFX(x, y) {
+        // ★ CombatEffects 내장 이펙트 활용 (잘 보임!)
+        if (typeof CombatEffects !== 'undefined') {
+            // 강력한 화면 효과
+            CombatEffects.screenShake(15, 250);
+            CombatEffects.screenFlash('#ffaa00', 150, 0.4);
+            
+            // 메인 충격 이펙트 (3회 연속)
+            CombatEffects.impactEffect(x, y, 0xffaa00, 2.0);
+            setTimeout(() => CombatEffects.impactEffect(x - 20, y - 10, 0xff6600, 1.5), 30);
+            setTimeout(() => CombatEffects.impactEffect(x + 10, y + 15, 0xffcc44, 1.2), 60);
+            
+            // 대량 파티클 버스트 (여러 색상)
+            CombatEffects.burstParticles(x, y, 0xffee88, 20, 200);  // 밝은 불꽃
+            CombatEffects.burstParticles(x, y, 0xff8844, 15, 150);  // 주황 불꽃
+            CombatEffects.burstParticles(x, y, 0xddaa66, 12, 120);  // 파편
+        }
+        
+        // 추가 커스텀 VFX (CombatEffects 없어도 동작)
         if (typeof CombatEffects === 'undefined' || !CombatEffects.container) return;
         
         const container = new PIXI.Container();
         container.x = x;
         container.y = y;
-        container.zIndex = 500;
+        container.zIndex = 900; // ★ 높은 zIndex
         CombatEffects.container.addChild(container);
         
-        // ★ 1. 강력한 플래시 (중앙 섬광)
+        // ★ 1. 거대한 중앙 섬광
         const flash = new PIXI.Graphics();
-        flash.circle(0, 0, 80);
+        flash.circle(0, 0, 100);
         flash.fill({ color: 0xffffff, alpha: 1 });
         container.addChild(flash);
         
         gsap.to(flash, {
             alpha: 0,
-            duration: 0.15,
+            duration: 0.2,
             ease: 'power2.out',
             onComplete: () => { if (!flash.destroyed) flash.destroy(); }
         });
-        gsap.to(flash.scale, {
-            x: 1.5,
-            y: 1.5,
-            duration: 0.15
+        gsap.to(flash.scale, { x: 2, y: 2, duration: 0.2 });
+        
+        // ★ 2. 충격 별 모양 (만화 효과)
+        const star = new PIXI.Graphics();
+        const spikes = 8;
+        const outerRadius = 80;
+        const innerRadius = 30;
+        
+        star.moveTo(outerRadius, 0);
+        for (let i = 0; i < spikes * 2; i++) {
+            const radius = i % 2 === 0 ? outerRadius : innerRadius;
+            const angle = (i * Math.PI) / spikes;
+            star.lineTo(Math.cos(angle) * radius, Math.sin(angle) * radius);
+        }
+        star.closePath();
+        star.fill({ color: 0xffff00, alpha: 0.9 });
+        star.stroke({ width: 4, color: 0xff8800 });
+        container.addChild(star);
+        
+        gsap.to(star, {
+            alpha: 0,
+            rotation: Math.PI / 4,
+            duration: 0.25,
+            ease: 'power2.out',
+            onComplete: () => { if (!star.destroyed) star.destroy(); }
         });
+        gsap.to(star.scale, { x: 1.8, y: 1.8, duration: 0.25 });
         
-        // ★ 2. 다중 충격파 (3겹)
-        for (let w = 0; w < 3; w++) {
-            const shockwave = new PIXI.Graphics();
-            shockwave.circle(0, 0, 15);
-            shockwave.stroke({ width: 6 - w * 1.5, color: w === 0 ? 0xffffff : 0xffaa00, alpha: 1 });
-            container.addChild(shockwave);
+        // ★ 3. 방사형 충격선 (굵게!)
+        for (let i = 0; i < 16; i++) {
+            const line = new PIXI.Graphics();
+            const angle = (i / 16) * Math.PI * 2;
+            const length = 60 + Math.random() * 80;
             
-            const delay = w * 0.05;
-            const maxRadius = 120 + w * 30;
+            line.moveTo(20, 0);
+            line.lineTo(length, 0);
+            line.stroke({ width: 5 + Math.random() * 4, color: 0xffee44, alpha: 1 });
+            line.rotation = angle;
+            container.addChild(line);
             
-            gsap.to(shockwave, {
+            gsap.to(line, {
                 alpha: 0,
-                duration: 0.35,
-                delay: delay,
-                onUpdate: function() {
-                    if (shockwave.destroyed) return;
-                    const progress = this.progress();
-                    const radius = 15 + progress * maxRadius;
-                    shockwave.clear();
-                    shockwave.circle(0, 0, radius);
-                    shockwave.stroke({ width: (6 - w * 1.5) * (1 - progress), color: w === 0 ? 0xffffff : 0xffaa00, alpha: 1 - progress });
-                },
-                onComplete: () => { if (!shockwave.destroyed) shockwave.destroy(); }
-            });
-        }
-        
-        // ★ 3. 충격 스파크 (방사형 선들)
-        for (let i = 0; i < 12; i++) {
-            const spark = new PIXI.Graphics();
-            const angle = (i / 12) * Math.PI * 2 - Math.PI; // 왼쪽 위주
-            const length = 30 + Math.random() * 50;
-            
-            spark.moveTo(0, 0);
-            spark.lineTo(Math.cos(angle) * length, Math.sin(angle) * length);
-            spark.stroke({ width: 3 + Math.random() * 3, color: 0xffee88, alpha: 1 });
-            container.addChild(spark);
-            
-            gsap.to(spark, {
-                alpha: 0,
-                x: Math.cos(angle) * 30,
-                y: Math.sin(angle) * 30,
-                duration: 0.2 + Math.random() * 0.1,
+                duration: 0.3,
                 ease: 'power2.out',
-                onComplete: () => { if (!spark.destroyed) spark.destroy(); }
+                onComplete: () => { if (!line.destroyed) line.destroy(); }
             });
+            gsap.to(line.scale, { x: 1.5, y: 1, duration: 0.3 });
         }
         
-        // ★ 4. 대형 파편들 (더 많고, 더 크게)
-        for (let i = 0; i < 15; i++) {
-            const debris = new PIXI.Graphics();
-            const size = 5 + Math.random() * 12;
-            
-            // 다양한 모양
-            if (Math.random() > 0.5) {
-                debris.rect(-size/2, -size/2, size, size * (0.5 + Math.random()));
-            } else {
-                debris.poly([0, -size/2, size/2, size/2, -size/2, size/2]);
-            }
-            debris.fill({ color: i < 5 ? 0xffddaa : 0xaa8866 });
-            debris.rotation = Math.random() * Math.PI;
+        // ★ 4. 큰 돌 파편 (3D 느낌)
+        for (let i = 0; i < 12; i++) {
+            const debris = new PIXI.Container();
+            debris.zIndex = 901;
             container.addChild(debris);
             
-            const angle = -Math.PI + (Math.random() - 0.3) * Math.PI; // 왼쪽으로 퍼짐
-            const speed = 150 + Math.random() * 200;
-            const targetX = Math.cos(angle) * speed;
-            const targetY = Math.sin(angle) * speed * 0.6 + 80; // 중력으로 아래로
+            // 그림자
+            const shadow = new PIXI.Graphics();
+            shadow.ellipse(0, 8, 10, 4);
+            shadow.fill({ color: 0x000000, alpha: 0.3 });
+            debris.addChild(shadow);
             
+            // 돌
+            const rock = new PIXI.Graphics();
+            const size = 10 + Math.random() * 20;
+            rock.poly([
+                -size/2, -size/3,
+                size/3, -size/2,
+                size/2, size/4,
+                0, size/2,
+                -size/2, size/3
+            ]);
+            rock.fill({ color: 0xccaa77 });
+            rock.stroke({ width: 2, color: 0x886644 });
+            debris.addChild(rock);
+            
+            // 하이라이트
+            const highlight = new PIXI.Graphics();
+            highlight.circle(-size/4, -size/4, size/4);
+            highlight.fill({ color: 0xeeddbb, alpha: 0.6 });
+            debris.addChild(highlight);
+            
+            const angle = -Math.PI + (Math.random() - 0.2) * Math.PI * 0.8;
+            const speed = 180 + Math.random() * 250;
+            const gravity = 300;
+            const startY = 0;
+            const vx = Math.cos(angle) * speed;
+            const vy = Math.sin(angle) * speed;
+            
+            // 포물선 운동
             gsap.to(debris, {
-                x: targetX,
-                y: targetY,
-                rotation: debris.rotation + (Math.random() - 0.5) * 12,
+                x: vx * 0.6,
+                duration: 0.6,
+                ease: 'none'
+            });
+            gsap.to(debris, {
+                y: vy * 0.6 + gravity * 0.18,  // 중력
+                duration: 0.6,
+                ease: 'power1.in'
+            });
+            gsap.to(rock, {
+                rotation: (Math.random() - 0.5) * 8,
+                duration: 0.6
+            });
+            gsap.to(debris, {
                 alpha: 0,
-                duration: 0.5 + Math.random() * 0.3,
-                ease: 'power2.out',
-                onComplete: () => { if (!debris.destroyed) debris.destroy(); }
+                duration: 0.2,
+                delay: 0.4,
+                onComplete: () => { if (!debris.destroyed) debris.destroy({ children: true }); }
             });
         }
         
-        // ★ 5. 큰 먼지 구름 (더 많고 크게)
-        for (let i = 0; i < 10; i++) {
+        // ★ 5. 먼지 폭발 (크고 오래 지속)
+        for (let i = 0; i < 8; i++) {
             const dust = new PIXI.Graphics();
-            const baseSize = 15 + Math.random() * 25;
-            dust.circle(0, 0, baseSize);
-            dust.fill({ color: i < 3 ? 0xeeddcc : 0xccbbaa, alpha: 0.7 });
-            dust.x = (Math.random() - 0.3) * 40;
-            dust.y = (Math.random() - 0.5) * 60;
+            const size = 30 + Math.random() * 40;
+            dust.circle(0, 0, size);
+            dust.fill({ color: 0xddccaa, alpha: 0.8 });
+            dust.x = (Math.random() - 0.5) * 30;
+            dust.y = (Math.random() - 0.5) * 40;
             container.addChild(dust);
             
-            const delay = i * 0.02;
             gsap.to(dust, {
-                x: dust.x - 80 - Math.random() * 100,
-                y: dust.y + 20 + Math.random() * 40,
+                x: dust.x - 100 - Math.random() * 150,
+                y: dust.y + Math.random() * 60,
                 alpha: 0,
-                delay: delay,
-                duration: 0.6 + Math.random() * 0.4,
+                duration: 0.8 + Math.random() * 0.4,
                 ease: 'power2.out',
                 onComplete: () => { if (!dust.destroyed) dust.destroy(); }
             });
-            
-            gsap.to(dust.scale, {
-                x: 3 + Math.random() * 2,
-                y: 3 + Math.random() * 2,
-                delay: delay,
-                duration: 0.6,
-                ease: 'power2.out'
-            });
-        }
-        
-        // ★ 6. 작은 불꽃/스파크 파티클
-        for (let i = 0; i < 20; i++) {
-            const sparkle = new PIXI.Graphics();
-            sparkle.circle(0, 0, 2 + Math.random() * 4);
-            sparkle.fill({ color: Math.random() > 0.5 ? 0xffff88 : 0xffaa44, alpha: 1 });
-            container.addChild(sparkle);
-            
-            const angle = Math.random() * Math.PI * 2;
-            const speed = 50 + Math.random() * 150;
-            
-            gsap.to(sparkle, {
-                x: Math.cos(angle) * speed,
-                y: Math.sin(angle) * speed * 0.7 + 20,
-                alpha: 0,
-                duration: 0.3 + Math.random() * 0.3,
-                ease: 'power3.out',
-                onComplete: () => { if (!sparkle.destroyed) sparkle.destroy(); }
-            });
+            gsap.to(dust.scale, { x: 4, y: 3, duration: 0.8 });
         }
         
         // 컨테이너 정리
