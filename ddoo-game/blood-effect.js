@@ -147,20 +147,8 @@ const BloodEffect = {
             return;
         }
         
-        // ★ 좌표는 이미 gameWorld 로컬 좌표로 전달됨 (변환 불필요)
+        // ★ 좌표는 이미 gameWorld 로컬 좌표로 전달됨
         console.log(`[BloodEffect] 피 생성: x=${x.toFixed(0)}, y=${y.toFixed(0)}, damage=${damage}`);
-        
-        // ★★★ 디버그: 직접 테스트 원 그리기 ★★★
-        const testG = new PIXI.Graphics();
-        testG.circle(x, y, 20);
-        testG.fill({ color: 0xFF0000, alpha: 1 });
-        this.container.addChild(testG);
-        console.log(`[BloodEffect] 테스트 원 생성: (${x.toFixed(0)}, ${y.toFixed(0)})`);
-        // 2초 후 제거
-        setTimeout(() => {
-            if (testG.parent) testG.parent.removeChild(testG);
-            testG.destroy();
-        }, 2000);
         
         const {
             direction = null,     // 피격 방향 (라디안, null이면 랜덤)
@@ -384,22 +372,24 @@ const BloodEffect = {
     },
     
     // ==========================================
-    // 업데이트 루프
+    // 업데이트 루프 (단순화)
     // ==========================================
     update(delta) {
-        
-        const dt = delta / 60;  // 60fps 기준
+        const dt = delta / 60;
         
         for (let i = this.activeParticles.length - 1; i >= 0; i--) {
             const p = this.activeParticles[i];
+            if (!p || !p.particleData) {
+                this.activeParticles.splice(i, 1);
+                continue;
+            }
+            
             const d = p.particleData;
             
-            // 생명 감소 (maxLife가 0이면 기본값 사용)
-            const maxLife = d.maxLife || 1;
-            d.life -= dt / maxLife;
+            // 생명 감소
+            d.life -= dt * 0.7;
             
             if (d.life <= 0) {
-                // 파티클 비활성화
                 p.active = false;
                 p.visible = false;
                 p.clear();
@@ -407,42 +397,17 @@ const BloodEffect = {
                 continue;
             }
             
-            // 물리 시뮬레이션
-            const gravity = d.gravity || 800;
-            const airResistance = d.airResistance || 0.98;
-            
-            d.vy += gravity * dt;
-            d.vx *= airResistance;
-            d.vy *= airResistance;
-            
+            // 간단한 물리
+            d.vy += 500 * dt;
             p.x += d.vx * dt;
             p.y += d.vy * dt;
             
-            // 트레일 (string 타입)
-            if (d.type === 'string' && d.trail) {
-                d.trail.push({ x: p.x, y: p.y, alpha: d.life });
-                if (d.trail.length > (d.maxTrailLength || 10)) {
-                    d.trail.shift();
-                }
-            }
-            
-            // 바닥 충돌
-            if (p.y >= d.groundY && !d.bounced) {
-                d.bounced = true;
-                d.vy = -Math.abs(d.vy) * 0.2;
-                d.vx *= 0.5;
-                d.gravity *= 2;
-            }
-            
-            // 회전
-            d.rotation += d.rotationSpeed * dt;
-            
-            // 늘어남 (속도 기반)
-            const speed = Math.sqrt(d.vx * d.vx + d.vy * d.vy);
-            d.stretch = 1 + Math.min(speed / 200, 2);
-            
-            // 그리기
-            this.drawParticle(p);
+            // 그리기 - 매우 단순하게
+            p.clear();
+            const size = Math.max(5, d.size * d.life);
+            const alpha = Math.min(1, d.life * 1.5);
+            p.circle(0, 0, size);
+            p.fill({ color: 0xCC0000, alpha: alpha });
         }
     },
     
