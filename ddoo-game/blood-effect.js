@@ -129,52 +129,19 @@ const BloodEffect = {
     },
     
     // ==========================================
-    // 파티클 그리기 (직접 좌표에 그리기)
+    // 파티클 그리기 (초간단 버전)
     // ==========================================
     drawParticle(p) {
         const g = p.graphics;
         g.clear();
         
         const alpha = Math.min(1, p.life * 1.5);
-        if (alpha <= 0) return;
+        if (alpha <= 0.05) return;
         
-        // ★ 모든 타입을 직접 좌표에 그리기 (테스트 원과 같은 방식)
-        if (p.type === 'drop' || p.type === 'spray') {
-            const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
-            const stretch = p.stuck ? 1 : Math.min(1 + speed / 300, 2);
-            const sizeX = p.size / stretch;
-            const sizeY = p.size * stretch;
-            
-            g.ellipse(p.x, p.y, sizeY, sizeX);
-            g.fill({ color: p.color, alpha: alpha });
-            
-        } else if (p.type === 'chunk') {
-            // 덩어리 - 좌표 오프셋 적용
-            const rotatedShape = [];
-            for (let j = 0; j < p.shape.length; j += 2) {
-                const px = p.shape[j];
-                const py = p.shape[j + 1];
-                const rx = px * Math.cos(p.rotation) - py * Math.sin(p.rotation);
-                const ry = px * Math.sin(p.rotation) + py * Math.cos(p.rotation);
-                rotatedShape.push(p.x + rx, p.y + ry);
-            }
-            g.poly(rotatedShape);
-            g.fill({ color: p.color, alpha: alpha });
-            
-            if (!p.stuck) {
-                p.rotation += p.rotationSpeed * 0.016;
-            }
-            
-        } else if (p.type === 'mist') {
-            const size = p.size * (1 + (1 - p.life) * 0.5);
-            g.circle(p.x, p.y, size);
-            g.fill({ color: p.color, alpha: alpha * 0.4 });
-            
-        } else if (p.type === 'puddle') {
-            const size = p.size * (1 + (1 - p.life) * 0.3);
-            g.ellipse(p.x, p.y, size * 1.5, size * 0.4);
-            g.fill({ color: p.color, alpha: alpha * 0.7 });
-        }
+        // ★ 모든 파티클을 단순 원으로 그리기
+        const size = Math.max(3, p.size * p.life);
+        g.circle(p.x, p.y, size);
+        g.fill({ color: 0xCC0000, alpha: alpha });
     },
     
     // ==========================================
