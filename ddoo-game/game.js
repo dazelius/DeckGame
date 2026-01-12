@@ -328,8 +328,8 @@ const Game = {
         this.containers.units.zIndex = 10;
         this.containers.units.sortableChildren = true;
         // ★ 전체 유닛 확대 + 오프셋 조정
-        this.containers.units.scale.set(1.15);  // 15% 확대
-        this.containers.units.y = 30;  // 아래로 오프셋
+        this.containers.units.scale.set(1.25);  // 25% 확대
+        this.containers.units.y = 60;  // 더 아래로 오프셋
         this.app.stage.addChild(this.containers.units);
         
         this.containers.effects = new PIXI.Container();
