@@ -3810,10 +3810,14 @@ const Game = {
     killUnit(unit) {
         console.log(`[Game] ${unit.type} died!`);
         
-        // ★★★ 해당 유닛 위치의 플로터(데미지 숫자) 정리 ★★★
+        // ★ 플로터는 딜레이 후 정리 (사망 대미지 표시 시간 확보)
         const unitPos = this.getUnitPosition(unit);
         if (unitPos && typeof CombatEffects !== 'undefined') {
-            CombatEffects.cleanupFloatersInArea(unitPos.x, unitPos.y, 150);
+            setTimeout(() => {
+                if (typeof CombatEffects !== 'undefined') {
+                    CombatEffects.cleanupFloatersInArea(unitPos.x, unitPos.y, 150);
+                }
+            }, 800);  // 0.8초 후 정리 (플로터 애니메이션 끝난 후)
         }
         
         // ★★★ 모든 gsap 애니메이션 먼저 정리 ★★★
