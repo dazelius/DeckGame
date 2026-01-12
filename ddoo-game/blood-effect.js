@@ -444,7 +444,7 @@ const BloodEffect = {
         }
     },
     
-    // 물방울 그리기
+    // 물방울 그리기 (PixiJS v8)
     drawDrop(p, d, alpha) {
         const size = d.size * (0.5 + d.life * 0.5);
         const stretchX = d.stretch;
@@ -452,8 +452,6 @@ const BloodEffect = {
         
         // 방향에 따른 회전
         const angle = Math.atan2(d.vy, d.vx);
-        
-        p.beginFill(d.color, alpha);
         
         // 타원 그리기 (늘어난 방울)
         const points = [];
@@ -468,18 +466,19 @@ const BloodEffect = {
             const rotY = px * Math.sin(angle) + py * Math.cos(angle);
             points.push(rotX, rotY);
         }
-        p.drawPolygon(points);
-        p.endFill();
+        
+        // PixiJS v8 API
+        p.poly(points);
+        p.fill({ color: d.color, alpha: alpha });
         
         // 하이라이트
         if (size > 3) {
-            p.beginFill(0xFF6666, alpha * 0.3);
-            p.drawCircle(-size * 0.2, -size * 0.2, size * 0.3);
-            p.endFill();
+            p.circle(-size * 0.2, -size * 0.2, size * 0.3);
+            p.fill({ color: 0xFF6666, alpha: alpha * 0.3 });
         }
     },
     
-    // 덩어리 그리기
+    // 덩어리 그리기 (PixiJS v8)
     drawGlob(p, d, alpha) {
         const size = d.size * (0.6 + d.life * 0.4);
         
@@ -492,46 +491,41 @@ const BloodEffect = {
             points.push(Math.cos(a) * r, Math.sin(a) * r * 0.8);
         }
         
-        p.beginFill(d.color, alpha);
-        p.drawPolygon(points);
-        p.endFill();
+        // PixiJS v8 API
+        p.poly(points);
+        p.fill({ color: d.color, alpha: alpha });
         
         // 어두운 중심
-        p.beginFill(0x440000, alpha * 0.5);
-        p.drawCircle(0, 0, size * 0.4);
-        p.endFill();
+        p.circle(0, 0, size * 0.4);
+        p.fill({ color: 0x440000, alpha: alpha * 0.5 });
         
         // 하이라이트
-        p.beginFill(0xFF8888, alpha * 0.25);
-        p.drawEllipse(-size * 0.25, -size * 0.2, size * 0.3, size * 0.15);
-        p.endFill();
+        p.ellipse(-size * 0.25, -size * 0.2, size * 0.3, size * 0.15);
+        p.fill({ color: 0xFF8888, alpha: alpha * 0.25 });
     },
     
-    // 줄기 그리기
+    // 줄기 그리기 (PixiJS v8)
     drawString(p, d, alpha) {
         if (!d.trail || d.trail.length < 2) {
             this.drawDrop(p, d, alpha);
             return;
         }
         
-        // 트레일 선 그리기
-        p.lineStyle(d.size * 1.2, d.color, alpha * 0.7);
+        // 트레일 선 그리기 (PixiJS v8 API)
         p.moveTo(d.trail[0].x - p.x, d.trail[0].y - p.y);
-        
         for (let i = 1; i < d.trail.length; i++) {
             const t = d.trail[i];
             p.lineTo(t.x - p.x, t.y - p.y);
         }
         p.lineTo(0, 0);
+        p.stroke({ width: d.size * 1.2, color: d.color, alpha: alpha * 0.7 });
         
         // 끝점에 방울
-        p.lineStyle(0);
-        p.beginFill(d.color, alpha);
-        p.drawCircle(0, 0, d.size);
-        p.endFill();
+        p.circle(0, 0, d.size);
+        p.fill({ color: d.color, alpha: alpha });
     },
     
-    // 미스트 그리기
+    // 미스트 그리기 (PixiJS v8)
     drawMist(p, d, alpha) {
         const size = d.size * (1 + (1 - d.life) * 0.5);
         
@@ -540,9 +534,8 @@ const BloodEffect = {
             const ratio = i / 3;
             const r = size * (0.3 + ratio * 0.7);
             const a = alpha * (1 - ratio) * 0.3;
-            p.beginFill(d.color, a);
-            p.drawCircle(0, 0, r);
-            p.endFill();
+            p.circle(0, 0, r);
+            p.fill({ color: d.color, alpha: a });
         }
     },
     
