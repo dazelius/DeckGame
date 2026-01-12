@@ -11,7 +11,8 @@ const MonsterPatterns = {
     // 로드할 몬스터 목록 (파일명 = 몬스터 ID)
     monsterList: [
         'goblin',
-        'goblinArcher', 
+        'goblinArcher',
+        'goblinShaman',
         'orc',
         'skeletonMage',
         'slime',

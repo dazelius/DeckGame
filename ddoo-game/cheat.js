@@ -482,6 +482,7 @@ const CheatSystem = {
         const monsterIcons = {
             goblin: '👺',
             goblinArcher: '🏹',
+            goblinShaman: '🔮',
             orc: '👹',
             skeleton: '💀',
             skeletonMage: '🧙',

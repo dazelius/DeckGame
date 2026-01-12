@@ -1,0 +1,63 @@
+{
+    "id": "goblinShaman",
+    "name": "Goblin Shaman",
+    "nameKo": "고블린 샤먼",
+    
+    "stats": {
+        "hp": 22,
+        "damage": 7,
+        "range": 4,
+        "sprite": "goblinshaman.png",
+        "scale": 0.4
+    },
+    
+    "ai": {
+        "attackType": "ranged",
+        "preferredDistance": 3,
+        "retreatBeforeAttack": true,
+        "retreatDistance": 1,
+        "keepDistance": true
+    },
+    
+    "weaknesses": ["physical", "ice"],
+    
+    "intents": [
+        { 
+            "id": "firebolt",
+            "name": "파이어볼트",
+            "nameEn": "Firebolt",
+            "type": "attack", 
+            "damage": 7,
+            "element": "fire",
+            "projectile": "fireball",
+            "createZone": true,
+            "weight": 45
+        },
+        { 
+            "id": "hex",
+            "name": "저주",
+            "nameEn": "Hex",
+            "type": "debuff",
+            "vulnerable": 2,
+            "weight": 25,
+            "breakRecipe": 2
+        },
+        { 
+            "id": "tribal_ward",
+            "name": "부족의 수호",
+            "nameEn": "Tribal Ward",
+            "type": "defend", 
+            "block": 5,
+            "weight": 20
+        },
+        { 
+            "id": "heal_ally",
+            "name": "치유의 손길",
+            "nameEn": "Healing Touch",
+            "type": "buff",
+            "buffType": "healAlly",
+            "buffValue": 5,
+            "weight": 10
+        }
+    ]
+}
