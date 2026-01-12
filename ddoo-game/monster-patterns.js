@@ -283,8 +283,6 @@ const MonsterPatterns = {
             // ★★★ 분열 인텐트가 이미 있으면 스킵! (분열은 유지되어야 함)
             if (enemy.intent?.type === 'split') {
                 console.log(`[MonsterPatterns] ${enemy.name || enemy.type}: 분열 인텐트 유지!`);
-                // 인텐트 변경 플래그 제거 (다음 턴에는 행동 가능)
-                delete enemy.intentChangedThisTurn;
                 return;
             }
             
@@ -681,7 +679,7 @@ const MonsterPatterns = {
                     spawnedMinis.push(mini);
                     
                     // ★★★ 새로 생성된 유닛은 이번 턴에 행동하지 않음!
-                    mini.intentChangedThisTurn = true;
+                    mini.spawnedThisTurn = true;
                     
                     // 팝업 연출
                     if (mini.sprite) {
