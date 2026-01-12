@@ -338,7 +338,6 @@ const BloodEffect = {
     // ==========================================
     createParticle(config) {
         const g = new PIXI.Graphics();
-        this.container.addChild(g);
         
         const particle = {
             graphics: g,
@@ -359,8 +358,13 @@ const BloodEffect = {
             shape: config.shape || null,
         };
         
-        // ★ 생성 즉시 그리기!
-        this.drawParticle(particle);
+        // ★ 먼저 그리고
+        const size = Math.max(4, particle.size);
+        g.circle(particle.x, particle.y, size);
+        g.fill({ color: 0xCC0000, alpha: 1 });
+        
+        // ★ 그 다음 컨테이너에 추가
+        this.container.addChild(g);
         
         this.particles.push(particle);
         return particle;
