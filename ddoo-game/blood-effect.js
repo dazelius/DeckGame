@@ -150,6 +150,18 @@ const BloodEffect = {
         // ★ 좌표는 이미 gameWorld 로컬 좌표로 전달됨 (변환 불필요)
         console.log(`[BloodEffect] 피 생성: x=${x.toFixed(0)}, y=${y.toFixed(0)}, damage=${damage}`);
         
+        // ★★★ 디버그: 직접 테스트 원 그리기 ★★★
+        const testG = new PIXI.Graphics();
+        testG.circle(x, y, 20);
+        testG.fill({ color: 0xFF0000, alpha: 1 });
+        this.container.addChild(testG);
+        console.log(`[BloodEffect] 테스트 원 생성: (${x.toFixed(0)}, ${y.toFixed(0)})`);
+        // 2초 후 제거
+        setTimeout(() => {
+            if (testG.parent) testG.parent.removeChild(testG);
+            testG.destroy();
+        }, 2000);
+        
         const {
             direction = null,     // 피격 방향 (라디안, null이면 랜덤)
             type = 'normal',      // 'normal', 'critical', 'bleed', 'heavy'
