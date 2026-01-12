@@ -576,9 +576,9 @@ const DDOOBackground = {
         const currentZ = this.autoZoom.currentZ;
         const currentX = this.autoZoom.currentX;
         
-        // ★ 탑뷰 모드 적용 (즉시 전환 - 애니메이션 없음)
-        this._currentPosY = this.topViewMode.active ? this.topViewMode.posY : this.cameraDefaults.posY;
-        this._currentLookY = this.topViewMode.active ? this.topViewMode.lookAtY : this.cameraDefaults.lookAtY;
+        // 카메라 위치 (탑뷰 모드 제거 - 그리드만 표시)
+        this._currentPosY = this.cameraDefaults.posY;
+        this._currentLookY = this.cameraDefaults.lookAtY;
         
         // Camera position (arena view with subtle parallax)
         this.camera.position.x = this.cameraDefaults.posX + this.mouse.x * this.config.mouseX * 0.3;
