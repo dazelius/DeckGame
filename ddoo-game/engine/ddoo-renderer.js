@@ -1000,17 +1000,13 @@ const DDOORenderer = {
         }
         
         if (enabled) {
-            // 글로우 ON: 파란색 + 두껍게 + 펄스
+            // 글로우 ON: 파란색 + alpha 펄스만
             outlines.forEach(outline => {
                 outline.tint = color;
                 outline.alpha = 1;
-                // 약간 확대해서 두껍게
-                const baseScale = outline.scale.x;
-                outline._baseScale = baseScale;
-                outline.scale.set(baseScale * 1.15);
             });
             
-            // 펄스 애니메이션 (숨쉬기)
+            // alpha 펄스 애니메이션 (글로우 느낌)
             container._glowTween = gsap.to({ val: 0 }, {
                 val: Math.PI * 2,
                 duration: 1.5,
@@ -1018,14 +1014,11 @@ const DDOORenderer = {
                 ease: 'none',
                 onUpdate: function() {
                     const v = this.targets()[0].val;
-                    const pulse = 0.8 + Math.sin(v) * 0.2;  // 0.6 ~ 1.0
-                    const scalePulse = 1.1 + Math.sin(v) * 0.05;  // 1.05 ~ 1.15
+                    const pulse = 0.7 + Math.sin(v) * 0.3;  // 0.4 ~ 1.0
                     
                     outlines.forEach(outline => {
                         if (outline && !outline.destroyed) {
                             outline.alpha = pulse;
-                            const base = outline._baseScale || 1;
-                            outline.scale.set(base * scalePulse);
                         }
                     });
                 }
@@ -1035,8 +1028,6 @@ const DDOORenderer = {
             outlines.forEach(outline => {
                 outline.tint = 0x000000;  // 검은색
                 outline.alpha = 1;
-                const baseScale = outline._baseScale || outline.scale.x / 1.15;
-                outline.scale.set(baseScale);
             });
         }
     },
