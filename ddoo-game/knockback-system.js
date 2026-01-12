@@ -224,15 +224,10 @@ const KnockbackSystem = {
     dealKnockbackDamage(unit, damage, type = 'knockback') {
         if (!unit || unit.hp <= 0 || damage <= 0) return;
         
-        // 대미지 적용
-        const isEnemy = unit.team === 'enemy';
-        if (isEnemy) {
-            this.game.dealDamage(unit, damage);
-        } else {
-            this.game.dealDamageToTarget(unit, damage);
-        }
+        // ★ 대미지 적용 (플로터 없이 - 아래서 직접 표시)
+        this.game.applyDamageWithoutFloater(unit, damage);
         
-        // 대미지 숫자 표시
+        // 대미지 숫자 표시 (넉백 타입별 색상)
         const posTarget = this.getPositionTarget(unit);
         if (typeof CombatEffects !== 'undefined' && posTarget) {
             const colors = {
