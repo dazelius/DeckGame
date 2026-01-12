@@ -286,6 +286,9 @@ const BloodEffect = {
             d.groundY = 9999;
             d.bounced = false;
             d.trail = [];
+            d.stretch = 1;
+            d.rotation = 0;
+            d.rotationSpeed = 0;
             
             this.activeParticles.push(p);
         }
@@ -320,6 +323,7 @@ const BloodEffect = {
             d.bounced = false;
             d.trail = [];
             d.maxTrailLength = 8 + Math.floor(Math.random() * 8);
+            d.stretch = 1;
             
             this.activeParticles.push(p);
         }
@@ -383,6 +387,12 @@ const BloodEffect = {
                 continue;
             }
             
+            // ★ NaN 체크 - 값이 없으면 기본값 사용
+            if (!d.gravity) d.gravity = 800;
+            if (!d.airResistance) d.airResistance = 0.98;
+            if (!d.vx) d.vx = 0;
+            if (!d.vy) d.vy = 0;
+            
             // 물리 시뮬레이션
             d.vy += d.gravity * dt;
             d.vx *= d.airResistance;
@@ -390,6 +400,10 @@ const BloodEffect = {
             
             p.x += d.vx * dt;
             p.y += d.vy * dt;
+            
+            // ★ NaN 방지
+            if (isNaN(p.x)) p.x = 0;
+            if (isNaN(p.y)) p.y = 0;
             
             // 트레일 (string 타입)
             if (d.type === 'string' && d.trail) {
