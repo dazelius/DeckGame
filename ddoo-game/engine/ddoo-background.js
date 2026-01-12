@@ -580,11 +580,12 @@ const DDOOBackground = {
         const targetPosY = this.topViewMode.active ? this.topViewMode.posY : this.cameraDefaults.posY;
         const targetLookY = this.topViewMode.active ? this.topViewMode.lookAtY : this.cameraDefaults.lookAtY;
         
-        // 부드러운 전환
+        // ★ 빠른 전환 (들어갈 때 느리게, 나올 때 빠르게)
         const currentPosY = this._currentPosY || this.cameraDefaults.posY;
         const currentLookY = this._currentLookY || this.cameraDefaults.lookAtY;
-        this._currentPosY = currentPosY + (targetPosY - currentPosY) * 0.1;
-        this._currentLookY = currentLookY + (targetLookY - currentLookY) * 0.1;
+        const speed = this.topViewMode.active ? 0.08 : 0.25;  // 나올 때 더 빠르게
+        this._currentPosY = currentPosY + (targetPosY - currentPosY) * speed;
+        this._currentLookY = currentLookY + (targetLookY - currentLookY) * speed;
         
         // Camera position (arena view with subtle parallax)
         this.camera.position.x = this.cameraDefaults.posX + this.mouse.x * this.config.mouseX * 0.3;
