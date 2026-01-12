@@ -280,6 +280,14 @@ const MonsterPatterns = {
         enemies.forEach(enemy => {
             if (enemy.hp <= 0) return;
             
+            // ★★★ 분열 인텐트가 이미 있으면 스킵! (분열은 유지되어야 함)
+            if (enemy.intent?.type === 'split') {
+                console.log(`[MonsterPatterns] ${enemy.name || enemy.type}: 분열 인텐트 유지!`);
+                // 인텐트 변경 플래그 제거 (다음 턴에는 행동 가능)
+                delete enemy.intentChangedThisTurn;
+                return;
+            }
+            
             const intent = this.rollIntent(enemy);
             enemy.intent = intent;
             
