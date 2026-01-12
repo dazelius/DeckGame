@@ -203,10 +203,57 @@ const BloodEffect = {
     },
     
     // ==========================================
-    // 🩸 피 분출 (메인)
+    // 🩸 피 분출 (메인) - 단순화 버전
     // ==========================================
     spawnBloodBurst(x, y, count, direction = null, customColor = null) {
         console.log(`[BloodEffect] spawnBloodBurst: count=${count}, activeParticles=${this.activeParticles.length}`);
+        
+        // ★ 풀 대신 새 Graphics 객체 직접 생성
+        for (let i = 0; i < count; i++) {
+            const g = new PIXI.Graphics();
+            
+            // 랜덤 방향
+            const angle = -Math.PI * 0.5 + (Math.random() - 0.5) * Math.PI * 1.5;
+            const speed = 150 + Math.random() * 350;
+            const size = 4 + Math.random() * 8;
+            
+            // 초기 위치
+            const startX = x + (Math.random() - 0.5) * 20;
+            const startY = y + (Math.random() - 0.5) * 20;
+            
+            // 속도
+            const vx = Math.cos(angle) * speed;
+            const vy = Math.sin(angle) * speed - 80;
+            
+            // 즉시 그리기
+            g.circle(startX, startY, size);
+            g.fill({ color: 0xCC0000, alpha: 1 });
+            this.container.addChild(g);
+            
+            // GSAP으로 간단한 애니메이션
+            const endX = startX + vx * 0.8;
+            const endY = startY + vy * 0.8 + 200;  // 중력 효과
+            
+            gsap.to({}, {
+                duration: 0.6 + Math.random() * 0.4,
+                onUpdate: function() {
+                    const progress = this.progress();
+                    const currentX = startX + (endX - startX) * progress;
+                    const currentY = startY + (endY - startY) * progress + 150 * progress * progress;
+                    const currentAlpha = 1 - progress;
+                    const currentSize = size * (1 - progress * 0.5);
+                    
+                    g.clear();
+                    g.circle(currentX, currentY, Math.max(2, currentSize));
+                    g.fill({ color: 0xCC0000, alpha: currentAlpha });
+                },
+                onComplete: () => {
+                    if (g.parent) g.parent.removeChild(g);
+                    g.destroy();
+                }
+            });
+        }
+        return; // ★ 기존 풀 로직 스킵
         
         for (let i = 0; i < count; i++) {
             const p = this.getParticle();
