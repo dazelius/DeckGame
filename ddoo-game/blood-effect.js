@@ -181,6 +181,8 @@ const BloodEffect = {
     onDamage(x, y, damage, options = {}) {
         if (!this.initialized || !this.config.enabled) return;
         
+        console.log(`[BloodEffect] onDamage: x=${x?.toFixed?.(0) || x}, y=${y?.toFixed?.(0) || y}, damage=${damage}`);
+        
         const { type = 'normal', direction = null } = options;
         const intensity = Math.min(damage / 8, 2) * this.config.intensity;
         
