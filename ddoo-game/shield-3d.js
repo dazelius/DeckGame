@@ -81,7 +81,8 @@ const Shield3D = {
         const {
             radius = 60,
             color = 0x00aaff,
-            duration = 1000
+            duration = 1000,
+            unit = null  // ★ 유닛 추적용
         } = options;
         
         // ★ PIXI 전역 좌표 → Three.js 좌표 변환
@@ -211,7 +212,8 @@ const Shield3D = {
             duration,
             phase: 0,
             impacts: [],  // 타격 효과
-            arcs: []      // 전기 아크
+            arcs: [],     // 전기 아크
+            trackedUnit: unit  // ★ 유닛 추적용
         };
         
         this.activeEffects.push(effect);
@@ -305,13 +307,13 @@ const Shield3D = {
         const flash = new THREE.Mesh(flashGeo, flashMat);
         hitGroup.add(flash);
         
-        // ★ 3. 육각형 파편 (적당히)
+        // ★ 3. 육각형 유리 파편 (파괴 연출 스타일, 소량)
         const hexFragments = [];
-        const numFragments = Math.floor(8 + 6 * intensity);
+        const numFragments = Math.floor(3 + 3 * intensity);  // 3~6개만
         
         for (let i = 0; i < numFragments; i++) {
             const hexShape = new THREE.Shape();
-            const size = 5 + Math.random() * 8;
+            const size = 8 + Math.random() * 15;  // 파괴 연출처럼 큰 크기
             for (let j = 0; j < 6; j++) {
                 const angle = (Math.PI / 3) * j;
                 const hx = size * Math.cos(angle);
@@ -322,24 +324,34 @@ const Shield3D = {
             hexShape.closePath();
             
             const hexGeo = new THREE.ShapeGeometry(hexShape);
+            // 파괴 연출과 동일한 색상 팔레트
+            const colors = [0xffffff, 0x88ddff, 0x00ccff, 0x44ffff, 0x00aaff];
             const hexMat = new THREE.MeshBasicMaterial({
-                color: Math.random() > 0.5 ? 0x00ccff : 0x66ddff,
+                color: colors[Math.floor(Math.random() * colors.length)],
                 transparent: true,
-                opacity: 0.8,
+                opacity: 1,
                 side: THREE.DoubleSide
             });
             
             const hexMesh = new THREE.Mesh(hexGeo, hexMat);
+            
+            // 폭발적으로 튀어나감 (파괴 연출 스타일)
             const angle = (i / numFragments) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
-            const speed = 4 + Math.random() * 5;
+            const elevation = (Math.random() - 0.5) * Math.PI * 0.6;
+            const speed = 8 + Math.random() * 12;
             
             hexMesh.userData = {
                 velocity: new THREE.Vector3(
-                    Math.cos(angle) * speed,
-                    (Math.random() - 0.3) * speed,
-                    Math.sin(angle) * speed * 0.4
+                    Math.cos(angle) * Math.cos(elevation) * speed,
+                    Math.sin(elevation) * speed + 3,
+                    Math.sin(angle) * Math.cos(elevation) * speed * 0.5
                 ),
-                rotationSpeed: (Math.random() - 0.5) * 0.3,
+                // 3D 회전 (파괴 연출 스타일)
+                rotationSpeed: new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.5,
+                    (Math.random() - 0.5) * 0.5,
+                    (Math.random() - 0.5) * 0.5
+                ),
                 life: 1.0
             };
             
@@ -412,12 +424,19 @@ const Shield3D = {
                 flash.material.opacity = 0.8 * (1 - fp);
             }
             
-            // 파편
+            // 파편 (3D 회전 적용)
             hexFragments.forEach(hex => {
                 if (!hex.parent) return;
                 hex.position.add(hex.userData.velocity);
                 hex.userData.velocity.multiplyScalar(0.95);
-                hex.rotation.z += hex.userData.rotationSpeed;
+                // 3D 회전 (파괴 연출 스타일)
+                if (hex.userData.rotationSpeed.isVector3) {
+                    hex.rotation.x += hex.userData.rotationSpeed.x;
+                    hex.rotation.y += hex.userData.rotationSpeed.y;
+                    hex.rotation.z += hex.userData.rotationSpeed.z;
+                } else {
+                    hex.rotation.z += hex.userData.rotationSpeed;
+                }
                 hex.userData.life -= 0.035;
                 hex.material.opacity = hex.userData.life * 0.8;
             });
@@ -842,9 +861,35 @@ const Shield3D = {
         requestAnimationFrame(() => this.animate());
         
         const time = Date.now() * 0.001;
+        const canvasWidth = this.canvas.clientWidth;
+        const canvasHeight = this.canvas.clientHeight;
         
         // 각 이펙트 업데이트
         for (const effect of this.activeEffects) {
+            // ★ 유닛 추적: 유닛 위치로 이펙트 이동
+            if (effect.trackedUnit) {
+                const unit = effect.trackedUnit;
+                const posTarget = unit.container || unit.sprite;
+                if (posTarget && posTarget.getGlobalPosition) {
+                    const gp = posTarget.getGlobalPosition();
+                    
+                    // ★ 스프라이트 높이의 절반만큼 위로 올려서 중앙에 배치
+                    let spriteHeight = 100;
+                    if (unit.sprite) {
+                        try {
+                            const bounds = unit.sprite.getLocalBounds();
+                            const scaleY = Math.abs(unit.sprite.scale?.y || 1);
+                            spriteHeight = Math.abs(bounds.height) * scaleY;
+                        } catch (e) {}
+                    }
+                    
+                    // ★ PIXI 좌표 → Three.js 좌표 변환 (스프라이트 중앙 기준)
+                    const newX = gp.x - canvasWidth / 2;
+                    const newY = -(gp.y - spriteHeight / 2 - canvasHeight / 2);
+                    effect.group.position.set(newX, newY, 0);
+                }
+            }
+            
             // 구체 회전
             effect.sphere.rotation.y += 0.015;
             effect.sphere.rotation.x += 0.008;

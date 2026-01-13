@@ -464,6 +464,40 @@ const Game = {
         };
     },
     
+    // ★ 스크린(마우스) 좌표 → 캔버스 로컬 좌표 (모든 좌표 변환의 통일된 입구)
+    screenToCanvasLocal(screenX, screenY) {
+        const battleArea = document.getElementById('battle-area');
+        if (!battleArea) return { x: screenX, y: screenY };
+        
+        const rect = battleArea.getBoundingClientRect();
+        const canvasX = screenX - rect.left;
+        const canvasY = screenY - rect.top;
+        
+        // globalToLocal 변환 적용 (스케일/오프셋 보정)
+        return this.globalToLocal(canvasX, canvasY);
+    },
+    
+    // ★ 유닛 글로벌 좌표 → 캔버스 로컬 좌표 (히트 테스트용)
+    getUnitLocalPosition(unit) {
+        if (!unit) return null;
+        const posTarget = unit.container || unit.sprite;
+        if (!posTarget) return null;
+        
+        // PixiJS 글로벌 좌표 획득
+        let globalX, globalY;
+        if (posTarget.getGlobalPosition) {
+            const gp = posTarget.getGlobalPosition();
+            globalX = gp.x;
+            globalY = gp.y;
+        } else {
+            globalX = posTarget.x;
+            globalY = posTarget.y;
+        }
+        
+        // globalToLocal 변환 적용
+        return this.globalToLocal(globalX, globalY);
+    },
+    
     // ==================== UI ====================
     setupUI() {
         this.updateTurnUI();
@@ -2902,24 +2936,56 @@ const Game = {
                 // ★ 히트 수 확인 (fireArrow 등 다중 히트 원거리)
                 const rangedHits = cardDef.hits || 1;
                 
-                // 원거리 발사 (★ 브레이크는 타격 시점에 처리!)
-                for (let hitNum = 0; hitNum < rangedHits; hitNum++) {
-                    if (targetEnemy.hp <= 0) break;
+                // ★★★ 화염 화살: 연발로 빠르게 쏘기! ★★★
+                if (cardDef.projectileType === 'fireArrow' && rangedHits > 1) {
+                    const arrowPromises = [];
                     
-                    await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage, {
-                        projectileType: cardDef.projectileType || 'default',
-                        createZone: cardDef.createZone || null,
-                        // ★ 타격 시점에 브레이크 시스템 호출!
-                        onHit: (hitTarget) => {
-                            if (typeof BreakSystem !== 'undefined') {
-                                BreakSystem.onAttack(hitTarget, cardDef, 1, hitNum);
-                                gameRef.createEnemyIntent(hitTarget);
+                    for (let hitNum = 0; hitNum < rangedHits; hitNum++) {
+                        // 짧은 딜레이 후 발사 (연발 느낌)
+                        const delay = hitNum * 80;  // 80ms 간격으로 연발
+                        
+                        arrowPromises.push(new Promise(async (resolve) => {
+                            await new Promise(r => setTimeout(r, delay));
+                            
+                            if (targetEnemy.hp <= 0) {
+                                resolve();
+                                return;
                             }
-                        }
-                    });
+                            
+                            await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage, {
+                                projectileType: 'fireArrow',
+                                createZone: cardDef.createZone || null,
+                                onHit: (hitTarget) => {
+                                    if (typeof BreakSystem !== 'undefined') {
+                                        BreakSystem.onAttack(hitTarget, cardDef, 1, hitNum);
+                                        gameRef.createEnemyIntent(hitTarget);
+                                    }
+                                }
+                            });
+                            resolve();
+                        }));
+                    }
                     
-                    // 다음 히트 전 짧은 딜레이 (파파팡!)
-                    if (hitNum < rangedHits - 1) await new Promise(r => setTimeout(r, 45));
+                    // 모든 화살이 도착할 때까지 대기
+                    await Promise.all(arrowPromises);
+                } else {
+                    // 일반 원거리 발사
+                    for (let hitNum = 0; hitNum < rangedHits; hitNum++) {
+                        if (targetEnemy.hp <= 0) break;
+                        
+                        await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage, {
+                            projectileType: cardDef.projectileType || 'default',
+                            createZone: cardDef.createZone || null,
+                            onHit: (hitTarget) => {
+                                if (typeof BreakSystem !== 'undefined') {
+                                    BreakSystem.onAttack(hitTarget, cardDef, 1, hitNum);
+                                    gameRef.createEnemyIntent(hitTarget);
+                                }
+                            }
+                        });
+                        
+                        if (hitNum < rangedHits - 1) await new Promise(r => setTimeout(r, 45));
+                    }
                 }
                 
                 // Deal damage to additional targets in AOE
@@ -3176,16 +3242,35 @@ const Game = {
         const localX = screenX - rect.left;
         const localY = screenY - rect.top;
         
+        // ★ 히트 테스트용: 변환 없는 원본 좌표 사용 (project3DToScreen 좌표계와 일치)
         // Find which cell contains this point
         for (let x = 0; x < this.arena.width; x++) {
             for (let z = 0; z < this.arena.depth; z++) {
-                const corners = this.getCellCorners(x, z);
+                const corners = this.getCellCornersRaw(x, z);
                 if (corners && this.pointInPolygon(localX, localY, corners)) {
                     return { x, z };
                 }
             }
         }
         return null;
+    },
+    
+    // ★ 히트 테스트용 셀 코너 (변환 없는 원본 좌표)
+    getCellCornersRaw(x, z) {
+        const tl = DDOOBackground.project3DToScreen(x, 0, z);
+        const tr = DDOOBackground.project3DToScreen(x + 1, 0, z);
+        const br = DDOOBackground.project3DToScreen(x + 1, 0, z + 1);
+        const bl = DDOOBackground.project3DToScreen(x, 0, z + 1);
+        
+        if (!tl || !tr || !br || !bl) return null;
+        
+        // 변환 없이 원본 좌표 반환 (battle-area 픽셀 좌표)
+        return [
+            { x: tl.screenX, y: tl.screenY },
+            { x: tr.screenX, y: tr.screenY },
+            { x: br.screenX, y: br.screenY },
+            { x: bl.screenX, y: bl.screenY }
+        ];
     },
     
     pointInPolygon(px, py, polygon) {
