@@ -334,9 +334,13 @@ const Game = {
         this.renderHand(false);
     },
     
-    // ★ 게임 컨테이너 스케일/오프셋 설정 (전역)
-    gameContainerScale: 1.25,
-    gameContainerOffsetY: 60,
+    // ★ 게임 컨테이너 스케일/오프셋 설정 (GameConstants에서 가져옴)
+    get gameContainerScale() { 
+        return (typeof GC !== 'undefined') ? GC.GAME_CONTAINER.SCALE : 1.25; 
+    },
+    get gameContainerOffsetY() { 
+        return (typeof GC !== 'undefined') ? GC.GAME_CONTAINER.OFFSET_Y : 60; 
+    },
     
     setupContainers() {
         // ★ 게임 콘텐츠를 담을 상위 컨테이너 (스케일/오프셋 적용)
