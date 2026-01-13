@@ -126,10 +126,11 @@ const CardDrag = {
                 <div class="card-desc">${cardDef.desc}</div>
             </div>
         `;
-        ghost.style.left = (touch.clientX - 80) + 'px';
-        ghost.style.top = (touch.clientY - 110) + 'px';
+        // ★ 커서 끝(좌측상단)에서 대롱대롱 달리는 느낌
+        ghost.style.left = (touch.clientX + 5) + 'px';
+        ghost.style.top = (touch.clientY + 10) + 'px';
         ghost.style.opacity = '1';
-        ghost.style.transform = 'scale(1.2) rotate(-5deg)';
+        ghost.style.transform = 'scale(1.1) rotate(-8deg)';
         
         cardEl.style.opacity = '0.3';
         cardEl.style.transform = 'scale(0.9)';
@@ -151,8 +152,7 @@ const CardDrag = {
         const touch = e.touches ? e.touches[0] : e;
         
         const ghost = this.dragState.ghost;
-        ghost.style.left = (touch.clientX - 80) + 'px';
-        ghost.style.top = (touch.clientY - 110) + 'px';
+        // ★ 위치는 각 핸들러에서 상태에 따라 설정
         
         const cardDef = this.game.getCard(this.dragState.cardId);
         
@@ -177,11 +177,17 @@ const CardDrag = {
         
         if (isValid) {
             this.highlightCell(gridPos.x, gridPos.z, true);
-            ghost.style.transform = 'scale(1.2) rotate(0deg)';
+            // ★ 타겟에 사용될 느낌 - 확 작아지면서 커서 쪽으로 빨려듦
+            ghost.style.transform = 'scale(0.5) rotate(0deg)';
+            ghost.style.left = (touch.clientX - 40) + 'px';  // 커서 중앙으로
+            ghost.style.top = (touch.clientY - 50) + 'px';
             ghost.querySelector('.drag-card').style.borderColor = '#44ff44';
         } else {
             this.highlightCell(-1, -1, false);
-            ghost.style.transform = 'scale(1.15) rotate(-3deg)';
+            // ★ 호버 전엔 크게, 커서 끝에 대롱대롱
+            ghost.style.transform = 'scale(1.15) rotate(-5deg)';
+            ghost.style.left = (touch.clientX + 5) + 'px';
+            ghost.style.top = (touch.clientY + 10) + 'px';
             ghost.querySelector('.drag-card').style.borderColor = '#666';
         }
         this.clearEnemyHighlights();
@@ -202,8 +208,9 @@ const CardDrag = {
         
         this.dragState.targetEnemy = targetEnemy;
         
-        const canvas = this.app.canvas;
-        const rect = canvas.getBoundingClientRect();
+        // ★ battle-area 기준 좌표 (drawTargetingCurvesToEnemies가 내부에서 globalToLocal 처리)
+        const battleArea = document.getElementById('battle-area');
+        const rect = battleArea.getBoundingClientRect();
         const cursorX = touch.clientX - rect.left;
         const cursorY = touch.clientY - rect.top;
         
@@ -238,7 +245,10 @@ const CardDrag = {
                 this.showAoeHighlight(targetEnemy.gridX, targetEnemy.gridZ, aoe);
             }
             
-            ghost.style.transform = 'scale(1.2) rotate(0deg)';
+            // ★ 타겟에 사용될 느낌 - 확 작아지면서 커서 쪽으로 빨려듦
+            ghost.style.transform = 'scale(0.5) rotate(0deg)';
+            ghost.style.left = (touch.clientX - 40) + 'px';  // 커서 중앙으로
+            ghost.style.top = (touch.clientY - 50) + 'px';
             ghost.querySelector('.drag-card').style.borderColor = '#ff4444';
         } else {
             const dragDist = this.dragState.startY - touch.clientY;
@@ -246,10 +256,15 @@ const CardDrag = {
             this.clearAoeHighlight();
             
             if (dragDist > 100) {
-                ghost.style.transform = 'scale(1.2) rotate(0deg)';
+                ghost.style.transform = 'scale(0.75) rotate(0deg)';
+                ghost.style.left = (touch.clientX - 60) + 'px';
+                ghost.style.top = (touch.clientY - 70) + 'px';
                 ghost.querySelector('.drag-card').style.borderColor = '#44ff44';
             } else {
-                ghost.style.transform = 'scale(1.15) rotate(-3deg)';
+                // ★ 호버 전엔 크게, 커서 끝에 대롱대롱
+                ghost.style.transform = 'scale(1.15) rotate(-5deg)';
+                ghost.style.left = (touch.clientX + 5) + 'px';
+                ghost.style.top = (touch.clientY + 10) + 'px';
                 ghost.querySelector('.drag-card').style.borderColor = '#666';
             }
         }
@@ -269,7 +284,10 @@ const CardDrag = {
         
         if (cardDef.target === 'self' && targetAlly && targetAlly.isHero) {
             this.highlightAlly(targetAlly, true);
-            ghost.style.transform = 'scale(1.2) rotate(0deg)';
+            // ★ 타겟에 사용될 느낌 - 확 작아지면서 커서 쪽으로 빨려듦
+            ghost.style.transform = 'scale(0.5) rotate(0deg)';
+            ghost.style.left = (touch.clientX - 40) + 'px';
+            ghost.style.top = (touch.clientY - 50) + 'px';
             ghost.querySelector('.drag-card').style.borderColor = '#44aaff';
         } else {
             this.clearAllyHighlights();
@@ -279,10 +297,15 @@ const CardDrag = {
                 if (cardDef.target === 'self' && hero && hero.sprite) {
                     this.highlightAlly(hero, true);
                 }
-                ghost.style.transform = 'scale(1.2) rotate(0deg)';
+                ghost.style.transform = 'scale(0.75) rotate(0deg)';
+                ghost.style.left = (touch.clientX - 60) + 'px';
+                ghost.style.top = (touch.clientY - 70) + 'px';
                 ghost.querySelector('.drag-card').style.borderColor = '#44aaff';
             } else {
-                ghost.style.transform = 'scale(1.15) rotate(-3deg)';
+                // ★ 호버 전엔 크게, 커서 끝에 대롱대롱
+                ghost.style.transform = 'scale(1.15) rotate(-5deg)';
+                ghost.style.left = (touch.clientX + 5) + 'px';
+                ghost.style.top = (touch.clientY + 10) + 'px';
                 ghost.querySelector('.drag-card').style.borderColor = '#666';
             }
         }
@@ -299,10 +322,15 @@ const CardDrag = {
         this.clearAoeHighlight();
         
         if (dragDist > 100) {
-            ghost.style.transform = 'scale(1.2) rotate(0deg)';
+            ghost.style.transform = 'scale(0.75) rotate(0deg)';
+            ghost.style.left = (touch.clientX - 60) + 'px';
+            ghost.style.top = (touch.clientY - 70) + 'px';
             ghost.querySelector('.drag-card').style.borderColor = '#44ff44';
         } else {
-            ghost.style.transform = 'scale(1.15) rotate(-3deg)';
+            // ★ 호버 전엔 크게, 커서 끝에 대롱대롱
+            ghost.style.transform = 'scale(1.15) rotate(-5deg)';
+            ghost.style.left = (touch.clientX + 5) + 'px';
+            ghost.style.top = (touch.clientY + 10) + 'px';
             ghost.querySelector('.drag-card').style.borderColor = '#666';
         }
     },
@@ -447,49 +475,32 @@ const CardDrag = {
     // ==========================================
     // 유틸: 유닛의 글로벌 좌표 가져오기
     // ==========================================
-    getUnitGlobalPosition(unit) {
-        if (!unit) return null;
-        const posTarget = unit.container || unit.sprite;
-        if (!posTarget) return null;
-        
-        // ★ 글로벌 좌표 사용 (부모 컨테이너 위치 포함)
-        if (posTarget.getGlobalPosition) {
-            return posTarget.getGlobalPosition();
-        }
-        return { x: posTarget.x, y: posTarget.y };
-    },
-    
     // ==========================================
-    // 적 감지 (스크린 좌표)
+    // 적 감지 (스크린 좌표) - game.js 통일 좌표계 사용
     // ==========================================
     getEnemyAtScreen(screenX, screenY, frontOnly = false) {
-        const canvas = this.app.canvas;
-        const rect = canvas.getBoundingClientRect();
-        const localX = screenX - rect.left;
-        const localY = screenY - rect.top;
-        
+        // ★ 통일된 좌표 변환 사용
+        const local = this.game.screenToCanvasLocal(screenX, screenY);
         const validTargets = frontOnly ? this.getFrontlineEnemies() : null;
         
         for (const enemy of this.game.state.enemyUnits) {
             if (enemy.hp <= 0) continue;
             if (frontOnly && !validTargets.includes(enemy)) continue;
             
-            // ★ 글로벌 좌표 사용!
-            const globalPos = this.getUnitGlobalPosition(enemy);
-            if (!globalPos) continue;
+            // ★ 통일된 유닛 로컬 좌표 사용
+            const unitPos = this.game.getUnitLocalPosition(enemy);
+            if (!unitPos) continue;
             
-            const spriteX = globalPos.x;
-            const spriteY = globalPos.y;
             const spriteWidth = enemy.sprite?.width || 80;
             const spriteHeight = enemy.sprite?.height || 100;
             
             const hitPadding = 50;
-            const left = spriteX - spriteWidth / 2 - hitPadding;
-            const right = spriteX + spriteWidth / 2 + hitPadding;
-            const top = spriteY - spriteHeight - hitPadding;
-            const bottom = spriteY + hitPadding;
+            const left = unitPos.x - spriteWidth / 2 - hitPadding;
+            const right = unitPos.x + spriteWidth / 2 + hitPadding;
+            const top = unitPos.y - spriteHeight - hitPadding;
+            const bottom = unitPos.y + hitPadding;
             
-            if (localX >= left && localX <= right && localY >= top && localY <= bottom) {
+            if (local.x >= left && local.x <= right && local.y >= top && local.y <= bottom) {
                 return enemy;
             }
         }
@@ -499,33 +510,31 @@ const CardDrag = {
     // ==========================================
     // 아군 감지 (스크린 좌표)
     // ==========================================
+    // ==========================================
+    // 아군 감지 (스크린 좌표) - game.js 통일 좌표계 사용
+    // ==========================================
     getAllyAtScreen(screenX, screenY) {
-        const canvas = this.app.canvas;
-        const rect = canvas.getBoundingClientRect();
-        const localX = screenX - rect.left;
-        const localY = screenY - rect.top;
-        
+        // ★ 통일된 좌표 변환 사용
+        const local = this.game.screenToCanvasLocal(screenX, screenY);
         const allAllies = [this.game.state.hero, ...this.game.state.playerUnits.filter(u => u !== this.game.state.hero)];
         
         for (const ally of allAllies) {
             if (!ally || ally.hp <= 0) continue;
             
-            // ★ 글로벌 좌표 사용!
-            const globalPos = this.getUnitGlobalPosition(ally);
-            if (!globalPos) continue;
+            // ★ 통일된 유닛 로컬 좌표 사용
+            const unitPos = this.game.getUnitLocalPosition(ally);
+            if (!unitPos) continue;
             
-            const spriteX = globalPos.x;
-            const spriteY = globalPos.y;
             const spriteWidth = ally.sprite?.width || 80;
             const spriteHeight = ally.sprite?.height || 100;
             
             const hitPadding = 50;
-            const left = spriteX - spriteWidth / 2 - hitPadding;
-            const right = spriteX + spriteWidth / 2 + hitPadding;
-            const top = spriteY - spriteHeight - hitPadding;
-            const bottom = spriteY + hitPadding;
+            const left = unitPos.x - spriteWidth / 2 - hitPadding;
+            const right = unitPos.x + spriteWidth / 2 + hitPadding;
+            const top = unitPos.y - spriteHeight - hitPadding;
+            const bottom = unitPos.y + hitPadding;
             
-            if (localX >= left && localX <= right && localY >= top && localY <= bottom) {
+            if (local.x >= left && local.x <= right && local.y >= top && local.y <= bottom) {
                 return ally;
             }
         }
@@ -586,30 +595,32 @@ const CardDrag = {
     // ==========================================
     // ★ 스피어 타겟팅 (선택한 레인의 최전선 적)
     // ==========================================
+    // ==========================================
+    // 스피어 타겟 감지 - game.js 통일 좌표계 사용
+    // ==========================================
     getSpearTarget(screenX, screenY) {
-        const canvas = this.app.canvas;
-        const rect = canvas.getBoundingClientRect();
-        const localX = screenX - rect.left;
-        const localY = screenY - rect.top;
+        // ★ 통일된 좌표 변환 사용
+        const local = this.game.screenToCanvasLocal(screenX, screenY);
         
         // 1. 커서가 가리키는 적이 있는지 확인
         let hoveredEnemy = null;
         for (const enemy of this.game.state.enemyUnits) {
             if (enemy.hp <= 0) continue;
             
-            const globalPos = this.getUnitGlobalPosition(enemy);
-            if (!globalPos) continue;
+            // ★ 통일된 유닛 로컬 좌표 사용
+            const unitPos = this.game.getUnitLocalPosition(enemy);
+            if (!unitPos) continue;
             
             const spriteWidth = enemy.sprite?.width || 80;
             const spriteHeight = enemy.sprite?.height || 100;
             const hitPadding = 50;
             
-            const left = globalPos.x - spriteWidth / 2 - hitPadding;
-            const right = globalPos.x + spriteWidth / 2 + hitPadding;
-            const top = globalPos.y - spriteHeight - hitPadding;
-            const bottom = globalPos.y + hitPadding;
+            const left = unitPos.x - spriteWidth / 2 - hitPadding;
+            const right = unitPos.x + spriteWidth / 2 + hitPadding;
+            const top = unitPos.y - spriteHeight - hitPadding;
+            const bottom = unitPos.y + hitPadding;
             
-            if (localX >= left && localX <= right && localY >= top && localY <= bottom) {
+            if (local.x >= left && local.x <= right && local.y >= top && local.y <= bottom) {
                 hoveredEnemy = enemy;
                 break;
             }
@@ -624,11 +635,14 @@ const CardDrag = {
             const hero = this.game.state.hero;
             if (!hero) return null;
             
-            // 화면 중앙 기준으로 레인 결정
-            const canvasHeight = rect.height;
-            if (localY < canvasHeight * 0.35) {
+            // battle-area 높이 기준으로 레인 결정
+            const battleArea = document.getElementById('battle-area');
+            const canvasHeight = battleArea ? battleArea.getBoundingClientRect().height : 600;
+            const adjustedY = local.y * (this.game.gameContainerScale || 1);
+            
+            if (adjustedY < canvasHeight * 0.35) {
                 targetZ = 0;  // 상단 레인
-            } else if (localY > canvasHeight * 0.65) {
+            } else if (adjustedY > canvasHeight * 0.65) {
                 targetZ = 2;  // 하단 레인
             } else {
                 targetZ = 1;  // 중앙 레인

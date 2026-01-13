@@ -567,6 +567,7 @@ const CheatSystem = {
     restoreCost() {
         this.game.state.cost = this.game.state.maxCost;
         this.game.updateCostUI();
+        this.game.renderHand(false); // 카드 활성화 상태 갱신
         this.showToast('코스트 회복!');
     },
     

@@ -871,7 +871,7 @@ const CombatEffects = {
         
         const {
             arrowLength = 28,
-            speed = 1400,  // 빠르게!
+            speed = 700,  // ★ 천천히 날아감 (연발이라 보기 좋게)
             isEnemy = false
         } = options;
         
@@ -3523,7 +3523,8 @@ const CombatEffects = {
                 Shield3D.createShield(pos.x, pos.y, {
                     radius: spriteHeight * 0.7,  // 스프라이트 높이 기반
                     color: 0x00aaff,
-                    duration: 2000  // 더 오래 유지
+                    duration: 2000,  // 더 오래 유지
+                    unit: unit       // ★ 유닛 추적용
                 });
             } else {
                 this.blockEffect(pos.x, pos.y);
