@@ -393,9 +393,9 @@ const CardDrag = {
                 this.game.executeCardOnTarget(cardId, handIndex, targetEnemy);
                 return true;
             } else if (dragDist > 100) {
-                // ★ frontOnly 카드는 반드시 유효한 타겟이 필요!
+                // ★ frontOnly 카드는 각 라인의 선두 적만 타겟 가능 (뒤에 숨은 적 공격 불가)
                 if (cardDef.frontOnly) {
-                    console.log(`[CardDrag] ${cardId}: frontOnly 카드는 최전방 타겟이 필요합니다`);
+                    console.log(`[CardDrag] ${cardId}: 근접 공격은 라인의 최전선 적을 지정해야 합니다`);
                     return false;
                 }
                 this.game.executeCard(cardId, handIndex);

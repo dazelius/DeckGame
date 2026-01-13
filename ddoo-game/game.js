@@ -179,6 +179,11 @@ const Game = {
             await SkillSystem.init(this);
         }
         
+        // ★ AnimSystem 초기화 (범용 카드 연출)
+        if (typeof AnimSystem !== 'undefined') {
+            AnimSystem.init(this);
+        }
+        
         // Knockback System
         if (typeof KnockbackSystem !== 'undefined') {
             KnockbackSystem.init(this);
@@ -1863,8 +1868,9 @@ const Game = {
     // ==========================================
     async executeWaterWave(hero, targetEnemy, cardDef, isTidal = false) {
         const gridZ = targetEnemy.gridZ;
-        const heroX = hero.gridX;
+        const targetX = targetEnemy.gridX;
         const knockbackDir = 1; // 오른쪽으로 밀어냄
+        const lineLength = cardDef.aoe?.width || 3;
         
         // 1. 영웅 전진 애니메이션
         const heroPos = hero.container || hero.sprite;
@@ -1886,22 +1892,22 @@ const Game = {
             });
         }
         
-        // 2. VFX (타이달은 추가 이펙트)
-        const lineLength = cardDef.aoe?.width || 3;
-        this.showWaterWaveVFX(heroX, gridZ, knockbackDir, lineLength, isTidal);
+        // 2. VFX (타겟 위치 기준)
+        this.showWaterWaveVFX(targetX, gridZ, knockbackDir, lineLength, isTidal);
         
         if (isTidal) {
             // 타이달크래시: 중심에 추가 이펙트
             setTimeout(() => {
-                this.showTidalCrashVFX(targetEnemy.gridX, targetEnemy.gridZ, cardDef.aoe?.depth || 3);
+                this.showTidalCrashVFX(targetX, gridZ, cardDef.aoe?.depth || 3);
             }, 150);
         }
         
-        // 3. 라인 범위 내 적들 타격 + 넉백
+        // 3. 라인 범위 내 적들 타격 + 넉백 (타겟 위치부터 lineLength 칸)
         const affectedEnemies = [];
         
-        for (let dx = 1; dx <= lineLength; dx++) {
-            const checkX = heroX + dx;
+        // 타겟 위치부터 시작해서 lineLength 칸 범위
+        for (let dx = 0; dx < lineLength; dx++) {
+            const checkX = targetX + dx;
             if (checkX >= 10) continue;
             
             // 해당 셀의 적 찾기
@@ -1914,7 +1920,7 @@ const Game = {
         
         // 4. 순차적 타격 실행
         for (const { enemy, delay } of affectedEnemies) {
-            await new Promise(r => setTimeout(r, delay));
+            await new Promise(r => setTimeout(r, delay > 0 ? delay : 50));
             
             // 데미지 적용
             this.dealDamage(enemy, cardDef.damage, null, cardDef);
@@ -1930,10 +1936,10 @@ const Game = {
             }
         }
         
-        // 5. 물 영역 생성
+        // 5. 물 영역 생성 (타겟 위치부터)
         if (cardDef.createZone && typeof GridAOE !== 'undefined') {
             const zoneLength = cardDef.createZoneLength || 3;
-            GridAOE.createWaterWaveLine(heroX + 1, gridZ, knockbackDir, zoneLength);
+            GridAOE.createWaterWaveLine(targetX, gridZ, knockbackDir, zoneLength);
         }
         
         // 대기
@@ -2087,14 +2093,14 @@ const Game = {
         });
         
         // ========================================
-        // 6. 바닥 물결 확산
+        // 6. 바닥 물결 확산 (시작점부터)
         // ========================================
         for (let i = 0; i < length; i++) {
             setTimeout(() => {
                 const ripple = new PIXI.Graphics();
                 ripple.lineStyle(3, 0x88ccff, 0.6);
                 ripple.drawEllipse(0, 0, 20, 12);
-                ripple.x = startPos.x + direction * (i + 1) * 100;
+                ripple.x = startPos.x + direction * i * 100;
                 ripple.y = startPos.y + 5;
                 this.app.stage.addChild(ripple);
                 
@@ -3042,370 +3048,259 @@ const Game = {
         
         const isMelee = cardDef.melee === true;
         const aoe = cardDef.aoe || { width: 1, depth: 1 };
-        const hits = cardDef.hits || 1; // 다중 공격 횟수
+        const hits = cardDef.hits || 1;
+        const animType = cardDef.anim?.type || (isMelee ? 'slash' : 'projectile');
         
-        // ★★★ 워터웨이브 계열 먼저 처리! (melee지만 특수 처리 필요) ★★★
-        if (cardId === 'waterWave') {
-            // 레인 이동
+        console.log(`[Game] ★ 범용 카드 실행: ${cardId}, animType=${animType}`);
+        
+        // ==========================================
+        // 1. 레인 이동 (근접 또는 필요시)
+        // ==========================================
+        if (isMelee || cardDef.requireLaneMove) {
             if (hero.gridZ !== targetEnemy.gridZ) {
                 await this.moveHeroToLine(targetEnemy.gridZ);
             }
-            console.log(`[Game] 🌊 워터웨이브! damage=${cardDef.damage}, knockback=${cardDef.knockback}`);
-            await this.executeWaterWave(hero, targetEnemy, cardDef, false);
-            return;
         }
         
-        if (cardId === 'tidalCrash') {
-            // 레인 이동
-            if (hero.gridZ !== targetEnemy.gridZ) {
-                await this.moveHeroToLine(targetEnemy.gridZ);
+        // ==========================================
+        // 2. AnimSystem으로 연출 실행
+        // ==========================================
+        let result = {};
+        if (typeof AnimSystem !== 'undefined' && AnimSystem.hasHandler(animType)) {
+            result = await AnimSystem.play(animType, hero, targetEnemy, cardDef, { isEnemy: false }) || {};
+        } else {
+            // AnimSystem 없으면 기본 처리
+            console.warn(`[Game] AnimSystem 없음, 기본 처리: ${cardId}`);
+            if (typeof UnitCombat !== 'undefined') {
+                if (isMelee) {
+                    await UnitCombat.meleeAttack(hero, targetEnemy, cardDef.damage, { isEnemy: false });
+                } else {
+                    await UnitCombat.rangedAttack(hero, targetEnemy, cardDef.damage, {
+                        projectileType: cardDef.projectileType || 'default',
+                        createZone: cardDef.createZone || null,
+                        isEnemy: false
+                    });
+                }
             }
-            console.log(`[Game] 🌊🌊 타이달크래시! damage=${cardDef.damage}, knockback=${cardDef.knockback}`);
-            await this.executeWaterWave(hero, targetEnemy, cardDef, true);
-            return;
         }
         
-        if (isMelee) {
-            // Melee: Move hero to same Z line as target, then dash attack
-            if (hero.gridZ !== targetEnemy.gridZ) {
-                await this.moveHeroToLine(targetEnemy.gridZ);
-            }
-            
-            // Find all enemies in AOE range from target position
-            const targetsInAoe = this.getEnemiesInAoe(targetEnemy.gridX, targetEnemy.gridZ, aoe);
-            
-            // ★★★ 스킬 실행 (폴백 없음! 무조건 카드에 맞는 스킬 실행!) ★★★
-            console.log(`[Game] 스킬 실행: ${cardId}, hits=${hits}`);
-            
-            // 1순위: SkillSystem (JSON 기반)
-            const skillData = typeof SkillSystem !== 'undefined' && SkillSystem.getSkill(cardId);
-            
-            if (skillData) {
-                console.log(`[Game] SkillSystem.execute: ${cardId}`);
-                await SkillSystem.execute(cardId, hero, targetEnemy, {
-                    cardDef,
-                    damage: cardDef.damage,
-                    knockback: cardDef.knockback || 0,
-                    isEnemy: false
-                });
-            } 
-            // 2순위: UnitCombat 직접 매핑 (폴백 아님! 카드별 전용 함수!)
-            else if (typeof UnitCombat !== 'undefined') {
-                console.log(`[Game] UnitCombat 직접 실행: ${cardId}`);
-                
-                // ★ 카드 ID에 맞는 공격 함수 직접 호출!
-                switch (cardId) {
-                    case 'flurry':
-                        // 연속찌르기: flurryAttack × hits
-                        for (let hitNum = 0; hitNum < hits; hitNum++) {
-                            if (targetEnemy.hp <= 0) break;
-                            if (typeof BreakSystem !== 'undefined') {
-                                BreakSystem.onAttack(targetEnemy, cardDef, 1, hitNum);
-                            }
-                            await UnitCombat.flurryAttack(hero, targetEnemy, cardDef.damage, { isEnemy: false });
-                            if (hitNum < hits - 1) await new Promise(r => setTimeout(r, 50));
-                        }
-                        break;
-                    
-                    case 'rush':
-                        // ★ 돌진: 한 번 대쉬 후 밀어붙이기!
-                        await UnitCombat.rushAttack(hero, targetEnemy, cardDef.damage, { 
-                            hits: cardDef.hits || 3,
-                            knockbackPerHit: cardDef.knockbackPerHit || 1,
-                            isEnemy: false,
-                            cardDef: cardDef
-                        });
-                        break;
-                    
-                    case 'sneakAttack':
-                        // ★ 비열한 습격: 뒤치기 + 출혈!
-                        await UnitCombat.sneakAttack(hero, targetEnemy, cardDef.damage, { 
-                            bleed: cardDef.bleed || 2,
-                            isEnemy: false
-                        });
-                        // 출혈은 sneakAttack 내부에서 처리
-                        break;
-                        
-                    case 'bash':
-                        // 강타: bashAttack
-                        if (typeof BreakSystem !== 'undefined') {
-                            BreakSystem.onAttack(targetEnemy, cardDef, 1, 0);
-                        }
-                        await UnitCombat.bashAttack(hero, targetEnemy, cardDef.damage, { isEnemy: false });
-                        break;
-                        
-                    case 'cleave':
-                        // 휘두르기: 강한 일격 (bash 스타일)
-                        if (typeof BreakSystem !== 'undefined') {
-                            BreakSystem.onAttack(targetEnemy, cardDef, 1, 0);
-                        }
-                        await UnitCombat.bashAttack(hero, targetEnemy, cardDef.damage, { isEnemy: false });
-                        break;
-                        
-                    case 'strike':
-                    default:
-                        // 기본 타격: meleeAttack
-                        for (let hitNum = 0; hitNum < hits; hitNum++) {
-                            if (targetEnemy.hp <= 0) break;
-                            if (typeof BreakSystem !== 'undefined') {
-                                BreakSystem.onAttack(targetEnemy, cardDef, 1, hitNum);
-                            }
-                            await UnitCombat.meleeAttack(hero, targetEnemy, cardDef.damage, { isEnemy: false });
-                            if (hitNum < hits - 1) await new Promise(r => setTimeout(r, 100));
-                        }
-                        break;
-                }
-            }
-            // 3순위: 최소 대미지 처리 (안전망)
-            else {
-                console.error(`[Game] 스킬 시스템 없음! 대미지만 처리: ${cardId}`);
-                for (let hitNum = 0; hitNum < hits; hitNum++) {
-                    if (targetEnemy.hp <= 0) break;
-                    this.dealDamage(targetEnemy, cardDef.damage);
-                }
-            }
-            
-            // 넉백 처리
-            if (cardDef.knockback && targetEnemy.hp > 0 && typeof KnockbackSystem !== 'undefined') {
+        // ==========================================
+        // 3. 공통 후처리 (AnimSystem에서 처리 안 된 것만)
+        // ==========================================
+        
+        // 브레이크 시스템 (result.skipBreak가 아니면)
+        if (!result.skipBreak && typeof BreakSystem !== 'undefined') {
+            BreakSystem.onAttack(targetEnemy, cardDef, 1, 0);
+        }
+        
+        // 넉백 (result.skipKnockback가 아니면)
+        if (!result.skipKnockback && cardDef.knockback && targetEnemy.hp > 0) {
+            if (typeof KnockbackSystem !== 'undefined') {
                 KnockbackSystem.knockback(targetEnemy, 1, cardDef.knockback);
             }
-            
-            // ★ 출혈 부여 (sneakAttack은 내부에서 처리)
-            if (cardDef.bleed && cardId !== 'sneakAttack' && targetEnemy.hp > 0 && typeof BleedSystem !== 'undefined') {
+        }
+        
+        // 출혈 (result.skipBleed가 아니면)
+        if (!result.skipBleed && cardDef.bleed && targetEnemy.hp > 0) {
+            if (typeof BleedSystem !== 'undefined') {
                 BleedSystem.applyBleed(targetEnemy, cardDef.bleed);
             }
-            
-            console.log(`[Game] 스킬 완료: ${cardId}`);
-            
-            // Deal damage to all targets in AOE (except primary which was already hit)
+        }
+        
+        // 취약 (vulnerable)
+        if (cardDef.vulnerable && targetEnemy.hp > 0) {
+            targetEnemy.vulnerable = (targetEnemy.vulnerable || 0) + cardDef.vulnerable;
+            console.log(`[Game] 취약 부여: ${cardDef.vulnerable} → 총 ${targetEnemy.vulnerable}`);
+        }
+        
+        // 영역 생성 (createZone) - AnimSystem에서 처리 안 된 경우만
+        if (!result.skipZone && cardDef.createZone && typeof GridAOE !== 'undefined') {
+            if (cardDef.lineAttack || cardDef.createZoneLength) {
+                // 라인 영역 (타겟 위치부터)
+                const length = cardDef.lineAttack || cardDef.createZoneLength || 3;
+                GridAOE.createWaterWaveLine(targetEnemy.gridX, targetEnemy.gridZ, 1, length);
+            } else if (cardDef.aoePattern === 'cross') {
+                // 십자 영역
+                const cells = this.getCrossAoeCells(targetEnemy.gridX, targetEnemy.gridZ, 1);
+                for (const cell of cells) {
+                    GridAOE.createZone(cardDef.createZone, cell.x, cell.z);
+                }
+            } else {
+                // 단일 셀 영역
+                GridAOE.createZone(cardDef.createZone, targetEnemy.gridX, targetEnemy.gridZ);
+            }
+        }
+        
+        // ==========================================
+        // 4. AOE 추가 타격 (주 타겟 외)
+        // ==========================================
+        if (isMelee && (aoe.width > 1 || aoe.depth > 1)) {
+            const targetsInAoe = this.getEnemiesInAoe(targetEnemy.gridX, targetEnemy.gridZ, aoe);
             for (const target of targetsInAoe) {
                 if (target !== targetEnemy && target.hp > 0) {
                     this.dealDamage(target, cardDef.damage * hits);
-                    // Also knockback AOE targets at same time
                     if (cardDef.knockback && target.hp > 0 && typeof KnockbackSystem !== 'undefined') {
                         KnockbackSystem.knockback(target, 1, cardDef.knockback);
                     }
                 }
             }
-        } else {
-            // Ranged: Attack from current position
-            
-            // ★★★ 번개 공격! (원거리지만 특별 처리) ★★★
-            if (cardId === 'lightning') {
-                console.log(`[Game] ⚡ 번개 공격! damage=${cardDef.damage}`);
-                
-                // ★ 물 영역 콤보 체크
-                let bonusDamage = 0;
-                if (typeof GridAOE !== 'undefined') {
-                    bonusDamage = GridAOE.checkLightningCombo(targetEnemy.gridX, targetEnemy.gridZ);
+        }
+        
+        console.log(`[Game] ★ 카드 실행 완료: ${cardId}`);
+    },
+    
+    // ==========================================
+    // 레거시: 스피어 투척 처리 (distanceBonus)
+    // TODO: AnimSystem.spear로 이동 완료 시 제거
+    // ==========================================
+    async playSpearAttack(hero, targetEnemy, cardDef) {
+        // 다른 레인의 적이면 먼저 레인 이동
+        if (targetEnemy.gridZ !== hero.gridZ) {
+            console.log(`[Game] 스피어 - 레인 이동: Z ${hero.gridZ} → ${targetEnemy.gridZ}`);
+            await this.heroLaneShift(hero, targetEnemy.gridZ);
+        }
+        
+        // 거리 계산 (X축 거리 기반)
+        const distance = Math.abs(targetEnemy.gridX - hero.gridX);
+        const distanceBonus = cardDef.distanceBonus * distance;
+        const baseDamage = cardDef.damage;
+        const totalDamage = baseDamage + distanceBonus;
+        
+        console.log(`[Game] 스피어 투척! 거리: ${distance}, 기본: ${baseDamage}, 보너스: ${distanceBonus}, 총: ${totalDamage}`);
+        
+        const gameRef = this;
+        if (typeof UnitCombat !== 'undefined') {
+            await UnitCombat.rangedAttack(hero, targetEnemy, totalDamage, {
+                projectileType: 'spear',
+                projectileColor: 0xccaa77,
+                projectileSize: 12,
+                gridDistance: distance,
+                isEnemy: false,
+                onHit: (hitTarget) => {
+                    if (typeof BreakSystem !== 'undefined') {
+                        BreakSystem.onAttack(hitTarget, cardDef, 1, 0);
+                        gameRef.createEnemyIntent(hitTarget);
+                    }
                 }
-                
-                await UnitCombat.lightningAttack(hero, targetEnemy, cardDef.damage + bonusDamage, { 
-                    chainReduction: cardDef.chainDamageReduction || 2,
-                    isEnemy: false
-                });
-                return; // 번개는 여기서 완료!
+            });
+            
+            if (distanceBonus > 0 && typeof CombatEffects !== 'undefined') {
+                const targetPos = targetEnemy.container || targetEnemy.sprite;
+                setTimeout(() => {
+                    CombatEffects.showDamageNumber(
+                        targetPos.x + 30,
+                        targetPos.y - 60,
+                        distanceBonus,
+                        'distance'
+                    );
+                }, 100);
+            }
+        }
+    },
+    
+    // ==========================================
+    // 레거시: 원거리 공격 처리 (일부 특수 카드용)
+    // TODO: 모두 AnimSystem으로 이전 후 제거
+    // ==========================================
+    async playRangedAttackLegacy(hero, targetEnemy, cardId, cardDef) {
+        const aoe = cardDef.aoe || { width: 1, depth: 1 };
+        const gameRef = this;
+        
+        // distanceBonus (스피어)
+        if (cardDef.distanceBonus) {
+            await this.playSpearAttack(hero, targetEnemy, cardDef);
+            return;
+        }
+        
+        // 갈고리 (Hook)
+        if (cardDef.pull) {
+            console.log(`[Game] 갈고리! 대상: ${targetEnemy.type}`);
+            if (targetEnemy.gridZ !== hero.gridZ) {
+                await this.heroLaneShift(hero, targetEnemy.gridZ);
+            }
+            await this.heroHookAnimation(hero, targetEnemy, cardDef.damage, cardDef.crashDamage || 2, {
+                onHit: (hitTarget) => {
+                    if (typeof BreakSystem !== 'undefined') {
+                        BreakSystem.onAttack(hitTarget, cardDef, 1, 0);
+                        gameRef.createEnemyIntent(hitTarget);
+                    }
+                }
+            });
+            return;
+        }
+        
+        // 십자가 패턴 (Fireball 등)
+        if (cardDef.aoePattern === 'cross') {
+            const crossTargets = this.getEnemiesInCrossAoe(targetEnemy.gridX, targetEnemy.gridZ, 1);
+            await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage, {
+                createZone: cardDef.createZone || null,
+                onHit: (hitTarget) => {
+                    if (typeof BreakSystem !== 'undefined') {
+                        BreakSystem.onAttack(hitTarget, cardDef, 1, 0);
+                    }
+                }
+            });
+            
+            for (let i = 0; i < crossTargets.length; i++) {
+                const target = crossTargets[i];
+                if (target !== targetEnemy && target.hp > 0) {
+                    this.dealDamage(target, cardDef.damage);
+                }
             }
             
-            // ★ 스피어 투척 (거리 보너스가 있는 원거리 공격, 다른 레인 타겟 가능!)
-            if (cardDef.distanceBonus) {
-                // 다른 레인의 적이면 먼저 레인 이동
-                if (targetEnemy.gridZ !== hero.gridZ) {
-                    console.log(`[Game] 스피어 - 레인 이동: Z ${hero.gridZ} → ${targetEnemy.gridZ}`);
-                    await this.heroLaneShift(hero, targetEnemy.gridZ);
+            if (cardDef.createZone && typeof GridAOE !== 'undefined') {
+                const cells = this.getCrossAoeCells(targetEnemy.gridX, targetEnemy.gridZ, 1);
+                for (const cell of cells) {
+                    GridAOE.createZone(cardDef.createZone, cell.x, cell.z);
                 }
-                
-                // 거리 계산 (X축 거리 기반)
-                const distance = Math.abs(targetEnemy.gridX - hero.gridX);
-                const distanceBonus = cardDef.distanceBonus * distance;
-                const baseDamage = cardDef.damage;
-                const totalDamage = baseDamage + distanceBonus;
-                
-                console.log(`[Game] 스피어 투척! 거리: ${distance}, 기본: ${baseDamage}, 보너스: ${distanceBonus}, 총: ${totalDamage}`);
-                
-                // ★ UnitCombat.rangedAttack 사용 (일반 발사체와 동일한 방식)
-                const gameRef = this;
-                if (typeof UnitCombat !== 'undefined') {
-                    await UnitCombat.rangedAttack(hero, targetEnemy, totalDamage, {
-                        projectileType: 'spear',
-                        projectileColor: 0xccaa77,
-                        projectileSize: 12,
-                        gridDistance: distance,  // ★ 그리드 거리 전달 (파워업용)
-                        isEnemy: false,
+            }
+            return;
+        }
+        
+        // 화염 화살 (다중 히트)
+        const rangedHits = cardDef.hits || 1;
+        if (cardDef.projectileType === 'fireArrow' && rangedHits > 1) {
+            const arrowPromises = [];
+            for (let hitNum = 0; hitNum < rangedHits; hitNum++) {
+                const delay = hitNum * 80;
+                arrowPromises.push(new Promise(async (resolve) => {
+                    await new Promise(r => setTimeout(r, delay));
+                    if (targetEnemy.hp <= 0) { resolve(); return; }
+                    await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage, {
+                        projectileType: 'fireArrow',
+                        createZone: cardDef.createZone || null,
                         onHit: (hitTarget) => {
                             if (typeof BreakSystem !== 'undefined') {
-                                BreakSystem.onAttack(hitTarget, cardDef, 1, 0);
-                                gameRef.createEnemyIntent(hitTarget);
+                                BreakSystem.onAttack(hitTarget, cardDef, 1, hitNum);
                             }
                         }
                     });
-                    
-                    // ★ 거리 보너스 별도 플로터 (있을 경우)
-                    if (distanceBonus > 0 && typeof CombatEffects !== 'undefined') {
-                        const targetPos = targetEnemy.container || targetEnemy.sprite;
-                        setTimeout(() => {
-                            CombatEffects.showDamageNumber(
-                                targetPos.x + 30, 
-                                targetPos.y - 60, 
-                                distanceBonus, 
-                                'distance'
-                            );
-                        }, 100);
-                    }
-                } else {
-                    this.dealDamage(targetEnemy, totalDamage);
-                }
+                    resolve();
+                }));
             }
-            // ★★★ 갈고리 (Hook) - 적을 앞으로 당김! ★★★
-            else if (cardDef.pull) {
-                console.log(`[Game] 갈고리! 대상: ${targetEnemy.type}, 위치: ${targetEnemy.gridX}`);
-                
-                // 다른 레인의 적이면 먼저 레인 이동
-                if (targetEnemy.gridZ !== hero.gridZ) {
-                    console.log(`[Game] 갈고리 - 레인 이동: Z ${hero.gridZ} → ${targetEnemy.gridZ}`);
-                    await this.heroLaneShift(hero, targetEnemy.gridZ);
-                }
-                
-                // ★ 갈고리 애니메이션 실행! (브레이크는 타격 시점에 처리)
-                const gameRef = this;
-                await this.heroHookAnimation(hero, targetEnemy, cardDef.damage, cardDef.crashDamage || 2, {
-                    onHit: (hitTarget) => {
-                        if (typeof BreakSystem !== 'undefined') {
-                            BreakSystem.onAttack(hitTarget, cardDef, 1, 0);
-                            gameRef.createEnemyIntent(hitTarget);
-                        }
-                    }
-                });
-            }
-            // 십자가 패턴 처리 (Fireball 등)
-            else if (cardDef.aoePattern === 'cross') {
-                const crossTargets = this.getEnemiesInCrossAoe(targetEnemy.gridX, targetEnemy.gridZ, 1);
-                const gameRef = this;
-                
-                // 파이어볼 발사 (★ 브레이크는 타격 시점에 처리!)
-                await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage, {
-                    createZone: cardDef.createZone || null,
-                    // ★ 타격 시점에 브레이크 시스템 호출!
-                    onHit: (hitTarget) => {
-                        if (typeof BreakSystem !== 'undefined') {
-                            BreakSystem.onAttack(hitTarget, cardDef, 1, 0);
-                            gameRef.createEnemyIntent(hitTarget);
-                        }
-                    }
-                });
-                
-                // 모든 십자가 영역의 적에게 대미지
-                for (let i = 0; i < crossTargets.length; i++) {
-                    const target = crossTargets[i];
-                    if (target !== targetEnemy && target.hp > 0) {
-                        // ★ 추가 타겟도 대미지 시점에 브레이크 처리
-                        if (typeof BreakSystem !== 'undefined') {
-                            BreakSystem.onAttack(target, cardDef, 1, i + 1);
-                            this.createEnemyIntent(target);
-                        }
-                        this.dealDamage(target, cardDef.damage);
-                    }
-                }
-                
-                // 십자가 영역에 불길 생성
-                if (cardDef.createZone && typeof GridAOE !== 'undefined') {
-                    const cells = this.getCrossAoeCells(targetEnemy.gridX, targetEnemy.gridZ, 1);
-                    for (const cell of cells) {
-                        GridAOE.createZone(cardDef.createZone, cell.x, cell.z);
-                    }
-                }
-            } else {
-                // 일반 원거리 공격
-                const targetsInAoe = this.getEnemiesInAoe(targetEnemy.gridX, targetEnemy.gridZ, aoe);
-                const gameRef = this;
-                
-                // ★ 히트 수 확인 (fireArrow 등 다중 히트 원거리)
-                const rangedHits = cardDef.hits || 1;
-                
-                // ★★★ 화염 화살: 연발로 빠르게 쏘기! ★★★
-                if (cardDef.projectileType === 'fireArrow' && rangedHits > 1) {
-                    const arrowPromises = [];
-                    
-                    for (let hitNum = 0; hitNum < rangedHits; hitNum++) {
-                        // 짧은 딜레이 후 발사 (연발 느낌)
-                        const delay = hitNum * 80;  // 80ms 간격으로 연발
-                        
-                        arrowPromises.push(new Promise(async (resolve) => {
-                            await new Promise(r => setTimeout(r, delay));
-                            
-                            if (targetEnemy.hp <= 0) {
-                                resolve();
-                                return;
-                            }
-                            
-                            await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage, {
-                                projectileType: 'fireArrow',
-                                createZone: cardDef.createZone || null,
-                                onHit: (hitTarget) => {
-                                    if (typeof BreakSystem !== 'undefined') {
-                                        BreakSystem.onAttack(hitTarget, cardDef, 1, hitNum);
-                                        gameRef.createEnemyIntent(hitTarget);
-                                    }
-                                }
-                            });
-                            resolve();
-                        }));
-                    }
-                    
-                    // 모든 화살이 도착할 때까지 대기
-                    await Promise.all(arrowPromises);
-                } else {
-                    // 일반 원거리 발사
-                    for (let hitNum = 0; hitNum < rangedHits; hitNum++) {
-                        if (targetEnemy.hp <= 0) break;
-                        
-                        await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage, {
-                            projectileType: cardDef.projectileType || 'default',
-                            createZone: cardDef.createZone || null,
-                            onHit: (hitTarget) => {
-                                if (typeof BreakSystem !== 'undefined') {
-                                    BreakSystem.onAttack(hitTarget, cardDef, 1, hitNum);
-                                    gameRef.createEnemyIntent(hitTarget);
-                                }
-                            }
-                        });
-                        
-                        if (hitNum < rangedHits - 1) await new Promise(r => setTimeout(r, 45));
-                    }
-                }
-                
-                // Deal damage to additional targets in AOE
-                for (let i = 0; i < targetsInAoe.length; i++) {
-                    const target = targetsInAoe[i];
-                    if (target !== targetEnemy && target.hp > 0) {
-                        // ★ 추가 타겟도 대미지 시점에 브레이크 처리
-                        if (typeof BreakSystem !== 'undefined') {
-                            BreakSystem.onAttack(target, cardDef, 1, i + 1);
-                            this.createEnemyIntent(target);
-                        }
-                        await this.dealDamage(target, cardDef.damage);
-                    }
-                }
-                
-                // Create zone effect for non-cross patterns
-                if (cardDef.createZone && typeof GridAOE !== 'undefined') {
-                    GridAOE.createZone(cardDef.createZone, targetEnemy.gridX, targetEnemy.gridZ);
-                }
-            }
+            await Promise.all(arrowPromises);
+            return;
         }
         
-        // Apply block if card has it
-        if (cardDef.block) {
-            if (typeof ShieldSystem !== 'undefined') {
-                ShieldSystem.addShield(this.state.hero, cardDef.block);
-            } else {
-                this.state.heroBlock += cardDef.block;
-                this.updateBlockUI();
-            }
+        // 일반 원거리 발사
+        for (let hitNum = 0; hitNum < rangedHits; hitNum++) {
+            if (targetEnemy.hp <= 0) break;
+            await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage, {
+                projectileType: cardDef.projectileType || 'default',
+                createZone: cardDef.createZone || null,
+                onHit: (hitTarget) => {
+                    if (typeof BreakSystem !== 'undefined') {
+                        BreakSystem.onAttack(hitTarget, cardDef, 1, hitNum);
+                    }
+                }
+            });
+            if (hitNum < rangedHits - 1) await new Promise(r => setTimeout(r, 45));
         }
         
-        // Check collisions after attack
-        await this.resolveAllCollisions();
+        // 영역 생성
+        if (cardDef.createZone && typeof GridAOE !== 'undefined') {
+            GridAOE.createZone(cardDef.createZone, targetEnemy.gridX, targetEnemy.gridZ);
+        }
     },
 
     // Get enemies within AOE pattern from a center point

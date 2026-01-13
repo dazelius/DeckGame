@@ -63,7 +63,13 @@
         "melee": true,
         "frontOnly": true,
         "aoe": { "width": 1, "depth": 1 },
-        "element": "physical"
+        "element": "physical",
+        "anim": {
+            "type": "bash",
+            "windup": 0.15,
+            "dash": 0.25,
+            "ease": "power2.out"
+        }
     },
     "flurry": {
         "name": "Flurry",
@@ -94,7 +100,11 @@
         "frontOnly": false,
         "aoe": { "width": 1, "depth": 1 },
         "createZone": "fire",
-        "element": "fire"
+        "element": "fire",
+        "anim": {
+            "type": "projectile",
+            "projectileType": "fireBolt"
+        }
     },
     "fireBall": {
         "name": "Fireball",
@@ -106,7 +116,11 @@
         "frontOnly": false,
         "aoePattern": "cross",
         "createZone": "fire",
-        "element": "fire"
+        "element": "fire",
+        "anim": {
+            "type": "projectile",
+            "projectileType": "fireBall"
+        }
     },
     "spearThrow": {
         "name": "Spear Throw",
@@ -117,7 +131,10 @@
         "melee": false,
         "frontOnly": false,
         "distanceBonus": 1,
-        "element": "physical"
+        "element": "physical",
+        "anim": {
+            "type": "spear"
+        }
     },
     "hook": {
         "name": "Hook",
@@ -147,7 +164,10 @@
         "frontOnly": true,
         "knockback": 1,
         "aoe": { "width": 1, "depth": 1 },
-        "element": "physical"
+        "element": "physical",
+        "anim": {
+            "type": "slash"
+        }
     },
     "rush": {
         "name": "Rush",
@@ -178,7 +198,25 @@
         "frontOnly": true,
         "bleed": 2,
         "aoe": { "width": 1, "depth": 1 },
-        "element": "physical"
+        "element": "physical",
+        "anim": {
+            "type": "sneak"
+        }
+    },
+    "spark": {
+        "name": "Spark",
+        "cost": 1,
+        "type": "attack",
+        "damage": 4,
+        "target": "enemy",
+        "melee": false,
+        "frontOnly": false,
+        "aoe": { "width": 1, "depth": 1 },
+        "element": "lightning",
+        "desc": "작은 전기 스파크. 물 위의 적에게 추가 데미지.",
+        "anim": {
+            "type": "spark"
+        }
     },
     "lightning": {
         "name": "Lightning",
@@ -190,7 +228,10 @@
         "frontOnly": false,
         "chainDamageReduction": 2,
         "aoe": { "width": 1, "depth": 1 },
-        "element": "lightning"
+        "element": "lightning",
+        "anim": {
+            "type": "lightning"
+        }
     },
     "fireArrow": {
         "name": "Fire Arrow",
@@ -203,7 +244,11 @@
         "hits": 3,
         "projectileType": "fireArrow",
         "aoe": { "width": 1, "depth": 1 },
-        "element": "fire"
+        "element": "fire",
+        "anim": {
+            "type": "projectile",
+            "projectileType": "fireArrow"
+        }
     },
     "waterWave": {
         "name": "Water Wave",
@@ -212,7 +257,7 @@
         "damage": 4,
         "target": "enemy",
         "melee": true,
-        "frontOnly": true,
+        "frontOnly": false,
         "knockback": 1,
         "aoe": { "width": 3, "depth": 1 },
         "createZone": "water",
@@ -233,7 +278,7 @@
         "damage": 7,
         "target": "enemy",
         "melee": true,
-        "frontOnly": true,
+        "frontOnly": false,
         "knockback": 2,
         "aoe": { "width": 3, "depth": 3 },
         "createZone": "water",
