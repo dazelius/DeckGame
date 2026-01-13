@@ -10,6 +10,20 @@ const GridAOE = {
     // Active zone effects on the grid
     zones: [],
     
+    // ★ 파티클 최대 개수 제한 (성능 최적화)
+    MAX_PARTICLES: {
+        ripples: 8,
+        bubbles: 6,
+        droplets: 10,
+        splashes: 5,
+        shimmers: 8,
+        waveParticles: 12,
+        embers: 15,
+        smokeParticles: 8,
+        flames: 10,
+        particles: 20
+    },
+    
     // Zone type definitions
     zoneTypes: {
         fire: {
@@ -227,7 +241,8 @@ const GridAOE = {
         zone.graphics = zoneContainer;
         
         // Spawn animation
-        zoneContainer.scale.set(0);
+        zoneContainer.scale.x = 0;
+        zoneContainer.scale.y = 0;
         zoneContainer.alpha = 0;
         gsap.to(zoneContainer.scale, { x: 1, y: 1, duration: 0.4, ease: 'back.out(2)' });
         gsap.to(zoneContainer, { alpha: 1, duration: 0.3 });
@@ -559,6 +574,7 @@ const GridAOE = {
     // ==========================================
     spawn3DWaterRipple(zone, delay = 0) {
         if (!zone.rippleContainer) return;
+        if (zone.ripples && zone.ripples.length >= this.MAX_PARTICLES.ripples) return;
         
         const zoneSize = zone.zoneSize || 100;
         const ripple = new PIXI.Container();
@@ -578,7 +594,8 @@ const GridAOE = {
         ripple._alpha = 0.8;
         ripple._maxScale = (0.5 + Math.random() * 0.4) * (zoneSize / 100);
         ripple._delay = delay;
-        ripple.scale.set(ripple._scale);
+        ripple.scale.x = ripple._scale;
+        ripple.scale.y = ripple._scale;
         ripple.alpha = 0;
         
         // 무작위 위치 오프셋
@@ -633,6 +650,7 @@ const GridAOE = {
     // ==========================================
     spawn3DWaterSplash(zone) {
         if (!zone.splashContainer) return;
+        if (zone.splashes && zone.splashes.length >= this.MAX_PARTICLES.splashes) return;
         
         const zoneSize = zone.zoneSize || 100;
         const splash = new PIXI.Container();
@@ -681,6 +699,7 @@ const GridAOE = {
     // ==========================================
     spawnWaterBubble(zone) {
         if (!zone.bubbleContainer) return;
+        if (zone.bubbles && zone.bubbles.length >= this.MAX_PARTICLES.bubbles) return;
         
         const zoneSize = zone.zoneSize || 100;
         const bubble = new PIXI.Graphics();
@@ -784,6 +803,7 @@ const GridAOE = {
     // ==========================================
     spawnWaterRipple(zone, delay = 0) {
         if (!zone.rippleContainer) return;
+        if (zone.ripples && zone.ripples.length >= this.MAX_PARTICLES.ripples) return;
         
         const zoneSize = zone.zoneSize || 100;
         const ripple = new PIXI.Graphics();
@@ -796,7 +816,8 @@ const GridAOE = {
         ripple._alpha = 0.8;
         ripple._maxScale = (0.6 + Math.random() * 0.3) * (zoneSize / 100);
         ripple._delay = delay;
-        ripple.scale.set(ripple._scale);
+        ripple.scale.x = ripple._scale;
+        ripple.scale.y = ripple._scale;
         ripple.alpha = 0;
         
         zone.rippleContainer.addChild(ripple);
@@ -808,6 +829,7 @@ const GridAOE = {
     // ==========================================
     spawnWaterDroplet(zone) {
         if (!zone.dropletContainer) return;
+        if (zone.droplets && zone.droplets.length >= this.MAX_PARTICLES.droplets) return;
         
         const zoneSize = zone.zoneSize || 100;
         const droplet = new PIXI.Container();
@@ -867,7 +889,8 @@ const GridAOE = {
             zone.puddleLayers.forEach((layer, i) => {
                 const phase = t * (1.5 + i * 0.3) + layer._pulsePhase;
                 const pulse = 1 + Math.sin(phase) * 0.04;
-                layer.scale.set(pulse, pulse * 0.7);
+                layer.scale.x = pulse;
+                layer.scale.y = pulse * 0.7;
                 layer.alpha = (0.35 + i * 0.05) + Math.sin(phase * 1.2) * 0.08;
                 layer.y = layer._baseY + Math.sin(phase * 0.6) * 1.5;
             });
@@ -894,7 +917,8 @@ const GridAOE = {
                 ripple._scale += delta * 0.5;
                 ripple._alpha -= delta * 0.4;
                 
-                ripple.scale.set(ripple._scale, ripple._scale * 0.6);
+                ripple.scale.x = ripple._scale;
+                ripple.scale.y = ripple._scale * 0.6;
                 ripple.alpha = Math.max(0, ripple._alpha);
                 
                 if (ripple._scale > ripple._maxScale || ripple._alpha <= 0) {
@@ -929,8 +953,9 @@ const GridAOE = {
                 wave.y = Math.sin(wave._angle) * wave._orbitY;
                 
                 // 깊이에 따른 스케일 & 알파
-                const scale = wave._baseScale * depthScale;
-                wave.scale.set(scale, scale * 0.6);
+                const waveScale = wave._baseScale * depthScale;
+                wave.scale.x = waveScale;
+                wave.scale.y = waveScale * 0.6;
                 wave.alpha = 0.5 + depthScale * 0.4;
                 
                 // 뒤에 있으면 더 어둡게
@@ -1014,7 +1039,9 @@ const GridAOE = {
                 
                 bubble._life -= bubble._decay;
                 bubble.alpha = bubble._life * 0.7;
-                bubble.scale.set(0.8 + bubble._life * 0.4);
+                const bubbleScale = 0.8 + bubble._life * 0.4;
+                bubble.scale.x = bubbleScale;
+                bubble.scale.y = bubbleScale;
                 
                 if (bubble._life <= 0 || bubble.y < -30) {
                     toRemove.push(bubble);
@@ -1044,7 +1071,9 @@ const GridAOE = {
             for (const shimmer of zone.shimmers) {
                 shimmer._phase += delta * shimmer._twinkleSpeed;
                 shimmer.alpha = shimmer._baseAlpha * (0.3 + Math.sin(shimmer._phase) * 0.7);
-                shimmer.scale.set(0.6 + Math.sin(shimmer._phase * 1.3) * 0.5);
+                const shimmerScale = 0.6 + Math.sin(shimmer._phase * 1.3) * 0.5;
+                shimmer.scale.x = shimmerScale;
+                shimmer.scale.y = shimmerScale;
                 shimmer.x += Math.sin(shimmer._phase * 0.5) * 0.3;
             }
         }
@@ -1055,8 +1084,9 @@ const GridAOE = {
         if (zone.cores) {
             zone.cores.forEach((core, i) => {
                 const phase = t * (4 + i * 1.5) + (core._pulsePhase || 0);
-                const pulse = 1 + Math.sin(phase) * 0.25;
-                core.scale.set(pulse, pulse * 0.6);
+                const corePulse = 1 + Math.sin(phase) * 0.25;
+                core.scale.x = corePulse;
+                core.scale.y = corePulse * 0.6;
                 core.alpha = (0.5 - i * 0.1) + Math.sin(phase * 1.5) * 0.2;
             });
         }
@@ -1267,6 +1297,7 @@ const GridAOE = {
     // ==========================================
     spawn3DFireEmber(zone) {
         if (!zone.emberContainer) return;
+        if (zone.embers && zone.embers.length >= this.MAX_PARTICLES.embers) return;
         
         const zoneSize = zone.zoneSize || 100;
         const ember = new PIXI.Container();
@@ -1323,6 +1354,7 @@ const GridAOE = {
     // ==========================================
     spawn3DSmoke(zone) {
         if (!zone.smokeContainer) return;
+        if (zone.smokeParticles && zone.smokeParticles.length >= this.MAX_PARTICLES.smokeParticles) return;
         
         const zoneSize = zone.zoneSize || 100;
         const smoke = new PIXI.Container();
@@ -1548,6 +1580,8 @@ const GridAOE = {
     },
     
     spawnParticle(zone) {
+        if (zone.particles && zone.particles.length >= this.MAX_PARTICLES.particles) return;
+        
         const particle = new PIXI.Graphics();
         const size = 3 + Math.random() * 4;
         
@@ -1617,8 +1651,9 @@ const GridAOE = {
         if (zone.heatLayers) {
             zone.heatLayers.forEach((heat, i) => {
                 const phase = t * (2 + i * 0.5) + heat._pulsePhase;
-                const pulse = 1 + Math.sin(phase) * 0.15;
-                heat.scale.set(pulse, pulse * 0.7);
+                const heatPulse = 1 + Math.sin(phase) * 0.15;
+                heat.scale.x = heatPulse;
+                heat.scale.y = heatPulse * 0.7;
                 heat.alpha = 0.08 + Math.sin(phase * 1.5) * 0.04 + (3 - i) * 0.02;
                 heat.y = heat._baseY + Math.sin(phase * 0.8) * 2;
             });
@@ -1640,8 +1675,9 @@ const GridAOE = {
                 flame.y = Math.sin(flame._angle) * flame._orbitY;
                 
                 // 깊이에 따른 스케일 & 알파
-                const scale = flame._baseScale * depthScale;
-                flame.scale.set(scale);
+                const flameScale = flame._baseScale * depthScale;
+                flame.scale.x = flameScale;
+                flame.scale.y = flameScale;
                 flame.alpha = 0.4 + depthScale * 0.5;
                 
                 // 뒤에 있으면 더 어둡게 (3D 효과)
@@ -1665,8 +1701,9 @@ const GridAOE = {
         if (zone.cores) {
             zone.cores.forEach((core, i) => {
                 const phase = t * (8 + i * 2) + (core._pulsePhase || 0);
-                const pulse = 1 + Math.sin(phase) * 0.2;
-                core.scale.set(pulse, pulse * 0.7);
+                const firePulse = 1 + Math.sin(phase) * 0.2;
+                core.scale.x = firePulse;
+                core.scale.y = firePulse * 0.7;
             });
         }
         
@@ -1684,7 +1721,8 @@ const GridAOE = {
                 // 스케일 플리커
                 const scaleX = 0.85 + Math.sin(pillar._phase * 2) * 0.2;
                 const scaleY = 0.9 + Math.sin(pillar._phase * 1.5) * 0.15;
-                pillar.scale.set(scaleX, scaleY);
+                pillar.scale.x = scaleX;
+                pillar.scale.y = scaleY;
                 
                 // 알파 플리커
                 pillar.alpha = 0.7 + Math.sin(pillar._phase * 3) * 0.25;
@@ -1711,7 +1749,9 @@ const GridAOE = {
                 
                 // Z축에 따른 스케일 (원근)
                 const zScale = 0.6 + (ember._z + 10) / 30;
-                ember.scale.set(Math.max(0.3, zScale));
+                const emberScale = Math.max(0.3, zScale);
+                ember.scale.x = emberScale;
+                ember.scale.y = emberScale;
                 
                 // 페이드
                 ember._life -= ember._decay;
@@ -1755,7 +1795,8 @@ const GridAOE = {
                 
                 // 확장
                 const currentScale = smoke.scale.x;
-                smoke.scale.set(currentScale + 0.008);
+                smoke.scale.x = currentScale + 0.008;
+                smoke.scale.y = currentScale + 0.008;
                 
                 if (smoke._life <= 0) {
                     smokeToRemove.push(smoke);
@@ -1819,7 +1860,8 @@ const GridAOE = {
             // Fade
             particle.life -= particle.decay;
             particle.alpha = particle.life;
-            particle.scale.set(particle.life);
+            particle.scale.x = particle.life;
+            particle.scale.y = particle.life;
             
             if (particle.life <= 0) {
                 toRemove.push(particle);
@@ -2170,19 +2212,54 @@ const GridAOE = {
             z.gridX === gridX && z.gridZ === gridZ && z.type === 'water'
         );
         if (waterZone && waterZone.options.lightningBonus) {
-            console.log(`[GridAOE] 번개 콤보! 물 영역에서 추가 ${waterZone.options.lightningBonus} 데미지`);
+            console.log(`[GridAOE] ⚡ 번개 콤보! 물 위에서 +${waterZone.options.lightningBonus} 데미지`);
             
-            // 번개+물 이펙트
-            this.showLightningWaterCombo(gridX, gridZ);
+            // 전기 스파크 이펙트 (물은 유지)
+            this.showLightningSparkEffect(gridX, gridZ);
             
-            const bonusDamage = waterZone.options.lightningBonus;
-            
-            // 물 영역 제거
-            this.removeZone(waterZone);
-            
-            return bonusDamage;
+            return waterZone.options.lightningBonus;
         }
         return 0;
+    },
+    
+    // ==========================================
+    // 번개 스파크 이펙트 (물 유지, 간단한 버전)
+    // ==========================================
+    showLightningSparkEffect(gridX, gridZ) {
+        const pos = this.game.getCellCenter(gridX, gridZ);
+        if (!pos || !this.app) return;
+        
+        // 전기 스파크 파티클
+        for (let i = 0; i < 15; i++) {
+            const spark = new PIXI.Graphics();
+            spark.beginFill(0xffff44, 0.9);
+            spark.drawCircle(0, 0, 2 + Math.random() * 3);
+            spark.endFill();
+            
+            spark.x = pos.x;
+            spark.y = pos.y;
+            this.app.stage.addChild(spark);
+            
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 30 + Math.random() * 40;
+            
+            gsap.to(spark, {
+                x: pos.x + Math.cos(angle) * dist,
+                y: pos.y + Math.sin(angle) * dist * 0.5 - 20,
+                alpha: 0,
+                duration: 0.3 + Math.random() * 0.2,
+                ease: 'power2.out',
+                onComplete: () => {
+                    this.app.stage.removeChild(spark);
+                    spark.destroy();
+                }
+            });
+        }
+        
+        // 화면 플래시
+        if (typeof CombatEffects !== 'undefined') {
+            CombatEffects.screenFlash('#ffff88', 150, 0.3);
+        }
     },
     
     // ==========================================
@@ -2275,11 +2352,11 @@ const GridAOE = {
             });
         }
         
-        // "감전!" 텍스트
-        const shockText = new PIXI.Text('⚡ 감전!', {
-            fontSize: 22,
+        // "증발!" 텍스트
+        const shockText = new PIXI.Text('💨 증발!', {
+            fontSize: 24,
             fontWeight: 'bold',
-            fill: 0xffff00,
+            fill: 0xaaddff,
             stroke: 0x0044aa,
             strokeThickness: 4
         });
@@ -2298,6 +2375,61 @@ const GridAOE = {
                 shockText.destroy();
             }
         });
+        
+        // ========================================
+        // 증기 효과 (Steam) - 물이 증발하는 표현
+        // ========================================
+        for (let i = 0; i < 20; i++) {
+            setTimeout(() => {
+                const steam = new PIXI.Graphics();
+                
+                // 증기 구름 (다층)
+                for (let layer = 2; layer >= 0; layer--) {
+                    const size = (12 + Math.random() * 15) + layer * 5;
+                    const alpha = 0.4 - layer * 0.1;
+                    steam.beginFill(0xffffff, alpha);
+                    steam.drawCircle(layer * 3, layer * 2, size);
+                    steam.endFill();
+                }
+                
+                // 시작 위치 (바닥에서)
+                const offsetX = (Math.random() - 0.5) * 80;
+                steam.x = pos.x + offsetX;
+                steam.y = pos.y + 10;
+                steam.scale.x = 0.3;
+                steam.scale.y = 0.3;
+                steam.alpha = 0.7;
+                this.app.stage.addChild(steam);
+                
+                // 위로 올라가면서 퍼지고 사라짐
+                const targetY = pos.y - 80 - Math.random() * 60;
+                const drift = (Math.random() - 0.5) * 40;
+                
+                gsap.to(steam, {
+                    y: targetY,
+                    x: pos.x + offsetX + drift,
+                    alpha: 0,
+                    duration: 0.8 + Math.random() * 0.5,
+                    ease: 'power1.out',
+                    onComplete: () => {
+                        this.app.stage.removeChild(steam);
+                        steam.destroy();
+                    }
+                });
+                
+                gsap.to(steam.scale, {
+                    x: 1.5 + Math.random() * 0.5,
+                    y: 1.2 + Math.random() * 0.3,
+                    duration: 0.8 + Math.random() * 0.5,
+                    ease: 'power1.out'
+                });
+            }, i * 40); // 순차적 생성
+        }
+        
+        // 추가: 지글지글 소리 효과
+        if (typeof SoundSystem !== 'undefined') {
+            SoundSystem.play('sizzle', 0.5);
+        }
     },
     
     // ==========================================

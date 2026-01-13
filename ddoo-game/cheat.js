@@ -14,7 +14,7 @@ const CheatSystem = {
         this.game = gameRef;
         this.createModal();
         this.setupKeyBindings();
-        console.log('[CheatSystem] 초기화 완료 - Ctrl+D: 카드 선택, F1~F3: 퀵 치트');
+        console.log('[CheatSystem] 초기화 완료 - F4/Ctrl+D: 메뉴, Ctrl+Z/F1: 코스트, F2: 체력, F3: 적 처치');
     },
     
     // ==========================================
@@ -26,6 +26,12 @@ const CheatSystem = {
             if (e.ctrlKey && e.key === 'd') {
                 e.preventDefault();
                 this.toggleModal();
+            }
+            
+            // Ctrl+Z: 코스트 회복 (대체 단축키)
+            if (e.ctrlKey && e.key === 'z') {
+                e.preventDefault();
+                this.restoreCost();
             }
             
             // F1: 코스트 회복
@@ -44,6 +50,12 @@ const CheatSystem = {
             if (e.key === 'F3') {
                 e.preventDefault();
                 this.killAllEnemies();
+            }
+            
+            // F4: 치트 메뉴 열기
+            if (e.key === 'F4') {
+                e.preventDefault();
+                this.toggleModal();
             }
             
             // ESC: 모달 닫기
@@ -82,7 +94,7 @@ const CheatSystem = {
                         <div class="cheat-quick-buttons">
                             <button class="cheat-btn" data-action="cost">
                                 <span class="cheat-icon">⚡</span>
-                                <span>코스트 회복 (F1)</span>
+                                <span>코스트 회복 (Ctrl+Z / F1)</span>
                             </button>
                             <button class="cheat-btn" data-action="hp">
                                 <span class="cheat-icon">❤️</span>
