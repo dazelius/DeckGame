@@ -1861,7 +1861,7 @@ const Game = {
     // ==========================================
     // 워터웨이브 실행
     // ==========================================
-    async executeWaterWave(hero, targetEnemy, cardDef) {
+    async executeWaterWave(hero, targetEnemy, cardDef, isTidal = false) {
         const gridZ = targetEnemy.gridZ;
         const heroX = hero.gridX;
         const knockbackDir = 1; // 오른쪽으로 밀어냄
@@ -1870,9 +1870,10 @@ const Game = {
         const heroPos = hero.container || hero.sprite;
         if (heroPos) {
             const originalX = heroPos.x;
+            const dashDist = isTidal ? 100 : 80;
             await gsap.to(heroPos, {
-                x: originalX + 80,
-                duration: 0.15,
+                x: originalX + dashDist,
+                duration: isTidal ? 0.2 : 0.15,
                 ease: 'power2.in'
             });
             
@@ -1881,16 +1882,23 @@ const Game = {
                 x: originalX,
                 duration: 0.3,
                 ease: 'power2.out',
-                delay: 0.2
+                delay: isTidal ? 0.3 : 0.2
             });
         }
         
-        // 2. 워터웨이브 VFX
-        this.showWaterWaveVFX(heroX, gridZ, knockbackDir, cardDef.aoe?.width || 3);
+        // 2. VFX (타이달은 추가 이펙트)
+        const lineLength = cardDef.aoe?.width || 3;
+        this.showWaterWaveVFX(heroX, gridZ, knockbackDir, lineLength, isTidal);
+        
+        if (isTidal) {
+            // 타이달크래시: 중심에 추가 이펙트
+            setTimeout(() => {
+                this.showTidalCrashVFX(targetEnemy.gridX, targetEnemy.gridZ, cardDef.aoe?.depth || 3);
+            }, 150);
+        }
         
         // 3. 라인 범위 내 적들 타격 + 넉백
         const affectedEnemies = [];
-        const lineLength = cardDef.aoe?.width || 3;
         
         for (let dx = 1; dx <= lineLength; dx++) {
             const checkX = heroX + dx;
@@ -1935,79 +1943,272 @@ const Game = {
     // ==========================================
     // 워터웨이브 VFX
     // ==========================================
-    showWaterWaveVFX(startX, gridZ, direction, length) {
+    showWaterWaveVFX(startX, gridZ, direction, length, isTidal = false) {
         if (!this.app) return;
         
         const startPos = this.getCellCenter(startX, gridZ);
         if (!startPos) return;
         
-        // 물결 웨이브 생성
+        const intensity = isTidal ? 1.5 : 1.0;
+        const targetX = startPos.x + direction * length * 100;
+        
+        // ========================================
+        // 1. 메인 웨이브 컨테이너
+        // ========================================
         const waveContainer = new PIXI.Container();
         waveContainer.x = startPos.x;
         waveContainer.y = startPos.y;
         this.app.stage.addChild(waveContainer);
         
-        // 메인 웨이브 (물결 모양)
-        const wave = new PIXI.Graphics();
-        wave.beginFill(0x4488ff, 0.7);
-        wave.drawEllipse(0, 0, 30, 15);
-        wave.endFill();
-        wave.beginFill(0x88ccff, 0.5);
-        wave.drawEllipse(0, -5, 20, 10);
-        wave.endFill();
-        waveContainer.addChild(wave);
-        
-        // 물방울 파티클
-        for (let i = 0; i < 20; i++) {
-            const droplet = new PIXI.Graphics();
-            droplet.beginFill(0x88ccff, 0.8);
-            droplet.drawCircle(0, 0, 2 + Math.random() * 4);
-            droplet.endFill();
-            droplet.x = (Math.random() - 0.5) * 30;
-            droplet.y = (Math.random() - 0.5) * 15;
-            waveContainer.addChild(droplet);
+        // ========================================
+        // 2. 다층 물결 (3D 깊이감)
+        // ========================================
+        for (let layer = 4; layer >= 0; layer--) {
+            const wave = new PIXI.Graphics();
+            const layerScale = 0.6 + layer * 0.15;
+            const colors = [0x1a3366, 0x2855aa, 0x4488cc, 0x66aaee, 0xaaddff];
+            const alphas = [0.4, 0.5, 0.55, 0.5, 0.4];
             
-            gsap.to(droplet, {
-                x: droplet.x + direction * (50 + Math.random() * 100),
-                y: droplet.y + (Math.random() - 0.5) * 40 - 20,
+            wave.beginFill(colors[layer], alphas[layer] * intensity);
+            wave.drawEllipse(0, layer * 3, 40 * layerScale * intensity, 18 * layerScale);
+            wave.endFill();
+            
+            // 백파 (물결 위에 하얀 거품)
+            if (layer === 4) {
+                wave.beginFill(0xffffff, 0.6);
+                wave.drawEllipse(0, -5, 25 * intensity, 8);
+                wave.endFill();
+            }
+            
+            waveContainer.addChild(wave);
+        }
+        
+        // ========================================
+        // 3. 물보라 파티클
+        // ========================================
+        const splashCount = isTidal ? 40 : 25;
+        for (let i = 0; i < splashCount; i++) {
+            const splash = new PIXI.Graphics();
+            const size = (2 + Math.random() * 5) * intensity;
+            
+            // 글로우
+            splash.beginFill(0x66aaee, 0.3);
+            splash.drawCircle(0, 0, size * 2);
+            splash.endFill();
+            // 코어
+            splash.beginFill(0x88ccff, 0.8);
+            splash.drawCircle(0, 0, size);
+            splash.endFill();
+            // 하이라이트
+            splash.beginFill(0xffffff, 0.6);
+            splash.drawCircle(-size * 0.3, -size * 0.3, size * 0.3);
+            splash.endFill();
+            
+            splash.x = (Math.random() - 0.5) * 50 * intensity;
+            splash.y = (Math.random() - 0.5) * 25;
+            this.app.stage.addChild(splash);
+            
+            // 포물선 운동
+            const baseX = startPos.x + splash.x;
+            const angle = Math.PI * 0.3 + Math.random() * Math.PI * 0.4; // 위쪽으로
+            const speed = (80 + Math.random() * 60) * intensity;
+            const vx = direction * Math.cos(angle) * speed * 0.01 + direction * 100;
+            const vy = -Math.sin(angle) * speed * 0.8;
+            
+            gsap.to(splash, {
+                x: baseX + vx + direction * length * (30 + Math.random() * 50),
+                y: startPos.y + splash.y + vy + 20,
                 alpha: 0,
-                duration: 0.5 + Math.random() * 0.3,
-                ease: 'power2.out'
+                duration: 0.4 + Math.random() * 0.3,
+                ease: 'power2.out',
+                onComplete: () => {
+                    this.app.stage.removeChild(splash);
+                    splash.destroy();
+                }
             });
         }
         
-        // 웨이브 전진
-        const targetX = startPos.x + direction * length * 100;
+        // ========================================
+        // 4. 물기둥 (타이달만)
+        // ========================================
+        if (isTidal) {
+            for (let i = 0; i < 3; i++) {
+                const pillar = new PIXI.Graphics();
+                const pillarX = startPos.x + direction * (50 + i * 80);
+                
+                // 기둥 베이스
+                pillar.beginFill(0x4488cc, 0.6);
+                pillar.drawRect(-15, -100, 30, 100);
+                pillar.endFill();
+                pillar.beginFill(0x66aaee, 0.5);
+                pillar.drawRect(-10, -100, 20, 100);
+                pillar.endFill();
+                pillar.beginFill(0xaaddff, 0.4);
+                pillar.drawRect(-5, -100, 10, 100);
+                pillar.endFill();
+                
+                pillar.x = pillarX;
+                pillar.y = startPos.y;
+                pillar.scale.y = 0;
+                this.app.stage.addChild(pillar);
+                
+                gsap.timeline()
+                    .to(pillar.scale, { y: 1, duration: 0.15, delay: i * 0.08, ease: 'power2.out' })
+                    .to(pillar, { alpha: 0, duration: 0.3 })
+                    .call(() => {
+                        this.app.stage.removeChild(pillar);
+                        pillar.destroy();
+                    });
+            }
+        }
+        
+        // ========================================
+        // 5. 웨이브 전진 애니메이션
+        // ========================================
         gsap.to(waveContainer, {
             x: targetX,
-            duration: 0.4,
+            duration: 0.35 + length * 0.05,
             ease: 'power2.out'
         });
         gsap.to(waveContainer.scale, {
-            x: 2.5,
-            y: 1.5,
+            x: 2.5 * intensity,
+            y: 1.2,
             duration: 0.4,
             ease: 'power2.out'
         });
         gsap.to(waveContainer, {
             alpha: 0,
             duration: 0.5,
-            delay: 0.1,
+            delay: 0.15,
             onComplete: () => {
                 this.app.stage.removeChild(waveContainer);
                 waveContainer.destroy({ children: true });
             }
         });
         
-        // 화면 효과
+        // ========================================
+        // 6. 바닥 물결 확산
+        // ========================================
+        for (let i = 0; i < length; i++) {
+            setTimeout(() => {
+                const ripple = new PIXI.Graphics();
+                ripple.lineStyle(3, 0x88ccff, 0.6);
+                ripple.drawEllipse(0, 0, 20, 12);
+                ripple.x = startPos.x + direction * (i + 1) * 100;
+                ripple.y = startPos.y + 5;
+                this.app.stage.addChild(ripple);
+                
+                gsap.to(ripple.scale, { x: 3, y: 2, duration: 0.4, ease: 'power2.out' });
+                gsap.to(ripple, {
+                    alpha: 0,
+                    duration: 0.4,
+                    onComplete: () => {
+                        this.app.stage.removeChild(ripple);
+                        ripple.destroy();
+                    }
+                });
+            }, i * 80);
+        }
+        
+        // ========================================
+        // 7. 화면 효과
+        // ========================================
         if (typeof CombatEffects !== 'undefined') {
-            CombatEffects.screenShake(8, 200);
-            CombatEffects.screenFlash('#4488ff', 150, 0.3);
+            CombatEffects.screenShake(isTidal ? 15 : 10, isTidal ? 300 : 200);
+            CombatEffects.screenFlash('#4488ff', 200, isTidal ? 0.4 : 0.25);
         }
         
         // 사운드
         if (typeof SoundSystem !== 'undefined') {
-            SoundSystem.play('water', 0.5);
+            SoundSystem.play('water', isTidal ? 0.7 : 0.5);
+        }
+    },
+    
+    // ==========================================
+    // 타이달크래시 VFX (별도 호출용)
+    // ==========================================
+    showTidalCrashVFX(centerX, centerZ, radius) {
+        if (!this.app) return;
+        
+        const centerPos = this.getCellCenter(centerX, centerZ);
+        if (!centerPos) return;
+        
+        // 거대 물기둥
+        const pillar = new PIXI.Graphics();
+        for (let i = 4; i >= 0; i--) {
+            const colors = [0x1a3366, 0x2855aa, 0x4488cc, 0x66aaee, 0xaaddff];
+            pillar.beginFill(colors[i], 0.5 - i * 0.05);
+            pillar.drawRect(-50 + i * 8, -200, 100 - i * 16, 200);
+            pillar.endFill();
+        }
+        pillar.x = centerPos.x;
+        pillar.y = centerPos.y;
+        pillar.scale.y = 0;
+        this.app.stage.addChild(pillar);
+        
+        gsap.timeline()
+            .to(pillar.scale, { y: 1.5, duration: 0.2, ease: 'power2.out' })
+            .to(pillar.scale, { y: 0.3, x: 2, duration: 0.3 })
+            .to(pillar, { alpha: 0, duration: 0.2 })
+            .call(() => {
+                this.app.stage.removeChild(pillar);
+                pillar.destroy();
+            });
+        
+        // 충격파
+        const shockwave = new PIXI.Graphics();
+        shockwave.lineStyle(4, 0x88ccff, 0.8);
+        shockwave.drawEllipse(0, 0, 30, 18);
+        shockwave.x = centerPos.x;
+        shockwave.y = centerPos.y;
+        this.app.stage.addChild(shockwave);
+        
+        gsap.to(shockwave.scale, { x: 6, y: 4, duration: 0.4, ease: 'power2.out' });
+        gsap.to(shockwave, {
+            alpha: 0,
+            duration: 0.4,
+            onComplete: () => {
+                this.app.stage.removeChild(shockwave);
+                shockwave.destroy();
+            }
+        });
+        
+        // 대량 물보라
+        for (let i = 0; i < 60; i++) {
+            const drop = new PIXI.Graphics();
+            const size = 3 + Math.random() * 6;
+            
+            drop.beginFill(0x88ccff, 0.8);
+            drop.drawCircle(0, 0, size);
+            drop.endFill();
+            drop.beginFill(0xffffff, 0.5);
+            drop.drawCircle(-size * 0.2, -size * 0.2, size * 0.3);
+            drop.endFill();
+            
+            drop.x = centerPos.x;
+            drop.y = centerPos.y;
+            this.app.stage.addChild(drop);
+            
+            const angle = (Math.PI * 2 * i) / 60 + Math.random() * 0.3;
+            const distance = 100 + Math.random() * 150;
+            
+            gsap.to(drop, {
+                x: centerPos.x + Math.cos(angle) * distance,
+                y: centerPos.y + Math.sin(angle) * distance * 0.5 - 80 - Math.random() * 60,
+                alpha: 0,
+                duration: 0.6 + Math.random() * 0.4,
+                ease: 'power2.out',
+                onComplete: () => {
+                    this.app.stage.removeChild(drop);
+                    drop.destroy();
+                }
+            });
+        }
+        
+        // 화면 효과
+        if (typeof CombatEffects !== 'undefined') {
+            CombatEffects.screenShake(20, 400);
+            CombatEffects.screenFlash('#4488ff', 250, 0.5);
         }
     },
     
@@ -2986,9 +3187,16 @@ const Game = {
             }
             
             // ★★★ 워터웨이브! (근접이지만 라인 공격) ★★★
-            if (cardId === 'waterWave' || cardId === 'tidalCrash') {
+            if (cardId === 'waterWave') {
                 console.log(`[Game] 🌊 워터웨이브! damage=${cardDef.damage}, knockback=${cardDef.knockback}`);
-                await this.executeWaterWave(hero, targetEnemy, cardDef);
+                await this.executeWaterWave(hero, targetEnemy, cardDef, false);
+                return;
+            }
+            
+            // ★★★ 타이달크래시! (강화된 해일) ★★★
+            if (cardId === 'tidalCrash') {
+                console.log(`[Game] 🌊🌊 타이달크래시! damage=${cardDef.damage}, knockback=${cardDef.knockback}`);
+                await this.executeWaterWave(hero, targetEnemy, cardDef, true);
                 return;
             }
             
