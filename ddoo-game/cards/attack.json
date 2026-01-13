@@ -8,7 +8,13 @@
         "melee": true,
         "frontOnly": true,
         "aoe": { "width": 2, "depth": 1 },
-        "element": "physical"
+        "element": "physical",
+        "anim": {
+            "type": "slash",
+            "dash": 0.3,
+            "attack": 0.1,
+            "ease": "power2.inOut"
+        }
     },
     "bash": {
         "name": "Bash",
@@ -21,7 +27,14 @@
         "knockback": 1,
         "frontOnly": true,
         "aoe": { "width": 1, "depth": 1 },
-        "element": "physical"
+        "element": "physical",
+        "anim": {
+            "type": "bash",
+            "windup": 0.2,
+            "dash": 0.28,
+            "impact": 0.15,
+            "ease": "power2.inOut"
+        }
     },
     "cleave": {
         "name": "Cleave",
@@ -32,7 +45,13 @@
         "melee": true,
         "frontOnly": true,
         "aoe": { "width": 1, "depth": 3 },
-        "element": "physical"
+        "element": "physical",
+        "anim": {
+            "type": "cleave",
+            "windup": 0.15,
+            "swing": 0.2,
+            "ease": "power2.out"
+        }
     },
     "ironWave": {
         "name": "Iron Wave",
@@ -56,7 +75,14 @@
         "frontOnly": true,
         "hits": 3,
         "aoe": { "width": 1, "depth": 1 },
-        "element": "physical"
+        "element": "physical",
+        "anim": {
+            "type": "flurry",
+            "dash": 0.28,
+            "stab": 0.08,
+            "interval": 0.06,
+            "ease": "power2.inOut"
+        }
     },
     "fireBolt": {
         "name": "Fire Bolt",
@@ -103,7 +129,13 @@
         "frontOnly": false,
         "pull": 99,
         "crashDamage": 2,
-        "element": "physical"
+        "element": "physical",
+        "anim": {
+            "type": "hook",
+            "throw": 0.2,
+            "pull": 0.35,
+            "ease": "power2.out"
+        }
     },
     "kick": {
         "name": "Kick",
@@ -128,7 +160,13 @@
         "hits": 3,
         "knockbackPerHit": 1,
         "aoe": { "width": 1, "depth": 1 },
-        "element": "physical"
+        "element": "physical",
+        "anim": {
+            "type": "rush",
+            "charge": 0.15,
+            "hitInterval": 0.1,
+            "ease": "power2.in"
+        }
     },
     "sneakAttack": {
         "name": "Sneak Attack",

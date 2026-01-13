@@ -623,13 +623,15 @@ const MonsterPatterns = {
                     }
                 }
                 
-                enemy.block = (enemy.block || 0) + (intent.block || 0);
-                if (typeof game.updateUnitHPBar === 'function') {
-                    game.updateUnitHPBar(enemy); // ★ HP 바에 쉴드 반영
-                }
-                // ★ 플로터로 변경 (중앙 토스트 대신)
-                if (typeof CombatEffects !== 'undefined') {
-                    CombatEffects.showBlockGain(enemy, intent.block || 0);
+                // ★ ShieldSystem 사용
+                if (typeof ShieldSystem !== 'undefined') {
+                    ShieldSystem.addShield(enemy, intent.block || 0, 1);
+                } else {
+                    enemy.block = (enemy.block || 0) + (intent.block || 0);
+                    enemy.blockDuration = 1;
+                    if (typeof game.updateUnitHPBar === 'function') {
+                        game.updateUnitHPBar(enemy);
+                    }
                 }
                 break;
                 

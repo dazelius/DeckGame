@@ -142,17 +142,36 @@ const MonsterDialogue = {
         const bubbleContainer = new PIXI.Container();
         bubbleContainer.zIndex = 500;
         
-        // ★ 인텐트 위치 기준으로 말풍선 배치!
-        let intentY = -80;  // 기본값
+        // ★ 항상 인텐트 위에 일관되게 배치!
+        let bubbleY = -120;  // 기본값
         
-        // 인텐트가 있으면 그 위치 기준
+        // 인텐트가 있으면 인텐트 바로 위에 배치
         if (unit.intentContainer && !unit.intentContainer.destroyed) {
-            intentY = unit.intentContainer.y;
+            bubbleY = unit.intentContainer.y - 45;
+        } else {
+            // 인텐트가 없으면 스프라이트 높이 기반으로 계산
+            const sprite = unit.sprite;
+            if (sprite) {
+                const baseScale = unit.baseScale || sprite.scale?.y || 1;
+                let bounds = sprite.getLocalBounds();
+                
+                // bounds가 너무 작으면 기본값 사용
+                if (Math.abs(bounds.height) < 80) {
+                    bounds = { height: -150, y: -150 };
+                }
+                
+                const actualHeight = Math.abs(bounds.height) * baseScale;
+                const anchorY = sprite.anchor?.y ?? 1;
+                const spriteTopY = -actualHeight * anchorY;
+                
+                // 스프라이트 머리 위 + 인텐트 공간 + 마진
+                bubbleY = Math.min(spriteTopY, -60) - 50;
+            }
         }
         
-        // 말풍선은 인텐트보다 40px 위, 살짝 앞쪽 (x: -20)
-        bubbleContainer.x = -20;  // 살짝 앞으로 (왼쪽)
-        bubbleContainer.y = intentY - 40;
+        // 말풍선 위치 설정
+        bubbleContainer.x = 0;  // 중앙 정렬
+        bubbleContainer.y = bubbleY;
         
         // 말풍선 배경
         const bubble = new PIXI.Graphics();

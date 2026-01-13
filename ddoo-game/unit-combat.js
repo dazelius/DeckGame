@@ -106,11 +106,12 @@ const UnitCombat = {
                 trailTimer = SkillSystem.startSandevistanTrail(attacker, 6, SkillSystem.GHOST_COLORS.CYAN, 18);
             }
             
+            const cfg = typeof AnimConfig !== 'undefined' ? AnimConfig.dash : { windup: 0.12, move: 0.25, ease: 'power2.inOut' };
             gsap.timeline()
-                .to(posTarget, { x: startX - (dashDirection * 15), duration: 0.08 })
-                .to(scaleTarget.scale, { x: baseScale * 0.9, y: baseScale * 1.1, duration: 0.08 }, '<')
-                .to(posTarget, { x: dashX, duration: 0.12, ease: 'power2.in' })
-                .to(scaleTarget.scale, { x: baseScale * 1.1, y: baseScale * 0.9, duration: 0.1 }, '<')
+                .to(posTarget, { x: startX - (dashDirection * 15), duration: cfg.windup })
+                .to(scaleTarget.scale, { x: baseScale * 0.9, y: baseScale * 1.1, duration: cfg.windup }, '<')
+                .to(posTarget, { x: dashX, duration: cfg.move, ease: cfg.ease })
+                .to(scaleTarget.scale, { x: baseScale * 1.1, y: baseScale * 0.9, duration: cfg.move }, '<')
                 .add(() => {
                     if (trailTimer && typeof SkillSystem !== 'undefined') {
                         SkillSystem.stopSandevistanTrail(trailTimer);
@@ -232,22 +233,23 @@ const UnitCombat = {
                 trailTimer = SkillSystem.startSandevistanTrail(attacker, 7, SkillSystem.GHOST_COLORS.YELLOW, 15);
             }
             
+            const bashCfg = typeof AnimConfig !== 'undefined' ? AnimConfig.attack.bash : { windup: 0.18, move: 0.25, impact: 0.12, ease: 'power2.inOut', impactEase: 'power3.in' };
             gsap.timeline()
-                .to(posTarget, { x: startX - (dashDirection * 25), duration: 0.12 })
-                .to(scaleTarget.scale, { x: baseScale * 0.85, y: baseScale * 1.2, duration: 0.12 }, '<')
+                .to(posTarget, { x: startX - (dashDirection * 25), duration: bashCfg.windup })
+                .to(scaleTarget.scale, { x: baseScale * 0.85, y: baseScale * 1.2, duration: bashCfg.windup }, '<')
                 .to(posTarget, { 
                     x: bashX, 
                     y: startY - 30,
-                    duration: 0.15, 
-                    ease: 'power2.out' 
+                    duration: bashCfg.move, 
+                    ease: bashCfg.ease 
                 })
-                .to(scaleTarget.scale, { x: baseScale * 1.3, y: baseScale * 0.75, duration: 0.1 }, '<')
+                .to(scaleTarget.scale, { x: baseScale * 1.3, y: baseScale * 0.75, duration: bashCfg.move }, '<')
                 .to(posTarget, { 
                     y: startY + 5,
-                    duration: 0.08, 
-                    ease: 'power3.in' 
+                    duration: bashCfg.impact, 
+                    ease: bashCfg.impactEase 
                 })
-                .to(scaleTarget.scale, { x: baseScale * 1.4, y: baseScale * 0.65, duration: 0.08 }, '<')
+                .to(scaleTarget.scale, { x: baseScale * 1.4, y: baseScale * 0.65, duration: bashCfg.impact }, '<')
                 .add(() => {
                     if (trailTimer && typeof SkillSystem !== 'undefined') {
                         SkillSystem.stopSandevistanTrail(trailTimer);

@@ -164,6 +164,16 @@ const Game = {
             ShieldVFX.init(this.app, this.app.stage);
         }
         
+        // ★ Intent Tooltip 초기화
+        if (typeof IntentTooltip !== 'undefined') {
+            IntentTooltip.init(this.app);
+        }
+        
+        // ★ Shield System 초기화
+        if (typeof ShieldSystem !== 'undefined') {
+            ShieldSystem.init(this);
+        }
+        
         // ★ Skill System 초기화 (JSON 기반 스킬 로드)
         if (typeof SkillSystem !== 'undefined') {
             await SkillSystem.init(this);
@@ -703,6 +713,26 @@ const Game = {
         // ★ 브레이크 레시피: 강력한 공격 준비 연출
         // ========================================
         if (hasBreakRecipe) {
+            // 스킬명 표시 (인텐트 위)
+            const skillName = intent.nameKo || intent.name || intent.id || '???';
+            const skillNameText = new PIXI.Text({
+                text: skillName,
+                style: {
+                    fontFamily: 'MaplestoryOTFBold, Arial',
+                    fontSize: 11,
+                    fill: '#ffcc44',
+                    dropShadow: {
+                        color: '#000000',
+                        blur: 2,
+                        distance: 1
+                    }
+                }
+            });
+            skillNameText.anchor.set(0.5, 1);
+            skillNameText.x = 0;
+            skillNameText.y = -frameHeight - 8;
+            container.addChild(skillNameText);
+            
             // 외부 위험 글로우
             const dangerGlow = new PIXI.Graphics();
             dangerGlow.roundRect(-frameWidth/2 - 6, -frameHeight - 6, frameWidth + 12, frameHeight + 12, 6);
@@ -903,6 +933,13 @@ const Game = {
         if (hasBreakRecipe && typeof BreakSystem !== 'undefined' && enemy.currentBreakRecipe) {
             console.log(`[Game] 브레이크 게이지 생성: ${enemy.name || enemy.type}`);
             BreakSystem.createBreakGauge(enemy);
+        }
+        
+        // ========================================
+        // ★ 툴팁 연결 (브레이크 인텐트에 우선 적용)
+        // ========================================
+        if (hasBreakRecipe && typeof IntentTooltip !== 'undefined') {
+            IntentTooltip.attachToIntent(container, enemy, intent);
         }
     },
     
@@ -1742,11 +1779,11 @@ const Game = {
         
         // Apply block if card has it
         if (cardDef.block) {
-            this.state.heroBlock += cardDef.block;
-            this.updateBlockUI();
-            // ★ 플로터로 변경 (중앙 토스트 대신)
-            if (typeof CombatEffects !== 'undefined') {
-                CombatEffects.showBlockGain(this.state.hero, cardDef.block);
+            if (typeof ShieldSystem !== 'undefined') {
+                ShieldSystem.addShield(this.state.hero, cardDef.block);
+            } else {
+                this.state.heroBlock += cardDef.block;
+                this.updateBlockUI();
             }
         }
         
@@ -1880,16 +1917,19 @@ const Game = {
             // ========================================
             const dashTl = gsap.timeline();
             
+            // AnimConfig에서 타이밍 가져오기
+            const dashCfg = typeof AnimConfig !== 'undefined' ? AnimConfig.dash : { windup: 0.12, move: 0.28, land: 0.1, ease: 'power2.inOut' };
+            
             // 웅크리기
-            dashTl.to(posTarget, { x: heroPos.x - 15, duration: 0.08, ease: 'power2.in' });
-            dashTl.to(scaleTarget.scale, { x: baseScale * 0.85, y: baseScale * 1.15, duration: 0.08 }, '<');
+            dashTl.to(posTarget, { x: heroPos.x - 15, duration: dashCfg.windup, ease: 'power2.in' });
+            dashTl.to(scaleTarget.scale, { x: baseScale * 0.85, y: baseScale * 1.15, duration: dashCfg.windup }, '<');
             
             // 대쉬!
-            dashTl.to(posTarget, { x: attackX, y: targetPos.y, duration: 0.12, ease: 'power4.out' });
-            dashTl.to(scaleTarget.scale, { x: baseScale * 1.1, y: baseScale * 0.9, duration: 0.12 }, '<');
+            dashTl.to(posTarget, { x: attackX, y: targetPos.y, duration: dashCfg.move, ease: dashCfg.ease });
+            dashTl.to(scaleTarget.scale, { x: baseScale * 1.1, y: baseScale * 0.9, duration: dashCfg.move }, '<');
             
             // 착지
-            dashTl.to(scaleTarget.scale, { x: baseScale, y: baseScale, duration: 0.08, ease: 'power2.out' });
+            dashTl.to(scaleTarget.scale, { x: baseScale, y: baseScale, duration: dashCfg.land, ease: 'power2.out' });
             
             await dashTl;
             
@@ -1911,10 +1951,11 @@ const Game = {
                 const stab = stabOffsets[hitNum];
                 const stabTl = gsap.timeline();
                 
-                // 찌르기 동작
-                stabTl.to(posTarget, { x: attackX + stab.x, duration: 0.04, ease: 'power2.out' });
-                stabTl.to(scaleTarget, { rotation: stab.rotation, duration: 0.04 }, '<');
-                stabTl.to(scaleTarget.scale, { x: baseScale * 1.05, y: baseScale * 0.95, duration: 0.04 }, '<');
+                // 찌르기 동작 (AnimConfig 사용)
+                const stabCfg = typeof AnimConfig !== 'undefined' ? AnimConfig.attack.stab : { duration: 0.08, ease: 'power2.out' };
+                stabTl.to(posTarget, { x: attackX + stab.x, duration: stabCfg.duration, ease: stabCfg.ease });
+                stabTl.to(scaleTarget, { rotation: stab.rotation, duration: stabCfg.duration }, '<');
+                stabTl.to(scaleTarget.scale, { x: baseScale * 1.05, y: baseScale * 0.95, duration: stabCfg.duration }, '<');
                 
                 await stabTl;
                 
@@ -2040,13 +2081,13 @@ const Game = {
         
         // ★ 블록 처리
         if (cardDef.block) {
-            this.state.heroBlock += cardDef.block;
-            hero.block = this.state.heroBlock;
-            this.updateBlockUI();
-            this.updateUnitHPBar(hero);
-            
-            if (typeof CombatEffects !== 'undefined') {
-                CombatEffects.showBlockGain(hero, cardDef.block);
+            if (typeof ShieldSystem !== 'undefined') {
+                ShieldSystem.addShield(hero, cardDef.block);
+            } else {
+                this.state.heroBlock += cardDef.block;
+                hero.block = this.state.heroBlock;
+                this.updateBlockUI();
+                this.updateUnitHPBar(hero);
             }
         }
         
@@ -2370,33 +2411,23 @@ const Game = {
     async applyDamageWithoutFloater(target, amount) {
         if (!target || target.hp <= 0) return;
         
-        // 쉴드(block) 먼저 감소
+        // ★ ShieldSystem으로 쉴드 처리
         let remainingDamage = amount;
-        const block = target.block || 0;
-        let absorbedByShield = 0;
-        
-        if (block > 0) {
-            if (block >= remainingDamage) {
-                absorbedByShield = remainingDamage;
-                target.block -= remainingDamage;
-                remainingDamage = 0;
-            } else {
-                absorbedByShield = block;
-                remainingDamage -= block;
-                target.block = 0;
-                
-                // ★ 실드 완전 파괴 연출!
-                if (typeof ShieldVFX !== 'undefined') {
-                    ShieldVFX.breakAtUnit(target, block);
+        if (typeof ShieldSystem !== 'undefined') {
+            const result = ShieldSystem.absorbDamage(target, amount);
+            remainingDamage = result.remaining;
+        } else {
+            // 폴백
+            const block = target.block || 0;
+            if (block > 0) {
+                const absorbed = Math.min(block, amount);
+                target.block -= absorbed;
+                remainingDamage -= absorbed;
+                if (target.block === 0) {
+                    if (typeof CombatEffects !== 'undefined') {
+                        CombatEffects.removeShieldGlow(target);
+                    }
                 }
-                // ★ 쉴드 글로우 제거
-                if (typeof CombatEffects !== 'undefined') {
-                    CombatEffects.removeShieldGlow(target);
-                }
-            }
-            
-            if (typeof HPBarSystem !== 'undefined') {
-                HPBarSystem.showShieldHit(target, absorbedByShield);
             }
         }
         
@@ -2426,34 +2457,23 @@ const Game = {
     async dealDamage(target, amount) {
         if (!target || target.hp <= 0) return;
         
-        // ★ 쉴드(block)가 있으면 쉴드 먼저 감소
+        // ★ ShieldSystem으로 쉴드 처리
         let remainingDamage = amount;
-        const block = target.block || 0;
-        let absorbedByShield = 0;
-        
-        if (block > 0) {
-            if (block >= remainingDamage) {
-                absorbedByShield = remainingDamage;
-                target.block -= remainingDamage;
-                remainingDamage = 0;
-            } else {
-                absorbedByShield = block;
-                remainingDamage -= block;
-                target.block = 0;
-                
-                // ★ 실드 완전 파괴 연출!
-                if (typeof ShieldVFX !== 'undefined') {
-                    ShieldVFX.breakAtUnit(target, block);
+        if (typeof ShieldSystem !== 'undefined') {
+            const result = ShieldSystem.absorbDamage(target, amount);
+            remainingDamage = result.remaining;
+        } else {
+            // 폴백
+            const block = target.block || 0;
+            if (block > 0) {
+                const absorbed = Math.min(block, amount);
+                target.block -= absorbed;
+                remainingDamage -= absorbed;
+                if (target.block === 0) {
+                    if (typeof CombatEffects !== 'undefined') {
+                        CombatEffects.removeShieldGlow(target);
+                    }
                 }
-                // ★ 쉴드 글로우 제거
-                if (typeof CombatEffects !== 'undefined') {
-                    CombatEffects.removeShieldGlow(target);
-                }
-            }
-            
-            // ★ 쉴드 피격 연출
-            if (typeof HPBarSystem !== 'undefined') {
-                HPBarSystem.showShieldHit(target, absorbedByShield);
             }
         }
         
@@ -2898,8 +2918,8 @@ const Game = {
                         }
                     });
                     
-                    // 다음 히트 전 짧은 딜레이
-                    if (hitNum < rangedHits - 1) await new Promise(r => setTimeout(r, 80));
+                    // 다음 히트 전 짧은 딜레이 (파파팡!)
+                    if (hitNum < rangedHits - 1) await new Promise(r => setTimeout(r, 45));
                 }
                 
                 // Deal damage to additional targets in AOE
@@ -2924,11 +2944,11 @@ const Game = {
         
         // Apply block if card has it
         if (cardDef.block) {
-            this.state.heroBlock += cardDef.block;
-            this.updateBlockUI();
-            // ★ 플로터로 변경 (중앙 토스트 대신)
-            if (typeof CombatEffects !== 'undefined') {
-                CombatEffects.showBlockGain(this.state.hero, cardDef.block);
+            if (typeof ShieldSystem !== 'undefined') {
+                ShieldSystem.addShield(this.state.hero, cardDef.block);
+            } else {
+                this.state.heroBlock += cardDef.block;
+                this.updateBlockUI();
             }
         }
         
@@ -3450,6 +3470,11 @@ const Game = {
             await new Promise(r => setTimeout(r, 1200));
         }
         
+        // ★ 에너미 턴 시작 시 기존 쉴드 만료!
+        if (typeof ShieldSystem !== 'undefined') {
+            ShieldSystem.onEnemyTurnStart();
+        }
+        
         console.log('[Game] Enemy phase - executing intents');
         
         for (const enemy of this.state.enemyUnits) {
@@ -3795,9 +3820,14 @@ const Game = {
                 break;
                 
             case 'defend':
-                // Enemy gains block
-                enemy.block = (enemy.block || 0) + (intent.block || 5);
-                this.updateUnitHPBar(enemy); // ★ HP 바에 쉴드 반영
+                // Enemy gains block - ShieldSystem 사용
+                if (typeof ShieldSystem !== 'undefined') {
+                    ShieldSystem.addShield(enemy, intent.block || 5, 1);
+                } else {
+                    enemy.block = (enemy.block || 0) + (intent.block || 5);
+                    enemy.blockDuration = 1;
+                    this.updateUnitHPBar(enemy);
+                }
                 this.showMessage(`${enemy.name || enemy.type} defends! +${intent.block || 5}`, 500);
                 await new Promise(r => setTimeout(r, 300));
                 break;
@@ -4060,45 +4090,23 @@ const Game = {
         // ★ 이미 죽은 타겟이면 무시
         if (!target || target.hp <= 0) return;
         
-        // ★ 쉴드(block) 처리
+        // ★ 쉴드(block) 처리 - ShieldSystem 사용
         let blocked = 0;
-        
-        if (target.isHero && this.state.heroBlock > 0) {
-            // 히어로는 state.heroBlock 사용
-            const prevBlock = this.state.heroBlock;
-            blocked = Math.min(this.state.heroBlock, damage);
-            this.state.heroBlock -= blocked;
-            target.block = this.state.heroBlock; // 동기화
-            damage -= blocked;
-            this.updateBlockUI();
-            
-            // ★ 히어로 실드 완전 파괴 연출
-            if (prevBlock > 0 && this.state.heroBlock === 0 && typeof ShieldVFX !== 'undefined') {
-                ShieldVFX.breakAtUnit(target, prevBlock);
-            }
-        } else if (target.block && target.block > 0) {
-            // 일반 유닛은 target.block 사용
-            const prevBlock = target.block;
-            blocked = Math.min(target.block, damage);
-            target.block -= blocked;
-            damage -= blocked;
-            
-            // ★ 유닛 실드 완전 파괴 연출
-            if (prevBlock > 0 && target.block === 0) {
-                if (typeof ShieldVFX !== 'undefined') {
-                    ShieldVFX.breakAtUnit(target, prevBlock);
-                }
-                // ★ 쉴드 글로우 제거
-                if (typeof CombatEffects !== 'undefined') {
-                    CombatEffects.removeShieldGlow(target);
-                }
-            }
-        }
-        
-        if (blocked > 0) {
-            // ★ 쉴드 피격 연출
-            if (typeof HPBarSystem !== 'undefined') {
-                HPBarSystem.showShieldHit(target, blocked);
+        if (typeof ShieldSystem !== 'undefined') {
+            const result = ShieldSystem.absorbDamage(target, damage);
+            blocked = result.blocked;
+            damage = result.remaining;
+        } else {
+            // 폴백: 기존 방식
+            if (target.isHero && this.state.heroBlock > 0) {
+                blocked = Math.min(this.state.heroBlock, damage);
+                this.state.heroBlock -= blocked;
+                target.block = this.state.heroBlock;
+                damage -= blocked;
+            } else if (target.block && target.block > 0) {
+                blocked = Math.min(target.block, damage);
+                target.block -= blocked;
+                damage -= blocked;
             }
         }
         
@@ -4609,6 +4617,12 @@ const Game = {
         
         // Reset cost to max (fixed 3 per turn)
         this.state.cost = this.state.maxCost;
+        
+        // ★ 턴 종료 시 블록(쉴드) 처리 - ShieldSystem 사용
+        if (typeof ShieldSystem !== 'undefined') {
+            ShieldSystem.onTurnEnd();
+        }
+        this.updateBlockUI();
         
         // Clear dead units
         this.state.playerUnits = this.state.playerUnits.filter(u => {

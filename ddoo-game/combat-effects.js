@@ -5,6 +5,7 @@
 const CombatEffects = {
     app: null,
     container: null,
+    floaterContainer: null,  // ★ 플로터 전용 컨테이너 (최상위)
     
     // ==========================================
     // 초기화
@@ -15,6 +16,11 @@ const CombatEffects = {
         this.container.zIndex = 50;  // effects(20) 위
         this.container.sortableChildren = true;
         
+        // ★ 플로터 전용 컨테이너 (항상 최상위)
+        this.floaterContainer = new PIXI.Container();
+        this.floaterContainer.zIndex = 9999;
+        this.floaterContainer.sortableChildren = true;
+        
         // ★ gameWorld가 있으면 그 안에 추가 (좌표 동기화)
         if (gameWorld) {
             gameWorld.addChild(this.container);
@@ -23,6 +29,10 @@ const CombatEffects = {
             pixiApp.stage.addChild(this.container);
             console.log('[CombatEffects] 초기화 완료 (stage)');
         }
+        
+        // ★ 플로터 컨테이너는 항상 stage에 직접 추가 (최상위)
+        pixiApp.stage.addChild(this.floaterContainer);
+        pixiApp.stage.sortableChildren = true;
     },
     
     // ==========================================
@@ -74,12 +84,54 @@ const CombatEffects = {
     },
     
     // ==========================================
-    // 유닛 위치 가져오기
+    // 유닛 위치 가져오기 (스프라이트 중앙 전역 좌표)
     // ==========================================
     getUnitPosition(unit) {
         if (!unit) return null;
-        const target = unit.container || unit.sprite;
-        return target ? { x: target.x, y: target.y } : null;
+        
+        // container가 발밑 위치
+        const container = unit.container;
+        if (container && !container.destroyed) {
+            // ★ container의 전역 좌표 (발밑) - getGlobalPosition 사용
+            let footX, footY;
+            if (container.getGlobalPosition) {
+                const globalPos = container.getGlobalPosition();
+                footX = globalPos.x;
+                footY = globalPos.y;
+            } else {
+                footX = container.x;
+                footY = container.y;
+            }
+            
+            // sprite 높이 계산해서 중앙 찾기
+            const sprite = unit.sprite;
+            let spriteHeight = 120; // 기본값
+            
+            if (sprite && !sprite.destroyed) {
+                try {
+                    const bounds = sprite.getLocalBounds();
+                    const scaleY = Math.abs(sprite.scale?.y || 1);
+                    spriteHeight = Math.abs(bounds.height) * scaleY;
+                } catch (e) {
+                    spriteHeight = 120;
+                }
+            }
+            
+            // 발밑에서 높이의 절반 위로 = 중앙
+            return { x: footX, y: footY - spriteHeight / 2 };
+        }
+        
+        // 폴백: sprite만 있는 경우
+        const sprite = unit.sprite;
+        if (sprite && !sprite.destroyed) {
+            if (sprite.getGlobalPosition) {
+                const globalPos = sprite.getGlobalPosition();
+                return { x: globalPos.x, y: globalPos.y - 60 };
+            }
+            return { x: sprite.x, y: sprite.y - 60 };
+        }
+        
+        return null;
     },
     
     // ==========================================
@@ -812,31 +864,42 @@ const CombatEffects = {
     },
     
     // ==========================================
-    // ★★★ 화염 화살 이펙트 (3D 볼류메트릭) ★★★
+    // ★★★ 화염 화살 이펙트 (단발 - 랜덤 베지어) ★★★
     // ==========================================
     async fireArrowEffect(startX, startY, endX, endY, options = {}) {
         if (!this.app) return;
         
         const {
             arrowLength = 28,
-            arcHeight = 40,
-            speed = 1000,
+            speed = 1400,  // 빠르게!
             isEnemy = false
         } = options;
         
         return new Promise(resolve => {
+            // ★ 발사 위치 살짝 오프셋
+            const startOffsetX = (Math.random() - 0.5) * 15;
+            const startOffsetY = (Math.random() - 0.5) * 12;
+            const actualStartX = startX + startOffsetX;
+            const actualStartY = startY + startOffsetY;
+            
+            // ★ 착탄 위치 살짝 오프셋
+            const endOffsetX = (Math.random() - 0.5) * 20;
+            const endOffsetY = (Math.random() - 0.5) * 15;
+            const actualEndX = endX + endOffsetX;
+            const actualEndY = endY + endOffsetY;
+            
             // 화염 화살 컨테이너
             const arrow = new PIXI.Container();
-            arrow.x = startX;
-            arrow.y = startY;
+            arrow.x = actualStartX;
+            arrow.y = actualStartY;
             arrow.zIndex = 150;
             
-            // === 화염 글로우 (가장 뒤) ===
+            // === 화염 글로우 ===
             const glowLayers = [];
             const glowColors = [0xff2200, 0xff6600, 0xffaa00];
             for (let i = 0; i < 3; i++) {
                 const glow = new PIXI.Graphics();
-                const radius = 18 - i * 4;
+                const radius = 16 - i * 4;
                 glow.circle(0, 0, radius);
                 glow.fill({ color: glowColors[i], alpha: 0.4 - i * 0.1 });
                 glow.zIndex = -10 + i;
@@ -844,48 +907,48 @@ const CombatEffects = {
                 glowLayers.push(glow);
             }
             
-            // === 화살대 (불타는 나무) ===
+            // === 화살대 ===
             const shaft = new PIXI.Graphics();
-            shaft.rect(-arrowLength/2, -2, arrowLength, 4);
-            shaft.fill({ color: 0x8B2500 }); // 짙은 붉은 갈색
+            shaft.rect(-arrowLength/2, -1.5, arrowLength, 3);
+            shaft.fill({ color: 0x8B2500 });
             arrow.addChild(shaft);
             
-            // === 화살촉 (빛나는 금속) ===
+            // === 화살촉 ===
             const head = new PIXI.Graphics();
-            head.moveTo(arrowLength/2 + 8, 0);
-            head.lineTo(arrowLength/2 - 2, -6);
-            head.lineTo(arrowLength/2 - 2, 6);
+            head.moveTo(arrowLength/2 + 7, 0);
+            head.lineTo(arrowLength/2 - 2, -5);
+            head.lineTo(arrowLength/2 - 2, 5);
             head.closePath();
-            head.fill({ color: 0xffcc00 }); // 황금빛
+            head.fill({ color: 0xffcc00 });
             arrow.addChild(head);
             
-            // === 3D 회전 화염 파티클 ===
+            // === 화염 파티클 ===
             const flameParticles = [];
-            for (let i = 0; i < 8; i++) {
+            for (let i = 0; i < 6; i++) {
                 const flame = new PIXI.Graphics();
-                const size = 4 + Math.random() * 4;
+                const size = 3 + Math.random() * 3;
                 flame.circle(0, 0, size);
                 flame.fill({ color: [0xff4400, 0xff6600, 0xffaa00][Math.floor(Math.random() * 3)] });
                 
-                flame._angle = (i / 8) * Math.PI * 2;
-                flame._orbit = 12 + Math.random() * 8;
-                flame._speed = 0.15 + Math.random() * 0.1;
+                flame._angle = (i / 6) * Math.PI * 2;
+                flame._orbit = 10 + Math.random() * 6;
+                flame._speed = 0.18 + Math.random() * 0.1;
                 flame._zPhase = Math.random() * Math.PI * 2;
-                flame._baseScale = 0.5 + Math.random() * 0.5;
+                flame._baseScale = 0.5 + Math.random() * 0.4;
                 
                 arrow.addChild(flame);
                 flameParticles.push(flame);
             }
             
-            // === 핫 코어 (중앙 밝은 점) ===
+            // === 핫 코어 ===
             const hotCore = new PIXI.Graphics();
-            hotCore.circle(3, 0, 5);
+            hotCore.circle(3, 0, 4);
             hotCore.fill({ color: 0xffffcc });
             arrow.addChild(hotCore);
             
             this.container.addChild(arrow);
             
-            // === 3D 회전 애니메이션 ===
+            // === 회전 애니메이션 ===
             let animTime = 0;
             const orbitAnim = gsap.ticker.add(() => {
                 if (arrow.destroyed) {
@@ -895,110 +958,80 @@ const CombatEffects = {
                 
                 animTime += 0.016;
                 
-                // 파티클 3D 궤도 업데이트
-                flameParticles.forEach((p, idx) => {
+                flameParticles.forEach((p) => {
                     if (p.destroyed) return;
-                    
                     p._angle += p._speed;
-                    
-                    // 3D 원형 궤도
                     const zOffset = Math.sin(p._angle + p._zPhase);
                     const depthScale = 0.6 + zOffset * 0.4;
-                    
-                    p.x = Math.cos(p._angle) * p._orbit * 0.3; // X축 압축
+                    p.x = Math.cos(p._angle) * p._orbit * 0.3;
                     p.y = Math.sin(p._angle) * p._orbit;
-                    
                     p.scale.set(p._baseScale * depthScale);
                     p.alpha = 0.4 + depthScale * 0.5;
-                    
                     if (zOffset < 0) p.alpha *= 0.6;
                 });
                 
-                // 글로우 펄스
                 glowLayers.forEach((g, i) => {
                     if (g.destroyed) return;
-                    const pulse = 1 + Math.sin(animTime * 10 + i * 0.5) * 0.2;
+                    const pulse = 1 + Math.sin(animTime * 12 + i * 0.5) * 0.2;
                     g.scale.set(pulse);
                 });
                 
-                // 핫코어 펄스
                 if (!hotCore.destroyed) {
-                    const corePulse = 1 + Math.sin(animTime * 15) * 0.3;
+                    const corePulse = 1 + Math.sin(animTime * 18) * 0.3;
                     hotCore.scale.set(corePulse);
                 }
             });
             
-            // 베지어 곡선 제어점 (곡사)
-            const midX = (startX + endX) / 2;
-            const midY = Math.min(startY, endY) - arcHeight;
+            // ★★★ 랜덤 베지어 곡선! ★★★
+            const randomArcY = -30 - Math.random() * 60;  // -30 ~ -90 (위로 휨)
+            const randomArcX = (Math.random() - 0.5) * 80; // -40 ~ +40 (좌우 휨)
             
-            // 비행시간
-            const distance = Math.hypot(endX - startX, endY - startY);
-            const duration = Math.max(0.15, distance / speed);
+            const midX = (actualStartX + actualEndX) / 2 + randomArcX;
+            const midY = Math.min(actualStartY, actualEndY) + randomArcY;
             
-            // 화염 트레일 효과
+            // 비행시간 (빠르게)
+            const distance = Math.hypot(actualEndX - actualStartX, actualEndY - actualStartY);
+            const duration = Math.max(0.12, distance / speed);
+            
+            // 화염 트레일
             const createFireTrail = () => {
                 if (arrow.destroyed) return;
                 
-                // 화염 파티클 트레일
-                for (let i = 0; i < 3; i++) {
-                    const trail = new PIXI.Graphics();
-                    const size = 3 + Math.random() * 4;
-                    trail.circle(0, 0, size);
-                    trail.fill({ color: [0xff4400, 0xff6600, 0xffaa00][i], alpha: 0.7 });
-                    trail.x = arrow.x + (Math.random() - 0.5) * 15;
-                    trail.y = arrow.y + (Math.random() - 0.5) * 10;
-                    trail.zIndex = 140;
-                    this.container.addChild(trail);
-                    
-                    gsap.to(trail, {
-                        y: trail.y - 15 - Math.random() * 10,
-                        scale: 0,
-                        alpha: 0,
-                        duration: 0.2 + Math.random() * 0.15,
-                        ease: 'power2.out',
-                        onComplete: () => trail.destroy()
-                    });
-                }
+                const trail = new PIXI.Graphics();
+                const size = 2 + Math.random() * 3;
+                trail.circle(0, 0, size);
+                trail.fill({ color: [0xff4400, 0xff6600, 0xffaa00][Math.floor(Math.random() * 3)], alpha: 0.6 });
+                trail.x = arrow.x + (Math.random() - 0.5) * 10;
+                trail.y = arrow.y + (Math.random() - 0.5) * 8;
+                trail.zIndex = 140;
+                this.container.addChild(trail);
                 
-                // 연기 파티클
-                if (Math.random() > 0.5) {
-                    const smoke = new PIXI.Graphics();
-                    smoke.circle(0, 0, 4 + Math.random() * 3);
-                    smoke.fill({ color: 0x444444, alpha: 0.3 });
-                    smoke.x = arrow.x + (Math.random() - 0.5) * 10;
-                    smoke.y = arrow.y;
-                    smoke.zIndex = 139;
-                    this.container.addChild(smoke);
-                    
-                    gsap.to(smoke, {
-                        y: smoke.y - 20,
-                        scale: 1.5,
-                        alpha: 0,
-                        duration: 0.4,
-                        onComplete: () => smoke.destroy()
-                    });
-                }
+                gsap.to(trail, {
+                    y: trail.y - 10 - Math.random() * 8,
+                    scale: 0,
+                    alpha: 0,
+                    duration: 0.12 + Math.random() * 0.08,
+                    ease: 'power2.out',
+                    onComplete: () => trail.destroy()
+                });
             };
             
             const trailInterval = setInterval(createFireTrail, 25);
             
-            // 베지어 애니메이션
+            // ★ 베지어 애니메이션 (가속)
             const bezier = { t: 0 };
             
             gsap.to(bezier, {
                 t: 1,
                 duration: duration,
-                ease: 'none',
+                ease: 'power1.in',
                 onUpdate: () => {
                     const t = bezier.t;
                     const invT = 1 - t;
                     
-                    // 2차 베지어 곡선
-                    const x = invT * invT * startX + 2 * invT * t * midX + t * t * endX;
-                    const y = invT * invT * startY + 2 * invT * t * midY + t * t * endY;
+                    const x = invT * invT * actualStartX + 2 * invT * t * midX + t * t * actualEndX;
+                    const y = invT * invT * actualStartY + 2 * invT * t * midY + t * t * actualEndY;
                     
-                    // 방향으로 회전
                     const dx = x - arrow.x;
                     const dy = y - arrow.y;
                     if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
@@ -1012,8 +1045,7 @@ const CombatEffects = {
                     clearInterval(trailInterval);
                     gsap.ticker.remove(orbitAnim);
                     
-                    // 화염 폭발 이펙트
-                    this.fireArrowExplosion(endX, endY);
+                    this.fireArrowExplosion(actualEndX, actualEndY);
                     
                     arrow.destroy({ children: true });
                     resolve();
@@ -2637,35 +2669,427 @@ const CombatEffects = {
     },
     
     // ==========================================
-    // 블록 이펙트 (방어)
+    // 블록 이펙트 (방어) - PIXI.js 2D 폴백
+    // (Three.js 3D 쉴드는 showBlockGain에서 직접 호출)
     // ==========================================
-    blockEffect(x, y) {
+    blockEffect(x, y, scale = 1.0) {
         if (!this.app) return;
         
-        this.screenShake(3, 100);
+        console.log(`[CombatEffects] blockEffect (PIXI) at (${x}, ${y})`);
         
-        // 방패 모양
-        const shield = new PIXI.Graphics();
-        shield.x = x;
-        shield.y = y;
-        shield.zIndex = 100;
-        shield.alpha = 0;
+        // ★ PIXI.js 2D 쉴드
+        const shieldContainer = new PIXI.Container();
+        shieldContainer.x = x;
+        shieldContainer.y = y;
+        shieldContainer.zIndex = 100;
+        this.container.addChild(shieldContainer);
         
-        // 방패 외곽
-        shield.roundRect(-25, -30, 50, 60, 5);
-        shield.stroke({ color: 0x4488ff, width: 4, alpha: 0.9 });
-        shield.fill({ color: 0x4488ff, alpha: 0.3 });
+        this.create3DSphereShield(shieldContainer, scale);
         
-        this.container.addChild(shield);
+        shieldContainer.alpha = 0;
+        shieldContainer.scale.set(0.1);
         
         gsap.timeline()
-            .to(shield, { alpha: 1, duration: 0.1 })
-            .to(shield.scale, { x: 1.3, y: 1.3, duration: 0.15 })
-            .to(shield.scale, { x: 1, y: 1, duration: 0.1 })
-            .to(shield, { alpha: 0, duration: 0.2, delay: 0.1, onComplete: () => shield.destroy() });
+            .to(shieldContainer, { alpha: 1, duration: 0.12, ease: 'power2.out' })
+            .to(shieldContainer.scale, { x: scale * 1.2, y: scale * 1.2, duration: 0.18, ease: 'back.out(1.5)' }, '<')
+            .to(shieldContainer.scale, { x: scale, y: scale, duration: 0.1, ease: 'power2.inOut' })
+            .to(shieldContainer, { 
+                alpha: 0, 
+                duration: 0.4, 
+                delay: 0.5,
+                ease: 'power2.in',
+                onComplete: () => {
+                    if (!shieldContainer.destroyed) shieldContainer.destroy({ children: true });
+                }
+            });
+    },
+    
+    // ★★★ 3D 구체 스타일 쉴드 (Three.js 효과 재현) ★★★
+    create3DSphereShield(container, scale = 1) {
+        const radius = 70;
+        const hexCount = 80;
+        const hexagons = [];
         
-        // 파편
-        this.burstParticles(x, y, 0x4488ff, 6, 60);
+        // 1. 와이어프레임 구체 (타원)
+        const wireframe = new PIXI.Graphics();
+        // 가로 링
+        for (let i = 0; i < 5; i++) {
+            const yOffset = (i - 2) * (radius * 0.35);
+            const ringRadius = Math.sqrt(radius * radius - yOffset * yOffset) * 0.95;
+            if (ringRadius > 0) {
+                wireframe.ellipse(0, yOffset * 0.6, ringRadius, ringRadius * 0.3);
+            }
+        }
+        // 세로 링
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI;
+            wireframe.ellipse(0, 0, radius * Math.cos(angle) * 0.95, radius * 0.7);
+        }
+        wireframe.stroke({ width: 1, color: 0x00aaff, alpha: 0.25 });
+        container.addChild(wireframe);
+        
+        // 2. 내부 글로우
+        const innerGlow = new PIXI.Graphics();
+        innerGlow.ellipse(0, 0, radius * 0.9, radius * 0.6);
+        innerGlow.fill({ color: 0x0066ff, alpha: 0.1 });
+        container.addChildAt(innerGlow, 0);
+        
+        // 3. 구체 표면에 분포된 육각형들 (피보나치 구체 분포)
+        for (let i = 0; i < hexCount; i++) {
+            // 피보나치 구체 분포 공식
+            const phi = Math.acos(1 - (2 * (i + 0.5)) / hexCount);
+            const theta = Math.PI * (1 + Math.sqrt(5)) * i;
+            
+            // 3D → 2D 투영 (정면에서 본 모습)
+            const x3d = Math.sin(phi) * Math.cos(theta);
+            const y3d = Math.sin(phi) * Math.sin(theta);
+            const z3d = Math.cos(phi);
+            
+            // 뒤쪽(z < 0)은 더 작고 흐리게
+            const depth = (z3d + 1) / 2; // 0~1
+            const projectedX = x3d * radius * 0.95;
+            const projectedY = y3d * radius * 0.65; // Y 압축 (3D→2D)
+            
+            // 육각형 생성
+            const hex = new PIXI.Graphics();
+            const hexSize = 8 + depth * 6; // 앞쪽이 더 큼
+            
+            // 육각형 그리기
+            const points = [];
+            for (let j = 0; j < 6; j++) {
+                const hexAngle = (Math.PI / 3) * j - Math.PI / 6;
+                points.push({
+                    x: hexSize * Math.cos(hexAngle),
+                    y: hexSize * Math.sin(hexAngle) * 0.8 // 약간 납작
+                });
+            }
+            
+            hex.poly(points);
+            hex.fill({ color: 0x00ccff, alpha: 0.15 + depth * 0.5 });
+            hex.stroke({ width: 1.5, color: 0x44eeff, alpha: 0.4 + depth * 0.5 });
+            
+            hex.x = projectedX;
+            hex.y = projectedY;
+            hex.zIndex = Math.floor(depth * 100);
+            
+            container.addChild(hex);
+            hexagons.push({ 
+                hex, 
+                phase: Math.random() * Math.PI * 2,
+                baseAlpha: 0.15 + depth * 0.5,
+                depth
+            });
+        }
+        
+        // 4. 외곽 발광 링
+        const outerRing = new PIXI.Graphics();
+        outerRing.ellipse(0, 0, radius * 1.05, radius * 0.72);
+        outerRing.stroke({ width: 2.5, color: 0x00ffff, alpha: 0.7 });
+        container.addChild(outerRing);
+        
+        // 5. 하이라이트 (상단 반사)
+        const highlight = new PIXI.Graphics();
+        highlight.ellipse(0, -radius * 0.35, radius * 0.5, radius * 0.18);
+        highlight.fill({ color: 0xffffff, alpha: 0.2 });
+        container.addChild(highlight);
+        
+        // 6. 파동 애니메이션 (육각형 깜빡임)
+        const startTime = Date.now();
+        const animDuration = 800; // ms
+        
+        const animateWave = () => {
+            const elapsed = Date.now() - startTime;
+            if (elapsed > animDuration || container.destroyed) return;
+            
+            const time = elapsed * 0.008;
+            
+            hexagons.forEach((data, i) => {
+                if (data.hex.destroyed) return;
+                const wave = Math.sin(time * 3 + data.phase) * 0.4 + 0.6;
+                data.hex.alpha = data.baseAlpha * wave;
+            });
+            
+            // 와이어프레임 회전 효과
+            wireframe.rotation += 0.02;
+            
+            requestAnimationFrame(animateWave);
+        };
+        
+        animateWave();
+        
+        // 7. 충격파 이펙트
+        this.createShieldImpact(container, radius);
+    },
+    
+    // ★ 쉴드 충격파
+    createShieldImpact(container, radius) {
+        for (let i = 0; i < 2; i++) {
+            const ring = new PIXI.Graphics();
+            ring.ellipse(0, 0, radius * 0.5, radius * 0.35);
+            ring.stroke({ width: 3 - i, color: 0x00ffff, alpha: 0.8 - i * 0.3 });
+            ring.scale.set(0.3);
+            container.addChildAt(ring, 0);
+            
+            gsap.to(ring.scale, {
+                x: 1.8 + i * 0.3,
+                y: 1.8 + i * 0.3,
+                duration: 0.35,
+                delay: i * 0.08,
+                ease: 'power2.out'
+            });
+            
+            gsap.to(ring, {
+                alpha: 0,
+                duration: 0.35,
+                delay: 0.1 + i * 0.08
+            });
+        }
+    },
+    
+    // ★ 에너지 돔 (3D 느낌의 반투명 쉴드)
+    createEnergyDome(container, scale = 1) {
+        // 외곽 글로우 (큰 발광)
+        const outerGlow = new PIXI.Graphics();
+        outerGlow.ellipse(0, 0, 70, 55);
+        outerGlow.fill({ color: 0x00ffff, alpha: 0.12 });
+        container.addChild(outerGlow);
+        
+        // 메인 돔
+        const dome = new PIXI.Graphics();
+        dome.ellipse(0, 0, 55, 42);
+        
+        // 그라데이션 효과 (위에서 아래로 밝기 변화)
+        dome.fill({ color: 0x4488ff, alpha: 0.2 });
+        dome.stroke({ width: 3, color: 0x88ccff, alpha: 0.9 });
+        container.addChild(dome);
+        
+        // 내부 하이라이트 (3D 느낌)
+        const highlight = new PIXI.Graphics();
+        highlight.ellipse(0, -12, 38, 22);
+        highlight.fill({ color: 0xffffff, alpha: 0.18 });
+        container.addChild(highlight);
+        
+        // 하단 그림자 (3D 깊이감)
+        const shadow = new PIXI.Graphics();
+        shadow.ellipse(0, 18, 45, 12);
+        shadow.fill({ color: 0x002244, alpha: 0.25 });
+        container.addChildAt(shadow, 0);
+        
+        // 돔 펄스
+        gsap.to(dome.scale, {
+            x: 1.08, y: 1.08,
+            duration: 0.12,
+            yoyo: true,
+            repeat: 3,
+            ease: 'sine.inOut'
+        });
+    },
+    
+    // ★ 허니콤 패턴 (육각형 에너지 그리드)
+    createHoneycombPattern(container, scale = 1) {
+        const hexContainer = new PIXI.Container();
+        container.addChild(hexContainer);
+        
+        const hexSize = 15;
+        // 더 넓게 퍼진 육각형 배치
+        const positions = [
+            { x: 0, y: -28 },
+            { x: -25, y: -12 },
+            { x: 25, y: -12 },
+            { x: -40, y: 5 },
+            { x: 0, y: 2 },
+            { x: 40, y: 5 },
+            { x: -25, y: 22 },
+            { x: 25, y: 22 },
+            { x: 0, y: 32 },
+            // 추가 육각형
+            { x: -50, y: -20 },
+            { x: 50, y: -20 },
+            { x: -55, y: 18 },
+            { x: 55, y: 18 }
+        ];
+        
+        positions.forEach((pos, i) => {
+            const hex = new PIXI.Graphics();
+            hex.x = pos.x;
+            hex.y = pos.y;
+            hex.alpha = 0;
+            
+            // 육각형 그리기
+            const points = [];
+            for (let j = 0; j < 6; j++) {
+                const angle = (j / 6) * Math.PI * 2 - Math.PI / 2;
+                points.push({
+                    x: Math.cos(angle) * hexSize,
+                    y: Math.sin(angle) * hexSize * 0.75  // 약간 납작하게 (3D 투영)
+                });
+            }
+            
+            hex.poly(points);
+            hex.stroke({ width: 2, color: 0x66ddff, alpha: 0.85 });
+            hex.fill({ color: 0x44aaff, alpha: 0.12 });
+            
+            hexContainer.addChild(hex);
+            
+            // 순차적으로 나타남
+            gsap.to(hex, {
+                alpha: 0.95,
+                duration: 0.06,
+                delay: i * 0.015,
+                ease: 'power2.out'
+            });
+            
+            // 반짝임
+            gsap.to(hex, {
+                alpha: 0.5,
+                duration: 0.12,
+                delay: 0.18 + i * 0.012,
+                ease: 'power2.inOut'
+            });
+        });
+    },
+    
+    // ★ 회전하는 룬 링
+    createRuneRing(container, scale = 1) {
+        const ringContainer = new PIXI.Container();
+        container.addChild(ringContainer);
+        
+        // 외곽 링 (이중)
+        const outerRing = new PIXI.Graphics();
+        outerRing.ellipse(0, 0, 68, 52);
+        outerRing.stroke({ width: 1.5, color: 0x88eeff, alpha: 0.5 });
+        ringContainer.addChild(outerRing);
+        
+        const innerRing = new PIXI.Graphics();
+        innerRing.ellipse(0, 0, 62, 46);
+        innerRing.stroke({ width: 1, color: 0xaaffff, alpha: 0.4 });
+        ringContainer.addChild(innerRing);
+        
+        // 룬 심볼들
+        const runeSymbols = ['◇', '△', '☆', '◈', '▽', '◆', '⬡', '✧'];
+        const numRunes = 8;
+        
+        for (let i = 0; i < numRunes; i++) {
+            const angle = (i / numRunes) * Math.PI * 2 - Math.PI / 2;
+            const rx = Math.cos(angle) * 62;
+            const ry = Math.sin(angle) * 46;
+            
+            const rune = new PIXI.Text({
+                text: runeSymbols[i],
+                style: {
+                    fontSize: 12,
+                    fill: '#88eeff',
+                    fontFamily: 'Arial'
+                }
+            });
+            rune.anchor.set(0.5);
+            rune.x = rx;
+            rune.y = ry;
+            rune.alpha = 0;
+            
+            ringContainer.addChild(rune);
+            
+            // 룬 나타남 + 빛남
+            gsap.to(rune, {
+                alpha: 0.9,
+                duration: 0.08,
+                delay: 0.03 + i * 0.025
+            });
+        }
+        
+        // 링 회전
+        gsap.to(ringContainer, {
+            rotation: Math.PI * 0.4,
+            duration: 0.6,
+            ease: 'power1.out'
+        });
+    },
+    
+    // ★ 에너지 파동 (충격파)
+    createEnergyWaves(container, scale = 1) {
+        for (let i = 0; i < 4; i++) {
+            const wave = new PIXI.Graphics();
+            wave.ellipse(0, 0, 45, 35);
+            wave.stroke({ width: 2.5 - i * 0.5, color: 0x66ddff, alpha: 0.75 - i * 0.15 });
+            wave.scale.set(0.4);
+            wave.alpha = 0;
+            
+            container.addChildAt(wave, 0);
+            
+            gsap.to(wave, {
+                alpha: 0.85 - i * 0.15,
+                duration: 0.08,
+                delay: i * 0.06
+            });
+            
+            gsap.to(wave.scale, {
+                x: 2.2 + i * 0.4,
+                y: 1.8 + i * 0.3,
+                duration: 0.4,
+                delay: i * 0.06,
+                ease: 'power2.out'
+            });
+            
+            gsap.to(wave, {
+                alpha: 0,
+                duration: 0.25,
+                delay: 0.12 + i * 0.06,
+                ease: 'power2.in'
+            });
+        }
+    },
+    
+    // ★ 빛나는 파티클
+    createShieldParticles(container, scale = 1) {
+        const NUM_PARTICLES = 24;
+        
+        for (let i = 0; i < NUM_PARTICLES; i++) {
+            const particle = new PIXI.Graphics();
+            const angle = (i / NUM_PARTICLES) * Math.PI * 2;
+            const startR = 20 + Math.random() * 15;
+            
+            particle.x = Math.cos(angle) * startR;
+            particle.y = Math.sin(angle) * startR * 0.7;
+            particle.alpha = 0;
+            
+            // 다이아몬드 모양 파티클
+            const size = 3 + Math.random() * 4;
+            particle.poly([
+                { x: 0, y: -size },
+                { x: size * 0.6, y: 0 },
+                { x: 0, y: size },
+                { x: -size * 0.6, y: 0 }
+            ]);
+            particle.fill({ color: 0xffffff, alpha: 0.95 });
+            
+            container.addChild(particle);
+            
+            const endR = 75 + Math.random() * 35;
+            const endX = Math.cos(angle) * endR;
+            const endY = Math.sin(angle) * endR * 0.7;
+            
+            gsap.to(particle, {
+                x: endX,
+                y: endY,
+                alpha: 0,
+                duration: 0.5 + Math.random() * 0.25,
+                delay: 0.04 + i * 0.012,
+                ease: 'power2.out'
+            });
+            
+            gsap.to(particle, {
+                alpha: 1,
+                duration: 0.06,
+                delay: i * 0.008
+            });
+            
+            gsap.to(particle.scale, {
+                x: 0.2,
+                y: 0.2,
+                duration: 0.5,
+                delay: 0.08 + i * 0.012
+            });
+        }
     },
     
     // ==========================================
@@ -3033,7 +3457,12 @@ const CombatEffects = {
         textObj.anchor.set(0.5);
         floater.addChild(textObj);
         
-        this.app.stage.addChild(floater);
+        // ★ 플로터 전용 컨테이너에 추가 (항상 최상위)
+        if (this.floaterContainer) {
+            this.floaterContainer.addChild(floater);
+        } else {
+            this.app.stage.addChild(floater);
+        }
         
         // 애니메이션: 위로 떠오르며 사라짐
         if (typeof gsap !== 'undefined') {
@@ -3075,9 +3504,31 @@ const CombatEffects = {
             size: 18
         });
         
-        // 이펙트도 추가
+        // ★ 스프라이트 크기 계산
+        let spriteHeight = 120;
+        const sprite = unit?.sprite;
+        if (sprite && !sprite.destroyed) {
+            try {
+                const bounds = sprite.getLocalBounds();
+                const scaleY = Math.abs(sprite.scale?.y || 1);
+                spriteHeight = Math.abs(bounds.height) * scaleY;
+            } catch (e) {}
+        }
+        
+        // 이펙트 - 스프라이트 크기에 맞는 반경
         const pos = this.getUnitPosition(unit);
-        if (pos) this.blockEffect(pos.x, pos.y);
+        if (pos) {
+            // Three.js 3D 쉴드
+            if (typeof Shield3D !== 'undefined' && typeof THREE !== 'undefined') {
+                Shield3D.createShield(pos.x, pos.y, {
+                    radius: spriteHeight * 0.7,  // 스프라이트 높이 기반
+                    color: 0x00aaff,
+                    duration: 2000  // 더 오래 유지
+                });
+            } else {
+                this.blockEffect(pos.x, pos.y);
+            }
+        }
         
         // ★ 쉴드 글로우 추가/강화
         this.addShieldGlow(unit);

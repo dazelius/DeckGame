@@ -104,6 +104,10 @@ const CheatSystem = {
                                 <span class="cheat-icon">⚔️</span>
                                 <span>적 전체 10 대미지</span>
                             </button>
+                            <button class="cheat-btn" data-action="allcards">
+                                <span class="cheat-icon">📚</span>
+                                <span>모든 카드 1장씩</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -551,6 +555,9 @@ const CheatSystem = {
             case 'damage':
                 this.damageAllEnemies();
                 break;
+            case 'allcards':
+                this.addAllCards();
+                break;
         }
     },
     
@@ -591,12 +598,16 @@ const CheatSystem = {
     },
     
     addBlock() {
-        this.game.state.heroBlock += 20;
-        if (this.game.state.hero) {
-            this.game.state.hero.block = this.game.state.heroBlock;
-            this.game.updateUnitHPBar(this.game.state.hero);
+        if (typeof ShieldSystem !== 'undefined' && this.game.state.hero) {
+            ShieldSystem.addShield(this.game.state.hero, 20);
+        } else {
+            this.game.state.heroBlock += 20;
+            if (this.game.state.hero) {
+                this.game.state.hero.block = this.game.state.heroBlock;
+                this.game.updateUnitHPBar(this.game.state.hero);
+            }
+            this.game.updateBlockUI();
         }
-        this.game.updateBlockUI();
         this.showToast('+20 방어력!');
     },
     
@@ -607,6 +618,27 @@ const CheatSystem = {
             }
         });
         this.showToast('적 전체 10 대미지!');
+    },
+    
+    addAllCards() {
+        if (this.game.state.phase !== 'prepare') {
+            this.showToast('준비 페이즈에서만 사용 가능!');
+            return;
+        }
+        
+        if (typeof CardSystem === 'undefined' || !CardSystem.cards) {
+            this.showToast('CardSystem 없음!');
+            return;
+        }
+        
+        let count = 0;
+        for (const cardId of Object.keys(CardSystem.cards)) {
+            this.game.state.hand.push(cardId);
+            count++;
+        }
+        
+        this.game.renderHand();
+        this.showToast(`모든 카드 ${count}장 추가됨!`);
     },
     
     // ==========================================

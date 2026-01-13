@@ -188,10 +188,10 @@ const BreakSystem = {
             // 텍스처 변경
             mainSprite.texture = newTexture;
             
-            // 아웃라인 스프라이트들도 텍스처 변경
+            // 아웃라인 스프라이트들 제거 (브레이크 시 외곽효과 해제)
             spriteContainer.children.forEach(child => {
-                if (child.isOutline && child.texture) {
-                    child.texture = newTexture;
+                if (child.isOutline) {
+                    child.visible = false;
                 }
             });
             
