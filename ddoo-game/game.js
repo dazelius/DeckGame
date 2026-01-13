@@ -3044,6 +3044,27 @@ const Game = {
         const aoe = cardDef.aoe || { width: 1, depth: 1 };
         const hits = cardDef.hits || 1; // 다중 공격 횟수
         
+        // ★★★ 워터웨이브 계열 먼저 처리! (melee지만 특수 처리 필요) ★★★
+        if (cardId === 'waterWave') {
+            // 레인 이동
+            if (hero.gridZ !== targetEnemy.gridZ) {
+                await this.moveHeroToLine(targetEnemy.gridZ);
+            }
+            console.log(`[Game] 🌊 워터웨이브! damage=${cardDef.damage}, knockback=${cardDef.knockback}`);
+            await this.executeWaterWave(hero, targetEnemy, cardDef, false);
+            return;
+        }
+        
+        if (cardId === 'tidalCrash') {
+            // 레인 이동
+            if (hero.gridZ !== targetEnemy.gridZ) {
+                await this.moveHeroToLine(targetEnemy.gridZ);
+            }
+            console.log(`[Game] 🌊🌊 타이달크래시! damage=${cardDef.damage}, knockback=${cardDef.knockback}`);
+            await this.executeWaterWave(hero, targetEnemy, cardDef, true);
+            return;
+        }
+        
         if (isMelee) {
             // Melee: Move hero to same Z line as target, then dash attack
             if (hero.gridZ !== targetEnemy.gridZ) {
@@ -3184,20 +3205,6 @@ const Game = {
                     isEnemy: false
                 });
                 return; // 번개는 여기서 완료!
-            }
-            
-            // ★★★ 워터웨이브! (근접이지만 라인 공격) ★★★
-            if (cardId === 'waterWave') {
-                console.log(`[Game] 🌊 워터웨이브! damage=${cardDef.damage}, knockback=${cardDef.knockback}`);
-                await this.executeWaterWave(hero, targetEnemy, cardDef, false);
-                return;
-            }
-            
-            // ★★★ 타이달크래시! (강화된 해일) ★★★
-            if (cardId === 'tidalCrash') {
-                console.log(`[Game] 🌊🌊 타이달크래시! damage=${cardDef.damage}, knockback=${cardDef.knockback}`);
-                await this.executeWaterWave(hero, targetEnemy, cardDef, true);
-                return;
             }
             
             // ★ 스피어 투척 (거리 보너스가 있는 원거리 공격, 다른 레인 타겟 가능!)
