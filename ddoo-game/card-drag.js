@@ -127,13 +127,12 @@ const CardDrag = {
             </div>
         `;
         // ★ 커서 끝(좌측상단)에서 대롱대롱 달리는 느낌
-        ghost.style.left = (touch.clientX + 5) + 'px';
-        ghost.style.top = (touch.clientY + 10) + 'px';
+        GC.applyGhostStyle(ghost, touch.clientX, touch.clientY, 'NORMAL');
         ghost.style.opacity = '1';
-        ghost.style.transform = 'scale(1.1) rotate(-8deg)';
         
-        cardEl.style.opacity = '0.3';
-        cardEl.style.transform = 'scale(0.9)';
+        // 원본 카드 스타일
+        cardEl.style.opacity = GC.CARD_DRAG.ORIGINAL_CARD.OPACITY;
+        cardEl.style.transform = `scale(${GC.CARD_DRAG.ORIGINAL_CARD.SCALE})`;
         
         if (typeof Game !== 'undefined') Game.vibrate(20);
         
@@ -178,17 +177,11 @@ const CardDrag = {
         if (isValid) {
             this.highlightCell(gridPos.x, gridPos.z, true);
             // ★ 타겟에 사용될 느낌 - 확 작아지면서 커서 쪽으로 빨려듦
-            ghost.style.transform = 'scale(0.5) rotate(0deg)';
-            ghost.style.left = (touch.clientX - 40) + 'px';  // 커서 중앙으로
-            ghost.style.top = (touch.clientY - 50) + 'px';
-            ghost.querySelector('.drag-card').style.borderColor = '#44ff44';
+            GC.applyGhostStyle(ghost, touch.clientX, touch.clientY, 'HOVER', GC.CARD_BORDER.SUMMON_VALID);
         } else {
             this.highlightCell(-1, -1, false);
             // ★ 호버 전엔 크게, 커서 끝에 대롱대롱
-            ghost.style.transform = 'scale(1.15) rotate(-5deg)';
-            ghost.style.left = (touch.clientX + 5) + 'px';
-            ghost.style.top = (touch.clientY + 10) + 'px';
-            ghost.querySelector('.drag-card').style.borderColor = '#666';
+            GC.applyGhostStyle(ghost, touch.clientX, touch.clientY, 'NORMAL', GC.CARD_BORDER.DEFAULT);
         }
         this.clearEnemyHighlights();
     },
@@ -246,26 +239,17 @@ const CardDrag = {
             }
             
             // ★ 타겟에 사용될 느낌 - 확 작아지면서 커서 쪽으로 빨려듦
-            ghost.style.transform = 'scale(0.5) rotate(0deg)';
-            ghost.style.left = (touch.clientX - 40) + 'px';  // 커서 중앙으로
-            ghost.style.top = (touch.clientY - 50) + 'px';
-            ghost.querySelector('.drag-card').style.borderColor = '#ff4444';
+            GC.applyGhostStyle(ghost, touch.clientX, touch.clientY, 'HOVER', GC.CARD_BORDER.ATTACK_TARGET);
         } else {
             const dragDist = this.dragState.startY - touch.clientY;
             this.clearEnemyHighlights();
             this.clearAoeHighlight();
             
-            if (dragDist > 100) {
-                ghost.style.transform = 'scale(0.75) rotate(0deg)';
-                ghost.style.left = (touch.clientX - 60) + 'px';
-                ghost.style.top = (touch.clientY - 70) + 'px';
-                ghost.querySelector('.drag-card').style.borderColor = '#44ff44';
+            if (dragDist > GC.CARD_DRAG.ACTIVATE_THRESHOLD) {
+                GC.applyGhostStyle(ghost, touch.clientX, touch.clientY, 'READY', GC.CARD_BORDER.READY);
             } else {
                 // ★ 호버 전엔 크게, 커서 끝에 대롱대롱
-                ghost.style.transform = 'scale(1.15) rotate(-5deg)';
-                ghost.style.left = (touch.clientX + 5) + 'px';
-                ghost.style.top = (touch.clientY + 10) + 'px';
-                ghost.querySelector('.drag-card').style.borderColor = '#666';
+                GC.applyGhostStyle(ghost, touch.clientX, touch.clientY, 'NORMAL', GC.CARD_BORDER.DEFAULT);
             }
         }
     },
@@ -285,28 +269,19 @@ const CardDrag = {
         if (cardDef.target === 'self' && targetAlly && targetAlly.isHero) {
             this.highlightAlly(targetAlly, true);
             // ★ 타겟에 사용될 느낌 - 확 작아지면서 커서 쪽으로 빨려듦
-            ghost.style.transform = 'scale(0.5) rotate(0deg)';
-            ghost.style.left = (touch.clientX - 40) + 'px';
-            ghost.style.top = (touch.clientY - 50) + 'px';
-            ghost.querySelector('.drag-card').style.borderColor = '#44aaff';
+            GC.applyGhostStyle(ghost, touch.clientX, touch.clientY, 'HOVER', GC.CARD_BORDER.SKILL_TARGET);
         } else {
             this.clearAllyHighlights();
             const dragDist = this.dragState.startY - touch.clientY;
             
-            if (dragDist > 100) {
+            if (dragDist > GC.CARD_DRAG.ACTIVATE_THRESHOLD) {
                 if (cardDef.target === 'self' && hero && hero.sprite) {
                     this.highlightAlly(hero, true);
                 }
-                ghost.style.transform = 'scale(0.75) rotate(0deg)';
-                ghost.style.left = (touch.clientX - 60) + 'px';
-                ghost.style.top = (touch.clientY - 70) + 'px';
-                ghost.querySelector('.drag-card').style.borderColor = '#44aaff';
+                GC.applyGhostStyle(ghost, touch.clientX, touch.clientY, 'READY', GC.CARD_BORDER.SKILL_TARGET);
             } else {
                 // ★ 호버 전엔 크게, 커서 끝에 대롱대롱
-                ghost.style.transform = 'scale(1.15) rotate(-5deg)';
-                ghost.style.left = (touch.clientX + 5) + 'px';
-                ghost.style.top = (touch.clientY + 10) + 'px';
-                ghost.querySelector('.drag-card').style.borderColor = '#666';
+                GC.applyGhostStyle(ghost, touch.clientX, touch.clientY, 'NORMAL', GC.CARD_BORDER.DEFAULT);
             }
         }
     },
@@ -321,17 +296,11 @@ const CardDrag = {
         this.clearTargetingCurve();
         this.clearAoeHighlight();
         
-        if (dragDist > 100) {
-            ghost.style.transform = 'scale(0.75) rotate(0deg)';
-            ghost.style.left = (touch.clientX - 60) + 'px';
-            ghost.style.top = (touch.clientY - 70) + 'px';
-            ghost.querySelector('.drag-card').style.borderColor = '#44ff44';
+        if (dragDist > GC.CARD_DRAG.ACTIVATE_THRESHOLD) {
+            GC.applyGhostStyle(ghost, touch.clientX, touch.clientY, 'READY', GC.CARD_BORDER.READY);
         } else {
             // ★ 호버 전엔 크게, 커서 끝에 대롱대롱
-            ghost.style.transform = 'scale(1.15) rotate(-5deg)';
-            ghost.style.left = (touch.clientX + 5) + 'px';
-            ghost.style.top = (touch.clientY + 10) + 'px';
-            ghost.querySelector('.drag-card').style.borderColor = '#666';
+            GC.applyGhostStyle(ghost, touch.clientX, touch.clientY, 'NORMAL', GC.CARD_BORDER.DEFAULT);
         }
     },
     
