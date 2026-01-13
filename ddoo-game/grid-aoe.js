@@ -404,89 +404,379 @@ const GridAOE = {
         zone.zoneSize = size;
         
         // ========================================
-        // Layer 1: 바닥 물웅덩이 (젖은 바닥)
+        // Layer 1: 바닥 물웅덩이 (다층 그라데이션)
         // ========================================
-        const puddle = new PIXI.Graphics();
-        // 외곽 (어두운 물)
-        puddle.beginFill(0x1a3366, 0.5);
-        puddle.drawEllipse(0, 8, size * 0.75, size * 0.35);
-        puddle.endFill();
-        // 내부 (밝은 물)
-        puddle.beginFill(0x4488cc, 0.4);
-        puddle.drawEllipse(0, 5, size * 0.6, size * 0.28);
-        puddle.endFill();
-        // 하이라이트
-        puddle.beginFill(0x88ccff, 0.25);
-        puddle.drawEllipse(-size * 0.15, 2, size * 0.25, size * 0.12);
-        puddle.endFill();
-        container.addChild(puddle);
-        zone.puddle = puddle;
+        const puddleLayers = [];
+        for (let i = 4; i >= 0; i--) {
+            const puddle = new PIXI.Graphics();
+            const layerSize = 0.4 + i * 0.1;
+            const colors = [0x0a1f4a, 0x1a3366, 0x2855aa, 0x4488cc, 0x66aaee];
+            const alphas = [0.6, 0.5, 0.45, 0.4, 0.35];
+            
+            puddle.beginFill(colors[i], alphas[i]);
+            puddle.drawEllipse(0, 5 + i * 1.5, size * layerSize, size * layerSize * 0.5);
+            puddle.endFill();
+            
+            puddle._baseY = 5 + i * 1.5;
+            puddle._pulsePhase = i * 0.4;
+            container.addChild(puddle);
+            puddleLayers.push(puddle);
+        }
+        zone.puddleLayers = puddleLayers;
+        
+        // 반짝이는 하이라이트
+        const highlight = new PIXI.Graphics();
+        highlight.beginFill(0xaaddff, 0.4);
+        highlight.drawEllipse(-size * 0.2, 0, size * 0.2, size * 0.08);
+        highlight.endFill();
+        highlight.beginFill(0xffffff, 0.3);
+        highlight.drawEllipse(-size * 0.15, -2, size * 0.1, size * 0.04);
+        highlight.endFill();
+        container.addChild(highlight);
+        zone.highlight = highlight;
         
         // ========================================
-        // Layer 2: 물결 링 (동심원 확산)
+        // Layer 2: 3D 물결 링 (동심원 확산)
         // ========================================
         const rippleContainer = new PIXI.Container();
         container.addChild(rippleContainer);
         zone.rippleContainer = rippleContainer;
         zone.ripples = [];
         
-        // 초기 물결 생성
-        for (let i = 0; i < 3; i++) {
-            this.spawnWaterRipple(zone, i * 0.3);
+        for (let i = 0; i < 4; i++) {
+            this.spawn3DWaterRipple(zone, i * 0.25);
         }
         
         // ========================================
-        // Layer 3: 물방울 파티클
+        // Layer 3: 수면 위 물결 파티클 (3D 궤도)
         // ========================================
-        const dropletContainer = new PIXI.Container();
-        container.addChild(dropletContainer);
-        zone.dropletContainer = dropletContainer;
-        zone.droplets = [];
+        const waveContainer = new PIXI.Container();
+        container.addChild(waveContainer);
+        zone.waveContainer = waveContainer;
+        zone.waveParticles = [];
         
-        // 초기 물방울 (15개)
-        for (let i = 0; i < 15; i++) {
-            this.spawnWaterDroplet(zone);
+        const NUM_WAVES = 6;
+        for (let i = 0; i < NUM_WAVES; i++) {
+            const wave = this.create3DWaveParticle(size);
+            const angle = (i / NUM_WAVES) * Math.PI * 2;
+            
+            wave._angle = angle;
+            wave._orbit = size * 0.25;
+            wave._orbitY = size * 0.12;
+            wave._speed = 0.6 + Math.random() * 0.3;
+            wave._zPhase = Math.random() * Math.PI * 2;
+            wave._baseScale = 0.6 + Math.random() * 0.4;
+            
+            waveContainer.addChild(wave);
+            zone.waveParticles.push(wave);
         }
         
         // ========================================
-        // Layer 4: 수면 반사광
+        // Layer 4: 물기둥 / 물방울 분출
+        // ========================================
+        const splashContainer = new PIXI.Container();
+        container.addChild(splashContainer);
+        zone.splashContainer = splashContainer;
+        zone.splashes = [];
+        
+        for (let i = 0; i < 12; i++) {
+            this.spawn3DWaterSplash(zone);
+        }
+        
+        // ========================================
+        // Layer 5: 거품 / 기포
+        // ========================================
+        const bubbleContainer = new PIXI.Container();
+        container.addChild(bubbleContainer);
+        zone.bubbleContainer = bubbleContainer;
+        zone.bubbles = [];
+        
+        for (let i = 0; i < 8; i++) {
+            this.spawnWaterBubble(zone);
+        }
+        
+        // ========================================
+        // Layer 6: 반짝이는 수면 반사
         // ========================================
         const shimmerContainer = new PIXI.Container();
         container.addChild(shimmerContainer);
         zone.shimmerContainer = shimmerContainer;
         zone.shimmers = [];
         
-        // 반사광 점들
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 10; i++) {
             const shimmer = new PIXI.Graphics();
-            const shimmerSize = 3 + Math.random() * 4;
-            shimmer.beginFill(0xffffff, 0.6);
+            const shimmerSize = 2 + Math.random() * 5;
+            
+            // 글로우
+            shimmer.beginFill(0xaaddff, 0.2);
+            shimmer.drawCircle(0, 0, shimmerSize * 2);
+            shimmer.endFill();
+            // 코어
+            shimmer.beginFill(0xffffff, 0.7);
             shimmer.drawCircle(0, 0, shimmerSize);
             shimmer.endFill();
             
-            shimmer.x = (Math.random() - 0.5) * size * 0.5;
-            shimmer.y = (Math.random() - 0.5) * size * 0.25;
+            shimmer.x = (Math.random() - 0.5) * size * 0.6;
+            shimmer.y = (Math.random() - 0.5) * size * 0.3;
             shimmer._phase = Math.random() * Math.PI * 2;
-            shimmer._baseAlpha = 0.3 + Math.random() * 0.4;
+            shimmer._baseAlpha = 0.3 + Math.random() * 0.5;
+            shimmer._twinkleSpeed = 3 + Math.random() * 3;
             
             shimmerContainer.addChild(shimmer);
             zone.shimmers.push(shimmer);
         }
         
         // ========================================
-        // Layer 5: 물 아이콘 (중앙)
+        // Layer 7: 중앙 물결 코어
         // ========================================
-        const iconText = new PIXI.Text('💧', {
-            fontSize: 24,
-            fill: 0xffffff
-        });
-        iconText.anchor.set(0.5);
-        iconText.y = -5;
-        iconText.alpha = 0.6;
-        container.addChild(iconText);
-        zone.icon = iconText;
+        const coreContainer = new PIXI.Container();
+        container.addChild(coreContainer);
+        zone.coreContainer = coreContainer;
+        
+        for (let i = 2; i >= 0; i--) {
+            const core = new PIXI.Graphics();
+            const coreSize = size * (0.06 + i * 0.04);
+            const colors = [0xffffff, 0xaaddff, 0x66aaee];
+            const alphas = [0.8, 0.5, 0.3];
+            
+            core.beginFill(colors[i], alphas[i]);
+            core.drawEllipse(0, 0, coreSize, coreSize * 0.5);
+            core.endFill();
+            
+            core._pulsePhase = i * 0.3;
+            coreContainer.addChild(core);
+        }
+        zone.cores = coreContainer.children;
         
         zone._animTime = 0;
+        
+        // 스폰 이펙트
+        this.waterSpawnBurst(container.x, container.y, size);
+    },
+    
+    // ==========================================
+    // 3D 물결 링 생성
+    // ==========================================
+    spawn3DWaterRipple(zone, delay = 0) {
+        if (!zone.rippleContainer) return;
+        
+        const zoneSize = zone.zoneSize || 100;
+        const ripple = new PIXI.Container();
+        
+        // 다중 링 (3D 효과)
+        for (let i = 2; i >= 0; i--) {
+            const ring = new PIXI.Graphics();
+            const alpha = 0.6 - i * 0.15;
+            const thickness = 3 - i * 0.5;
+            
+            ring.lineStyle(thickness, i === 0 ? 0xffffff : 0x88ccff, alpha);
+            ring.drawEllipse(0, i * 2, 15, 9);
+            ripple.addChild(ring);
+        }
+        
+        ripple._scale = 0.1;
+        ripple._alpha = 0.8;
+        ripple._maxScale = (0.5 + Math.random() * 0.4) * (zoneSize / 100);
+        ripple._delay = delay;
+        ripple.scale.set(ripple._scale);
+        ripple.alpha = 0;
+        
+        // 무작위 위치 오프셋
+        ripple.x = (Math.random() - 0.5) * zoneSize * 0.3;
+        ripple.y = (Math.random() - 0.5) * zoneSize * 0.15;
+        
+        zone.rippleContainer.addChild(ripple);
+        zone.ripples.push(ripple);
+    },
+    
+    // ==========================================
+    // 3D 물결 파티클 생성
+    // ==========================================
+    create3DWaveParticle(zoneSize) {
+        const particle = new PIXI.Container();
+        const scale = zoneSize / 100;
+        
+        // 외부 글로우
+        const outerGlow = new PIXI.Graphics();
+        const outerSize = (8 + Math.random() * 6) * scale;
+        outerGlow.beginFill(0x4488cc, 0.3);
+        outerGlow.drawEllipse(0, 0, outerSize * 1.5, outerSize * 0.8);
+        outerGlow.endFill();
+        particle.addChild(outerGlow);
+        
+        // 중간 물결
+        const midWave = new PIXI.Graphics();
+        midWave.beginFill(0x66aaee, 0.5);
+        midWave.drawEllipse(0, 0, outerSize, outerSize * 0.5);
+        midWave.endFill();
+        particle.addChild(midWave);
+        
+        // 밝은 코어
+        const core = new PIXI.Graphics();
+        core.beginFill(0xaaddff, 0.7);
+        core.drawEllipse(0, 0, outerSize * 0.5, outerSize * 0.25);
+        core.endFill();
+        particle.addChild(core);
+        
+        // 하이라이트
+        const highlight = new PIXI.Graphics();
+        highlight.beginFill(0xffffff, 0.6);
+        highlight.drawEllipse(-outerSize * 0.2, -outerSize * 0.1, outerSize * 0.15, outerSize * 0.08);
+        highlight.endFill();
+        particle.addChild(highlight);
+        
+        return particle;
+    },
+    
+    // ==========================================
+    // 3D 물 스플래시 생성
+    // ==========================================
+    spawn3DWaterSplash(zone) {
+        if (!zone.splashContainer) return;
+        
+        const zoneSize = zone.zoneSize || 100;
+        const splash = new PIXI.Container();
+        
+        // 물방울 모양
+        const drop = new PIXI.Graphics();
+        const size = 2 + Math.random() * 4;
+        
+        // 글로우
+        drop.beginFill(0x66aaee, 0.3);
+        drop.drawCircle(0, 0, size * 2);
+        drop.endFill();
+        
+        // 코어
+        drop.beginFill(0x88ccff, 0.8);
+        drop.drawCircle(0, 0, size);
+        drop.endFill();
+        
+        // 하이라이트
+        drop.beginFill(0xffffff, 0.7);
+        drop.drawCircle(-size * 0.3, -size * 0.3, size * 0.3);
+        drop.endFill();
+        
+        splash.addChild(drop);
+        
+        // 위치 (수면에서 시작)
+        const angle = Math.random() * Math.PI * 2;
+        const dist = Math.random() * zoneSize * 0.35;
+        splash.x = Math.cos(angle) * dist;
+        splash.y = Math.sin(angle) * dist * 0.5;
+        
+        // 속성 (포물선 운동)
+        splash._vx = (Math.random() - 0.5) * 2;
+        splash._vy = -4 - Math.random() * 6;
+        splash._gravity = 0.25;
+        splash._groundY = Math.sin(angle) * dist * 0.5 + 5;
+        splash._life = 1;
+        splash._decay = 0.015 + Math.random() * 0.01;
+        
+        zone.splashContainer.addChild(splash);
+        zone.splashes.push(splash);
+    },
+    
+    // ==========================================
+    // 물 거품 생성
+    // ==========================================
+    spawnWaterBubble(zone) {
+        if (!zone.bubbleContainer) return;
+        
+        const zoneSize = zone.zoneSize || 100;
+        const bubble = new PIXI.Graphics();
+        const size = 3 + Math.random() * 5;
+        
+        // 거품 테두리
+        bubble.lineStyle(1, 0xffffff, 0.6);
+        bubble.drawCircle(0, 0, size);
+        
+        // 내부 반사광
+        bubble.beginFill(0xffffff, 0.2);
+        bubble.drawCircle(-size * 0.2, -size * 0.2, size * 0.3);
+        bubble.endFill();
+        
+        // 위치
+        bubble.x = (Math.random() - 0.5) * zoneSize * 0.5;
+        bubble.y = (Math.random() - 0.5) * zoneSize * 0.25 + 5;
+        
+        // 속성
+        bubble._vy = -0.5 - Math.random() * 1;
+        bubble._wobble = Math.random() * Math.PI * 2;
+        bubble._wobbleSpeed = 3 + Math.random() * 2;
+        bubble._wobbleAmount = 1 + Math.random() * 2;
+        bubble._life = 1;
+        bubble._decay = 0.008 + Math.random() * 0.008;
+        
+        zone.bubbleContainer.addChild(bubble);
+        zone.bubbles.push(bubble);
+    },
+    
+    // ==========================================
+    // 물 영역 스폰 버스트 이펙트
+    // ==========================================
+    waterSpawnBurst(x, y, size) {
+        // 화면 효과
+        if (typeof CombatEffects !== 'undefined') {
+            CombatEffects.screenFlash('#4488ff', 150, 0.3);
+            CombatEffects.screenShake(6, 150);
+        }
+        
+        // 물기둥 솟구침
+        const pillar = new PIXI.Graphics();
+        pillar.beginFill(0x4488ff, 0.6);
+        pillar.drawRect(-size * 0.15, -80, size * 0.3, 80);
+        pillar.endFill();
+        pillar.beginFill(0x88ccff, 0.4);
+        pillar.drawRect(-size * 0.1, -80, size * 0.2, 80);
+        pillar.endFill();
+        pillar.beginFill(0xaaddff, 0.3);
+        pillar.drawRect(-size * 0.05, -80, size * 0.1, 80);
+        pillar.endFill();
+        pillar.x = x;
+        pillar.y = y;
+        this.app.stage.addChild(pillar);
+        
+        gsap.to(pillar, {
+            alpha: 0,
+            duration: 0.4,
+            onComplete: () => {
+                this.app.stage.removeChild(pillar);
+                pillar.destroy();
+            }
+        });
+        gsap.to(pillar.scale, { x: 2, y: 0.5, duration: 0.4, ease: 'power2.out' });
+        
+        // 물방울 버스트
+        for (let i = 0; i < 15; i++) {
+            const drop = new PIXI.Graphics();
+            const dropSize = 3 + Math.random() * 5;
+            
+            drop.beginFill(0x88ccff, 0.8);
+            drop.drawCircle(0, 0, dropSize);
+            drop.endFill();
+            drop.beginFill(0xffffff, 0.5);
+            drop.drawCircle(-dropSize * 0.2, -dropSize * 0.2, dropSize * 0.3);
+            drop.endFill();
+            
+            drop.x = x;
+            drop.y = y;
+            this.app.stage.addChild(drop);
+            
+            const angle = (Math.PI * 2 * i) / 15 + Math.random() * 0.3;
+            const distance = size * 0.3 + Math.random() * size * 0.4;
+            
+            gsap.to(drop, {
+                x: x + Math.cos(angle) * distance,
+                y: y + Math.sin(angle) * distance * 0.5 - 50 - Math.random() * 30,
+                alpha: 0,
+                duration: 0.5 + Math.random() * 0.3,
+                ease: 'power2.out',
+                onComplete: () => {
+                    this.app.stage.removeChild(drop);
+                    drop.destroy();
+                }
+            });
+        }
     },
     
     // ==========================================
@@ -571,16 +861,26 @@ const GridAOE = {
         zone._animTime = (zone._animTime || 0) + delta;
         
         // ========================================
-        // 1. 물웅덩이 펄스
+        // 1. 물웅덩이 레이어 펄스 (3D 깊이감)
         // ========================================
-        if (zone.puddle) {
-            const pulse = 1 + Math.sin(t * 2) * 0.03;
-            zone.puddle.scale.set(pulse, pulse * 0.8);
-            zone.puddle.alpha = 0.4 + Math.sin(t * 1.5) * 0.1;
+        if (zone.puddleLayers) {
+            zone.puddleLayers.forEach((layer, i) => {
+                const phase = t * (1.5 + i * 0.3) + layer._pulsePhase;
+                const pulse = 1 + Math.sin(phase) * 0.04;
+                layer.scale.set(pulse, pulse * 0.7);
+                layer.alpha = (0.35 + i * 0.05) + Math.sin(phase * 1.2) * 0.08;
+                layer.y = layer._baseY + Math.sin(phase * 0.6) * 1.5;
+            });
+        }
+        
+        // 하이라이트 깜빡임
+        if (zone.highlight) {
+            zone.highlight.alpha = 0.3 + Math.sin(t * 3) * 0.15;
+            zone.highlight.x = Math.sin(t * 0.8) * 5;
         }
         
         // ========================================
-        // 2. 물결 링 확산
+        // 2. 3D 물결 링 확산
         // ========================================
         if (zone.ripples) {
             const toRemove = [];
@@ -591,10 +891,10 @@ const GridAOE = {
                     continue;
                 }
                 
-                ripple._scale += delta * 0.4;
-                ripple._alpha -= delta * 0.3;
+                ripple._scale += delta * 0.5;
+                ripple._alpha -= delta * 0.4;
                 
-                ripple.scale.set(ripple._scale);
+                ripple.scale.set(ripple._scale, ripple._scale * 0.6);
                 ripple.alpha = Math.max(0, ripple._alpha);
                 
                 if (ripple._scale > ripple._maxScale || ripple._alpha <= 0) {
@@ -606,89 +906,159 @@ const GridAOE = {
                 const idx = zone.ripples.indexOf(r);
                 if (idx > -1) zone.ripples.splice(idx, 1);
                 zone.rippleContainer.removeChild(r);
-                try { r.destroy(); } catch(e) {}
+                try { r.destroy({ children: true }); } catch(e) {}
                 
                 // 새 물결 생성
-                this.spawnWaterRipple(zone);
+                this.spawn3DWaterRipple(zone);
             }
         }
         
         // ========================================
-        // 3. 물방울 포물선 운동
+        // 3. 3D 궤도 물결 파티클 회전
         // ========================================
-        if (zone.droplets) {
+        if (zone.waveParticles) {
+            zone.waveParticles.forEach(wave => {
+                wave._angle += delta * wave._speed;
+                
+                // 3D 원형 궤도 시뮬레이션
+                const zOffset = Math.sin(wave._angle + wave._zPhase);
+                const depthScale = 0.6 + zOffset * 0.4;
+                
+                // XY 위치 (타원 궤도)
+                wave.x = Math.cos(wave._angle) * wave._orbit;
+                wave.y = Math.sin(wave._angle) * wave._orbitY;
+                
+                // 깊이에 따른 스케일 & 알파
+                const scale = wave._baseScale * depthScale;
+                wave.scale.set(scale, scale * 0.6);
+                wave.alpha = 0.5 + depthScale * 0.4;
+                
+                // 뒤에 있으면 더 어둡게
+                if (zOffset < 0) {
+                    wave.alpha *= 0.6;
+                    wave.zIndex = -1;
+                } else {
+                    wave.zIndex = 1;
+                }
+            });
+            
+            if (zone.waveContainer) {
+                zone.waveContainer.sortChildren();
+            }
+        }
+        
+        // ========================================
+        // 4. 물 스플래시 포물선 운동
+        // ========================================
+        if (zone.splashes) {
             const toRemove = [];
             
-            for (const droplet of zone.droplets) {
-                droplet.x += droplet._vx;
-                droplet._vy += droplet._gravity;
-                droplet.y += droplet._vy;
+            for (const splash of zone.splashes) {
+                splash.x += splash._vx;
+                splash._vy += splash._gravity;
+                splash.y += splash._vy;
                 
-                // 수면에 닿으면 튀김
-                if (!droplet._bounced && droplet.y >= droplet._groundY) {
-                    droplet._bounced = true;
-                    droplet._vy = -droplet._vy * 0.3;
-                    droplet._vx *= 0.5;
+                // 수면에 닿으면 소멸
+                if (splash.y >= splash._groundY) {
+                    splash._life -= delta * 3;
+                    splash.alpha = splash._life;
                     
-                    // 작은 물결 생성
-                    if (zone.rippleContainer) {
-                        const splash = new PIXI.Graphics();
-                        splash.lineStyle(1, 0x88ccff, 0.5);
-                        splash.drawEllipse(0, 0, 5, 3);
-                        splash.x = droplet.x;
-                        splash.y = droplet._groundY;
-                        splash._scale = 0.5;
-                        splash._alpha = 0.5;
-                        splash._maxScale = 1.5;
-                        zone.rippleContainer.addChild(splash);
-                        zone.ripples.push(splash);
+                    // 작은 물결 생성 (한 번만)
+                    if (!splash._splashed && zone.rippleContainer) {
+                        splash._splashed = true;
+                        const miniRipple = new PIXI.Graphics();
+                        miniRipple.lineStyle(1, 0x88ccff, 0.5);
+                        miniRipple.drawEllipse(0, 0, 5, 3);
+                        miniRipple.x = splash.x;
+                        miniRipple.y = splash._groundY;
+                        miniRipple._scale = 0.3;
+                        miniRipple._alpha = 0.6;
+                        miniRipple._maxScale = 1.2;
+                        zone.rippleContainer.addChild(miniRipple);
+                        zone.ripples.push(miniRipple);
                     }
                 }
                 
-                // 두 번째 바운스 후 소멸
-                if (droplet._bounced && droplet.y > droplet._groundY + 5) {
-                    droplet._life -= delta * 2;
-                    droplet.alpha = droplet._life;
-                }
-                
-                if (droplet._life <= 0) {
-                    toRemove.push(droplet);
+                splash._life -= splash._decay;
+                if (splash._life <= 0) {
+                    toRemove.push(splash);
                 }
             }
             
-            for (const d of toRemove) {
-                const idx = zone.droplets.indexOf(d);
-                if (idx > -1) zone.droplets.splice(idx, 1);
-                zone.dropletContainer.removeChild(d);
-                try { d.destroy({ children: true }); } catch(e) {}
+            for (const s of toRemove) {
+                const idx = zone.splashes.indexOf(s);
+                if (idx > -1) zone.splashes.splice(idx, 1);
+                zone.splashContainer.removeChild(s);
+                try { s.destroy({ children: true }); } catch(e) {}
                 
-                // 새 물방울 생성
-                this.spawnWaterDroplet(zone);
+                // 새 스플래시 생성
+                this.spawn3DWaterSplash(zone);
             }
             
-            // 추가 물방울 (확률적)
-            if (Math.random() < 0.03) {
-                this.spawnWaterDroplet(zone);
+            // 추가 스플래시 (확률적)
+            if (Math.random() < 0.04) {
+                this.spawn3DWaterSplash(zone);
             }
         }
         
         // ========================================
-        // 4. 반사광 깜빡임
+        // 5. 거품 애니메이션
+        // ========================================
+        if (zone.bubbles) {
+            const toRemove = [];
+            
+            for (const bubble of zone.bubbles) {
+                bubble._wobble += delta * bubble._wobbleSpeed;
+                bubble.x += Math.sin(bubble._wobble) * bubble._wobbleAmount * delta;
+                bubble.y += bubble._vy;
+                
+                bubble._life -= bubble._decay;
+                bubble.alpha = bubble._life * 0.7;
+                bubble.scale.set(0.8 + bubble._life * 0.4);
+                
+                if (bubble._life <= 0 || bubble.y < -30) {
+                    toRemove.push(bubble);
+                }
+            }
+            
+            for (const b of toRemove) {
+                const idx = zone.bubbles.indexOf(b);
+                if (idx > -1) zone.bubbles.splice(idx, 1);
+                zone.bubbleContainer.removeChild(b);
+                try { b.destroy(); } catch(e) {}
+                
+                // 새 거품 생성
+                this.spawnWaterBubble(zone);
+            }
+            
+            // 추가 거품 (확률적)
+            if (Math.random() < 0.02) {
+                this.spawnWaterBubble(zone);
+            }
+        }
+        
+        // ========================================
+        // 6. 반사광 깜빡임
         // ========================================
         if (zone.shimmers) {
             for (const shimmer of zone.shimmers) {
-                shimmer._phase += delta * (3 + Math.random());
-                shimmer.alpha = shimmer._baseAlpha * (0.5 + Math.sin(shimmer._phase) * 0.5);
-                shimmer.scale.set(0.8 + Math.sin(shimmer._phase * 1.5) * 0.3);
+                shimmer._phase += delta * shimmer._twinkleSpeed;
+                shimmer.alpha = shimmer._baseAlpha * (0.3 + Math.sin(shimmer._phase) * 0.7);
+                shimmer.scale.set(0.6 + Math.sin(shimmer._phase * 1.3) * 0.5);
+                shimmer.x += Math.sin(shimmer._phase * 0.5) * 0.3;
             }
         }
         
         // ========================================
-        // 5. 아이콘 부유
+        // 7. 코어 펄스
         // ========================================
-        if (zone.icon) {
-            zone.icon.y = -5 + Math.sin(t * 2) * 3;
-            zone.icon.alpha = 0.5 + Math.sin(t * 3) * 0.1;
+        if (zone.cores) {
+            zone.cores.forEach((core, i) => {
+                const phase = t * (4 + i * 1.5) + (core._pulsePhase || 0);
+                const pulse = 1 + Math.sin(phase) * 0.25;
+                core.scale.set(pulse, pulse * 0.6);
+                core.alpha = (0.5 - i * 0.1) + Math.sin(phase * 1.5) * 0.2;
+            });
         }
     },
     
