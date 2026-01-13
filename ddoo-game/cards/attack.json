@@ -211,9 +211,11 @@
         "target": "enemy",
         "melee": false,
         "frontOnly": false,
+        "chainRange": 1,
+        "chainDamageReduction": 1,
         "aoe": { "width": 1, "depth": 1 },
         "element": "lightning",
-        "desc": "작은 전기 스파크. 물 위의 적에게 추가 데미지.",
+        "desc": "전기 스파크. 1칸 인접 적에게 연쇄. 물 위 추가 데미지.",
         "anim": {
             "type": "spark"
         }
