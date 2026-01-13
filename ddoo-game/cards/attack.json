@@ -153,5 +153,18 @@
         "chainDamageReduction": 2,
         "aoe": { "width": 1, "depth": 1 },
         "element": "lightning"
+    },
+    "fireArrow": {
+        "name": "Fire Arrow",
+        "cost": 2,
+        "type": "attack",
+        "damage": 4,
+        "target": "enemy",
+        "melee": false,
+        "frontOnly": false,
+        "hits": 3,
+        "projectileType": "fireArrow",
+        "aoe": { "width": 1, "depth": 1 },
+        "element": "fire"
     }
 }

@@ -9,7 +9,7 @@
         "range": 1,
         "sprite": "goblinshield.png",
         "scale": 0.32,
-        "breakSprite": "goblin.png"
+        "breakSprite": "goblinshield_break.png"
     },
     
     "ai": {
@@ -40,7 +40,7 @@
             "hits": 3,
             "knockbackPerHit": 1,
             "weight": 30,
-            "breakRecipe": 3,
+            "breakRecipe": 2,
             "cooldown": 3
         },
         { 

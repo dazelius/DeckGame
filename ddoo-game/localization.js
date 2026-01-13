@@ -187,6 +187,10 @@ const Localization = {
                 name: '번개',
                 desc: '8 피해. 인접 적에게 연쇄. 연쇄당 -2 피해.'
             },
+            fireArrow: {
+                name: '화염 화살',
+                desc: '4 피해 x 3회. 원거리. 화염 속성.'
+            },
             
             // 스킬 카드
             defend: {
@@ -265,6 +269,10 @@ const Localization = {
                 name: 'Lightning',
                 desc: '8 damage. Chains to adjacent enemies. -2 damage per chain.'
             },
+            fireArrow: {
+                name: 'Fire Arrow',
+                desc: '4 damage x3. Ranged. Fire element.'
+            },
             defend: {
                 name: 'Defend',
                 desc: 'Gain 5 Block'
@@ -338,6 +346,10 @@ const Localization = {
             lightning: {
                 name: '雷撃',
                 desc: '8ダメージ。隣接敵に連鎖。連鎖ごとに-2ダメージ。'
+            },
+            fireArrow: {
+                name: '火炎矢',
+                desc: '4ダメージx3。遠距離。火属性。'
             },
             defend: {
                 name: '防御',

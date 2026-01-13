@@ -1784,10 +1784,11 @@ const Game = {
     },
     
     async heroRangedAnimation(hero, target, damage, options = {}) {
-        console.log('[Game] heroRangedAnimation - options:', options, '| createZone:', options.createZone);
+        console.log('[Game] heroRangedAnimation - options:', options, '| createZone:', options.createZone, '| projectileType:', options.projectileType);
         
         if (typeof UnitCombat !== 'undefined') {
             await UnitCombat.rangedAttack(hero, target, damage, {
+                projectileType: options.projectileType || 'default',
                 projectileColor: options.projectileColor || 0xffaa00,
                 createZone: options.createZone || null,
                 isEnemy: false,
@@ -2878,17 +2879,28 @@ const Game = {
                 const targetsInAoe = this.getEnemiesInAoe(targetEnemy.gridX, targetEnemy.gridZ, aoe);
                 const gameRef = this;
                 
+                // ★ 히트 수 확인 (fireArrow 등 다중 히트 원거리)
+                const rangedHits = cardDef.hits || 1;
+                
                 // 원거리 발사 (★ 브레이크는 타격 시점에 처리!)
-                await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage, {
-                    createZone: cardDef.createZone || null,
-                    // ★ 타격 시점에 브레이크 시스템 호출!
-                    onHit: (hitTarget) => {
-                        if (typeof BreakSystem !== 'undefined') {
-                            BreakSystem.onAttack(hitTarget, cardDef, 1, 0);
-                            gameRef.createEnemyIntent(hitTarget);
+                for (let hitNum = 0; hitNum < rangedHits; hitNum++) {
+                    if (targetEnemy.hp <= 0) break;
+                    
+                    await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage, {
+                        projectileType: cardDef.projectileType || 'default',
+                        createZone: cardDef.createZone || null,
+                        // ★ 타격 시점에 브레이크 시스템 호출!
+                        onHit: (hitTarget) => {
+                            if (typeof BreakSystem !== 'undefined') {
+                                BreakSystem.onAttack(hitTarget, cardDef, 1, hitNum);
+                                gameRef.createEnemyIntent(hitTarget);
+                            }
                         }
-                    }
-                });
+                    });
+                    
+                    // 다음 히트 전 짧은 딜레이
+                    if (hitNum < rangedHits - 1) await new Promise(r => setTimeout(r, 80));
+                }
                 
                 // Deal damage to additional targets in AOE
                 for (let i = 0; i < targetsInAoe.length; i++) {

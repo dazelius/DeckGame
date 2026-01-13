@@ -1581,6 +1581,11 @@ const UnitCombat = {
                 console.log('[UnitCombat] 🏹 화살 이펙트 실행!');
                 await CombatEffects.arrowEffect(startX, startY, endX, endY, { isEnemy });
                 CombatEffects.hitEffect(target.sprite);
+            } else if (projectileType === 'fireArrow') {
+                // ★ 화염 화살 이펙트 (3D 볼류메트릭)
+                console.log('[UnitCombat] 🔥🏹 화염 화살 이펙트 실행!');
+                await CombatEffects.fireArrowEffect(startX, startY, endX, endY, { isEnemy });
+                CombatEffects.hitEffect(target.sprite);
             } else {
                 // 일반 투사체
                 await CombatEffects.projectileEffect(startX, startY, endX, endY, projectileColor, projectileSize);

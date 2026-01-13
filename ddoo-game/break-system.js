@@ -183,7 +183,7 @@ const BreakSystem = {
         
         try {
             // 새 텍스처 로드
-            const newTexture = await PIXI.Assets.load(`assets/${breakSprite}`);
+            const newTexture = await PIXI.Assets.load(`image/${breakSprite}`);
             
             // 텍스처 변경
             mainSprite.texture = newTexture;
