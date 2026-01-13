@@ -204,5 +204,47 @@
         "projectileType": "fireArrow",
         "aoe": { "width": 1, "depth": 1 },
         "element": "fire"
+    },
+    "waterWave": {
+        "name": "Water Wave",
+        "cost": 2,
+        "type": "attack",
+        "damage": 4,
+        "target": "enemy",
+        "melee": true,
+        "frontOnly": true,
+        "knockback": 1,
+        "aoe": { "width": 3, "depth": 1 },
+        "createZone": "water",
+        "createZoneLength": 3,
+        "element": "water",
+        "desc": "3칸을 쭉 타격하고 넉백. 물 영역을 남긴다.",
+        "anim": {
+            "type": "wave",
+            "windup": 0.15,
+            "sweep": 0.3,
+            "ease": "power2.out"
+        }
+    },
+    "tidalCrash": {
+        "name": "Tidal Crash",
+        "cost": 3,
+        "type": "attack",
+        "damage": 7,
+        "target": "enemy",
+        "melee": true,
+        "frontOnly": true,
+        "knockback": 2,
+        "aoe": { "width": 3, "depth": 3 },
+        "createZone": "water",
+        "createZoneLength": 3,
+        "element": "water",
+        "desc": "강력한 해일! 넓은 범위 타격 + 2칸 넉백. 물 영역 생성.",
+        "anim": {
+            "type": "wave",
+            "windup": 0.25,
+            "sweep": 0.4,
+            "ease": "power3.out"
+        }
     }
 }

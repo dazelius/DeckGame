@@ -1858,6 +1858,159 @@ const Game = {
         }
     },
     
+    // ==========================================
+    // 워터웨이브 실행
+    // ==========================================
+    async executeWaterWave(hero, targetEnemy, cardDef) {
+        const gridZ = targetEnemy.gridZ;
+        const heroX = hero.gridX;
+        const knockbackDir = 1; // 오른쪽으로 밀어냄
+        
+        // 1. 영웅 전진 애니메이션
+        const heroPos = hero.container || hero.sprite;
+        if (heroPos) {
+            const originalX = heroPos.x;
+            await gsap.to(heroPos, {
+                x: originalX + 80,
+                duration: 0.15,
+                ease: 'power2.in'
+            });
+            
+            // 복귀 (비동기)
+            gsap.to(heroPos, {
+                x: originalX,
+                duration: 0.3,
+                ease: 'power2.out',
+                delay: 0.2
+            });
+        }
+        
+        // 2. 워터웨이브 VFX
+        this.showWaterWaveVFX(heroX, gridZ, knockbackDir, cardDef.aoe?.width || 3);
+        
+        // 3. 라인 범위 내 적들 타격 + 넉백
+        const affectedEnemies = [];
+        const lineLength = cardDef.aoe?.width || 3;
+        
+        for (let dx = 1; dx <= lineLength; dx++) {
+            const checkX = heroX + dx;
+            if (checkX >= 10) continue;
+            
+            // 해당 셀의 적 찾기
+            for (const enemy of this.state.enemyUnits) {
+                if (enemy.hp > 0 && enemy.gridX === checkX && enemy.gridZ === gridZ) {
+                    affectedEnemies.push({ enemy, delay: dx * 60 }); // 순차적 타격
+                }
+            }
+        }
+        
+        // 4. 순차적 타격 실행
+        for (const { enemy, delay } of affectedEnemies) {
+            await new Promise(r => setTimeout(r, delay));
+            
+            // 데미지 적용
+            this.dealDamage(enemy, cardDef.damage, null, cardDef);
+            
+            // 넉백
+            if (cardDef.knockback && enemy.hp > 0 && typeof KnockbackSystem !== 'undefined') {
+                KnockbackSystem.knockback(enemy, knockbackDir, cardDef.knockback);
+            }
+            
+            // 브레이크 시스템
+            if (typeof BreakSystem !== 'undefined') {
+                BreakSystem.onAttack(enemy, cardDef, 1, 0);
+            }
+        }
+        
+        // 5. 물 영역 생성
+        if (cardDef.createZone && typeof GridAOE !== 'undefined') {
+            const zoneLength = cardDef.createZoneLength || 3;
+            GridAOE.createWaterWaveLine(heroX + 1, gridZ, knockbackDir, zoneLength);
+        }
+        
+        // 대기
+        await new Promise(r => setTimeout(r, 300));
+    },
+    
+    // ==========================================
+    // 워터웨이브 VFX
+    // ==========================================
+    showWaterWaveVFX(startX, gridZ, direction, length) {
+        if (!this.app) return;
+        
+        const startPos = this.getCellCenter(startX, gridZ);
+        if (!startPos) return;
+        
+        // 물결 웨이브 생성
+        const waveContainer = new PIXI.Container();
+        waveContainer.x = startPos.x;
+        waveContainer.y = startPos.y;
+        this.app.stage.addChild(waveContainer);
+        
+        // 메인 웨이브 (물결 모양)
+        const wave = new PIXI.Graphics();
+        wave.beginFill(0x4488ff, 0.7);
+        wave.drawEllipse(0, 0, 30, 15);
+        wave.endFill();
+        wave.beginFill(0x88ccff, 0.5);
+        wave.drawEllipse(0, -5, 20, 10);
+        wave.endFill();
+        waveContainer.addChild(wave);
+        
+        // 물방울 파티클
+        for (let i = 0; i < 20; i++) {
+            const droplet = new PIXI.Graphics();
+            droplet.beginFill(0x88ccff, 0.8);
+            droplet.drawCircle(0, 0, 2 + Math.random() * 4);
+            droplet.endFill();
+            droplet.x = (Math.random() - 0.5) * 30;
+            droplet.y = (Math.random() - 0.5) * 15;
+            waveContainer.addChild(droplet);
+            
+            gsap.to(droplet, {
+                x: droplet.x + direction * (50 + Math.random() * 100),
+                y: droplet.y + (Math.random() - 0.5) * 40 - 20,
+                alpha: 0,
+                duration: 0.5 + Math.random() * 0.3,
+                ease: 'power2.out'
+            });
+        }
+        
+        // 웨이브 전진
+        const targetX = startPos.x + direction * length * 100;
+        gsap.to(waveContainer, {
+            x: targetX,
+            duration: 0.4,
+            ease: 'power2.out'
+        });
+        gsap.to(waveContainer.scale, {
+            x: 2.5,
+            y: 1.5,
+            duration: 0.4,
+            ease: 'power2.out'
+        });
+        gsap.to(waveContainer, {
+            alpha: 0,
+            duration: 0.5,
+            delay: 0.1,
+            onComplete: () => {
+                this.app.stage.removeChild(waveContainer);
+                waveContainer.destroy({ children: true });
+            }
+        });
+        
+        // 화면 효과
+        if (typeof CombatEffects !== 'undefined') {
+            CombatEffects.screenShake(8, 200);
+            CombatEffects.screenFlash('#4488ff', 150, 0.3);
+        }
+        
+        // 사운드
+        if (typeof SoundSystem !== 'undefined') {
+            SoundSystem.play('water', 0.5);
+        }
+    },
+    
     async heroRangedAnimation(hero, target, damage, options = {}) {
         console.log('[Game] heroRangedAnimation - options:', options, '| createZone:', options.createZone, '| projectileType:', options.projectileType);
         
@@ -2818,11 +2971,25 @@ const Game = {
             // ★★★ 번개 공격! (원거리지만 특별 처리) ★★★
             if (cardId === 'lightning') {
                 console.log(`[Game] ⚡ 번개 공격! damage=${cardDef.damage}`);
-                await UnitCombat.lightningAttack(hero, targetEnemy, cardDef.damage, { 
+                
+                // ★ 물 영역 콤보 체크
+                let bonusDamage = 0;
+                if (typeof GridAOE !== 'undefined') {
+                    bonusDamage = GridAOE.checkLightningCombo(targetEnemy.gridX, targetEnemy.gridZ);
+                }
+                
+                await UnitCombat.lightningAttack(hero, targetEnemy, cardDef.damage + bonusDamage, { 
                     chainReduction: cardDef.chainDamageReduction || 2,
                     isEnemy: false
                 });
                 return; // 번개는 여기서 완료!
+            }
+            
+            // ★★★ 워터웨이브! (근접이지만 라인 공격) ★★★
+            if (cardId === 'waterWave' || cardId === 'tidalCrash') {
+                console.log(`[Game] 🌊 워터웨이브! damage=${cardDef.damage}, knockback=${cardDef.knockback}`);
+                await this.executeWaterWave(hero, targetEnemy, cardDef);
+                return;
             }
             
             // ★ 스피어 투척 (거리 보너스가 있는 원거리 공격, 다른 레인 타겟 가능!)

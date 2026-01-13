@@ -20,8 +20,23 @@ const ShieldSystem = {
     addShield(unit, amount, duration = 1) {
         if (!unit || amount <= 0) return;
         
+        // ★ 물 영역 효과: 쉴드 생성량 감소
+        let finalAmount = amount;
+        if (typeof GridAOE !== 'undefined' && unit.gridX !== undefined) {
+            const reduction = GridAOE.getShieldReduction(unit.gridX, unit.gridZ);
+            if (reduction > 0) {
+                finalAmount = Math.max(0, amount - reduction);
+                console.log(`[ShieldSystem] 물 영역 효과: ${amount} → ${finalAmount} (−${reduction})`);
+            }
+        }
+        
+        if (finalAmount <= 0) {
+            console.log(`[ShieldSystem] 물 영역에서 쉴드 생성 무효화됨`);
+            return;
+        }
+        
         const prevBlock = this.getShield(unit);
-        const newBlock = prevBlock + amount;
+        const newBlock = prevBlock + finalAmount;
         
         // 쉴드 설정
         this.setShield(unit, newBlock);
@@ -37,10 +52,10 @@ const ShieldSystem = {
         // 글로우 효과 추가
         if (typeof CombatEffects !== 'undefined') {
             CombatEffects.addShieldGlow(unit);
-            CombatEffects.showBlockGain(unit, amount);
+            CombatEffects.showBlockGain(unit, finalAmount);
         }
         
-        console.log(`[ShieldSystem] ${this.getUnitName(unit)}: +${amount} 쉴드 (총 ${newBlock})`);
+        console.log(`[ShieldSystem] ${this.getUnitName(unit)}: +${finalAmount} 쉴드 (총 ${newBlock})`);
     },
     
     // ==========================================
