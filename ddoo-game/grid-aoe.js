@@ -78,7 +78,30 @@ const GridAOE = {
             applyOnEnter: true,
             applyOnTurnStart: false,
             animation: 'lightning'
+        },
+        water: {
+            name: '물 지대',
+            color: 0x4488ff,
+            particleColor: 0x88ccff,
+            damage: 0,
+            duration: 3,
+            applyOnEnter: false,
+            applyOnTurnStart: false,
+            animation: 'water',
+            sound: 'water',
+            // 물 영역 특수 효과
+            shieldReduction: 2,       // 쉴드 생성량 감소
+            lightningBonus: 5,        // 번개 콤보 추가 데미지
+            cancelsElement: 'fire'    // 상쇄하는 원소
         }
+    },
+    
+    // ==========================================
+    // 원소 상쇄 규칙
+    // ==========================================
+    elementCounters: {
+        water: 'fire',    // 물은 불을 상쇄
+        fire: 'water',    // 불은 물을 상쇄
     },
     
     // ==========================================
@@ -117,6 +140,18 @@ const GridAOE = {
         
         // Merge with custom options
         const options = { ...zoneDef, ...customOptions };
+        
+        // ★ 원소 상쇄 체크
+        const counterElement = this.elementCounters[type];
+        if (counterElement) {
+            const oppositeZone = this.zones.find(z => z.gridX === gridX && z.gridZ === gridZ && z.type === counterElement);
+            if (oppositeZone) {
+                console.log(`[GridAOE] 원소 상쇄! ${type} vs ${counterElement} at (${gridX}, ${gridZ})`);
+                this.showElementCancelEffect(gridX, gridZ, type, counterElement);
+                this.removeZone(oppositeZone);
+                return null; // 새 영역도 생성 안 함
+            }
+        }
         
         // Check if zone already exists at this position
         const existingZone = this.zones.find(z => z.gridX === gridX && z.gridZ === gridZ && z.type === type);
@@ -171,6 +206,8 @@ const GridAOE = {
         // Type-specific visual creation
         if (zone.type === 'fire') {
             this.createFireZoneVisual(zone, zoneContainer);
+        } else if (zone.type === 'water') {
+            this.createWaterZoneVisual(zone, zoneContainer);
         } else {
             // Default base glow for other types
             const baseGlow = new PIXI.Graphics();
@@ -356,6 +393,414 @@ const GridAOE = {
         // 애니메이션 시작 시간 저장
         // ========================================
         zone._animTime = 0;
+    },
+    
+    // ==========================================
+    // 물 지대 전용 시각화 - 물결 + 물방울 시스템
+    // ==========================================
+    createWaterZoneVisual(zone, container) {
+        const cellSize = this.getApproxCellSize();
+        const size = Math.max(cellSize * 1.2, 120);
+        zone.zoneSize = size;
+        
+        // ========================================
+        // Layer 1: 바닥 물웅덩이 (젖은 바닥)
+        // ========================================
+        const puddle = new PIXI.Graphics();
+        // 외곽 (어두운 물)
+        puddle.beginFill(0x1a3366, 0.5);
+        puddle.drawEllipse(0, 8, size * 0.75, size * 0.35);
+        puddle.endFill();
+        // 내부 (밝은 물)
+        puddle.beginFill(0x4488cc, 0.4);
+        puddle.drawEllipse(0, 5, size * 0.6, size * 0.28);
+        puddle.endFill();
+        // 하이라이트
+        puddle.beginFill(0x88ccff, 0.25);
+        puddle.drawEllipse(-size * 0.15, 2, size * 0.25, size * 0.12);
+        puddle.endFill();
+        container.addChild(puddle);
+        zone.puddle = puddle;
+        
+        // ========================================
+        // Layer 2: 물결 링 (동심원 확산)
+        // ========================================
+        const rippleContainer = new PIXI.Container();
+        container.addChild(rippleContainer);
+        zone.rippleContainer = rippleContainer;
+        zone.ripples = [];
+        
+        // 초기 물결 생성
+        for (let i = 0; i < 3; i++) {
+            this.spawnWaterRipple(zone, i * 0.3);
+        }
+        
+        // ========================================
+        // Layer 3: 물방울 파티클
+        // ========================================
+        const dropletContainer = new PIXI.Container();
+        container.addChild(dropletContainer);
+        zone.dropletContainer = dropletContainer;
+        zone.droplets = [];
+        
+        // 초기 물방울 (15개)
+        for (let i = 0; i < 15; i++) {
+            this.spawnWaterDroplet(zone);
+        }
+        
+        // ========================================
+        // Layer 4: 수면 반사광
+        // ========================================
+        const shimmerContainer = new PIXI.Container();
+        container.addChild(shimmerContainer);
+        zone.shimmerContainer = shimmerContainer;
+        zone.shimmers = [];
+        
+        // 반사광 점들
+        for (let i = 0; i < 5; i++) {
+            const shimmer = new PIXI.Graphics();
+            const shimmerSize = 3 + Math.random() * 4;
+            shimmer.beginFill(0xffffff, 0.6);
+            shimmer.drawCircle(0, 0, shimmerSize);
+            shimmer.endFill();
+            
+            shimmer.x = (Math.random() - 0.5) * size * 0.5;
+            shimmer.y = (Math.random() - 0.5) * size * 0.25;
+            shimmer._phase = Math.random() * Math.PI * 2;
+            shimmer._baseAlpha = 0.3 + Math.random() * 0.4;
+            
+            shimmerContainer.addChild(shimmer);
+            zone.shimmers.push(shimmer);
+        }
+        
+        // ========================================
+        // Layer 5: 물 아이콘 (중앙)
+        // ========================================
+        const iconText = new PIXI.Text('💧', {
+            fontSize: 24,
+            fill: 0xffffff
+        });
+        iconText.anchor.set(0.5);
+        iconText.y = -5;
+        iconText.alpha = 0.6;
+        container.addChild(iconText);
+        zone.icon = iconText;
+        
+        zone._animTime = 0;
+    },
+    
+    // ==========================================
+    // 물결 링 생성
+    // ==========================================
+    spawnWaterRipple(zone, delay = 0) {
+        if (!zone.rippleContainer) return;
+        
+        const zoneSize = zone.zoneSize || 100;
+        const ripple = new PIXI.Graphics();
+        
+        // 타원형 링
+        ripple.lineStyle(2, 0x88ccff, 0.6);
+        ripple.drawEllipse(0, 0, 10, 6);
+        
+        ripple._scale = 0.1;
+        ripple._alpha = 0.8;
+        ripple._maxScale = (0.6 + Math.random() * 0.3) * (zoneSize / 100);
+        ripple._delay = delay;
+        ripple.scale.set(ripple._scale);
+        ripple.alpha = 0;
+        
+        zone.rippleContainer.addChild(ripple);
+        zone.ripples.push(ripple);
+    },
+    
+    // ==========================================
+    // 물방울 파티클 생성
+    // ==========================================
+    spawnWaterDroplet(zone) {
+        if (!zone.dropletContainer) return;
+        
+        const zoneSize = zone.zoneSize || 100;
+        const droplet = new PIXI.Container();
+        
+        // 글로우
+        const glow = new PIXI.Graphics();
+        const size = 2 + Math.random() * 4;
+        glow.beginFill(0x4488ff, 0.3);
+        glow.drawCircle(0, 0, size * 2);
+        glow.endFill();
+        droplet.addChild(glow);
+        
+        // 코어
+        const core = new PIXI.Graphics();
+        core.beginFill(0x88ccff, 0.7);
+        core.drawCircle(0, 0, size);
+        core.endFill();
+        droplet.addChild(core);
+        
+        // 하이라이트
+        const highlight = new PIXI.Graphics();
+        highlight.beginFill(0xffffff, 0.8);
+        highlight.drawCircle(-size * 0.3, -size * 0.3, size * 0.3);
+        highlight.endFill();
+        droplet.addChild(highlight);
+        
+        // 위치 (수면 위에서 시작)
+        const angle = Math.random() * Math.PI * 2;
+        const dist = Math.random() * zoneSize * 0.4;
+        droplet.x = Math.cos(angle) * dist;
+        droplet.y = Math.sin(angle) * dist * 0.5 - 10 - Math.random() * 30;
+        
+        // 속성 (포물선 운동)
+        droplet._vx = (Math.random() - 0.5) * 1;
+        droplet._vy = 1 + Math.random() * 2;
+        droplet._gravity = 0.15;
+        droplet._groundY = Math.sin(angle) * dist * 0.5 + 5;
+        droplet._bounced = false;
+        droplet._life = 1;
+        droplet._baseSize = size;
+        
+        zone.dropletContainer.addChild(droplet);
+        zone.droplets.push(droplet);
+    },
+    
+    // ==========================================
+    // 물 지대 애니메이션 업데이트
+    // ==========================================
+    updateWaterZone(zone, delta) {
+        const t = zone.animationTime;
+        zone._animTime = (zone._animTime || 0) + delta;
+        
+        // ========================================
+        // 1. 물웅덩이 펄스
+        // ========================================
+        if (zone.puddle) {
+            const pulse = 1 + Math.sin(t * 2) * 0.03;
+            zone.puddle.scale.set(pulse, pulse * 0.8);
+            zone.puddle.alpha = 0.4 + Math.sin(t * 1.5) * 0.1;
+        }
+        
+        // ========================================
+        // 2. 물결 링 확산
+        // ========================================
+        if (zone.ripples) {
+            const toRemove = [];
+            
+            for (const ripple of zone.ripples) {
+                if (ripple._delay > 0) {
+                    ripple._delay -= delta;
+                    continue;
+                }
+                
+                ripple._scale += delta * 0.4;
+                ripple._alpha -= delta * 0.3;
+                
+                ripple.scale.set(ripple._scale);
+                ripple.alpha = Math.max(0, ripple._alpha);
+                
+                if (ripple._scale > ripple._maxScale || ripple._alpha <= 0) {
+                    toRemove.push(ripple);
+                }
+            }
+            
+            for (const r of toRemove) {
+                const idx = zone.ripples.indexOf(r);
+                if (idx > -1) zone.ripples.splice(idx, 1);
+                zone.rippleContainer.removeChild(r);
+                try { r.destroy(); } catch(e) {}
+                
+                // 새 물결 생성
+                this.spawnWaterRipple(zone);
+            }
+        }
+        
+        // ========================================
+        // 3. 물방울 포물선 운동
+        // ========================================
+        if (zone.droplets) {
+            const toRemove = [];
+            
+            for (const droplet of zone.droplets) {
+                droplet.x += droplet._vx;
+                droplet._vy += droplet._gravity;
+                droplet.y += droplet._vy;
+                
+                // 수면에 닿으면 튀김
+                if (!droplet._bounced && droplet.y >= droplet._groundY) {
+                    droplet._bounced = true;
+                    droplet._vy = -droplet._vy * 0.3;
+                    droplet._vx *= 0.5;
+                    
+                    // 작은 물결 생성
+                    if (zone.rippleContainer) {
+                        const splash = new PIXI.Graphics();
+                        splash.lineStyle(1, 0x88ccff, 0.5);
+                        splash.drawEllipse(0, 0, 5, 3);
+                        splash.x = droplet.x;
+                        splash.y = droplet._groundY;
+                        splash._scale = 0.5;
+                        splash._alpha = 0.5;
+                        splash._maxScale = 1.5;
+                        zone.rippleContainer.addChild(splash);
+                        zone.ripples.push(splash);
+                    }
+                }
+                
+                // 두 번째 바운스 후 소멸
+                if (droplet._bounced && droplet.y > droplet._groundY + 5) {
+                    droplet._life -= delta * 2;
+                    droplet.alpha = droplet._life;
+                }
+                
+                if (droplet._life <= 0) {
+                    toRemove.push(droplet);
+                }
+            }
+            
+            for (const d of toRemove) {
+                const idx = zone.droplets.indexOf(d);
+                if (idx > -1) zone.droplets.splice(idx, 1);
+                zone.dropletContainer.removeChild(d);
+                try { d.destroy({ children: true }); } catch(e) {}
+                
+                // 새 물방울 생성
+                this.spawnWaterDroplet(zone);
+            }
+            
+            // 추가 물방울 (확률적)
+            if (Math.random() < 0.03) {
+                this.spawnWaterDroplet(zone);
+            }
+        }
+        
+        // ========================================
+        // 4. 반사광 깜빡임
+        // ========================================
+        if (zone.shimmers) {
+            for (const shimmer of zone.shimmers) {
+                shimmer._phase += delta * (3 + Math.random());
+                shimmer.alpha = shimmer._baseAlpha * (0.5 + Math.sin(shimmer._phase) * 0.5);
+                shimmer.scale.set(0.8 + Math.sin(shimmer._phase * 1.5) * 0.3);
+            }
+        }
+        
+        // ========================================
+        // 5. 아이콘 부유
+        // ========================================
+        if (zone.icon) {
+            zone.icon.y = -5 + Math.sin(t * 2) * 3;
+            zone.icon.alpha = 0.5 + Math.sin(t * 3) * 0.1;
+        }
+    },
+    
+    // ==========================================
+    // 원소 상쇄 이펙트
+    // ==========================================
+    showElementCancelEffect(gridX, gridZ, type1, type2) {
+        const pos = this.game.getCellCenter(gridX, gridZ);
+        if (!pos) return;
+        
+        // 화면 효과
+        if (typeof CombatEffects !== 'undefined') {
+            CombatEffects.screenFlash('#ffffff', 200, 0.5);
+            CombatEffects.screenShake(8, 200);
+        }
+        
+        // 원소 충돌 파티클
+        const colors = {
+            fire: [0xff4400, 0xff8800],
+            water: [0x4488ff, 0x88ccff]
+        };
+        
+        const color1 = colors[type1] || [0xffffff];
+        const color2 = colors[type2] || [0xffffff];
+        
+        // 폭발 파티클
+        for (let i = 0; i < 20; i++) {
+            const particle = new PIXI.Graphics();
+            const color = i % 2 === 0 ? color1[i % color1.length] : color2[i % color2.length];
+            const size = 4 + Math.random() * 6;
+            
+            particle.beginFill(color, 0.9);
+            particle.drawCircle(0, 0, size);
+            particle.endFill();
+            
+            particle.x = pos.x;
+            particle.y = pos.y;
+            this.app.stage.addChild(particle);
+            
+            const angle = (Math.PI * 2 * i) / 20 + Math.random() * 0.3;
+            const distance = 60 + Math.random() * 40;
+            
+            gsap.to(particle, {
+                x: pos.x + Math.cos(angle) * distance,
+                y: pos.y + Math.sin(angle) * distance * 0.5 - 20,
+                alpha: 0,
+                duration: 0.5 + Math.random() * 0.3,
+                ease: 'power2.out',
+                onComplete: () => {
+                    this.app.stage.removeChild(particle);
+                    particle.destroy();
+                }
+            });
+        }
+        
+        // "상쇄!" 텍스트
+        const cancelText = new PIXI.Text('💥 상쇄!', {
+            fontSize: 20,
+            fontWeight: 'bold',
+            fill: 0xffffff,
+            stroke: 0x000000,
+            strokeThickness: 3
+        });
+        cancelText.anchor.set(0.5);
+        cancelText.x = pos.x;
+        cancelText.y = pos.y - 30;
+        this.app.stage.addChild(cancelText);
+        
+        gsap.to(cancelText, {
+            y: pos.y - 80,
+            alpha: 0,
+            duration: 1,
+            ease: 'power2.out',
+            onComplete: () => {
+                this.app.stage.removeChild(cancelText);
+                cancelText.destroy();
+            }
+        });
+        
+        // 증기 효과 (불+물)
+        if ((type1 === 'fire' && type2 === 'water') || (type1 === 'water' && type2 === 'fire')) {
+            for (let i = 0; i < 8; i++) {
+                const steam = new PIXI.Graphics();
+                steam.beginFill(0xcccccc, 0.4);
+                steam.drawCircle(0, 0, 10 + Math.random() * 10);
+                steam.endFill();
+                
+                steam.x = pos.x + (Math.random() - 0.5) * 40;
+                steam.y = pos.y;
+                this.app.stage.addChild(steam);
+                
+                gsap.to(steam, {
+                    y: pos.y - 60 - Math.random() * 40,
+                    alpha: 0,
+                    duration: 1 + Math.random() * 0.5,
+                    ease: 'power1.out',
+                    onComplete: () => {
+                        this.app.stage.removeChild(steam);
+                        steam.destroy();
+                    }
+                });
+                
+                gsap.to(steam.scale, {
+                    x: 2,
+                    y: 2,
+                    duration: 1,
+                    ease: 'power1.out'
+                });
+            }
+        }
+        
+        console.log(`[GridAOE] 원소 상쇄 이펙트: ${type1} vs ${type2}`);
     },
     
     // ==========================================
@@ -776,6 +1221,8 @@ const GridAOE = {
             // Type-specific animations
             if (zone.type === 'fire') {
                 this.updateFireZone(zone, delta);
+            } else if (zone.type === 'water') {
+                this.updateWaterZone(zone, delta);
             } else {
                 // Default animation for other types
                 if (zone.baseGlow) {
@@ -1330,6 +1777,181 @@ const GridAOE = {
     
     getZonesAt(gridX, gridZ) {
         return this.zones.filter(z => z.gridX === gridX && z.gridZ === gridZ);
+    },
+    
+    // ==========================================
+    // 물 영역 효과 - 쉴드 생성량 감소 계산
+    // ==========================================
+    getShieldReduction(gridX, gridZ) {
+        const waterZone = this.zones.find(z => 
+            z.gridX === gridX && z.gridZ === gridZ && z.type === 'water'
+        );
+        if (waterZone && waterZone.options.shieldReduction) {
+            return waterZone.options.shieldReduction;
+        }
+        return 0;
+    },
+    
+    // ==========================================
+    // 번개 콤보 체크 - 물 영역에서 번개 추가 데미지
+    // ==========================================
+    checkLightningCombo(gridX, gridZ) {
+        const waterZone = this.zones.find(z => 
+            z.gridX === gridX && z.gridZ === gridZ && z.type === 'water'
+        );
+        if (waterZone && waterZone.options.lightningBonus) {
+            console.log(`[GridAOE] 번개 콤보! 물 영역에서 추가 ${waterZone.options.lightningBonus} 데미지`);
+            
+            // 번개+물 이펙트
+            this.showLightningWaterCombo(gridX, gridZ);
+            
+            const bonusDamage = waterZone.options.lightningBonus;
+            
+            // 물 영역 제거
+            this.removeZone(waterZone);
+            
+            return bonusDamage;
+        }
+        return 0;
+    },
+    
+    // ==========================================
+    // 번개+물 콤보 이펙트
+    // ==========================================
+    showLightningWaterCombo(gridX, gridZ) {
+        const pos = this.game.getCellCenter(gridX, gridZ);
+        if (!pos) return;
+        
+        // 화면 효과
+        if (typeof CombatEffects !== 'undefined') {
+            CombatEffects.screenFlash('#88ffff', 300, 0.6);
+            CombatEffects.screenShake(15, 300);
+        }
+        
+        // 전기 스파크 + 물방울 폭발
+        for (let i = 0; i < 25; i++) {
+            const particle = new PIXI.Graphics();
+            const isElectric = i % 3 === 0;
+            
+            if (isElectric) {
+                // 전기 스파크
+                particle.beginFill(0xffff88, 0.9);
+                particle.drawCircle(0, 0, 3 + Math.random() * 4);
+                particle.endFill();
+            } else {
+                // 전기 충격 받은 물방울
+                particle.beginFill(0x88ffff, 0.8);
+                particle.drawCircle(0, 0, 2 + Math.random() * 3);
+                particle.endFill();
+            }
+            
+            particle.x = pos.x;
+            particle.y = pos.y;
+            this.app.stage.addChild(particle);
+            
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 50 + Math.random() * 60;
+            
+            gsap.to(particle, {
+                x: pos.x + Math.cos(angle) * distance,
+                y: pos.y + Math.sin(angle) * distance * 0.5 - 30,
+                alpha: 0,
+                duration: 0.4 + Math.random() * 0.3,
+                ease: 'power2.out',
+                onComplete: () => {
+                    this.app.stage.removeChild(particle);
+                    particle.destroy();
+                }
+            });
+        }
+        
+        // 전기 아크 선
+        for (let i = 0; i < 5; i++) {
+            const arc = new PIXI.Graphics();
+            arc.lineStyle(2, 0xffff44, 0.8);
+            
+            const startAngle = Math.random() * Math.PI * 2;
+            const endAngle = startAngle + Math.PI * (0.3 + Math.random() * 0.4);
+            const radius = 30 + Math.random() * 30;
+            
+            arc.moveTo(
+                Math.cos(startAngle) * radius,
+                Math.sin(startAngle) * radius * 0.5
+            );
+            
+            // 지그재그 라인
+            const segments = 3 + Math.floor(Math.random() * 3);
+            for (let j = 1; j <= segments; j++) {
+                const t = j / segments;
+                const midAngle = startAngle + (endAngle - startAngle) * t;
+                const jitter = (Math.random() - 0.5) * 20;
+                arc.lineTo(
+                    Math.cos(midAngle) * radius + jitter,
+                    Math.sin(midAngle) * radius * 0.5 + jitter * 0.5
+                );
+            }
+            
+            arc.x = pos.x;
+            arc.y = pos.y;
+            this.app.stage.addChild(arc);
+            
+            gsap.to(arc, {
+                alpha: 0,
+                duration: 0.2 + Math.random() * 0.1,
+                onComplete: () => {
+                    this.app.stage.removeChild(arc);
+                    arc.destroy();
+                }
+            });
+        }
+        
+        // "감전!" 텍스트
+        const shockText = new PIXI.Text('⚡ 감전!', {
+            fontSize: 22,
+            fontWeight: 'bold',
+            fill: 0xffff00,
+            stroke: 0x0044aa,
+            strokeThickness: 4
+        });
+        shockText.anchor.set(0.5);
+        shockText.x = pos.x;
+        shockText.y = pos.y - 40;
+        this.app.stage.addChild(shockText);
+        
+        gsap.to(shockText, {
+            y: pos.y - 100,
+            alpha: 0,
+            duration: 1,
+            ease: 'power2.out',
+            onComplete: () => {
+                this.app.stage.removeChild(shockText);
+                shockText.destroy();
+            }
+        });
+    },
+    
+    // ==========================================
+    // 유닛이 물 영역에 있는지 확인
+    // ==========================================
+    isInWaterZone(unit) {
+        if (!unit || unit.gridX === undefined) return false;
+        return this.hasZoneAt(unit.gridX, unit.gridZ, 'water');
+    },
+    
+    // ==========================================
+    // 워터웨이브 생성 (3칸 라인)
+    // ==========================================
+    createWaterWaveLine(startX, gridZ, direction = 1, length = 3) {
+        const zones = [];
+        for (let i = 0; i < length; i++) {
+            const x = startX + (i * direction);
+            // 그리드 범위 체크
+            if (x >= 0 && x < 10) {
+                const zone = this.createZone('water', x, gridZ);
+                if (zone) zones.push(zone);
+            }
+        }
+        return zones;
     }
 };
 
