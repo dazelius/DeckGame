@@ -396,6 +396,11 @@ const CardDrag = {
                 this.game.executeCardOnTarget(cardId, handIndex, targetEnemy);
                 return true;
             } else if (dragDist > 100) {
+                // ★ frontOnly 카드는 반드시 유효한 타겟이 필요!
+                if (cardDef.frontOnly) {
+                    console.log(`[CardDrag] ${cardId}: frontOnly 카드는 최전방 타겟이 필요합니다`);
+                    return false;
+                }
                 this.game.executeCard(cardId, handIndex);
                 return true;
             }

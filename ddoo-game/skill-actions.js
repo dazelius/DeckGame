@@ -16,10 +16,25 @@ const SkillActions = {
     config: {
         animPath: 'anim/',           // JSON 파일 경로
         vfxPath: 'vfx/',             // ★ VFX 파일 경로
-        defaultDashDuration: 0.12,   // 대쉬 시간
-        defaultHitDuration: 0.04,    // 타격 시간
-        defaultReturnDuration: 0.15, // 복귀 시간
         debug: false
+    },
+    
+    // ★ AnimConfig에서 타이밍 가져오기
+    getTiming(path, defaultVal) {
+        if (typeof AnimConfig !== 'undefined') {
+            return AnimConfig.get(path) ?? defaultVal;
+        }
+        return defaultVal;
+    },
+    
+    get defaultDashDuration() {
+        return this.getTiming('dash.move', 0.35);
+    },
+    get defaultHitDuration() {
+        return this.getTiming('attack.stab.duration', 0.08);
+    },
+    get defaultReturnDuration() {
+        return this.getTiming('return.duration', 0.25);
     },
     
     // ==========================================
@@ -371,15 +386,15 @@ const SkillActions = {
             const tl = gsap.timeline({ onComplete: resolve, onInterrupt: resolve });
             
             // 웅크리기 (준비)
-            tl.to(container, { x: startPos.x - 15, duration: 0.08, ease: 'power2.in' });
-            tl.to(sprite.scale, { x: baseScale * 0.85, y: baseScale * 1.15, duration: 0.08 }, '<');
+            tl.to(container, { x: startPos.x - 15, duration: 0.1, ease: 'power2.in' });
+            tl.to(sprite.scale, { x: baseScale * 0.85, y: baseScale * 1.15, duration: 0.1 }, '<');
             
-            // 대쉬!
-            tl.to(container, { x: targetX, y: targetY, duration: duration, ease: 'power4.out' });
-            tl.to(sprite.scale, { x: baseScale * 1.1, y: baseScale * 0.9, duration: duration }, '<');
+            // 대쉬! (가속감 있게)
+            tl.to(container, { x: targetX, y: targetY, duration: duration, ease: 'power2.inOut' });
+            tl.to(sprite.scale, { x: baseScale * 1.1, y: baseScale * 0.9, duration: duration, ease: 'power2.inOut' }, '<');
             
             // 착지
-            tl.to(sprite.scale, { x: baseScale, y: baseScale, duration: 0.08, ease: 'power2.out' });
+            tl.to(sprite.scale, { x: baseScale, y: baseScale, duration: 0.1, ease: 'power2.out' });
         });
     },
     
@@ -416,19 +431,21 @@ const SkillActions = {
         
         console.log(`[DashToTarget] 웅크리기 완료, x: ${container.x}`);
         
-        // 2. 대쉬! (빠르게 전진)
+        // 2. 대쉬! (가속감 있게 전진)
+        const dashEase = this.getTiming('dash.ease', 'power2.inOut');
         await new Promise(resolve => {
             gsap.to(container, { 
                 x: targetX, 
                 y: targetY, 
                 duration: duration, 
-                ease: 'power4.out',
+                ease: dashEase,
                 onComplete: resolve
             });
             gsap.to(sprite.scale, { 
                 x: baseScale * 1.15, 
                 y: baseScale * 0.85, 
-                duration: duration
+                duration: duration,
+                ease: dashEase
             });
         });
         
@@ -600,17 +617,18 @@ const SkillActions = {
         console.log(`[Flurry] 웅크리기 완료, x: ${container.x}`);
         
         // 대쉬!
+        const flurryCfg = this.getTiming('skills.flurry', { dashDuration: 0.28, ease: 'power2.inOut' });
         await new Promise(resolve => {
             gsap.timeline({ onComplete: resolve })
-                .to(container, { x: attackX, y: targetY, duration: 0.12, ease: 'power4.out' })
-                .to(sprite.scale, { x: baseScale * 1.1, y: baseScale * 0.9, duration: 0.12 }, '<');
+                .to(container, { x: attackX, y: targetY, duration: flurryCfg.dashDuration, ease: flurryCfg.ease })
+                .to(sprite.scale, { x: baseScale * 1.1, y: baseScale * 0.9, duration: flurryCfg.dashDuration }, '<');
         });
         
         console.log(`[Flurry] 대쉬 완료, x: ${container.x}`);
         
         // 착지
         await new Promise(resolve => {
-            gsap.to(sprite.scale, { x: baseScale, y: baseScale, duration: 0.05, onComplete: resolve });
+            gsap.to(sprite.scale, { x: baseScale, y: baseScale, duration: 0.08, onComplete: resolve });
         });
         
         // ========================================
@@ -633,11 +651,12 @@ const SkillActions = {
             const currentX = container.x;
             
             // 찌르기 모션
+            const stabCfg = this.getTiming('attack.stab', { duration: 0.08, ease: 'power2.out' });
             await new Promise(resolve => {
                 gsap.timeline({ onComplete: resolve })
-                    .to(container, { x: currentX + stab.x, duration: 0.04, ease: 'power2.out' })
-                    .to(sprite, { rotation: stab.rotation, duration: 0.04 }, '<')
-                    .to(sprite.scale, { x: baseScale * 1.05, y: baseScale * 0.95, duration: 0.04 }, '<');
+                    .to(container, { x: currentX + stab.x, duration: stabCfg.duration, ease: stabCfg.ease })
+                    .to(sprite, { rotation: stab.rotation, duration: stabCfg.duration }, '<')
+                    .to(sprite.scale, { x: baseScale * 1.05, y: baseScale * 0.95, duration: stabCfg.duration }, '<');
             });
             
             // ★ VFX: CombatEffects 사용!

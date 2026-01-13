@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎬 Animation Studio - DDOO Game</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-panel: #12121a;
+            --bg-card: #1a1a25;
+            --accent: #ff6b35;
+            --accent-glow: rgba(255, 107, 53, 0.3);
+            --text: #e8e8e8;
+            --text-dim: #888;
+            --border: #2a2a3a;
+            --success: #4ade80;
+            --danger: #f87171;
+            --info: #60a5fa;
+        }
+        
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        .app {
+            display: grid;
+            grid-template-columns: 320px 1fr 300px;
+            grid-template-rows: 60px 1fr;
+            height: 100vh;
+            gap: 1px;
+            background: var(--border);
+        }
+        
+        /* 헤더 */
+        .header {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, var(--bg-panel), #1a1a28);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .header h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), #ffd700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        /* 왼쪽 패널 - 컨트롤 */
+        .left-panel {
+            background: var(--bg-panel);
+            overflow-y: auto;
+            padding: 16px;
+        }
+        
+        .panel-section {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border);
+        }
+        
+        .panel-section h3 {
+            font-size: 0.9rem;
+            color: var(--accent);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .form-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .form-row label {
+            width: 80px;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+        
+        .form-row input, .form-row select {
+            flex: 1;
+            padding: 8px 12px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 0.9rem;
+        }
+        
+        .form-row input:focus, .form-row select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px var(--accent-glow);
+        }
+        
+        .form-row input[type="range"] {
+            padding: 0;
+        }
+        
+        .range-value {
+            width: 50px;
+            text-align: right;
+            font-size: 0.85rem;
+            color: var(--info);
+        }
+        
+        /* 버튼 */
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #ff8c5a);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px var(--accent-glow);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--bg-panel);
+            border-color: var(--accent);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #ef4444);
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), #22c55e);
+            color: white;
+        }
+        
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 0.8rem;
+        }
+        
+        .btn-block {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        /* 메인 캔버스 영역 */
+        .main-area {
+            background: var(--bg-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        #canvas-container {
+            position: relative;
+        }
+        
+        #game-canvas {
+            border-radius: 12px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.5);
+        }
+        
+        /* 오른쪽 패널 - 로그 & 프리셋 */
+        .right-panel {
+            background: var(--bg-panel);
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* 액션 그리드 */
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        
+        /* 프리셋 리스트 */
+        .preset-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .preset-item {
+            padding: 10px 12px;
+            background: var(--bg-dark);
+            border-radius: 6px;
+            margin-bottom: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .preset-item:hover {
+            background: var(--bg-card);
+            border-left: 3px solid var(--accent);
+        }
+        
+        .preset-item .name {
+            font-size: 0.9rem;
+        }
+        
+        .preset-item .type {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            background: var(--bg-panel);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        
+        /* 로그 영역 */
+        .log-area {
+            flex: 1;
+            background: var(--bg-dark);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.8rem;
+            overflow-y: auto;
+            max-height: 300px;
+        }
+        
+        .log-entry {
+            padding: 4px 0;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-dim);
+        }
+        
+        .log-entry.info { color: var(--info); }
+        .log-entry.success { color: var(--success); }
+        .log-entry.error { color: var(--danger); }
+        .log-entry.action { color: var(--accent); }
+        
+        /* 유닛 선택 */
+        .unit-selector {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .unit-chip {
+            padding: 8px 14px;
+            background: var(--bg-dark);
+            border: 2px solid var(--border);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+        }
+        
+        .unit-chip:hover {
+            border-color: var(--accent);
+        }
+        
+        .unit-chip.selected {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+        
+        /* 타임라인 프리뷰 */
+        .timeline {
+            background: var(--bg-dark);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+        }
+        
+        .timeline-bar {
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .timeline-progress {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--success));
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.1s;
+        }
+        
+        .timeline-markers {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 6px;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+        
+        /* 툴팁 */
+        .tooltip {
+            position: absolute;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            pointer-events: none;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        
+        /* 로딩 */
+        .loading {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-dark);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            margin-top: 16px;
+            color: var(--text-dim);
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading Animation Studio...</div>
+    </div>
+    
+    <div class="app">
+        <!-- 헤더 -->
+        <header class="header">
+            <h1>🎬 Animation Studio</h1>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="AnimStudio.reset()">🔄 Reset</button>
+                <button class="btn btn-primary" onclick="AnimStudio.exportConfig()">💾 Export</button>
+            </div>
+        </header>
+        
+        <!-- 왼쪽 패널 -->
+        <aside class="left-panel">
+            <!-- 유닛 스폰 -->
+            <div class="panel-section">
+                <h3>👤 Units</h3>
+                <div class="form-row">
+                    <label>Player</label>
+                    <select id="player-sprite">
+                        <option value="hero.png">Hero</option>
+                        <option value="knight.png">Knight</option>
+                        <option value="archer.png">Archer</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label>Enemy</label>
+                    <select id="enemy-sprite">
+                        <option value="goblin.png">Goblin</option>
+                        <option value="goblinshield.png">Goblin Shield</option>
+                        <option value="orc.png">Orc</option>
+                        <option value="skeleton.png">Skeleton</option>
+                        <option value="slime.png">Slime</option>
+                    </select>
+                </div>
+                <div class="action-grid">
+                    <button class="btn btn-secondary btn-sm" onclick="AnimStudio.spawnPlayer()">+ Player</button>
+                    <button class="btn btn-danger btn-sm" onclick="AnimStudio.spawnEnemy()">+ Enemy</button>
+                </div>
+            </div>
+            
+            <!-- 액션 선택 -->
+            <div class="panel-section">
+                <h3>⚔️ Actions</h3>
+                <div class="form-row">
+                    <label>Type</label>
+                    <select id="action-type" onchange="AnimStudio.onActionTypeChange()">
+                        <option value="dash">Dash To Target</option>
+                        <option value="attack">Attack Motion</option>
+                        <option value="hit">Hit Reaction</option>
+                        <option value="skill">Skill Animation</option>
+                        <option value="vfx">VFX Only</option>
+                    </select>
+                </div>
+                <div class="form-row" id="skill-select-row" style="display:none;">
+                    <label>Skill</label>
+                    <select id="skill-type">
+                        <option value="strike">Strike</option>
+                        <option value="bash">Bash</option>
+                        <option value="cleave">Cleave</option>
+                        <option value="flurry">Flurry</option>
+                    </select>
+                </div>
+                <div class="form-row" id="vfx-select-row" style="display:none;">
+                    <label>VFX</label>
+                    <select id="vfx-type">
+                        <option value="hit">Hit Spark</option>
+                        <option value="slash">Slash</option>
+                        <option value="fire">Fire</option>
+                        <option value="lightning">Lightning</option>
+                        <option value="heal">Heal</option>
+                        <option value="block">Block</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- 파라미터 -->
+            <div class="panel-section">
+                <h3>⚙️ Parameters</h3>
+                <div class="form-row">
+                    <label>Duration</label>
+                    <input type="range" id="param-duration" min="0.1" max="1.5" step="0.05" value="0.28" oninput="AnimStudio.updateParam('duration')">
+                    <span class="range-value" id="duration-val">0.28s</span>
+                </div>
+                <div class="form-row">
+                    <label>Ease</label>
+                    <select id="param-ease">
+                        <option value="power2.inOut">power2.inOut (가속→감속)</option>
+                        <option value="power2.in">power2.in (천천히→빠르게)</option>
+                        <option value="power2.out">power2.out (빠르게→천천히)</option>
+                        <option value="power4.out">power4.out (강한 감속)</option>
+                        <option value="back.out(1.5)">back.out (오버슈트)</option>
+                        <option value="elastic.out(1,0.3)">elastic (탄성)</option>
+                        <option value="linear">linear</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label>Distance</label>
+                    <input type="range" id="param-distance" min="50" max="300" step="10" value="150" oninput="AnimStudio.updateParam('distance')">
+                    <span class="range-value" id="distance-val">150px</span>
+                </div>
+                <div class="form-row">
+                    <label>Scale</label>
+                    <input type="range" id="param-scale" min="0.5" max="2" step="0.1" value="1" oninput="AnimStudio.updateParam('scale')">
+                    <span class="range-value" id="scale-val">1.0x</span>
+                </div>
+            </div>
+            
+            <!-- 실행 -->
+            <div class="panel-section">
+                <h3>▶️ Execute</h3>
+                <button class="btn btn-primary btn-block" onclick="AnimStudio.execute()">
+                    ▶️ Play Animation
+                </button>
+                <div class="timeline">
+                    <div class="timeline-bar">
+                        <div class="timeline-progress" id="timeline-progress"></div>
+                    </div>
+                    <div class="timeline-markers">
+                        <span>0s</span>
+                        <span id="timeline-total">0.5s</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- 메인 캔버스 -->
+        <main class="main-area">
+            <div id="canvas-container"></div>
+        </main>
+        
+        <!-- 오른쪽 패널 -->
+        <aside class="right-panel">
+            <!-- 프리셋 -->
+            <div class="panel-section">
+                <h3>📦 Presets</h3>
+                <div class="preset-list" id="preset-list">
+                    <div class="preset-item" onclick="AnimStudio.loadPreset('dashFast')">
+                        <span class="name">빠른 대시</span>
+                        <span class="type">Dash</span>
+                    </div>
+                    <div class="preset-item" onclick="AnimStudio.loadPreset('dashSmooth')">
+                        <span class="name">부드러운 대시</span>
+                        <span class="type">Dash</span>
+                    </div>
+                    <div class="preset-item" onclick="AnimStudio.loadPreset('heavyAttack')">
+                        <span class="name">강타</span>
+                        <span class="type">Attack</span>
+                    </div>
+                    <div class="preset-item" onclick="AnimStudio.loadPreset('quickStrike')">
+                        <span class="name">속공</span>
+                        <span class="type">Attack</span>
+                    </div>
+                    <div class="preset-item" onclick="AnimStudio.loadPreset('hitReact')">
+                        <span class="name">피격 반응</span>
+                        <span class="type">Hit</span>
+                    </div>
+                </div>
+                <button class="btn btn-secondary btn-sm btn-block" onclick="AnimStudio.savePreset()" style="margin-top:10px;">
+                    💾 Save Current as Preset
+                </button>
+            </div>
+            
+            <!-- 로그 -->
+            <div class="panel-section" style="flex:1; display:flex; flex-direction:column;">
+                <h3>📋 Log</h3>
+                <div class="log-area" id="log-area">
+                    <div class="log-entry info">[Studio] Ready</div>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="AnimStudio.clearLog()" style="margin-top:8px;">
+                    🗑️ Clear Log
+                </button>
+            </div>
+        </aside>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/8.0.0/pixi.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
+    <script>
+        // =====================================================
+        // Animation Studio - 연출 시뮬레이션 툴
+        // =====================================================
+        
+        const AnimStudio = {
+            app: null,
+            container: null,
+            player: null,
+            enemy: null,
+            isPlaying: false,
+            
+            // 프리셋
+            presets: {
+                dashFast: { duration: 0.15, ease: 'power4.out', distance: 150 },
+                dashSmooth: { duration: 0.35, ease: 'power2.inOut', distance: 150 },
+                heavyAttack: { duration: 0.4, ease: 'back.out(1.5)', distance: 120 },
+                quickStrike: { duration: 0.12, ease: 'power2.out', distance: 100 },
+                hitReact: { duration: 0.15, ease: 'elastic.out(1,0.3)', distance: 30 }
+            },
+            
+            // ==========================================
+            // 초기화
+            // ==========================================
+            async init() {
+                this.log('Initializing PIXI...', 'info');
+                
+                // PIXI 앱 생성
+                this.app = new PIXI.Application();
+                await this.app.init({
+                    width: 800,
+                    height: 500,
+                    backgroundColor: 0x1a1a2e,
+                    antialias: true
+                });
+                
+                document.getElementById('canvas-container').appendChild(this.app.canvas);
+                this.app.canvas.id = 'game-canvas';
+                
+                // 메인 컨테이너
+                this.container = new PIXI.Container();
+                this.container.sortableChildren = true;
+                this.app.stage.addChild(this.container);
+                
+                // 그리드 그리기
+                this.drawGrid();
+                
+                // 기본 유닛 스폰
+                await this.spawnPlayer();
+                await this.spawnEnemy();
+                
+                // 로딩 완료
+                document.getElementById('loading').style.display = 'none';
+                this.log('Studio ready!', 'success');
+            },
+            
+            // ==========================================
+            // 그리드 그리기
+            // ==========================================
+            drawGrid() {
+                const grid = new PIXI.Graphics();
+                
+                // 배경
+                grid.rect(0, 0, 800, 500);
+                grid.fill({ color: 0x0f0f18 });
+                
+                // 그리드 라인
+                grid.stroke({ width: 1, color: 0x2a2a3a, alpha: 0.5 });
+                for (let x = 0; x <= 800; x += 50) {
+                    grid.moveTo(x, 0);
+                    grid.lineTo(x, 500);
+                }
+                for (let y = 0; y <= 500; y += 50) {
+                    grid.moveTo(0, y);
+                    grid.lineTo(800, y);
+                }
+                grid.stroke();
+                
+                // 중앙선
+                grid.stroke({ width: 2, color: 0x444455 });
+                grid.moveTo(400, 0);
+                grid.lineTo(400, 500);
+                grid.stroke();
+                
+                // 바닥 라인
+                grid.stroke({ width: 3, color: 0x3a3a4a });
+                grid.moveTo(0, 380);
+                grid.lineTo(800, 380);
+                grid.stroke();
+                
+                this.container.addChild(grid);
+            },
+            
+            // ==========================================
+            // 유닛 스폰
+            // ==========================================
+            async spawnPlayer() {
+                if (this.player) {
+                    this.player.destroy();
+                }
+                
+                const spriteName = document.getElementById('player-sprite').value;
+                
+                try {
+                    const texture = await PIXI.Assets.load(`image/${spriteName}`);
+                    const sprite = new PIXI.Sprite(texture);
+                    sprite.anchor.set(0.5, 1);
+                    sprite.x = 200;
+                    sprite.y = 380;
+                    sprite.scale.set(0.4);
+                    sprite.zIndex = 10;
+                    
+                    // 컨테이너로 감싸기
+                    const container = new PIXI.Container();
+                    container.x = sprite.x;
+                    container.y = sprite.y;
+                    container.zIndex = 10;
+                    sprite.x = 0;
+                    sprite.y = 0;
+                    container.addChild(sprite);
+                    
+                    this.container.addChild(container);
+                    this.player = { container, sprite, baseScale: 0.4, baseX: 200, baseY: 380 };
+                    
+                    this.log(`Player spawned: ${spriteName}`, 'success');
+                } catch (e) {
+                    this.log(`Failed to load: ${spriteName}`, 'error');
+                    // 대체 원 생성
+                    const circle = new PIXI.Graphics();
+                    circle.circle(0, -40, 30);
+                    circle.fill({ color: 0x4488ff });
+                    
+                    const container = new PIXI.Container();
+                    container.x = 200;
+                    container.y = 380;
+                    container.zIndex = 10;
+                    container.addChild(circle);
+                    
+                    this.container.addChild(container);
+                    this.player = { container, sprite: circle, baseScale: 1, baseX: 200, baseY: 380 };
+                }
+            },
+            
+            async spawnEnemy() {
+                if (this.enemy) {
+                    this.enemy.destroy();
+                }
+                
+                const spriteName = document.getElementById('enemy-sprite').value;
+                
+                try {
+                    const texture = await PIXI.Assets.load(`image/${spriteName}`);
+                    const sprite = new PIXI.Sprite(texture);
+                    sprite.anchor.set(0.5, 1);
+                    sprite.x = 600;
+                    sprite.y = 380;
+                    sprite.scale.set(-0.4, 0.4);  // 좌우 반전
+                    sprite.zIndex = 10;
+                    
+                    // 컨테이너로 감싸기
+                    const container = new PIXI.Container();
+                    container.x = sprite.x;
+                    container.y = sprite.y;
+                    container.zIndex = 10;
+                    sprite.x = 0;
+                    sprite.y = 0;
+                    container.addChild(sprite);
+                    
+                    this.container.addChild(container);
+                    this.enemy = { container, sprite, baseScale: 0.4, baseX: 600, baseY: 380 };
+                    
+                    this.log(`Enemy spawned: ${spriteName}`, 'success');
+                } catch (e) {
+                    this.log(`Failed to load: ${spriteName}`, 'error');
+                    // 대체 원 생성
+                    const circle = new PIXI.Graphics();
+                    circle.circle(0, -40, 30);
+                    circle.fill({ color: 0xff4444 });
+                    
+                    const container = new PIXI.Container();
+                    container.x = 600;
+                    container.y = 380;
+                    container.zIndex = 10;
+                    container.addChild(circle);
+                    
+                    this.container.addChild(container);
+                    this.enemy = { container, sprite: circle, baseScale: 1, baseX: 600, baseY: 380 };
+                }
+            },
+            
+            // ==========================================
+            // 파라미터 가져오기
+            // ==========================================
+            getParams() {
+                return {
+                    duration: parseFloat(document.getElementById('param-duration').value),
+                    ease: document.getElementById('param-ease').value,
+                    distance: parseInt(document.getElementById('param-distance').value),
+                    scale: parseFloat(document.getElementById('param-scale').value),
+                    actionType: document.getElementById('action-type').value,
+                    skillType: document.getElementById('skill-type').value,
+                    vfxType: document.getElementById('vfx-type').value
+                };
+            },
+            
+            updateParam(name) {
+                const el = document.getElementById(`param-${name}`);
+                const valEl = document.getElementById(`${name}-val`);
+                if (name === 'duration') valEl.textContent = el.value + 's';
+                else if (name === 'distance') valEl.textContent = el.value + 'px';
+                else if (name === 'scale') valEl.textContent = el.value + 'x';
+                
+                // 타임라인 업데이트
+                document.getElementById('timeline-total').textContent = 
+                    (parseFloat(document.getElementById('param-duration').value) + 0.3).toFixed(2) + 's';
+            },
+            
+            // ==========================================
+            // 액션 실행
+            // ==========================================
+            async execute() {
+                if (this.isPlaying) return;
+                this.isPlaying = true;
+                
+                const params = this.getParams();
+                this.log(`Executing: ${params.actionType} (${params.duration}s, ${params.ease})`, 'action');
+                
+                // 타임라인 시작
+                this.startTimeline(params.duration + 0.3);
+                
+                // 위치 초기화
+                this.resetPositions();
+                await this.wait(100);
+                
+                switch (params.actionType) {
+                    case 'dash':
+                        await this.executeDash(params);
+                        break;
+                    case 'attack':
+                        await this.executeAttack(params);
+                        break;
+                    case 'hit':
+                        await this.executeHit(params);
+                        break;
+                    case 'skill':
+                        await this.executeSkill(params);
+                        break;
+                    case 'vfx':
+                        await this.executeVFX(params);
+                        break;
+                }
+                
+                // 복귀
+                await this.wait(200);
+                await this.returnToBase();
+                
+                this.isPlaying = false;
+                this.log('Animation complete', 'success');
+            },
+            
+            // ==========================================
+            // 대시 실행
+            // ==========================================
+            async executeDash(params) {
+                const { container, sprite, baseScale } = this.player;
+                const target = this.enemy;
+                const targetX = target.container.x - params.distance;
+                
+                // 웅크리기
+                await new Promise(resolve => {
+                    gsap.to(container, { x: container.x - 20, duration: 0.1, ease: 'power2.in', onComplete: resolve });
+                    gsap.to(sprite.scale, { x: baseScale * 0.85, y: baseScale * 1.15, duration: 0.1 });
+                });
+                
+                // 대시
+                await new Promise(resolve => {
+                    gsap.to(container, { 
+                        x: targetX, 
+                        duration: params.duration, 
+                        ease: params.ease,
+                        onComplete: resolve 
+                    });
+                    gsap.to(sprite.scale, { 
+                        x: baseScale * 1.1, 
+                        y: baseScale * 0.9, 
+                        duration: params.duration,
+                        ease: params.ease
+                    });
+                });
+                
+                // 착지
+                await new Promise(resolve => {
+                    gsap.to(sprite.scale, { x: baseScale, y: baseScale, duration: 0.1, ease: 'power2.out', onComplete: resolve });
+                });
+            },
+            
+            // ==========================================
+            // 공격 실행
+            // ==========================================
+            async executeAttack(params) {
+                await this.executeDash(params);
+                
+                const { container, sprite, baseScale } = this.player;
+                
+                // 공격 모션
+                await new Promise(resolve => {
+                    gsap.to(container, { x: container.x + 30, duration: 0.08, ease: 'power4.out' });
+                    gsap.to(sprite.scale, { x: baseScale * 1.2, y: baseScale * 0.8, duration: 0.08, onComplete: resolve });
+                });
+                
+                // 히트 이펙트
+                this.createHitEffect(this.enemy.container.x - 30, this.enemy.container.y - 50);
+                
+                // 적 히트 반응
+                gsap.to(this.enemy.container, { x: this.enemy.container.x + 20, duration: 0.1, ease: 'power2.out' });
+                gsap.to(this.enemy.sprite, { tint: 0xff8888, duration: 0.1 });
+                gsap.to(this.enemy.sprite, { tint: 0xffffff, duration: 0.2, delay: 0.1 });
+                
+                await new Promise(resolve => {
+                    gsap.to(sprite.scale, { x: baseScale, y: baseScale, duration: 0.1, onComplete: resolve });
+                });
+            },
+            
+            // ==========================================
+            // 히트 반응 실행
+            // ==========================================
+            async executeHit(params) {
+                const { container, sprite } = this.enemy;
+                const originalX = container.x;
+                
+                // 히트 반응
+                await new Promise(resolve => {
+                    gsap.to(container, { 
+                        x: originalX + params.distance * 0.2, 
+                        duration: params.duration * 0.3, 
+                        ease: 'power2.out'
+                    });
+                    gsap.to(sprite, { tint: 0xff4444, duration: 0.05 });
+                    gsap.to(sprite, { tint: 0xffffff, duration: params.duration, delay: 0.05, onComplete: resolve });
+                });
+                
+                // 복귀
+                await new Promise(resolve => {
+                    gsap.to(container, { x: originalX, duration: params.duration * 0.7, ease: params.ease, onComplete: resolve });
+                });
+            },
+            
+            // ==========================================
+            // 스킬 실행
+            // ==========================================
+            async executeSkill(params) {
+                // 기본적으로 공격과 동일, 스킬별로 확장 가능
+                await this.executeAttack(params);
+            },
+            
+            // ==========================================
+            // VFX 실행
+            // ==========================================
+            async executeVFX(params) {
+                const x = 400;
+                const y = 300;
+                
+                switch (params.vfxType) {
+                    case 'hit':
+                        this.createHitEffect(x, y);
+                        break;
+                    case 'slash':
+                        this.createSlashEffect(x, y);
+                        break;
+                    case 'fire':
+                        this.createFireEffect(x, y);
+                        break;
+                    default:
+                        this.createHitEffect(x, y);
+                }
+                
+                await this.wait(500);
+            },
+            
+            // ==========================================
+            // 이펙트 생성
+            // ==========================================
+            createHitEffect(x, y) {
+                const particles = [];
+                const NUM_PARTICLES = 12;
+                
+                for (let i = 0; i < NUM_PARTICLES; i++) {
+                    const particle = new PIXI.Graphics();
+                    const angle = (i / NUM_PARTICLES) * Math.PI * 2;
+                    particle.x = x;
+                    particle.y = y;
+                    particle.zIndex = 100;
+                    
+                    const size = 3 + Math.random() * 5;
+                    particle.circle(0, 0, size);
+                    particle.fill({ color: 0xffcc44, alpha: 1 });
+                    
+                    this.container.addChild(particle);
+                    
+                    const distance = 30 + Math.random() * 40;
+                    gsap.to(particle, {
+                        x: x + Math.cos(angle) * distance,
+                        y: y + Math.sin(angle) * distance,
+                        alpha: 0,
+                        duration: 0.3 + Math.random() * 0.2,
+                        ease: 'power2.out',
+                        onComplete: () => particle.destroy()
+                    });
+                }
+                
+                // 플래시
+                const flash = new PIXI.Graphics();
+                flash.circle(0, 0, 30);
+                flash.fill({ color: 0xffffff, alpha: 0.8 });
+                flash.x = x;
+                flash.y = y;
+                flash.zIndex = 99;
+                this.container.addChild(flash);
+                
+                gsap.to(flash, {
+                    alpha: 0,
+                    duration: 0.15,
+                    onComplete: () => flash.destroy()
+                });
+                gsap.to(flash.scale, { x: 2, y: 2, duration: 0.15 });
+            },
+            
+            createSlashEffect(x, y) {
+                const slash = new PIXI.Graphics();
+                slash.x = x;
+                slash.y = y;
+                slash.zIndex = 100;
+                
+                // 슬래시 라인
+                slash.moveTo(-40, 30);
+                slash.lineTo(40, -30);
+                slash.stroke({ width: 6, color: 0xffffff, alpha: 0.9 });
+                
+                this.container.addChild(slash);
+                
+                gsap.to(slash, {
+                    alpha: 0,
+                    duration: 0.3,
+                    onComplete: () => slash.destroy()
+                });
+                gsap.to(slash.scale, { x: 1.5, y: 1.5, duration: 0.3 });
+            },
+            
+            createFireEffect(x, y) {
+                for (let i = 0; i < 20; i++) {
+                    const particle = new PIXI.Graphics();
+                    particle.x = x + (Math.random() - 0.5) * 40;
+                    particle.y = y;
+                    particle.zIndex = 100;
+                    
+                    const size = 5 + Math.random() * 10;
+                    const colors = [0xff4400, 0xff8800, 0xffcc00];
+                    particle.circle(0, 0, size);
+                    particle.fill({ color: colors[Math.floor(Math.random() * 3)] });
+                    
+                    this.container.addChild(particle);
+                    
+                    gsap.to(particle, {
+                        y: y - 50 - Math.random() * 50,
+                        alpha: 0,
+                        duration: 0.5 + Math.random() * 0.3,
+                        ease: 'power2.out',
+                        delay: i * 0.02,
+                        onComplete: () => particle.destroy()
+                    });
+                    gsap.to(particle.scale, {
+                        x: 0,
+                        y: 0,
+                        duration: 0.5 + Math.random() * 0.3,
+                        delay: i * 0.02
+                    });
+                }
+            },
+            
+            // ==========================================
+            // 유틸리티
+            // ==========================================
+            resetPositions() {
+                if (this.player) {
+                    gsap.killTweensOf(this.player.container);
+                    gsap.killTweensOf(this.player.sprite);
+                    gsap.killTweensOf(this.player.sprite.scale);
+                    this.player.container.x = this.player.baseX;
+                    this.player.container.y = this.player.baseY;
+                    this.player.sprite.scale.set(this.player.baseScale);
+                }
+                if (this.enemy) {
+                    gsap.killTweensOf(this.enemy.container);
+                    gsap.killTweensOf(this.enemy.sprite);
+                    this.enemy.container.x = this.enemy.baseX;
+                    this.enemy.container.y = this.enemy.baseY;
+                    this.enemy.sprite.scale.set(-this.enemy.baseScale, this.enemy.baseScale);
+                    this.enemy.sprite.tint = 0xffffff;
+                }
+            },
+            
+            async returnToBase() {
+                const promises = [];
+                
+                if (this.player) {
+                    promises.push(new Promise(resolve => {
+                        gsap.to(this.player.container, { 
+                            x: this.player.baseX, 
+                            y: this.player.baseY, 
+                            duration: 0.2, 
+                            ease: 'power2.out',
+                            onComplete: resolve 
+                        });
+                    }));
+                }
+                if (this.enemy) {
+                    promises.push(new Promise(resolve => {
+                        gsap.to(this.enemy.container, { 
+                            x: this.enemy.baseX, 
+                            duration: 0.2, 
+                            ease: 'power2.out',
+                            onComplete: resolve 
+                        });
+                    }));
+                }
+                
+                await Promise.all(promises);
+            },
+            
+            wait(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            },
+            
+            // ==========================================
+            // 타임라인
+            // ==========================================
+            startTimeline(totalDuration) {
+                const progress = document.getElementById('timeline-progress');
+                progress.style.width = '0%';
+                
+                gsap.to({ val: 0 }, {
+                    val: 100,
+                    duration: totalDuration,
+                    ease: 'linear',
+                    onUpdate: function() {
+                        progress.style.width = this.targets()[0].val + '%';
+                    }
+                });
+            },
+            
+            // ==========================================
+            // 프리셋
+            // ==========================================
+            loadPreset(name) {
+                const preset = this.presets[name];
+                if (!preset) return;
+                
+                document.getElementById('param-duration').value = preset.duration;
+                document.getElementById('param-ease').value = preset.ease || 'power2.inOut';
+                document.getElementById('param-distance').value = preset.distance;
+                
+                this.updateParam('duration');
+                this.updateParam('distance');
+                
+                this.log(`Loaded preset: ${name}`, 'info');
+            },
+            
+            savePreset() {
+                const params = this.getParams();
+                const name = prompt('Preset name:');
+                if (!name) return;
+                
+                this.presets[name] = {
+                    duration: params.duration,
+                    ease: params.ease,
+                    distance: params.distance
+                };
+                
+                this.log(`Saved preset: ${name}`, 'success');
+            },
+            
+            // ==========================================
+            // UI 이벤트
+            // ==========================================
+            onActionTypeChange() {
+                const actionType = document.getElementById('action-type').value;
+                document.getElementById('skill-select-row').style.display = actionType === 'skill' ? 'flex' : 'none';
+                document.getElementById('vfx-select-row').style.display = actionType === 'vfx' ? 'flex' : 'none';
+            },
+            
+            reset() {
+                this.resetPositions();
+                this.log('Reset complete', 'info');
+            },
+            
+            exportConfig() {
+                const params = this.getParams();
+                const config = JSON.stringify(params, null, 2);
+                
+                navigator.clipboard.writeText(config).then(() => {
+                    this.log('Config copied to clipboard!', 'success');
+                });
+                
+                console.log('Exported config:', config);
+            },
+            
+            // ==========================================
+            // 로그
+            // ==========================================
+            log(message, type = '') {
+                const logArea = document.getElementById('log-area');
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${type}`;
+                entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                logArea.appendChild(entry);
+                logArea.scrollTop = logArea.scrollHeight;
+            },
+            
+            clearLog() {
+                document.getElementById('log-area').innerHTML = '<div class="log-entry info">[Studio] Log cleared</div>';
+            }
+        };
+        
+        // 시작
+        AnimStudio.init();
+    </script>
+</body>
+</html>
