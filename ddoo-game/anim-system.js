@@ -239,26 +239,63 @@ const AnimSystem = {
         },
         
         // ========================================
-        // 스파크 (spark) - 작은 전기 방전
+        // 스파크 (spark) - 연쇄 전기 방전
         // ========================================
         async spark(attacker, target, cardDef, options) {
             const game = AnimSystem.game;
             if (!game) return;
             
-            let bonusDamage = 0;
+            const chainRange = cardDef.chainRange || 1;
+            const chainReduction = cardDef.chainDamageReduction || 1;
+            const enemies = game.state?.enemyUnits || [];
             
-            // 물 영역 콤보 체크
+            // 타격 대상 수집 (연쇄 포함)
+            const hitTargets = [{ unit: target, damage: cardDef.damage, order: 0 }];
+            const hitSet = new Set([target]);
+            
+            // 인접 적 찾기 (1칸 범위)
+            for (const enemy of enemies) {
+                if (enemy.hp <= 0 || hitSet.has(enemy)) continue;
+                
+                const dx = Math.abs(enemy.gridX - target.gridX);
+                const dz = Math.abs(enemy.gridZ - target.gridZ);
+                
+                // 1칸 인접 (상하좌우 + 대각선)
+                if (dx <= chainRange && dz <= chainRange && (dx + dz) > 0) {
+                    hitTargets.push({ 
+                        unit: enemy, 
+                        damage: Math.max(1, cardDef.damage - chainReduction),
+                        order: 1
+                    });
+                    hitSet.add(enemy);
+                }
+            }
+            
+            // 첫 번째 타겟에 스파크 VFX
+            await AnimSystem.playSparkVFX(game, attacker, target, cardDef.damage);
+            
+            // 메인 타겟 데미지 + 물 콤보
+            let bonusDamage = 0;
             if (typeof GridAOE !== 'undefined') {
                 bonusDamage = GridAOE.checkLightningCombo(target.gridX, target.gridZ);
             }
+            game.dealDamage(target, cardDef.damage + bonusDamage, null, cardDef);
             
-            const totalDamage = cardDef.damage + bonusDamage;
-            
-            // 스파크 VFX
-            await AnimSystem.playSparkVFX(game, attacker, target, totalDamage);
-            
-            // 데미지 적용
-            game.dealDamage(target, totalDamage, null, cardDef);
+            // 연쇄 타겟들에 전기 아크 + 데미지
+            for (let i = 1; i < hitTargets.length; i++) {
+                const chainTarget = hitTargets[i];
+                await new Promise(r => setTimeout(r, 80));
+                
+                // 연쇄 아크 VFX
+                AnimSystem.playChainArc(game, target, chainTarget.unit);
+                
+                // 연쇄 대상 물 콤보 체크
+                let chainBonus = 0;
+                if (typeof GridAOE !== 'undefined') {
+                    chainBonus = GridAOE.checkLightningCombo(chainTarget.unit.gridX, chainTarget.unit.gridZ);
+                }
+                game.dealDamage(chainTarget.unit, chainTarget.damage + chainBonus, null, cardDef);
+            }
             
             return { skipDamage: true };
         },
@@ -342,7 +379,7 @@ const AnimSystem = {
     },
     
     // ==========================================
-    // 스파크 VFX 헬퍼 (handlers 외부)
+    // 스파크 VFX 헬퍼 (3D + 2D 하이브리드)
     // ==========================================
     async playSparkVFX(game, attacker, target, damage) {
         if (!game.app) return;
@@ -351,118 +388,166 @@ const AnimSystem = {
         const targetPos = target.container || target.sprite;
         if (!attackerPos || !targetPos) return;
         
-        const startX = attackerPos.x + 50;
-        const startY = attackerPos.y - 30;
+        const startX = attackerPos.x + 60;
+        const startY = attackerPos.y - 50;
         const endX = targetPos.x;
         const endY = targetPos.y - (target.sprite?.height || 60) / 2;
         
         // ========================================
-        // 1. 전기 볼 (시작점에서 생성)
+        // 1. 시전 이펙트 (손에서 전기 모으기)
         // ========================================
-        const sparkBall = new PIXI.Container();
-        sparkBall.x = startX;
-        sparkBall.y = startY;
-        game.app.stage.addChild(sparkBall);
+        const chargeContainer = new PIXI.Container();
+        chargeContainer.x = startX;
+        chargeContainer.y = startY;
+        game.app.stage.addChild(chargeContainer);
         
-        // 코어
+        // 전기 코어
         const core = new PIXI.Graphics();
         core.beginFill(0xffffff, 1);
         core.drawCircle(0, 0, 8);
         core.endFill();
-        sparkBall.addChild(core);
+        chargeContainer.addChild(core);
         
-        // 글로우
-        const glow = new PIXI.Graphics();
-        glow.beginFill(0xffff44, 0.5);
-        glow.drawCircle(0, 0, 20);
-        glow.endFill();
-        sparkBall.addChild(glow);
+        // 차지 스파크
+        for (let i = 0; i < 6; i++) {
+            const miniArc = new PIXI.Graphics();
+            miniArc.lineStyle(2, 0xffff44, 0.8);
+            const angle = (i / 6) * Math.PI * 2;
+            const len = 15 + Math.random() * 10;
+            miniArc.moveTo(0, 0);
+            miniArc.lineTo(Math.cos(angle) * len, Math.sin(angle) * len);
+            chargeContainer.addChild(miniArc);
+        }
         
-        // 외부 글로우
-        const outerGlow = new PIXI.Graphics();
-        outerGlow.beginFill(0x4488ff, 0.3);
-        outerGlow.drawCircle(0, 0, 30);
-        outerGlow.endFill();
-        sparkBall.addChild(outerGlow);
+        gsap.to(chargeContainer.scale, { x: 1.5, y: 1.5, duration: 0.08, yoyo: true, repeat: 1 });
+        
+        await new Promise(r => setTimeout(r, 60));
         
         // ========================================
-        // 2. 전기 아크 라인 (지그재그)
+        // 2. 메인 전기 아크 (시작 → 타겟)
         // ========================================
-        const arcContainer = new PIXI.Container();
-        game.app.stage.addChild(arcContainer);
-        
-        // 전기 볼 이동 + 아크 생성
-        await new Promise(resolve => {
-            let arcTimer = 0;
-            const duration = 0.25;
+        const arcs = [];
+        const drawLightningArc = (sx, sy, ex, ey, segments, color, width, jitter) => {
+            const arc = new PIXI.Graphics();
+            arc.lineStyle(width, color, 1);
+            arc.moveTo(sx, sy);
             
-            const animate = () => {
-                arcTimer += 0.016;
-                const progress = Math.min(arcTimer / duration, 1);
-                const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+            const dx = ex - sx;
+            const dy = ey - sy;
+            
+            for (let i = 1; i < segments; i++) {
+                const t = i / segments;
+                const x = sx + dx * t + (Math.random() - 0.5) * jitter;
+                const y = sy + dy * t + (Math.random() - 0.5) * jitter * 0.6;
+                arc.lineTo(x, y);
+            }
+            arc.lineTo(ex, ey);
+            
+            game.app.stage.addChild(arc);
+            arcs.push(arc);
+            return arc;
+        };
+        
+        // 메인 아크
+        drawLightningArc(startX, startY, endX, endY, 10, 0xffffff, 6, 50);
+        drawLightningArc(startX, startY, endX, endY, 12, 0xffff44, 4, 45);
+        drawLightningArc(startX, startY, endX, endY, 8, 0x88ddff, 3, 55);
+        
+        // ========================================
+        // 3. 타겟 위치 갈래번개 (핵심!)
+        // ========================================
+        const branchCount = 6 + Math.floor(Math.random() * 4);
+        for (let i = 0; i < branchCount; i++) {
+            // 타겟 중심에서 뻗어나가는 갈래번개
+            const angle = (i / branchCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+            const branchLen = 50 + Math.random() * 70;
+            const branchEndX = endX + Math.cos(angle) * branchLen;
+            const branchEndY = endY + Math.sin(angle) * branchLen * 0.5; // 3D 느낌 위해 Y 압축
+            
+            // 굵은 갈래
+            drawLightningArc(endX, endY, branchEndX, branchEndY, 6, 0xffffff, 4, 25);
+            drawLightningArc(endX, endY, branchEndX, branchEndY, 5, 0xffff44, 3, 20);
+            
+            // 2차 분기 (갈래에서 더 갈라지는 번개)
+            if (Math.random() < 0.6) {
+                const midT = 0.5 + Math.random() * 0.3;
+                const midX = endX + (branchEndX - endX) * midT;
+                const midY = endY + (branchEndY - endY) * midT;
+                const subAngle = angle + (Math.random() - 0.5) * Math.PI * 0.5;
+                const subLen = 25 + Math.random() * 35;
+                const subEndX = midX + Math.cos(subAngle) * subLen;
+                const subEndY = midY + Math.sin(subAngle) * subLen * 0.5;
                 
-                // 전기 볼 위치
-                sparkBall.x = startX + (endX - startX) * eased;
-                sparkBall.y = startY + (endY - startY) * eased;
-                
-                // 글로우 펄스
-                const pulse = 1 + Math.sin(arcTimer * 30) * 0.3;
-                glow.scale.x = pulse;
-                glow.scale.y = pulse;
-                
-                // 랜덤 스파크 발사
-                if (Math.random() < 0.4) {
-                    const miniSpark = new PIXI.Graphics();
-                    miniSpark.beginFill(0xffff88, 0.8);
-                    miniSpark.drawCircle(0, 0, 2 + Math.random() * 2);
-                    miniSpark.endFill();
-                    miniSpark.x = sparkBall.x;
-                    miniSpark.y = sparkBall.y;
-                    game.app.stage.addChild(miniSpark);
-                    
-                    const angle = Math.random() * Math.PI * 2;
-                    gsap.to(miniSpark, {
-                        x: miniSpark.x + Math.cos(angle) * (20 + Math.random() * 30),
-                        y: miniSpark.y + Math.sin(angle) * (15 + Math.random() * 20),
-                        alpha: 0,
-                        duration: 0.15,
-                        onComplete: () => {
-                            game.app.stage.removeChild(miniSpark);
-                            miniSpark.destroy();
-                        }
-                    });
-                }
-                
-                if (progress < 1) {
-                    requestAnimationFrame(animate);
-                } else {
-                    resolve();
-                }
-            };
-            animate();
+                drawLightningArc(midX, midY, subEndX, subEndY, 4, 0xffffaa, 2, 15);
+            }
+        }
+        
+        // ========================================
+        // 4. 전기 코어 (타겟 중심)
+        // ========================================
+        const impactCore = new PIXI.Container();
+        impactCore.x = endX;
+        impactCore.y = endY;
+        game.app.stage.addChild(impactCore);
+        
+        // 밝은 코어
+        const brightCore = new PIXI.Graphics();
+        brightCore.beginFill(0xffffff, 1);
+        brightCore.drawCircle(0, 0, 20);
+        brightCore.endFill();
+        impactCore.addChild(brightCore);
+        
+        // 노란 글로우
+        const yellowGlow = new PIXI.Graphics();
+        yellowGlow.beginFill(0xffff44, 0.7);
+        yellowGlow.drawCircle(0, 0, 35);
+        yellowGlow.endFill();
+        impactCore.addChild(yellowGlow);
+        
+        // 파란 외곽
+        const blueGlow = new PIXI.Graphics();
+        blueGlow.beginFill(0x4488ff, 0.4);
+        blueGlow.drawCircle(0, 0, 50);
+        blueGlow.endFill();
+        impactCore.addChild(blueGlow);
+        
+        // 코어 펄스
+        gsap.to(impactCore.scale, { x: 1.8, y: 1.8, duration: 0.1, ease: 'power2.out' });
+        gsap.to(impactCore, {
+            alpha: 0,
+            duration: 0.25,
+            delay: 0.05,
+            onComplete: () => {
+                game.app.stage.removeChild(impactCore);
+                impactCore.destroy({ children: true });
+            }
         });
         
         // ========================================
-        // 3. 충격 이펙트
+        // 5. 전기 파티클 (타겟 주변)
         // ========================================
-        // 전기 폭발
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 25; i++) {
             const spark = new PIXI.Graphics();
-            const isWhite = Math.random() < 0.3;
-            spark.beginFill(isWhite ? 0xffffff : 0xffff44, 0.9);
-            spark.drawCircle(0, 0, 2 + Math.random() * 4);
+            const colors = [0xffffff, 0xffffaa, 0xffff44, 0x88ddff];
+            spark.beginFill(colors[Math.floor(Math.random() * colors.length)], 1);
+            
+            // 길쭉한 스파크
+            const sparkLen = 4 + Math.random() * 8;
+            spark.drawEllipse(0, 0, sparkLen, 2);
             spark.endFill();
             
             spark.x = endX;
             spark.y = endY;
+            spark.rotation = Math.random() * Math.PI * 2;
             game.app.stage.addChild(spark);
             
             const angle = Math.random() * Math.PI * 2;
-            const dist = 40 + Math.random() * 50;
+            const dist = 40 + Math.random() * 60;
             
             gsap.to(spark, {
                 x: endX + Math.cos(angle) * dist,
-                y: endY + Math.sin(angle) * dist * 0.6,
+                y: endY + Math.sin(angle) * dist * 0.5,
+                rotation: spark.rotation + Math.PI,
                 alpha: 0,
                 duration: 0.3 + Math.random() * 0.2,
                 ease: 'power2.out',
@@ -473,37 +558,208 @@ const AnimSystem = {
             });
         }
         
-        // 충격파 링
-        const shockRing = new PIXI.Graphics();
-        shockRing.lineStyle(3, 0xffff88, 0.8);
-        shockRing.drawCircle(0, 0, 10);
-        shockRing.x = endX;
-        shockRing.y = endY;
-        game.app.stage.addChild(shockRing);
+        // ========================================
+        // 6. 충격파 링
+        // ========================================
+        for (let i = 0; i < 3; i++) {
+            const ring = new PIXI.Graphics();
+            const colors = [0xffffff, 0xffff44, 0x88ddff];
+            ring.lineStyle(4 - i, colors[i], 0.9);
+            ring.drawEllipse(0, 0, 15, 10); // 3D 느낌의 타원
+            ring.x = endX;
+            ring.y = endY;
+            game.app.stage.addChild(ring);
+            
+            gsap.to(ring.scale, { 
+                x: 6 - i, 
+                y: 4 - i * 0.5, 
+                duration: 0.35, 
+                ease: 'power2.out', 
+                delay: i * 0.04 
+            });
+            gsap.to(ring, {
+                alpha: 0,
+                duration: 0.35,
+                delay: i * 0.04,
+                onComplete: () => {
+                    game.app.stage.removeChild(ring);
+                    ring.destroy();
+                }
+            });
+        }
         
-        gsap.to(shockRing.scale, { x: 4, y: 2.5, duration: 0.3, ease: 'power2.out' });
-        gsap.to(shockRing, {
+        // ========================================
+        // 7. 화면 효과
+        // ========================================
+        if (typeof CombatEffects !== 'undefined') {
+            CombatEffects.screenFlash('#ffffcc', 150, 0.15);
+            CombatEffects.screenShake(12, 180);
+        }
+        
+        // 아크 페이드아웃
+        gsap.to(arcs, {
             alpha: 0,
-            duration: 0.3,
+            duration: 0.2,
+            delay: 0.05,
             onComplete: () => {
-                game.app.stage.removeChild(shockRing);
-                shockRing.destroy();
+                arcs.forEach(arc => {
+                    game.app.stage.removeChild(arc);
+                    arc.destroy();
+                });
             }
         });
         
-        // 화면 효과
-        if (typeof CombatEffects !== 'undefined') {
-            CombatEffects.screenFlash('#ffff88', 100, 0.25);
-            CombatEffects.screenShake(8, 150);
+        // 시전 이펙트 정리
+        gsap.to(chargeContainer, {
+            alpha: 0,
+            duration: 0.1,
+            onComplete: () => {
+                game.app.stage.removeChild(chargeContainer);
+                chargeContainer.destroy({ children: true });
+            }
+        });
+        
+        await new Promise(r => setTimeout(r, 200));
+    },
+    
+    // ==========================================
+    // 연쇄 아크 VFX (타겟 간 전기 연결)
+    // ==========================================
+    playChainArc(game, fromUnit, toUnit) {
+        if (!game.app) return;
+        
+        const fromPos = fromUnit.container || fromUnit.sprite;
+        const toPos = toUnit.container || toUnit.sprite;
+        if (!fromPos || !toPos) return;
+        
+        const sx = fromPos.x;
+        const sy = fromPos.y - (fromUnit.sprite?.height || 60) / 2;
+        const ex = toPos.x;
+        const ey = toPos.y - (toUnit.sprite?.height || 60) / 2;
+        
+        const arcs = [];
+        
+        // 지그재그 아크 그리기
+        const drawArc = (startX, startY, endX, endY, segments, color, width, jitter) => {
+            const arc = new PIXI.Graphics();
+            arc.lineStyle(width, color, 1);
+            arc.moveTo(startX, startY);
+            
+            const dx = endX - startX;
+            const dy = endY - startY;
+            
+            for (let i = 1; i < segments; i++) {
+                const t = i / segments;
+                const x = startX + dx * t + (Math.random() - 0.5) * jitter;
+                const y = startY + dy * t + (Math.random() - 0.5) * jitter * 0.6;
+                arc.lineTo(x, y);
+            }
+            arc.lineTo(endX, endY);
+            
+            game.app.stage.addChild(arc);
+            arcs.push(arc);
+            return arc;
+        };
+        
+        // 메인 연쇄 아크
+        drawArc(sx, sy, ex, ey, 8, 0xffffff, 5, 30);
+        drawArc(sx, sy, ex, ey, 6, 0xffff44, 4, 25);
+        drawArc(sx, sy, ex, ey, 10, 0x88ddff, 3, 35);
+        
+        // 타겟 위치 갈래번개 (작은 버전)
+        const branchCount = 4;
+        for (let i = 0; i < branchCount; i++) {
+            const angle = (i / branchCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+            const branchLen = 30 + Math.random() * 40;
+            const branchEndX = ex + Math.cos(angle) * branchLen;
+            const branchEndY = ey + Math.sin(angle) * branchLen * 0.5;
+            
+            drawArc(ex, ey, branchEndX, branchEndY, 4, 0xffff88, 2, 15);
         }
         
-        // 정리
-        game.app.stage.removeChild(sparkBall);
-        sparkBall.destroy({ children: true });
-        game.app.stage.removeChild(arcContainer);
-        arcContainer.destroy({ children: true });
+        // 연쇄 충격 코어
+        const chainCore = new PIXI.Graphics();
+        chainCore.beginFill(0xffffff, 0.9);
+        chainCore.drawCircle(0, 0, 15);
+        chainCore.endFill();
+        chainCore.x = ex;
+        chainCore.y = ey;
+        game.app.stage.addChild(chainCore);
         
-        await new Promise(r => setTimeout(r, 100));
+        gsap.to(chainCore.scale, { x: 2, y: 2, duration: 0.1, ease: 'power2.out' });
+        gsap.to(chainCore, {
+            alpha: 0,
+            duration: 0.2,
+            onComplete: () => {
+                game.app.stage.removeChild(chainCore);
+                chainCore.destroy();
+            }
+        });
+        
+        // 연쇄 충격 파티클
+        for (let i = 0; i < 15; i++) {
+            const spark = new PIXI.Graphics();
+            const colors = [0xffffff, 0xffff44, 0x88ddff];
+            spark.beginFill(colors[Math.floor(Math.random() * colors.length)], 1);
+            const sparkLen = 3 + Math.random() * 5;
+            spark.drawEllipse(0, 0, sparkLen, 1.5);
+            spark.endFill();
+            spark.x = ex;
+            spark.y = ey;
+            spark.rotation = Math.random() * Math.PI * 2;
+            game.app.stage.addChild(spark);
+            
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 30 + Math.random() * 40;
+            gsap.to(spark, {
+                x: ex + Math.cos(angle) * dist,
+                y: ey + Math.sin(angle) * dist * 0.5,
+                rotation: spark.rotation + Math.PI,
+                alpha: 0,
+                duration: 0.25,
+                ease: 'power2.out',
+                onComplete: () => {
+                    game.app.stage.removeChild(spark);
+                    spark.destroy();
+                }
+            });
+        }
+        
+        // 연쇄 충격파 링
+        const chainRing = new PIXI.Graphics();
+        chainRing.lineStyle(3, 0xffff88, 0.8);
+        chainRing.drawEllipse(0, 0, 12, 8);
+        chainRing.x = ex;
+        chainRing.y = ey;
+        game.app.stage.addChild(chainRing);
+        
+        gsap.to(chainRing.scale, { x: 4, y: 3, duration: 0.25, ease: 'power2.out' });
+        gsap.to(chainRing, {
+            alpha: 0,
+            duration: 0.25,
+            onComplete: () => {
+                game.app.stage.removeChild(chainRing);
+                chainRing.destroy();
+            }
+        });
+        
+        // 작은 화면 효과
+        if (typeof CombatEffects !== 'undefined') {
+            CombatEffects.screenFlash('#ffffaa', 80, 0.1);
+            CombatEffects.screenShake(6, 100);
+        }
+        
+        // 아크 페이드아웃
+        gsap.to(arcs, {
+            alpha: 0,
+            duration: 0.18,
+            onComplete: () => {
+                arcs.forEach(arc => {
+                    game.app.stage.removeChild(arc);
+                    arc.destroy();
+                });
+            }
+        });
     },
     
     // ==========================================
