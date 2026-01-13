@@ -1,0 +1,121 @@
+{
+    "id": "goblinShaman",
+    "name": "Goblin Shaman",
+    "nameKo": "고블린 샤먼",
+    
+    "stats": {
+        "hp": 22,
+        "damage": 7,
+        "range": 4,
+        "sprite": "goblinshaman.png",
+        "scale": 0.4
+    },
+    
+    "ai": {
+        "attackType": "ranged",
+        "preferredDistance": 3,
+        "retreatBeforeAttack": true,
+        "retreatDistance": 1,
+        "keepDistance": true
+    },
+    
+    "weaknesses": ["physical", "ice"],
+    
+    "intents": [
+        { 
+            "id": "firebolt",
+            "name": "파이어볼트",
+            "nameEn": "Firebolt",
+            "type": "attack", 
+            "damage": 7,
+            "element": "fire",
+            "projectile": "fireball",
+            "createZone": true,
+            "weight": 60
+        },
+        { 
+            "id": "hex",
+            "name": "저주",
+            "nameEn": "Hex",
+            "type": "debuff",
+            "vulnerable": 2,
+            "weight": 40,
+            "breakRecipe": 2,
+            "cooldown": 2
+        }
+    ],
+    
+    "dialogues": {
+        "spawn": [
+            "주술의 힘을...",
+            "정령들이여!",
+            "키히히... 불이다",
+            "주술사가 왔다"
+        ],
+        "intent": [
+            "불타라...",
+            "주문을 외우마...",
+            "정령들이여...",
+            "키히히..."
+        ],
+        "attack": [
+            "불이다!",
+            "타올라라!",
+            "정령의 분노!",
+            "화염이여!"
+        ],
+        "defend": [
+            "수호의 주문...",
+            "정령이여 지켜라",
+            "결계를..."
+        ],
+        "buff": [
+            "힘을 빌려주마...",
+            "치유하라...",
+            "정령의 축복을...",
+            "회복!"
+        ],
+        "hit": [
+            "크윽!",
+            "감히..!",
+            "주술사를?!",
+            "고통스럽군!",
+            "으으..!",
+            "정령이여..!",
+            "집중이..!",
+            "이런..!"
+        ],
+        "death": [
+            "정령들이여...",
+            "주술이... 깨졌다...",
+            "복수를..."
+        ],
+        "break": [
+            "집중이..!",
+            "주문이 흐트러져!",
+            "안돼!"
+        ],
+        "intents": {
+            "firebolt": [
+                "불타라!",
+                "화염을 받아라!",
+                "정령의 불이다!"
+            ],
+            "hex": [
+                "저주를 받아라...",
+                "고통받아라...",
+                "키히히... 아플거야"
+            ],
+            "tribal_ward": [
+                "부족을 지켜라!",
+                "수호의 힘!",
+                "결계!"
+            ],
+            "heal_ally": [
+                "치유하라!",
+                "동료여, 힘내!",
+                "생명을..."
+            ]
+        }
+    }
+}

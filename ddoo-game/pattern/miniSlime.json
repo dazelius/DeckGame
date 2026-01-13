@@ -1,0 +1,43 @@
+{
+    "id": "miniSlime",
+    "name": "Mini Slime",
+    "nameKo": "미니 슬라임",
+    
+    "stats": {
+        "hp": 8,
+        "damage": 3,
+        "range": 1,
+        "sprite": "minislime.png",
+        "scale": 0.6
+    },
+    
+    "ai": {
+        "attackType": "melee",
+        "preferredDistance": 1,
+        "retreatBeforeAttack": false,
+        "aggressive": true
+    },
+    
+    "weaknesses": ["fire", "ice", "lightning"],
+    
+    "intents": [
+        { 
+            "id": "bounce",
+            "name": "통통",
+            "nameEn": "Bounce",
+            "type": "attack", 
+            "damage": 3,
+            "weight": 70
+        },
+        { 
+            "id": "stick",
+            "name": "달라붙기",
+            "nameEn": "Stick",
+            "type": "debuff",
+            "debuffType": "slow",
+            "debuffValue": 1,
+            "damage": 2,
+            "weight": 30
+        }
+    ]
+}

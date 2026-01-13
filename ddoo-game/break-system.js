@@ -157,6 +157,51 @@ const BreakSystem = {
     },
     
     // ==========================================
+    // ★ 브레이크 시 스프라이트 변경
+    // ==========================================
+    async changeBreakSprite(enemy) {
+        if (!enemy || !enemy.sprite) return;
+        
+        // MonsterPatterns에서 breakSprite 확인
+        const pattern = typeof MonsterPatterns !== 'undefined' 
+            ? MonsterPatterns.getPattern(enemy.type) 
+            : null;
+        
+        const breakSprite = pattern?.stats?.breakSprite;
+        if (!breakSprite) return;
+        
+        console.log(`[BreakSystem] 🔄 스프라이트 변경: ${enemy.type} → ${breakSprite}`);
+        
+        // 메인 스프라이트 찾기 (DDOORenderer 구조)
+        const spriteContainer = enemy.sprite;
+        const mainSprite = spriteContainer.children?.find(c => c.label === 'main');
+        
+        if (!mainSprite) {
+            console.warn('[BreakSystem] 메인 스프라이트를 찾을 수 없음');
+            return;
+        }
+        
+        try {
+            // 새 텍스처 로드
+            const newTexture = await PIXI.Assets.load(`image/${breakSprite}`);
+            
+            // 텍스처 변경
+            mainSprite.texture = newTexture;
+            
+            // 아웃라인 스프라이트들도 텍스처 변경
+            spriteContainer.children.forEach(child => {
+                if (child.isOutline && child.texture) {
+                    child.texture = newTexture;
+                }
+            });
+            
+            console.log(`[BreakSystem] ✅ 스프라이트 변경 완료!`);
+        } catch (e) {
+            console.error(`[BreakSystem] 스프라이트 변경 실패:`, e);
+        }
+    },
+    
+    // ==========================================
     // 공격 시 브레이크 진행
     // ==========================================
     onAttack(enemy, cardDef, hitCount = 1, hitNum = 0) {
@@ -256,6 +301,14 @@ const BreakSystem = {
         
         console.log(`[BreakSystem] 🔥 ${enemy.name || enemy.type} BREAK!!! +취약 ${vulnerableTurns}턴`);
         
+        // ★ 브레이크 대사!
+        if (typeof MonsterDialogue !== 'undefined') {
+            MonsterDialogue.onBreak(enemy);
+        }
+        
+        // ★ 브레이크 시 스프라이트 변경 (breakSprite가 있으면)
+        this.changeBreakSprite(enemy);
+        
         // 브레이크 이펙트
         this.showBreakEffect(enemy);
         
@@ -343,34 +396,50 @@ const BreakSystem = {
         }
         
         // 텍스트 위치 (적 머리 위)
-        const textY = enemyY - 80;
+        const textY = enemyY - 100;
         
-        // 1. 국소적 플래시 (적 주변만)
-        this.createLocalBreakFlash(enemyX, enemyY);
-        
-        // 2. 히트스톱 (짧게)
+        // ★★★ 0. 화면 전체 플래시! ★★★
         if (typeof CombatEffects !== 'undefined') {
-            CombatEffects.hitStop(100);
+            CombatEffects.screenFlash('#ffffff', 150, 0.15);
+            setTimeout(() => CombatEffects.screenFlash('#ff6600', 100, 0.2), 100);
         }
         
-        // 3. 화면 흔들림 (약하게)
+        // 1. 국소적 플래시 (적 주변 - 더 크게!)
+        this.createLocalBreakFlash(enemyX, enemyY);
+        
+        // 2. 히트스톱 (더 길게!)
         if (typeof CombatEffects !== 'undefined') {
-            CombatEffects.screenShake(15, 300);
+            CombatEffects.hitStop(200);
+        }
+        
+        // 3. 화면 흔들림 (더 강하게!)
+        if (typeof CombatEffects !== 'undefined') {
+            CombatEffects.screenShake(30, 500);
         }
         
         // 4. 스턴 별 VFX (적 머리 위 - 3D 타원 궤도)
         this.createStunStars(enemy);
         
-        // 5. 충격파 (적 위치에서)
+        // 5. 충격파 (적 위치에서 - 여러 겹!)
         this.createLocalShockwave(enemyX, enemyY);
+        setTimeout(() => this.createLocalShockwave(enemyX, enemyY), 80);
         
-        // 6. 유리 파편 (적 위치)
+        // 6. 유리 파편 (적 위치 - 더 많이!)
+        this.createGlassShards(enemyX, enemyY);
         this.createGlassShards(enemyX, enemyY);
         
-        // 7. ★ 개인 BREAK 텍스트 (적 위에 표시)
+        // ★★★ 7. PIXI 파티클 폭발! ★★★
+        if (typeof CombatEffects !== 'undefined') {
+            CombatEffects.burstParticles(enemyX, enemyY, 0xffaa00, 25);
+            CombatEffects.burstParticles(enemyX, enemyY, 0xff4400, 15);
+            CombatEffects.impactEffect(enemyX, enemyY, 0xffcc00, 2.0);
+        }
+        
+        // 8. ★★★ 개인 BREAK 텍스트 (더 크고 화려하게!) ★★★
         const breakPopup = document.createElement('div');
         breakPopup.className = 'break-popup-personal';
         breakPopup.innerHTML = `
+            <div class="break-crack-bg"></div>
             <div class="break-text-personal">BREAK!</div>
             <div class="break-sub-personal">💔 취약 +${enemy?.vulnerable || 1}</div>
         `;
@@ -383,43 +452,111 @@ const BreakSystem = {
             pointer-events: none;
             text-align: center;
         `;
+        
+        // 스타일 주입
+        const style = document.createElement('style');
+        style.textContent = `
+            .break-text-personal {
+                font-family: 'Cinzel', serif;
+                font-size: 4rem;
+                font-weight: 900;
+                color: #fff;
+                text-shadow: 
+                    0 0 10px #ff6600,
+                    0 0 20px #ff4400,
+                    0 0 40px #ff2200,
+                    0 0 60px #ff0000,
+                    3px 3px 0 #000,
+                    -3px -3px 0 #000,
+                    3px -3px 0 #000,
+                    -3px 3px 0 #000;
+                letter-spacing: 8px;
+                filter: drop-shadow(0 5px 15px rgba(255, 100, 0, 0.8));
+            }
+            .break-sub-personal {
+                font-family: 'Cinzel', serif;
+                font-size: 1.5rem;
+                font-weight: 700;
+                color: #ffcc00;
+                text-shadow: 
+                    0 0 10px #ff6600,
+                    2px 2px 0 #000;
+                margin-top: 8px;
+            }
+            .break-crack-bg {
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                width: 300px;
+                height: 150px;
+                background: radial-gradient(ellipse, 
+                    rgba(255, 100, 0, 0.6) 0%,
+                    rgba(255, 50, 0, 0.3) 40%,
+                    transparent 70%);
+                filter: blur(10px);
+                z-index: -1;
+            }
+        `;
+        document.head.appendChild(style);
         document.body.appendChild(breakPopup);
         
-        // 애니메이션
+        // ★★★ 강화된 애니메이션 ★★★
         if (typeof gsap !== 'undefined') {
             const mainText = breakPopup.querySelector('.break-text-personal');
             const subText = breakPopup.querySelector('.break-sub-personal');
+            const bg = breakPopup.querySelector('.break-crack-bg');
             
             const tl = gsap.timeline();
             
-            // 메인 텍스트 - 튀어나오면서 등장
-            tl.fromTo(mainText, 
-                { scale: 2.5, opacity: 0, y: 20 },
-                { scale: 1, opacity: 1, y: 0, duration: 0.12, ease: 'back.out(2)' }
+            // 배경 펄스
+            tl.fromTo(bg,
+                { scale: 0, opacity: 0 },
+                { scale: 1.5, opacity: 1, duration: 0.2, ease: 'power2.out' }
             )
-            // 흔들림
+            // 메인 텍스트 - 폭발적 등장!
+            .fromTo(mainText, 
+                { scale: 4, opacity: 0, y: 30, rotation: -10 },
+                { scale: 1, opacity: 1, y: 0, rotation: 0, duration: 0.15, ease: 'back.out(3)' },
+                '-=0.1'
+            )
+            // 강한 흔들림
             .to(mainText, {
-                x: -5,
-                duration: 0.03,
+                x: -8,
+                duration: 0.02,
                 yoyo: true,
-                repeat: 3
+                repeat: 5
             })
+            // 배경 펄스
+            .to(bg, {
+                scale: 2,
+                opacity: 0,
+                duration: 0.4
+            }, '-=0.1')
             // 서브 텍스트
             .fromTo(subText,
-                { opacity: 0, y: 10 },
-                { opacity: 1, y: 0, duration: 0.15, ease: 'power2.out' },
-                '-=0.05'
+                { opacity: 0, y: 15, scale: 0.5 },
+                { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'back.out(2)' },
+                '-=0.3'
             )
             // 페이드 아웃 + 위로 떠오름
             .to(breakPopup, {
                 opacity: 0,
-                y: -30,
-                duration: 0.5,
-                delay: 0.8,
-                onComplete: () => breakPopup.remove()
+                y: -50,
+                scale: 1.2,
+                duration: 0.6,
+                delay: 1.0,
+                ease: 'power2.in',
+                onComplete: () => {
+                    breakPopup.remove();
+                    style.remove();
+                }
             });
         } else {
-            setTimeout(() => breakPopup.remove(), 1500);
+            setTimeout(() => {
+                breakPopup.remove();
+                style.remove();
+            }, 2000);
         }
         
         // 사운드
@@ -429,76 +566,115 @@ const BreakSystem = {
     },
     
     // ==========================================
-    // 로컬 브레이크 플래시 (적 주변만)
+    // 로컬 브레이크 플래시 (적 주변 - 강화!)
     // ==========================================
     createLocalBreakFlash(x, y) {
+        // 메인 플래시 (더 크게!)
         const flash = document.createElement('div');
         flash.style.cssText = `
             position: fixed;
             left: ${x}px;
             top: ${y}px;
-            width: 200px;
-            height: 200px;
+            width: 400px;
+            height: 400px;
             transform: translate(-50%, -50%);
             background: radial-gradient(circle, 
                 rgba(255, 255, 255, 1) 0%, 
-                rgba(255, 200, 50, 0.8) 30%,
-                rgba(255, 100, 0, 0.4) 60%,
-                transparent 80%);
+                rgba(255, 220, 100, 0.9) 20%,
+                rgba(255, 150, 50, 0.6) 40%,
+                rgba(255, 80, 0, 0.3) 60%,
+                transparent 75%);
             z-index: 9999;
             pointer-events: none;
             border-radius: 50%;
         `;
         document.body.appendChild(flash);
         
+        // 내부 코어 플래시 (더 밝게!)
+        const core = document.createElement('div');
+        core.style.cssText = `
+            position: fixed;
+            left: ${x}px;
+            top: ${y}px;
+            width: 150px;
+            height: 150px;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(circle, 
+                rgba(255, 255, 255, 1) 0%, 
+                rgba(255, 255, 200, 0.9) 40%,
+                transparent 70%);
+            z-index: 10000;
+            pointer-events: none;
+            border-radius: 50%;
+        `;
+        document.body.appendChild(core);
+        
         if (typeof gsap !== 'undefined') {
+            // 메인 플래시 애니메이션
             gsap.fromTo(flash, 
-                { scale: 0.5, opacity: 1 },
+                { scale: 0.3, opacity: 1 },
                 { 
-                    scale: 2, 
+                    scale: 3, 
                     opacity: 0, 
-                    duration: 0.4, 
+                    duration: 0.5, 
                     ease: 'power2.out',
                     onComplete: () => flash.remove()
                 }
             );
+            // 코어 플래시 애니메이션 (빠르게 사라짐)
+            gsap.fromTo(core, 
+                { scale: 0.5, opacity: 1 },
+                { 
+                    scale: 2, 
+                    opacity: 0, 
+                    duration: 0.25, 
+                    ease: 'power3.out',
+                    onComplete: () => core.remove()
+                }
+            );
         } else {
-            setTimeout(() => flash.remove(), 400);
+            setTimeout(() => {
+                flash.remove();
+                core.remove();
+            }, 500);
         }
     },
     
     // ==========================================
-    // 로컬 충격파 (적 위치에서)
+    // 로컬 충격파 (적 위치에서 - 강화!)
     // ==========================================
     createLocalShockwave(x, y) {
-        for (let i = 0; i < 2; i++) {
+        // 3겹 충격파!
+        for (let i = 0; i < 3; i++) {
             const ring = document.createElement('div');
+            const colors = ['rgba(255, 220, 100, 0.9)', 'rgba(255, 150, 50, 0.7)', 'rgba(255, 80, 0, 0.5)'];
             ring.style.cssText = `
                 position: fixed;
                 left: ${x}px;
                 top: ${y}px;
-                width: 50px;
-                height: 50px;
+                width: 60px;
+                height: 60px;
                 transform: translate(-50%, -50%);
-                border: 3px solid rgba(255, 200, 100, 0.8);
+                border: ${4 - i}px solid ${colors[i]};
                 border-radius: 50%;
                 z-index: 9998;
                 pointer-events: none;
+                box-shadow: 0 0 ${15 - i * 3}px ${colors[i]};
             `;
             document.body.appendChild(ring);
             
             if (typeof gsap !== 'undefined') {
                 gsap.to(ring, {
-                    width: 150 + i * 50,
-                    height: 150 + i * 50,
+                    width: 250 + i * 80,
+                    height: 250 + i * 80,
                     opacity: 0,
-                    duration: 0.4,
-                    delay: i * 0.08,
+                    duration: 0.5,
+                    delay: i * 0.06,
                     ease: 'power2.out',
                     onComplete: () => ring.remove()
                 });
             } else {
-                setTimeout(() => ring.remove(), 500);
+                setTimeout(() => ring.remove(), 600);
             }
         }
     },
@@ -838,17 +1014,26 @@ const BreakSystem = {
     },
     
     // ==========================================
-    // 유리 파편 VFX
+    // 유리 파편 VFX (강화!)
     // ==========================================
     createGlassShards(x, y) {
-        const colors = ['#ffd700', '#ffffff', '#ffcc00', '#ff8800'];
+        const colors = ['#ffd700', '#ffffff', '#ffcc00', '#ff8800', '#ff4400', '#ffee88'];
         
-        for (let i = 0; i < 20; i++) {
+        // ★ 파편 개수 증가! (20 → 35)
+        for (let i = 0; i < 35; i++) {
             const shard = document.createElement('div');
             const angle = Math.random() * Math.PI * 2;
-            const distance = 60 + Math.random() * 80;
-            const size = 8 + Math.random() * 12;
-            const rotation = Math.random() * 720;
+            const distance = 80 + Math.random() * 150; // 더 멀리!
+            const size = 10 + Math.random() * 18; // 더 크게!
+            const rotation = Math.random() * 1080; // 더 빠르게 회전!
+            
+            // 다양한 모양
+            const shapes = [
+                'polygon(20% 0%, 80% 0%, 100% 50%, 80% 100%, 20% 100%, 0% 50%)', // 육각형
+                'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)', // 다이아몬드
+                'polygon(0% 0%, 100% 0%, 80% 100%, 20% 100%)', // 사다리꼴
+                'polygon(30% 0%, 70% 0%, 100% 70%, 0% 70%)' // 삼각 사다리
+            ];
             
             shard.style.cssText = `
                 position: fixed;
@@ -857,27 +1042,28 @@ const BreakSystem = {
                 width: ${size}px;
                 height: ${size * 0.6}px;
                 background: linear-gradient(135deg, ${colors[i % colors.length]}, white);
-                clip-path: polygon(20% 0%, 80% 0%, 100% 50%, 80% 100%, 20% 100%, 0% 50%);
+                clip-path: ${shapes[i % shapes.length]};
                 transform: translate(-50%, -50%);
                 z-index: 10000;
                 pointer-events: none;
-                box-shadow: 0 0 ${size/2}px ${colors[i % colors.length]};
+                box-shadow: 0 0 ${size}px ${colors[i % colors.length]};
+                filter: brightness(1.2);
             `;
             document.body.appendChild(shard);
             
             if (typeof gsap !== 'undefined') {
                 gsap.to(shard, {
                     x: Math.cos(angle) * distance,
-                    y: Math.sin(angle) * distance + 40, // 중력
+                    y: Math.sin(angle) * distance + 60 + Math.random() * 40, // 더 많은 중력
                     rotation: rotation,
                     opacity: 0,
                     scale: 0,
-                    duration: 0.5 + Math.random() * 0.3,
+                    duration: 0.6 + Math.random() * 0.4,
                     ease: 'power2.out',
                     onComplete: () => shard.remove()
                 });
             } else {
-                setTimeout(() => shard.remove(), 800);
+                setTimeout(() => shard.remove(), 1000);
             }
         }
     },

@@ -171,6 +171,26 @@ const Localization = {
                 name: '갈고리',
                 desc: '4 피해. 적을 맨 앞으로 당김. 충돌 시 2 피해.'
             },
+            kick: {
+                name: '킥',
+                desc: '적을 1칸 뒤로 밀침. 넉백 피해만.'
+            },
+            rush: {
+                name: '돌진',
+                desc: '3번 밀어붙임! 넉백 피해만.'
+            },
+            sneakAttack: {
+                name: '비열한 습격',
+                desc: '5 피해. 2 출혈 부여.'
+            },
+            lightning: {
+                name: '번개',
+                desc: '8 피해. 인접 적에게 연쇄. 연쇄당 -2 피해.'
+            },
+            fireArrow: {
+                name: '화염 화살',
+                desc: '4 피해 x 3회. 원거리. 화염 속성.'
+            },
             
             // 스킬 카드
             defend: {
@@ -233,6 +253,26 @@ const Localization = {
                 name: 'Hook',
                 desc: '4 damage. Pull enemy to front. 2 crash damage on collision.'
             },
+            kick: {
+                name: 'Kick',
+                desc: 'Push enemy 1 cell back. Knockback damage only.'
+            },
+            rush: {
+                name: 'Rush',
+                desc: 'Push 3 times! Knockback damage only.'
+            },
+            sneakAttack: {
+                name: 'Sneak Attack',
+                desc: '5 damage. Apply 2 Bleed.'
+            },
+            lightning: {
+                name: 'Lightning',
+                desc: '8 damage. Chains to adjacent enemies. -2 damage per chain.'
+            },
+            fireArrow: {
+                name: 'Fire Arrow',
+                desc: '4 damage x3. Ranged. Fire element.'
+            },
             defend: {
                 name: 'Defend',
                 desc: 'Gain 5 Block'
@@ -290,6 +330,26 @@ const Localization = {
             hook: {
                 name: 'フック',
                 desc: '4ダメージ。敵を最前線に引く。衝突時2ダメージ。'
+            },
+            kick: {
+                name: 'キック',
+                desc: '敵を1マス後ろに押す。ノックバックダメージのみ。'
+            },
+            rush: {
+                name: '突進',
+                desc: '3回押す！ノックバックダメージのみ。'
+            },
+            sneakAttack: {
+                name: '卑劣な襲撃',
+                desc: '5ダメージ。2出血を付与。'
+            },
+            lightning: {
+                name: '雷撃',
+                desc: '8ダメージ。隣接敵に連鎖。連鎖ごとに-2ダメージ。'
+            },
+            fireArrow: {
+                name: '火炎矢',
+                desc: '4ダメージx3。遠距離。火属性。'
             },
             defend: {
                 name: '防御',

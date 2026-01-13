@@ -68,11 +68,15 @@ const CheatSystem = {
                 </div>
                 <div class="cheat-tabs">
                     <button class="cheat-tab active" data-tab="cards">카드 추가</button>
+                    <button class="cheat-tab" data-tab="monsters">몬스터 소환</button>
                     <button class="cheat-tab" data-tab="quick">퀵 치트</button>
                 </div>
                 <div class="cheat-content">
                     <div class="cheat-tab-content active" id="cheat-cards">
                         <div class="cheat-card-grid"></div>
+                    </div>
+                    <div class="cheat-tab-content" id="cheat-monsters">
+                        <div class="cheat-monster-grid"></div>
                     </div>
                     <div class="cheat-tab-content" id="cheat-quick">
                         <div class="cheat-quick-buttons">
@@ -275,6 +279,44 @@ const CheatSystem = {
             .cheat-card.skill { border-left: 3px solid #22c55e; }
             .cheat-card.summon { border-left: 3px solid #3b82f6; }
             
+            .cheat-monster-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+                gap: 10px;
+            }
+            
+            .cheat-monster {
+                padding: 14px 10px;
+                background: rgba(255,255,255,0.05);
+                border: 1px solid rgba(255,255,255,0.1);
+                border-radius: 8px;
+                text-align: center;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            
+            .cheat-monster:hover {
+                background: rgba(139, 92, 246, 0.2);
+                border-color: #8b5cf6;
+                transform: translateY(-2px);
+            }
+            
+            .cheat-monster-icon {
+                font-size: 1.8rem;
+                margin-bottom: 6px;
+            }
+            
+            .cheat-monster-name {
+                font-size: 0.9rem;
+                color: #fff;
+                margin-bottom: 3px;
+            }
+            
+            .cheat-monster-hp {
+                font-size: 0.75rem;
+                color: #ef4444;
+            }
+            
             .cheat-quick-buttons {
                 display: grid;
                 grid-template-columns: repeat(2, 1fr);
@@ -344,6 +386,7 @@ const CheatSystem = {
         }
         
         this.refreshCardList();
+        this.refreshMonsterList();
         this.modal.classList.add('open');
         this.isOpen = true;
     },
@@ -422,6 +465,67 @@ const CheatSystem = {
             : card.name;
         
         this.showToast(`${localName} 추가됨!`);
+    },
+    
+    // ==========================================
+    // 몬스터 목록 갱신
+    // ==========================================
+    refreshMonsterList() {
+        const grid = this.modal.querySelector('.cheat-monster-grid');
+        grid.innerHTML = '';
+        
+        if (typeof MonsterPatterns === 'undefined' || !MonsterPatterns.patterns) {
+            console.warn('[Cheat] MonsterPatterns 없음!');
+            return;
+        }
+        
+        const monsterIcons = {
+            goblin: '👺',
+            goblinArcher: '🏹',
+            goblinShaman: '🔮',
+            orc: '👹',
+            skeleton: '💀',
+            skeletonMage: '🧙',
+            bigSlime: '🫧',
+            slime: '💧',
+            miniSlime: '💦'
+        };
+        
+        for (const [monsterId, pattern] of Object.entries(MonsterPatterns.patterns)) {
+            const monsterEl = document.createElement('div');
+            monsterEl.className = 'cheat-monster';
+            monsterEl.innerHTML = `
+                <div class="cheat-monster-icon">${monsterIcons[monsterId] || '👾'}</div>
+                <div class="cheat-monster-name">${pattern.nameKo || pattern.name}</div>
+                <div class="cheat-monster-hp">HP: ${pattern.stats?.hp || '?'}</div>
+            `;
+            monsterEl.onclick = () => this.spawnMonster(monsterId);
+            grid.appendChild(monsterEl);
+        }
+    },
+    
+    // ==========================================
+    // 몬스터 소환
+    // ==========================================
+    async spawnMonster(monsterId) {
+        if (this.game.state.phase !== 'prepare') {
+            this.showToast('준비 페이즈에서만 사용 가능!');
+            return;
+        }
+        
+        // 랜덤 위치에 소환
+        const arena = this.game.arena;
+        const x = arena.playerZoneX + Math.floor(Math.random() * (arena.width - arena.playerZoneX));
+        const z = Math.floor(Math.random() * arena.depth);
+        
+        const unit = await this.game.spawnEnemy(monsterId, z, x);
+        
+        if (unit) {
+            const pattern = MonsterPatterns.getPattern(monsterId);
+            this.showToast(`${pattern?.nameKo || monsterId} 소환!`);
+        } else {
+            this.showToast('소환 실패 (빈 칸 없음)');
+        }
     },
     
     // ==========================================

@@ -18,43 +18,116 @@
         "aggressive": true
     },
     
-    "weaknesses": ["physical", "fire"],
+    "weaknesses": ["physical", "fire", "lightning"],
     
     "intents": [
         { 
-            "id": "slash",
-            "name": "베기",
-            "nameEn": "Slash",
+            "id": "stab",
+            "name": "찌르기",
+            "nameEn": "Stab",
             "type": "attack", 
-            "damage": 8,
-            "weight": 40,
-            "breakRecipe": 3
+            "damage": 6,
+            "weight": 50
         },
         { 
-            "id": "wild_swing",
-            "name": "난폭한 휘두르기",
-            "nameEn": "Wild Swing",
+            "id": "flurry",
+            "name": "단검 연속찌르기",
+            "nameEn": "Dagger Flurry",
             "type": "attack", 
-            "damage": 12,
-            "weight": 25,
-            "breakRecipe": 2
+            "attackStyle": "flurry",
+            "damage": 2,
+            "hits": 3,
+            "weight": 30,
+            "breakRecipe": 2,
+            "cooldown": 2
         },
         { 
             "id": "defend",
             "name": "방어 태세",
             "nameEn": "Defensive Stance",
             "type": "defend", 
-            "block": 6,
+            "block": 5,
             "weight": 20
-        },
-        { 
-            "id": "prepare",
-            "name": "준비",
-            "nameEn": "Prepare",
-            "type": "buff", 
-            "buffType": "strength",
-            "buffValue": 2,
-            "weight": 15
         }
-    ]
+    ],
+    
+    "dialogues": {
+        "spawn": [
+            "끼익!",
+            "키키킥!",
+            "인간이다!",
+            "잡아라!",
+            "고기다!!",
+            "키히히..."
+        ],
+        "intent": [
+            "죽여버려!",
+            "끼이익~",
+            "키킥킥...",
+            "어디 도망가!",
+            "가만 안둬!"
+        ],
+        "attack": [
+            "받아라!",
+            "끼야아앗!",
+            "죽어!",
+            "키히힛!",
+            "이거나 먹어라!"
+        ],
+        "defend": [
+            "으으...",
+            "잠깐!",
+            "막아야지...",
+            "끼익..."
+        ],
+        "buff": [
+            "키히히...",
+            "더 강하게...",
+            "힘이 솟아!",
+            "끼기긱..."
+        ],
+        "hit": [
+            "끼악!",
+            "아야!",
+            "아프다고!",
+            "으악!",
+            "크윽!",
+            "윽!",
+            "끄윽..!",
+            "이 녀석!",
+            "감히!",
+            "아앗!"
+        ],
+        "death": [
+            "키이익...",
+            "안돼...",
+            "복수를...",
+            "이럴순..."
+        ],
+        "break": [
+            "끼이익?!",
+            "뭐, 뭐야?!",
+            "안돼!!",
+            "살려줘!"
+        ],
+        "random": [
+            "키킥킥...",
+            "빨리빨리!",
+            "뭘봐!",
+            "배고파..."
+        ],
+        "intents": {
+            "stab": [
+                "찔러!",
+                "죽어!",
+                "키힉!"
+            ],
+            "flurry": [
+                "찔러찔러찔러!",
+                "찍찍찍!",
+                "빠르게! 빠르게!",
+                "키히히히!"
+            ]
+        }
+    }
 }

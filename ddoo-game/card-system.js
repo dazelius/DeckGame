@@ -25,6 +25,10 @@ const CardSystem = {
         fireBall: 1,
         spearThrow: 1,
         hook: 1,       // ★ 갈고리 추가
+        kick: 1,       // ★ 킥 추가
+        rush: 1,       // ★ 돌진 추가
+        sneakAttack: 1, // ★ 비열한 습격 추가
+        lightning: 1,   // ★ 번개 추가
         summonKnight: 2,
         summonArcher: 2,
         heal: 1

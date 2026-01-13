@@ -25,11 +25,18 @@ const DDOOBackground = {
     // Camera defaults - fit grid exactly, hide back edge
     cameraDefaults: {
         posX: 5,       // Center of arena (X axis)
-        posY: 3.2,     // Slightly lower for better view
-        posZ: 4.8,     // Closer for better visibility
+        posY: 1.1,     // 카메라 높이
+        posZ: 3.0,     // 확대
         lookAtX: 5,    // Look at arena center
-        lookAtY: 0,    // Look at floor level
-        lookAtZ: 1.2   // Look slightly forward to hide back edge
+        lookAtY: 1.0,  // 시선
+        lookAtZ: 0.5   // 가까이
+    },
+    
+    // ★ 탑뷰 모드 (카드 드래그용)
+    topViewMode: {
+        active: false,
+        posY: 3.0,      // ★ 더 높이 올림
+        lookAtY: -0.2,  // ★ 더 아래로 내려다봄 (거의 수직)
     },
     
     // Auto zoom settings
@@ -569,15 +576,27 @@ const DDOOBackground = {
         const currentZ = this.autoZoom.currentZ;
         const currentX = this.autoZoom.currentX;
         
+        // ★ 탑뷰 모드: 들어갈 때 부드럽게, 나올 때 빠르게
+        const targetPosY = this.topViewMode.active ? this.topViewMode.posY : this.cameraDefaults.posY;
+        const targetLookY = this.topViewMode.active ? this.topViewMode.lookAtY : this.cameraDefaults.lookAtY;
+        
+        const currentPosY = this._currentPosY || this.cameraDefaults.posY;
+        const currentLookY = this._currentLookY || this.cameraDefaults.lookAtY;
+        
+        // 들어갈 때 0.1, 나올 때 0.3 (빠르게)
+        const speed = this.topViewMode.active ? 0.1 : 0.3;
+        this._currentPosY = currentPosY + (targetPosY - currentPosY) * speed;
+        this._currentLookY = currentLookY + (targetLookY - currentLookY) * speed;
+        
         // Camera position (arena view with subtle parallax)
         this.camera.position.x = this.cameraDefaults.posX + this.mouse.x * this.config.mouseX * 0.3;
-        this.camera.position.y = this.cameraDefaults.posY + this.mouse.y * this.config.mouseY * 0.2;
+        this.camera.position.y = this._currentPosY + this.mouse.y * this.config.mouseY * 0.2;
         this.camera.position.z = currentZ;
         
         // Look at arena center
         this.camera.lookAt(
             this.cameraDefaults.lookAtX + this.mouse.x * 0.15,
-            this.cameraDefaults.lookAtY,
+            this._currentLookY,
             this.cameraDefaults.lookAtZ
         );
         
@@ -680,6 +699,19 @@ const DDOOBackground = {
     // ==========================================
     // 카메라 제어
     // ==========================================
+    
+    // ★ 탑뷰 모드 (카드 드래그 시)
+    setTopView(enabled) {
+        this.topViewMode.active = enabled;
+        
+        // ★ 그리드 표시/숨김
+        if (typeof game !== 'undefined' && game.containers && game.containers.grid) {
+            game.containers.grid.visible = enabled;
+        }
+        
+        console.log(`[Camera] 탑뷰 모드: ${enabled ? 'ON' : 'OFF'}`);
+    },
+    
     setZoom(level) {
         const baseZ = this.cameraDefaults.posZ;
         this.autoZoom.targetZ = baseZ * level;

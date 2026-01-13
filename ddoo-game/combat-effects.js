@@ -9,13 +9,20 @@ const CombatEffects = {
     // ==========================================
     // 초기화
     // ==========================================
-    init(pixiApp) {
+    init(pixiApp, gameWorld = null) {
         this.app = pixiApp;
         this.container = new PIXI.Container();
-        this.container.zIndex = 500;
+        this.container.zIndex = 50;  // effects(20) 위
         this.container.sortableChildren = true;
-        pixiApp.stage.addChild(this.container);
-        console.log('[CombatEffects] 초기화 완료');
+        
+        // ★ gameWorld가 있으면 그 안에 추가 (좌표 동기화)
+        if (gameWorld) {
+            gameWorld.addChild(this.container);
+            console.log('[CombatEffects] 초기화 완료 (gameWorld)');
+        } else {
+            pixiApp.stage.addChild(this.container);
+            console.log('[CombatEffects] 초기화 완료 (stage)');
+        }
     },
     
     // ==========================================
@@ -805,13 +812,823 @@ const CombatEffects = {
     },
     
     // ==========================================
-    // 파이어볼 이펙트 - 절제된 파티클 버전
+    // ★★★ 화염 화살 이펙트 (3D 볼류메트릭) ★★★
+    // ==========================================
+    async fireArrowEffect(startX, startY, endX, endY, options = {}) {
+        if (!this.app) return;
+        
+        const {
+            arrowLength = 28,
+            arcHeight = 40,
+            speed = 1000,
+            isEnemy = false
+        } = options;
+        
+        return new Promise(resolve => {
+            // 화염 화살 컨테이너
+            const arrow = new PIXI.Container();
+            arrow.x = startX;
+            arrow.y = startY;
+            arrow.zIndex = 150;
+            
+            // === 화염 글로우 (가장 뒤) ===
+            const glowLayers = [];
+            const glowColors = [0xff2200, 0xff6600, 0xffaa00];
+            for (let i = 0; i < 3; i++) {
+                const glow = new PIXI.Graphics();
+                const radius = 18 - i * 4;
+                glow.circle(0, 0, radius);
+                glow.fill({ color: glowColors[i], alpha: 0.4 - i * 0.1 });
+                glow.zIndex = -10 + i;
+                arrow.addChild(glow);
+                glowLayers.push(glow);
+            }
+            
+            // === 화살대 (불타는 나무) ===
+            const shaft = new PIXI.Graphics();
+            shaft.rect(-arrowLength/2, -2, arrowLength, 4);
+            shaft.fill({ color: 0x8B2500 }); // 짙은 붉은 갈색
+            arrow.addChild(shaft);
+            
+            // === 화살촉 (빛나는 금속) ===
+            const head = new PIXI.Graphics();
+            head.moveTo(arrowLength/2 + 8, 0);
+            head.lineTo(arrowLength/2 - 2, -6);
+            head.lineTo(arrowLength/2 - 2, 6);
+            head.closePath();
+            head.fill({ color: 0xffcc00 }); // 황금빛
+            arrow.addChild(head);
+            
+            // === 3D 회전 화염 파티클 ===
+            const flameParticles = [];
+            for (let i = 0; i < 8; i++) {
+                const flame = new PIXI.Graphics();
+                const size = 4 + Math.random() * 4;
+                flame.circle(0, 0, size);
+                flame.fill({ color: [0xff4400, 0xff6600, 0xffaa00][Math.floor(Math.random() * 3)] });
+                
+                flame._angle = (i / 8) * Math.PI * 2;
+                flame._orbit = 12 + Math.random() * 8;
+                flame._speed = 0.15 + Math.random() * 0.1;
+                flame._zPhase = Math.random() * Math.PI * 2;
+                flame._baseScale = 0.5 + Math.random() * 0.5;
+                
+                arrow.addChild(flame);
+                flameParticles.push(flame);
+            }
+            
+            // === 핫 코어 (중앙 밝은 점) ===
+            const hotCore = new PIXI.Graphics();
+            hotCore.circle(3, 0, 5);
+            hotCore.fill({ color: 0xffffcc });
+            arrow.addChild(hotCore);
+            
+            this.container.addChild(arrow);
+            
+            // === 3D 회전 애니메이션 ===
+            let animTime = 0;
+            const orbitAnim = gsap.ticker.add(() => {
+                if (arrow.destroyed) {
+                    gsap.ticker.remove(orbitAnim);
+                    return;
+                }
+                
+                animTime += 0.016;
+                
+                // 파티클 3D 궤도 업데이트
+                flameParticles.forEach((p, idx) => {
+                    if (p.destroyed) return;
+                    
+                    p._angle += p._speed;
+                    
+                    // 3D 원형 궤도
+                    const zOffset = Math.sin(p._angle + p._zPhase);
+                    const depthScale = 0.6 + zOffset * 0.4;
+                    
+                    p.x = Math.cos(p._angle) * p._orbit * 0.3; // X축 압축
+                    p.y = Math.sin(p._angle) * p._orbit;
+                    
+                    p.scale.set(p._baseScale * depthScale);
+                    p.alpha = 0.4 + depthScale * 0.5;
+                    
+                    if (zOffset < 0) p.alpha *= 0.6;
+                });
+                
+                // 글로우 펄스
+                glowLayers.forEach((g, i) => {
+                    if (g.destroyed) return;
+                    const pulse = 1 + Math.sin(animTime * 10 + i * 0.5) * 0.2;
+                    g.scale.set(pulse);
+                });
+                
+                // 핫코어 펄스
+                if (!hotCore.destroyed) {
+                    const corePulse = 1 + Math.sin(animTime * 15) * 0.3;
+                    hotCore.scale.set(corePulse);
+                }
+            });
+            
+            // 베지어 곡선 제어점 (곡사)
+            const midX = (startX + endX) / 2;
+            const midY = Math.min(startY, endY) - arcHeight;
+            
+            // 비행시간
+            const distance = Math.hypot(endX - startX, endY - startY);
+            const duration = Math.max(0.15, distance / speed);
+            
+            // 화염 트레일 효과
+            const createFireTrail = () => {
+                if (arrow.destroyed) return;
+                
+                // 화염 파티클 트레일
+                for (let i = 0; i < 3; i++) {
+                    const trail = new PIXI.Graphics();
+                    const size = 3 + Math.random() * 4;
+                    trail.circle(0, 0, size);
+                    trail.fill({ color: [0xff4400, 0xff6600, 0xffaa00][i], alpha: 0.7 });
+                    trail.x = arrow.x + (Math.random() - 0.5) * 15;
+                    trail.y = arrow.y + (Math.random() - 0.5) * 10;
+                    trail.zIndex = 140;
+                    this.container.addChild(trail);
+                    
+                    gsap.to(trail, {
+                        y: trail.y - 15 - Math.random() * 10,
+                        scale: 0,
+                        alpha: 0,
+                        duration: 0.2 + Math.random() * 0.15,
+                        ease: 'power2.out',
+                        onComplete: () => trail.destroy()
+                    });
+                }
+                
+                // 연기 파티클
+                if (Math.random() > 0.5) {
+                    const smoke = new PIXI.Graphics();
+                    smoke.circle(0, 0, 4 + Math.random() * 3);
+                    smoke.fill({ color: 0x444444, alpha: 0.3 });
+                    smoke.x = arrow.x + (Math.random() - 0.5) * 10;
+                    smoke.y = arrow.y;
+                    smoke.zIndex = 139;
+                    this.container.addChild(smoke);
+                    
+                    gsap.to(smoke, {
+                        y: smoke.y - 20,
+                        scale: 1.5,
+                        alpha: 0,
+                        duration: 0.4,
+                        onComplete: () => smoke.destroy()
+                    });
+                }
+            };
+            
+            const trailInterval = setInterval(createFireTrail, 25);
+            
+            // 베지어 애니메이션
+            const bezier = { t: 0 };
+            
+            gsap.to(bezier, {
+                t: 1,
+                duration: duration,
+                ease: 'none',
+                onUpdate: () => {
+                    const t = bezier.t;
+                    const invT = 1 - t;
+                    
+                    // 2차 베지어 곡선
+                    const x = invT * invT * startX + 2 * invT * t * midX + t * t * endX;
+                    const y = invT * invT * startY + 2 * invT * t * midY + t * t * endY;
+                    
+                    // 방향으로 회전
+                    const dx = x - arrow.x;
+                    const dy = y - arrow.y;
+                    if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
+                        arrow.rotation = Math.atan2(dy, dx);
+                    }
+                    
+                    arrow.x = x;
+                    arrow.y = y;
+                },
+                onComplete: () => {
+                    clearInterval(trailInterval);
+                    gsap.ticker.remove(orbitAnim);
+                    
+                    // 화염 폭발 이펙트
+                    this.fireArrowExplosion(endX, endY);
+                    
+                    arrow.destroy({ children: true });
+                    resolve();
+                }
+            });
+        });
+    },
+    
+    // 화염 화살 폭발 이펙트
+    fireArrowExplosion(x, y) {
+        if (!this.app) return;
+        
+        // 화염 버스트
+        for (let i = 0; i < 12; i++) {
+            const particle = new PIXI.Graphics();
+            const size = 4 + Math.random() * 6;
+            particle.circle(0, 0, size);
+            particle.fill({ color: [0xff2200, 0xff6600, 0xffaa00][i % 3] });
+            particle.x = x;
+            particle.y = y;
+            particle.zIndex = 160;
+            this.container.addChild(particle);
+            
+            const angle = (i / 12) * Math.PI * 2 + Math.random() * 0.3;
+            const dist = 25 + Math.random() * 25;
+            
+            gsap.to(particle, {
+                x: x + Math.cos(angle) * dist,
+                y: y + Math.sin(angle) * dist - 15,
+                scale: 0,
+                alpha: 0,
+                duration: 0.3 + Math.random() * 0.2,
+                ease: 'power2.out',
+                onComplete: () => particle.destroy()
+            });
+        }
+        
+        // 중앙 플래시
+        const flash = new PIXI.Graphics();
+        flash.circle(0, 0, 20);
+        flash.fill({ color: 0xffffaa, alpha: 0.8 });
+        flash.x = x;
+        flash.y = y;
+        flash.zIndex = 161;
+        this.container.addChild(flash);
+        
+        gsap.to(flash, {
+            scale: 2,
+            alpha: 0,
+            duration: 0.2,
+            onComplete: () => flash.destroy()
+        });
+        
+        // 링 이펙트
+        const ring = new PIXI.Graphics();
+        ring.circle(0, 0, 15);
+        ring.stroke({ width: 3, color: 0xff6600, alpha: 0.8 });
+        ring.x = x;
+        ring.y = y;
+        ring.zIndex = 160;
+        this.container.addChild(ring);
+        
+        gsap.to(ring, {
+            scale: 2.5,
+            alpha: 0,
+            duration: 0.25,
+            onComplete: () => ring.destroy()
+        });
+    },
+    
+    // ==========================================
+    // ★★★ 스피어 이펙트 (직선 투척, 스핀 파워업!) ★★★
+    // ==========================================
+    async spearEffect(startX, startY, endX, endY, options = {}) {
+        if (!this.app) return;
+        
+        const {
+            shaftColor = 0x8B4513,    // 갈색 나무
+            metalColor = 0x888899,    // 금속색
+            spearLength = 60,         // ★ 큰 창
+            speed = 900,              // 직선 스피드
+            gridDistance = 1,         // ★ 그리드 거리 (파워업용)
+            isEnemy = false
+        } = options;
+        
+        return new Promise(resolve => {
+            // ★ 파워 레벨 (1칸부터 시작, 최대 5)
+            let currentPower = 0;
+            const maxPower = Math.min(5, gridDistance);
+            
+            // ★ 스핀 강도 (파워에 따라 증가) - 드릴처럼 축 회전!
+            let spinIntensity = 0;  // 스핀 강도 (시각 효과용)
+            const baseAngle = Math.atan2(endY - startY, endX - startX);
+            let spinPhase = 0;  // 스핀 애니메이션 위상
+            
+            // 파워 레벨별 색상
+            const powerColors = [
+                { trail: 0xddccaa, glow: null },           // 0: 기본
+                { trail: 0xeedd99, glow: 0xffcc00 },       // 1: 황금빛
+                { trail: 0xffaa44, glow: 0xff8800 },       // 2: 주황
+                { trail: 0xff7733, glow: 0xff4400 },       // 3: 불꽃
+                { trail: 0xff4422, glow: 0xff2200 },       // 4: 맹렬
+                { trail: 0xff2211, glow: 0xff0000 },       // 5: 지옥불
+            ];
+            
+            // 스피어 컨테이너 (위치용)
+            const spearContainer = new PIXI.Container();
+            spearContainer.x = startX;
+            spearContainer.y = startY;
+            spearContainer.zIndex = 150;
+            
+            // 스피어 본체 (회전용)
+            const spear = new PIXI.Container();
+            spearContainer.addChild(spear);
+            
+            // === 글로우 컨테이너 (파워업용) ===
+            const glowContainer = new PIXI.Container();
+            glowContainer.zIndex = -1;
+            spear.addChild(glowContainer);
+            
+            // === 창대 (나무) ===
+            const shaft = new PIXI.Graphics();
+            shaft.rect(-spearLength/2, -3, spearLength, 6);
+            shaft.fill({ color: shaftColor });
+            shaft.rect(-spearLength/2 + 5, -2, spearLength - 10, 2);
+            shaft.fill({ color: 0xA67C52, alpha: 0.5 });
+            spear.addChild(shaft);
+            
+            // === 창날 (금속, 삼각형) ===
+            const head = new PIXI.Graphics();
+            head.moveTo(spearLength/2 + 20, 0);
+            head.lineTo(spearLength/2 - 5, -8);
+            head.lineTo(spearLength/2 - 5, 8);
+            head.closePath();
+            head.fill({ color: metalColor });
+            head.moveTo(spearLength/2 + 18, 0);
+            head.lineTo(spearLength/2, -4);
+            head.lineTo(spearLength/2, 4);
+            head.closePath();
+            head.fill({ color: 0xccccdd, alpha: 0.6 });
+            head.rect(spearLength/2 - 8, -5, 6, 10);
+            head.fill({ color: 0x666666 });
+            spear.addChild(head);
+            
+            // === 창 끝 장식 (뒷부분) ===
+            const pommel = new PIXI.Graphics();
+            pommel.circle(-spearLength/2 - 3, 0, 4);
+            pommel.fill({ color: 0x555555 });
+            spear.addChild(pommel);
+            
+            // 초기 각도 설정 (발사 방향)
+            spear.rotation = baseAngle;
+            
+            this.container.addChild(spearContainer);
+            
+            // 비행 시간
+            const pixelDistance = Math.hypot(endX - startX, endY - startY);
+            const duration = Math.max(0.25, pixelDistance / speed);
+            
+            // ★ 그리드 체크포인트 (진행률 기준)
+            const checkpoints = [];
+            for (let i = 1; i <= gridDistance; i++) {
+                checkpoints.push(i / gridDistance);
+            }
+            let passedCheckpoints = 0;
+            
+            // ★ 파워업 함수 (스핀 강도 증가!)
+            const powerUp = (power) => {
+                currentPower = power;
+                const colors = powerColors[Math.min(power, 5)];
+                
+                // ★ 스핀 강도 증가! (드릴 회전 효과)
+                spinIntensity = power;
+                
+                // 글로우 업데이트
+                glowContainer.removeChildren();
+                if (colors.glow) {
+                    // 외곽 글로우
+                    const outerGlow = new PIXI.Graphics();
+                    outerGlow.circle(15, 0, 20 + power * 4);
+                    outerGlow.fill({ color: colors.glow, alpha: 0.15 + power * 0.03 });
+                    glowContainer.addChild(outerGlow);
+                    
+                    // 코어 글로우
+                    const coreGlow = new PIXI.Graphics();
+                    coreGlow.circle(25, 0, 8 + power * 2);
+                    coreGlow.fill({ color: 0xffffff, alpha: 0.3 });
+                    glowContainer.addChild(coreGlow);
+                    
+                    // 펄스 애니메이션
+                    gsap.to(coreGlow, {
+                        alpha: 0.1,
+                        duration: 0.08,
+                        repeat: -1,
+                        yoyo: true,
+                        onUpdate: function() {
+                            if (spearContainer.destroyed) this.kill();
+                        }
+                    });
+                }
+                
+                // 파워업 이펙트 (스핀 강화 + 불씨 폭발)
+                this.spearPowerUpEffect(spearContainer.x, spearContainer.y, power);
+                
+                // 스핀 강화 연출
+                this.spearSpinBoostEffect(spearContainer.x, spearContainer.y, power);
+                
+                // 스케일 펀치
+                gsap.fromTo(spear.scale, 
+                    { x: 1.15, y: 0.9 },
+                    { x: 1, y: 1, duration: 0.1, ease: 'power2.out' }
+                );
+            };
+            
+            // === 드릴 스핀 트레일 (축 방향 회전!) ===
+            const createSpinTrail = () => {
+                if (spearContainer.destroyed) return;
+                
+                const trail = new PIXI.Container();
+                trail.x = spearContainer.x;
+                trail.y = spearContainer.y;
+                trail.rotation = baseAngle;  // 항상 발사 방향 유지
+                trail.zIndex = 149;
+                
+                const colors = powerColors[Math.min(currentPower, 5)];
+                const trailLength = spearLength/2 + currentPower * 8;
+                const trailWidth = 3 + currentPower * 1.2;
+                
+                // 메인 트레일 (직선)
+                const mainTrail = new PIXI.Graphics();
+                mainTrail.rect(-spearLength/3, -trailWidth/2, trailLength, trailWidth);
+                mainTrail.fill({ color: colors.trail, alpha: 0.4 + currentPower * 0.05 });
+                trail.addChild(mainTrail);
+                
+                // ★ 스핀이 있으면 드릴 오라 효과!
+                if (currentPower >= 1 && colors.glow) {
+                    // 회전하는 오라 링 (축 방향 스핀 표현)
+                    const ringCount = Math.min(3, currentPower);
+                    for (let i = 0; i < ringCount; i++) {
+                        const ring = new PIXI.Graphics();
+                        const offset = -10 + i * 15;  // 창 축을 따라 배치
+                        const ringSize = 6 + currentPower * 2 - i * 2;
+                        
+                        // 타원으로 3D 회전 느낌
+                        const phase = spinPhase + (Math.PI * 2 / ringCount) * i;
+                        const scaleY = 0.3 + Math.abs(Math.sin(phase)) * 0.4;
+                        
+                        ring.ellipse(offset, 0, ringSize, ringSize * scaleY);
+                        ring.stroke({ width: 1.5, color: colors.glow, alpha: 0.4 - i * 0.1 });
+                        trail.addChild(ring);
+                    }
+                }
+                
+                this.container.addChild(trail);
+                
+                gsap.to(trail, {
+                    alpha: 0,
+                    scaleX: 0.7,
+                    duration: 0.1 + currentPower * 0.015,
+                    onComplete: () => { if (!trail.destroyed) trail.destroy(); }
+                });
+            };
+            
+            // === 바람/불씨 파티클 (스핀 방향으로!) ===
+            const createParticle = () => {
+                if (spearContainer.destroyed) return;
+                
+                const colors = powerColors[Math.min(currentPower, 5)];
+                
+                if (currentPower >= 2) {
+                    // ★ 스핀하는 불씨 파티클
+                    const ember = new PIXI.Graphics();
+                    const size = 1.5 + Math.random() * (1 + currentPower * 0.4);
+                    ember.circle(0, 0, size);
+                    ember.fill({ color: colors.glow || 0xffaa00, alpha: 0.8 });
+                    
+                    // 스핀 방향으로 튀어나감
+                    const spinAngle = spear.rotation + (Math.random() - 0.5) * Math.PI;
+                    ember.x = spearContainer.x + Math.cos(spinAngle) * 10;
+                    ember.y = spearContainer.y + Math.sin(spinAngle) * 10;
+                    ember.zIndex = 148;
+                    this.container.addChild(ember);
+                    
+                    gsap.to(ember, {
+                        x: ember.x + Math.cos(spinAngle) * (15 + Math.random() * 15),
+                        y: ember.y + Math.sin(spinAngle) * (15 + Math.random() * 15),
+                        alpha: 0,
+                        duration: 0.15 + Math.random() * 0.1,
+                        onComplete: () => { if (!ember.destroyed) ember.destroy(); }
+                    });
+                } else {
+                    // 바람 파티클
+                    const wind = new PIXI.Graphics();
+                    wind.moveTo(0, 0);
+                    wind.lineTo(-15 - Math.random() * 10, 0);
+                    wind.stroke({ width: 1 + Math.random(), color: 0xffffff, alpha: 0.3 });
+                    wind.x = spearContainer.x + (Math.random() - 0.5) * 20;
+                    wind.y = spearContainer.y + (Math.random() - 0.5) * 15;
+                    wind.rotation = baseAngle + (Math.random() - 0.5) * 0.3;
+                    wind.zIndex = 148;
+                    this.container.addChild(wind);
+                    
+                    gsap.to(wind, {
+                        x: wind.x - Math.cos(baseAngle) * 30,
+                        alpha: 0,
+                        duration: 0.1,
+                        onComplete: () => { if (!wind.destroyed) wind.destroy(); }
+                    });
+                }
+            };
+            
+            const trailInterval = setInterval(createSpinTrail, 16);
+            const particleInterval = setInterval(createParticle, currentPower >= 2 ? 12 : 30);
+            
+            // === 직선 비행 + 드릴 스핀 애니메이션 ===
+            let lastTime = Date.now();
+            const progress = { t: 0 };
+            
+            gsap.to(progress, {
+                t: 1,
+                duration: duration,
+                ease: 'power1.in',
+                onUpdate: () => {
+                    if (spearContainer.destroyed) return;
+                    
+                    // 위치 업데이트
+                    spearContainer.x = startX + (endX - startX) * progress.t;
+                    spearContainer.y = startY + (endY - startY) * progress.t;
+                    
+                    // ★ 드릴 스핀 위상 업데이트 (창은 회전 안 함!)
+                    const now = Date.now();
+                    const dt = (now - lastTime) / 1000;
+                    lastTime = now;
+                    
+                    // 스핀 강도에 따라 위상 속도 증가
+                    spinPhase += spinIntensity * 15 * dt;
+                    
+                    // 창은 항상 발사 방향 유지!
+                    spear.rotation = baseAngle;
+                    
+                    // ★ 체크포인트 통과 확인 (파워업!)
+                    while (passedCheckpoints < checkpoints.length && progress.t >= checkpoints[passedCheckpoints]) {
+                        passedCheckpoints++;
+                        if (passedCheckpoints >= 1) {
+                            powerUp(Math.min(5, passedCheckpoints));
+                        }
+                    }
+                },
+                onComplete: () => {
+                    clearInterval(trailInterval);
+                    clearInterval(particleInterval);
+                    
+                    // ★ 착탄 이펙트 (파워 레벨 + 스핀 강도 반영)
+                    this.spearImpactEffect(endX, endY, baseAngle, currentPower, spinIntensity);
+                    
+                    spearContainer.destroy();
+                    resolve();
+                }
+            });
+            
+            // 시전시 약간의 스케일 팝
+            spear.scale.set(0.6);
+            gsap.to(spear.scale, {
+                x: 1, y: 1,
+                duration: 0.1,
+                ease: 'back.out(2)'
+            });
+        });
+    },
+    
+    // ★ 스피어 파워업 이펙트 (불씨 폭발)
+    spearPowerUpEffect(x, y, power) {
+        if (!this.app) return;
+        
+        const powerColors = [0xddcc88, 0xffcc00, 0xff8800, 0xff4400, 0xff2200, 0xff0000];
+        const color = powerColors[Math.min(power, 5)];
+        
+        // 불씨 폭발
+        const count = 3 + power * 2;
+        for (let i = 0; i < count; i++) {
+            const ember = new PIXI.Graphics();
+            const size = 1 + Math.random() * (1.5 + power * 0.3);
+            ember.circle(0, 0, size);
+            ember.fill({ color, alpha: 0.8 });
+            ember.x = x;
+            ember.y = y;
+            ember.zIndex = 160;
+            this.container.addChild(ember);
+            
+            const angle = (Math.PI * 2 / count) * i + Math.random() * 0.5;
+            const dist = 12 + Math.random() * 18;
+            
+            gsap.to(ember, {
+                x: x + Math.cos(angle) * dist,
+                y: y + Math.sin(angle) * dist - 8,
+                alpha: 0,
+                duration: 0.2 + Math.random() * 0.1,
+                ease: 'power2.out',
+                onComplete: () => { if (!ember.destroyed) ember.destroy(); }
+            });
+        }
+        
+        // 충격 링
+        const ring = new PIXI.Graphics();
+        ring.circle(0, 0, 10 + power * 3);
+        ring.stroke({ width: 2, color: color, alpha: 0.6 });
+        ring.x = x;
+        ring.y = y;
+        ring.zIndex = 159;
+        this.container.addChild(ring);
+        
+        gsap.to(ring, {
+            scaleX: 1.8,
+            scaleY: 1.8,
+            alpha: 0,
+            duration: 0.15,
+            onComplete: () => { if (!ring.destroyed) ring.destroy(); }
+        });
+    },
+    
+    // ★ 스핀 부스트 이펙트 (드릴 회전 강화 표현)
+    spearSpinBoostEffect(x, y, power) {
+        if (!this.app) return;
+        
+        const powerColors = [0xddcc88, 0xffcc00, 0xff8800, 0xff4400, 0xff2200, 0xff0000];
+        const color = powerColors[Math.min(power, 5)];
+        
+        // ★ 드릴 링 이펙트 (축 방향 회전 표현)
+        const ringCount = 2 + power;
+        for (let i = 0; i < ringCount; i++) {
+            const ring = new PIXI.Graphics();
+            const ringSize = 15 + power * 3;
+            
+            // 타원으로 3D 회전 느낌
+            ring.ellipse(0, 0, ringSize, ringSize * 0.4);
+            ring.stroke({ width: 2 + power * 0.3, color: color, alpha: 0.6 });
+            
+            ring.x = x;
+            ring.y = y;
+            ring.rotation = (Math.PI / ringCount) * i;
+            ring.zIndex = 161;
+            this.container.addChild(ring);
+            
+            // 확대되면서 회전하고 사라짐
+            gsap.to(ring, {
+                scaleX: 2,
+                scaleY: 2,
+                alpha: 0,
+                duration: 0.2 + i * 0.03,
+                ease: 'power2.out',
+                onComplete: () => { if (!ring.destroyed) ring.destroy(); }
+            });
+        }
+        
+        // "DRILL!" 텍스트 (파워 2 이상)
+        if (power >= 2) {
+            const spinText = new PIXI.Text({
+                text: power >= 4 ? '🔥 MAX DRILL!' : `⚡ DRILL x${power}`,
+                style: {
+                    fontSize: 11 + power * 2,
+                    fontWeight: 'bold',
+                    fill: color,
+                    stroke: { color: 0x000000, width: 3 }
+                }
+            });
+            spinText.anchor.set(0.5);
+            spinText.x = x;
+            spinText.y = y - 25;
+            spinText.zIndex = 162;
+            this.container.addChild(spinText);
+            
+            gsap.to(spinText, {
+                y: y - 40,
+                alpha: 0,
+                duration: 0.35,
+                ease: 'power2.out',
+                onComplete: () => { if (!spinText.destroyed) spinText.destroy(); }
+            });
+        }
+    },
+    
+    // 스피어 착탄 이펙트 (★ 파워 레벨 + 드릴 스핀 반영)
+    spearImpactEffect(x, y, angle, power = 0, spinIntensity = 0) {
+        if (!this.app) return;
+        
+        const powerColors = [0xffffff, 0xffcc00, 0xff8800, 0xff4400, 0xff2200, 0xff0000];
+        const impactColor = powerColors[Math.min(power, 5)];
+        
+        // ★ 드릴 스핀이 강할수록 관통 이펙트!
+        if (power >= 2) {
+            // 드릴링 효과 (동심원 링들)
+            const drillRingCount = power + 1;
+            for (let i = 0; i < drillRingCount; i++) {
+                const drillRing = new PIXI.Graphics();
+                const ringSize = 12 + power * 4;
+                
+                // 3D 드릴링 느낌의 타원
+                drillRing.ellipse(0, 0, ringSize, ringSize * 0.35);
+                drillRing.stroke({ width: 2 + power * 0.5, color: impactColor, alpha: 0.6 });
+                drillRing.rotation = angle;  // 창 방향으로 정렬
+                drillRing.x = x;
+                drillRing.y = y;
+                drillRing.zIndex = 201;
+                this.container.addChild(drillRing);
+                
+                gsap.to(drillRing, {
+                    scaleX: 2.5 + i * 0.3,
+                    scaleY: 2.5 + i * 0.3,
+                    alpha: 0,
+                    duration: 0.2 + i * 0.05,
+                    delay: i * 0.03,
+                    ease: 'power2.out',
+                    onComplete: () => { if (!drillRing.destroyed) drillRing.destroy(); }
+                });
+            }
+        }
+        
+        // 충격파 (파워에 따라 크기 증가)
+        const shockwave = new PIXI.Graphics();
+        shockwave.circle(0, 0, 15 + power * 5);
+        shockwave.stroke({ width: 3 + power, color: impactColor, alpha: 0.8 });
+        shockwave.x = x;
+        shockwave.y = y;
+        shockwave.zIndex = 200;
+        this.container.addChild(shockwave);
+        
+        gsap.to(shockwave, {
+            scaleX: 2.5 + power * 0.3,
+            scaleY: 2.5 + power * 0.3,
+            alpha: 0,
+            duration: 0.25,
+            ease: 'power2.out',
+            onComplete: () => shockwave.destroy()
+        });
+        
+        // ★ 드릴 파편 (창 방향 + 방사형)
+        const sparkCount = 8 + power * 3;
+        for (let i = 0; i < sparkCount; i++) {
+            const spark = new PIXI.Graphics();
+            spark.rect(-3, -1, 6, 2);
+            spark.fill({ color: power >= 2 ? impactColor : 0xffffaa });
+            spark.x = x;
+            spark.y = y;
+            spark.zIndex = 199;
+            this.container.addChild(spark);
+            
+            // 방사형으로 퍼짐
+            const sparkAngle = angle + Math.PI + (Math.PI * 2 / sparkCount) * i;
+            const dist = 20 + Math.random() * (30 + power * 8);
+            
+            gsap.to(spark, {
+                x: x + Math.cos(sparkAngle) * dist,
+                y: y + Math.sin(sparkAngle) * dist,
+                rotation: Math.random() * Math.PI * 4,
+                alpha: 0,
+                duration: 0.3,
+                ease: 'power2.out',
+                onComplete: () => spark.destroy()
+            });
+        }
+        
+        // 먼지 구름 (파워에 따라 크기/수 증가)
+        const dustCount = 5 + power * 2;
+        for (let i = 0; i < dustCount; i++) {
+            const dust = new PIXI.Graphics();
+            const size = 8 + Math.random() * (8 + power * 3);
+            dust.circle(0, 0, size);
+            dust.fill({ color: power >= 3 ? 0x554433 : 0x887766, alpha: 0.5 });
+            dust.x = x + (Math.random() - 0.5) * (20 + power * 5);
+            dust.y = y + Math.random() * 10;
+            dust.zIndex = 198;
+            this.container.addChild(dust);
+            
+            gsap.to(dust, {
+                y: dust.y - 20 - Math.random() * (15 + power * 3),
+                scaleX: 1.5 + power * 0.2,
+                scaleY: 1.5 + power * 0.2,
+                alpha: 0,
+                duration: 0.4,
+                ease: 'power1.out',
+                onComplete: () => dust.destroy()
+            });
+        }
+        
+        // ★ 파워 3 이상: 지면 충격파
+        if (power >= 3) {
+            const groundWave = new PIXI.Graphics();
+            groundWave.ellipse(0, 0, 20 + power * 5, 6);
+            groundWave.stroke({ width: 2, color: 0x664422, alpha: 0.4 });
+            groundWave.x = x;
+            groundWave.y = y + 8;
+            groundWave.zIndex = 197;
+            this.container.addChild(groundWave);
+            
+            gsap.to(groundWave, {
+                scaleX: 2.5,
+                scaleY: 1.5,
+                alpha: 0,
+                duration: 0.3,
+                onComplete: () => { if (!groundWave.destroyed) groundWave.destroy(); }
+            });
+        }
+        
+        // 화면 흔들림 (파워에 따라 강화)
+        this.screenShake(6 + power * 3, 100 + power * 30);
+    },
+    
+    // ==========================================
+    // 파이어볼 이펙트 (3D 파티클 시스템) - 볼류메트릭 버전
     // ==========================================
     async fireballEffect(startX, startY, endX, endY) {
         if (!this.app) return;
         
         // 시전 이펙트
-        this.screenFlash('#ff4400', 40, 0.15);
+        this.screenFlash('#ff4400', 50, 0.2);
         
         return new Promise(resolve => {
             // 파이어볼 컨테이너
@@ -822,32 +1639,35 @@ const CombatEffects = {
             this.container.addChild(fireball);
             
             // ========================================
-            // 파티클 시스템 (2궤도 x 5개 = 10개)
+            // 3D 파티클 시스템 - 궤도 파티클들 (경량화)
             // ========================================
             const orbitParticles = [];
-            const NUM_ORBITS = 2;
-            const PARTICLES_PER_ORBIT = 5;
+            const NUM_ORBITS = 2;  // 궤도 레이어 수 (3→2)
+            const PARTICLES_PER_ORBIT = 5;  // 궤도당 파티클 (8→5)
             
+            // 각 궤도 레이어 생성
             for (let orbit = 0; orbit < NUM_ORBITS; orbit++) {
-                const orbitRadius = 18 + orbit * 10;
-                const orbitSpeed = 0.12 - orbit * 0.02;
-                const baseSize = 6 - orbit * 2;
+                const orbitRadius = 20 + orbit * 12;
+                const orbitSpeed = 0.15 - orbit * 0.03;  // 안쪽이 더 빠름
+                const baseSize = 8 - orbit * 2;
                 
                 for (let i = 0; i < PARTICLES_PER_ORBIT; i++) {
                     const particle = new PIXI.Graphics();
                     const angle = (i / PARTICLES_PER_ORBIT) * Math.PI * 2;
-                    const size = baseSize + Math.random() * 3;
+                    const size = baseSize + Math.random() * 4;
                     
-                    const colors = [0xffcc44, 0xff8800, 0xff5500];
-                    const colorIdx = Math.min(orbit, colors.length - 1);
+                    // 깊이에 따른 색상 (안쪽 = 밝음, 바깥 = 어두움)
+                    const colors = [0xffffcc, 0xffcc44, 0xff8800, 0xff5500, 0xff3300];
+                    const colorIdx = Math.min(orbit + Math.floor(Math.random() * 2), colors.length - 1);
                     
                     particle.circle(0, 0, size);
-                    particle.fill({ color: colors[colorIdx], alpha: 0.85 - orbit * 0.2 });
+                    particle.fill({ color: colors[colorIdx], alpha: 0.9 - orbit * 0.2 });
                     
+                    // 3D 느낌의 초기 위치
                     particle._angle = angle;
                     particle._orbit = orbitRadius;
-                    particle._speed = orbitSpeed * (Math.random() * 0.3 + 0.85);
-                    particle._zPhase = Math.random() * Math.PI * 2;
+                    particle._speed = orbitSpeed * (Math.random() * 0.4 + 0.8);
+                    particle._zPhase = Math.random() * Math.PI * 2;  // Z축 위상
                     particle._baseSize = size;
                     
                     fireball.addChild(particle);
@@ -855,13 +1675,13 @@ const CombatEffects = {
                 }
             }
             
-            // === 코어 글로우 (3레이어) ===
+            // === 볼류메트릭 코어 (다층 글로우) ===
             const glowLayers = [];
-            for (let i = 2; i >= 0; i--) {
+            for (let i = 4; i >= 0; i--) {
                 const glow = new PIXI.Graphics();
-                const radius = 6 + i * 6;
-                const alpha = 0.2 + (2 - i) * 0.2;
-                const colors = [0xffffcc, 0xffaa33, 0xff5500];
+                const radius = 8 + i * 8;
+                const alpha = 0.15 + (4 - i) * 0.15;
+                const colors = [0xffffee, 0xffdd66, 0xffaa33, 0xff7722, 0xff4400];
                 
                 glow.circle(0, 0, radius);
                 glow.fill({ color: colors[i], alpha: alpha });
@@ -869,10 +1689,10 @@ const CombatEffects = {
                 glowLayers.push(glow);
             }
             
-            // === 핫스팟 코어 ===
+            // === 밝은 핫스팟 코어 ===
             const hotCore = new PIXI.Graphics();
-            hotCore.circle(0, 0, 5);
-            hotCore.fill({ color: 0xffffff, alpha: 0.9 });
+            hotCore.circle(0, 0, 6);
+            hotCore.fill({ color: 0xffffff, alpha: 1 });
             fireball.addChild(hotCore);
             
             // === 3D 회전 애니메이션 ===
@@ -1044,10 +1864,10 @@ const CombatEffects = {
                 });
             };
             
-            // 파티클 생성 인터벌 (절제된 빈도)
-            const trailInterval = setInterval(createVolumetricTrail, 30);
-            const sparkInterval = setInterval(createSpark, 25);
-            const smokeInterval = setInterval(createVolumetricSmoke, 80);
+            // 파티클 생성 인터벌 (경량화: 빈도 낮춤)
+            const trailInterval = setInterval(createVolumetricTrail, 30);   // 15→30
+            const sparkInterval = setInterval(createSpark, 25);             // 12→25
+            const smokeInterval = setInterval(createVolumetricSmoke, 100);  // 60→100
             
             // === 비행 애니메이션 ===
             const flightDuration = Math.max(0.3, distance / 700);
@@ -1091,23 +1911,23 @@ const CombatEffects = {
     fireballExplosion3D(x, y) {
         if (!this.app) return;
         
-        // 화면 효과 (절제됨)
-        this.screenShake(12, 180);
-        this.screenFlash('#ff4400', 80, 0.4);
-        this.hitStop(40);
+        // 강력한 화면 효과
+        this.screenShake(18, 250);
+        this.screenFlash('#ff4400', 120, 0.6);
+        this.hitStop(50);
         
         // ========================================
-        // 초기 플래시 (2레이어)
+        // 초기 플래시 (3중 레이어)
         // ========================================
-        for (let i = 0; i < 2; i++) {
+        for (let i = 0; i < 3; i++) {
             const flash = new PIXI.Graphics();
             flash.x = x;
             flash.y = y;
             flash.zIndex = 260 - i * 5;
             
-            const radius = 40 + i * 25;
-            const colors = [0xffffff, 0xffdd88];
-            const alphas = [0.9, 0.6];
+            const radius = 50 + i * 30;
+            const colors = [0xffffff, 0xffffcc, 0xffdd88];
+            const alphas = [0.95, 0.7, 0.5];
             
             flash.circle(0, 0, radius);
             flash.fill({ color: colors[i], alpha: alphas[i] });
@@ -1120,13 +1940,13 @@ const CombatEffects = {
             });
             
             gsap.to(flash.scale, {
-                x: 1.6, y: 1.6,
+                x: 1.8 - i * 0.2, y: 1.8 - i * 0.2,
                 duration: 0.1 + i * 0.03
             });
         }
         
         // ========================================
-        // 폭발 구체 (4레이어)
+        // 3D 폭발 구체 (다층 글로우)
         // ========================================
         const sphereContainer = new PIXI.Container();
         sphereContainer.x = x;
@@ -1134,19 +1954,21 @@ const CombatEffects = {
         sphereContainer.zIndex = 245;
         this.container.addChild(sphereContainer);
         
-        for (let layer = 3; layer >= 0; layer--) {
+        // 볼류메트릭 구체 레이어들
+        for (let layer = 5; layer >= 0; layer--) {
             const sphere = new PIXI.Graphics();
-            const radius = 12 + layer * 10;
-            const colors = [0xffffcc, 0xffaa44, 0xff6600, 0xff3300];
-            const alpha = 0.85 - layer * 0.15;
+            const radius = 15 + layer * 12;
+            const colors = [0xffffff, 0xffee88, 0xffcc44, 0xff9922, 0xff6600, 0xff3300];
+            const alpha = 0.9 - layer * 0.12;
             
             sphere.circle(0, 0, radius);
             sphere.fill({ color: colors[layer], alpha: alpha });
             sphereContainer.addChild(sphere);
         }
         
+        // 구체 확장 + 소멸
         gsap.to(sphereContainer.scale, {
-            x: 2.2, y: 2,
+            x: 2.5, y: 2.2,  // 약간 비대칭 (3D 느낌)
             duration: 0.25,
             ease: 'power2.out'
         });
@@ -1157,39 +1979,40 @@ const CombatEffects = {
         });
         
         // ========================================
-        // 충격파 링 (2개)
+        // 3D 충격파 링 (다중 레이어)
         // ========================================
-        for (let r = 0; r < 2; r++) {
+        for (let r = 0; r < 3; r++) {
             const ring = new PIXI.Graphics();
             ring.x = x;
             ring.y = y;
             ring.zIndex = 240 - r * 3;
             
             const ringRadius = 20 + r * 10;
-            const colors = [0xffdd66, 0xff6622];
-            const widths = [6, 4];
+            const colors = [0xffdd66, 0xff8844, 0xff5522];
+            const widths = [8, 5, 3];
             
             ring.circle(0, 0, ringRadius);
-            ring.stroke({ color: colors[r], width: widths[r], alpha: 0.8 - r * 0.2 });
+            ring.stroke({ color: colors[r], width: widths[r], alpha: 0.9 - r * 0.2 });
             this.container.addChild(ring);
             
+            // 3D 느낌의 비대칭 확장
             gsap.to(ring.scale, {
-                x: 5 - r, y: 4 - r * 0.5,
-                duration: 0.3 + r * 0.05,
+                x: 7 - r, y: 5 - r * 0.5,  // Y축 압축
+                duration: 0.35 + r * 0.05,
                 ease: 'power2.out'
             });
             gsap.to(ring, {
                 alpha: 0,
-                duration: 0.3 + r * 0.05,
+                duration: 0.35 + r * 0.05,
                 delay: r * 0.02,
                 onComplete: () => { if (!ring.destroyed) ring.destroy(); }
             });
         }
         
         // ========================================
-        // 화염 파편 (15개로 축소)
+        // 3D 화염 파편 (깊이별 레이어) - 경량화
         // ========================================
-        const NUM_DEBRIS = 15;
+        const NUM_DEBRIS = 18;  // 36→18
         for (let i = 0; i < NUM_DEBRIS; i++) {
             const debris = new PIXI.Container();
             debris.x = x;
@@ -1249,49 +2072,50 @@ const CombatEffects = {
         }
         
         // ========================================
-        // 연기 (5개로 축소)
+        // 3D 연기 볼륨 (경량화)
         // ========================================
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 5; i++) {  // 10→5
             const smokeContainer = new PIXI.Container();
-            const offsetX = (Math.random() - 0.5) * 50;
-            const offsetY = (Math.random() - 0.5) * 30;
+            const offsetX = (Math.random() - 0.5) * 70;
+            const offsetY = (Math.random() - 0.5) * 40;
             smokeContainer.x = x + offsetX;
             smokeContainer.y = y + offsetY;
             smokeContainer.zIndex = 205;
             this.container.addChild(smokeContainer);
             
-            // 2층 연기
-            for (let s = 1; s >= 0; s--) {
+            // 다층 연기 (볼륨감)
+            for (let s = 2; s >= 0; s--) {
                 const smoke = new PIXI.Graphics();
-                const size = 12 + s * 8 + Math.random() * 8;
-                const colors = [0x222222, 0x333333];
-                const alpha = 0.35 - s * 0.1;
+                const size = 15 + s * 8 + Math.random() * 10;
+                const colors = [0x111111, 0x222222, 0x333333];
+                const alpha = 0.4 - s * 0.1;
                 
-                smoke.circle(s * 2, s * 2, size);
+                smoke.circle(s * 3, s * 2, size);  // 약간 오프셋 (3D 깊이)
                 smoke.fill({ color: colors[s], alpha: alpha });
                 smokeContainer.addChild(smoke);
             }
             
+            // 연기 상승
             gsap.to(smokeContainer, {
-                y: smokeContainer.y - 50 - Math.random() * 40,
-                x: smokeContainer.x + (Math.random() - 0.5) * 30,
+                y: smokeContainer.y - 70 - Math.random() * 50,
+                x: smokeContainer.x + (Math.random() - 0.5) * 40,
                 alpha: 0,
-                duration: 0.6 + Math.random() * 0.3,
+                duration: 0.8 + Math.random() * 0.4,
                 delay: i * 0.03,
                 ease: 'power2.out',
                 onComplete: () => { if (!smokeContainer.destroyed) smokeContainer.destroy({ children: true }); }
             });
             
             gsap.to(smokeContainer.scale, {
-                x: 2 + Math.random() * 0.5, y: 1.5 + Math.random() * 0.5,
-                duration: 0.6
+                x: 2.5 + Math.random(), y: 2 + Math.random(),
+                duration: 0.8
             });
         }
         
         // ========================================
-        // 떠오르는 불씨 (10개로 축소)
+        // 떠오르는 불씨 파티클 (경량화)
         // ========================================
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 10; i++) {  // 20→10
             setTimeout(() => {
                 if (!this.app || !this.container) return;
                 
@@ -1329,16 +2153,16 @@ const CombatEffects = {
         }
         
         // ========================================
-        // 바닥 스콜치 마크 (잔여 효과)
+        // 바닥 스콜치 마크 (잔여 효과) - 20% 축소
         // ========================================
         const scorch = new PIXI.Graphics();
         scorch.x = x;
         scorch.y = y + 20;  // 바닥 쪽
         scorch.zIndex = 180;
         
-        // 타원형 스콜치
-        scorch.ellipse(0, 0, 50, 20);
-        scorch.fill({ color: 0x111111, alpha: 0.4 });
+        // 타원형 스콜치 (50,20 → 40,16 = 20% 축소)
+        scorch.ellipse(0, 0, 40, 16);
+        scorch.fill({ color: 0x111111, alpha: 0.35 });
         this.container.addChild(scorch);
         
         scorch.scale.set(0.5);
@@ -1620,6 +2444,14 @@ const CombatEffects = {
     showDamageNumber(x, y, damage, type = 'normal') {
         if (!this.app) return;
         
+        // ★ 피 효과 자동 발생 (대미지 타입일 때만)
+        const damageTypes = ['normal', 'critical', 'bash', 'flurry', 'burn', 'poison', 'dot', 'bleed'];
+        console.log(`[CombatEffects] showDamageNumber: type=${type}, damage=${damage}, BloodEffect=${typeof BloodEffect}`);
+        if (typeof BloodEffect !== 'undefined' && damageTypes.includes(type) && damage > 0) {
+            console.log('[CombatEffects] BloodEffect.onDamage 호출!');
+            BloodEffect.onDamage(x, y, damage, { type: type });
+        }
+        
         const styles = {
             normal: { 
                 fill: '#ff4444',
@@ -1674,6 +2506,12 @@ const CombatEffects = {
                 stroke: '#002244',
                 fontSize: 38,
                 prefix: ''
+            },
+            bleed: { 
+                fill: '#cc0000',
+                stroke: '#330000',
+                fontSize: 42,
+                prefix: '🩸'
             }
         };
         
@@ -2240,6 +3078,133 @@ const CombatEffects = {
         // 이펙트도 추가
         const pos = this.getUnitPosition(unit);
         if (pos) this.blockEffect(pos.x, pos.y);
+        
+        // ★ 쉴드 글로우 추가/강화
+        this.addShieldGlow(unit);
+    },
+    
+    // ==========================================
+    // ★ 쉴드 외곽선 시스템 (DDOORenderer 활용)
+    // ==========================================
+    
+    /**
+     * 유닛에 쉴드 효과 추가 (외곽선 파란색 글로우)
+     * @param {Object} unit - 유닛 객체
+     */
+    addShieldGlow(unit) {
+        if (!unit || !unit.sprite) return;
+        
+        // 이미 쉴드 외곽선이면 스킵
+        if (unit.hasShieldOutline) return;
+        
+        // DDOORenderer의 글로우 효과 활성화
+        if (typeof DDOORenderer !== 'undefined') {
+            DDOORenderer.setOutlineGlow(unit.sprite, true, 0x44aaff);
+        }
+        
+        unit.hasShieldOutline = true;
+    },
+    
+    /**
+     * 쉴드 외곽선 제거 (원래 색상으로 복원)
+     */
+    removeShieldGlow(unit) {
+        console.log(`[ShieldGlow] removeShieldGlow 호출: ${unit?.type}, hasOutline=${unit?.hasShieldOutline}`);
+        
+        if (!unit || !unit.sprite) {
+            console.warn('[ShieldGlow] unit 또는 sprite 없음');
+            return;
+        }
+        if (!unit.hasShieldOutline) {
+            console.log('[ShieldGlow] hasShieldOutline=false, 스킵');
+            return;
+        }
+        
+        // 글로우 효과 비활성화
+        if (typeof DDOORenderer !== 'undefined') {
+            DDOORenderer.setOutlineGlow(unit.sprite, false);
+        }
+        
+        unit.hasShieldOutline = false;
+        console.log('[ShieldGlow] 쉴드 글로우 제거 완료');
+    },
+    
+    /**
+     * 쉴드 상태 업데이트 (block 값에 따라)
+     */
+    updateShieldGlow(unit) {
+        if (!unit) return;
+        
+        const hasBlock = (unit.block || 0) > 0;
+        
+        if (hasBlock && !unit.hasShieldOutline) {
+            this.addShieldGlow(unit);
+        } else if (!hasBlock && unit.hasShieldOutline) {
+            this.removeShieldGlow(unit);
+        }
+    },
+    
+    // ★ 슬라임 분열 경고 VFX
+    showSplitWarning(x, y) {
+        if (!this.app) return;
+        
+        // 경고 텍스트
+        const warningText = new PIXI.Text({
+            text: '💥 분열 준비!',
+            style: {
+                fontSize: 16,
+                fontWeight: 'bold',
+                fill: '#ff4444',
+                stroke: { color: '#000000', width: 4 }
+            }
+        });
+        warningText.anchor.set(0.5);
+        warningText.x = x;
+        warningText.y = y;
+        warningText.zIndex = 500;
+        this.container.addChild(warningText);
+        
+        // 애니메이션
+        gsap.fromTo(warningText, 
+            { y: y + 20, alpha: 0, scale: 0.5 },
+            { 
+                y: y - 10, 
+                alpha: 1, 
+                scale: 1.2,
+                duration: 0.3,
+                ease: 'back.out(2)',
+                onComplete: () => {
+                    gsap.to(warningText, {
+                        y: y - 30,
+                        alpha: 0,
+                        duration: 0.5,
+                        delay: 0.5,
+                        onComplete: () => { if (!warningText.destroyed) warningText.destroy(); }
+                    });
+                }
+            }
+        );
+        
+        // 위험 링 이펙트
+        for (let i = 0; i < 3; i++) {
+            const ring = new PIXI.Graphics();
+            ring.circle(0, 0, 20 + i * 10);
+            ring.stroke({ width: 2, color: 0xff4444, alpha: 0.6 });
+            ring.x = x;
+            ring.y = y + 30;
+            ring.zIndex = 499;
+            this.container.addChild(ring);
+            
+            gsap.to(ring, {
+                scaleX: 2,
+                scaleY: 2,
+                alpha: 0,
+                duration: 0.4,
+                delay: i * 0.1,
+                ease: 'power2.out',
+                onComplete: () => { if (!ring.destroyed) ring.destroy(); }
+            });
+        }
     },
     
     /**
@@ -2648,639 +3613,6 @@ const CombatEffects = {
                 duration: 0.4,
                 ease: 'power1.out'
             });
-        }
-    },
-    
-    // ==========================================
-    // 스피어 투척 이펙트 (그리드 거리 기반 파워업!)
-    // ==========================================
-    async spearThrowEffect(attacker, target, baseDamage, distanceBonus, gameRef, onHitCallback = null) {
-        const totalDamage = baseDamage + distanceBonus;
-        
-        if (!this.app || !attacker.sprite || !target.sprite) {
-            // ★ onHit 콜백 먼저 실행!
-            if (typeof onHitCallback === 'function') {
-                onHitCallback(target);
-            }
-            if (gameRef) gameRef.dealDamage(target, totalDamage);
-            return;
-        }
-        
-        // 시작/도착 위치 계산
-        const attackerPos = attacker.sprite.getGlobalPosition();
-        const targetPos = target.sprite.getGlobalPosition();
-        
-        // ★ 그리드 거리 계산 (한 칸당 파워업!)
-        const gridDistance = Math.abs(target.gridX - attacker.gridX);
-        const powerLevel = Math.min(5, Math.max(0, gridDistance - 1)); // 2칸부터 파워업 시작, 최대 5
-        
-        console.log(`[Spear] 그리드 거리: ${gridDistance}, 파워 레벨: ${powerLevel}`);
-        
-        // 투척 모션 - 더 역동적으로!
-        const posTarget = attacker.container || attacker.sprite;
-        const scaleTarget = attacker.sprite;
-        const originalX = posTarget.x;
-        const baseScale = scaleTarget.scale?.x || 1;
-        
-        return new Promise(resolve => {
-            const tl = gsap.timeline();
-            
-            // 1. 준비 동작 - 뒤로 빠지면서 몸을 웅크림
-            tl.to(posTarget, {
-                x: originalX - 20,
-                duration: 0.15,
-                ease: 'power2.in'
-            });
-            if (scaleTarget.scale) {
-                tl.to(scaleTarget.scale, {
-                    x: baseScale * 0.9,
-                    y: baseScale * 1.1,
-                    duration: 0.15
-                }, '<');
-            }
-            
-            // 2. 던지기! - 강하게 앞으로
-            tl.to(posTarget, {
-                x: originalX + 25,
-                duration: 0.1,
-                ease: 'power4.out',
-                onComplete: () => {
-                    // ★ 강화된 창 발사!
-                    this.createSpearProjectile(attackerPos, targetPos, gridDistance, powerLevel, (currentPower) => {
-                        // ★★★ 타격 시점! onHit 콜백 (브레이크 시스템 등) ★★★
-                        if (typeof onHitCallback === 'function') {
-                            onHitCallback(target);
-                        }
-                        
-                        // 창 도착 - 대미지 처리
-                        if (gameRef && target && target.hp > 0) {
-                            // ★ dealDamage 사용 (플로터 포함)
-                            gameRef.dealDamage(target, totalDamage);
-                            console.log(`[Spear Hit] 대미지 적용: ${totalDamage} (기본: ${baseDamage}, 보너스: ${distanceBonus})`);
-                        }
-                        // ★ 파워 레벨에 따른 쉐이크 강도
-                        const shakeIntensity = 5 + currentPower * 4;
-                        this.screenShake(shakeIntensity, 100 + currentPower * 30);
-                        this.spearImpactEffect(targetPos.x, targetPos.y, currentPower);
-                    });
-                }
-            });
-            if (scaleTarget.scale) {
-                tl.to(scaleTarget.scale, {
-                    x: baseScale * 1.15,
-                    y: baseScale * 0.85,
-                    duration: 0.1
-                }, '<');
-            }
-            
-            // 3. 원위치
-            tl.to(posTarget, {
-                x: originalX,
-                duration: 0.25,
-                ease: 'power2.out',
-                onUpdate: function() {
-                    // ★ 파괴 체크
-                    if (!posTarget || posTarget.destroyed) {
-                        this.kill();
-                        resolve();
-                    }
-                },
-                onComplete: resolve
-            });
-            if (scaleTarget.scale) {
-                tl.to(scaleTarget.scale, {
-                    x: baseScale,
-                    y: baseScale,
-                    duration: 0.2,
-                    ease: 'elastic.out(1, 0.5)'
-                }, '<');
-            }
-        });
-    },
-    
-    
-    
-    // ★ 스피어 발사체 생성 (비행 중 실시간 파워업!)
-    createSpearProjectile(start, end, gridDistance, initialPower = 0, onHit) {
-        if (!this.app) return;
-        
-        const spearContainer = new PIXI.Container();
-        spearContainer.x = start.x;
-        spearContainer.y = start.y - 30;
-        spearContainer.zIndex = 600;
-        this.container.addChild(spearContainer);
-        
-        // ★ 창 그래픽 (기본 상태)
-        const spear = new PIXI.Graphics();
-        this.drawSpear(spear, 0);
-        spearContainer.addChild(spear);
-        
-        // ★ 글로우 이펙트 컨테이너
-        const glowContainer = new PIXI.Container();
-        glowContainer.zIndex = -1;
-        spearContainer.addChild(glowContainer);
-        
-        // ★ 파워업 텍스트 표시용
-        let lastPowerLevel = 0;
-        
-        // 비행 방향
-        const angle = Math.atan2(end.y - 30 - (start.y - 30), end.x - start.x);
-        spearContainer.rotation = angle;
-        
-        // 비행 거리 & 시간
-        const pixelDistance = Math.sqrt((end.x - start.x) ** 2 + (end.y - start.y) ** 2);
-        const flightDuration = Math.max(0.25, pixelDistance / 800);
-        
-        // ★ 그리드 체크포인트 계산 (한 칸마다 파워업)
-        const checkpoints = [];
-        for (let i = 1; i <= gridDistance; i++) {
-            checkpoints.push(i / gridDistance); // 0~1 사이의 진행률
-        }
-        
-        let currentPower = 0;
-        let passedCheckpoints = 0;
-        
-        // ★ 실시간 업데이트 (프레임마다)
-        const updateInterval = setInterval(() => {
-            if (spearContainer.destroyed) {
-                clearInterval(updateInterval);
-                return;
-            }
-            
-            // 현재 진행률 계산
-            const progress = (spearContainer.x - start.x) / (end.x - start.x);
-            
-            // 체크포인트 통과 확인
-            while (passedCheckpoints < checkpoints.length && progress >= checkpoints[passedCheckpoints]) {
-                passedCheckpoints++;
-                if (passedCheckpoints >= 2) { // 2칸부터 파워업
-                    currentPower = Math.min(5, passedCheckpoints - 1);
-                    this.powerUpSpear(spearContainer, spear, glowContainer, currentPower);
-                }
-            }
-            
-            // 잔상 생성
-            this.createSpearTrail(spearContainer.x, spearContainer.y, spearContainer.rotation, currentPower);
-            
-            // 파워 2 이상: 불꽃 파티클
-            if (currentPower >= 2 && Math.random() < 0.4) {
-                this.createFlameParticle(spearContainer.x, spearContainer.y, currentPower);
-            }
-        }, 25);
-        
-        // 비행 애니메이션
-        gsap.to(spearContainer, {
-            x: end.x,
-            y: end.y - 30,
-            duration: flightDuration,
-            ease: 'none',
-            onUpdate: function() {
-                // ★ 애니메이션 중 파괴 체크
-                if (!spearContainer || spearContainer.destroyed) {
-                    this.kill();
-                    clearInterval(updateInterval);
-                }
-            },
-            onComplete: () => {
-                clearInterval(updateInterval);
-                
-                // ★ 파괴 체크
-                if (spearContainer && !spearContainer.destroyed) {
-                    // 도착 시 콜백 (최종 파워 레벨 전달)
-                    if (typeof onHit === 'function') onHit(currentPower);
-                    
-                    // 폭발 후 사라짐
-                    gsap.to(spearContainer, {
-                        alpha: 0,
-                        duration: 0.08,
-                        onComplete: () => {
-                            if (spearContainer && !spearContainer.destroyed) {
-                                spearContainer.destroy({ children: true });
-                            }
-                        }
-                    });
-                } else {
-                    // 이미 파괴됨 - 콜백만 호출
-                    if (typeof onHit === 'function') onHit(currentPower);
-                }
-            }
-        });
-    },
-    
-    // ★ 창 그리기 (다크소울 풍 - 파워 레벨별)
-    drawSpear(graphics, powerLevel) {
-        graphics.clear();
-        
-        // 다크소울 색상 - 어둡고 묵직한 톤
-        const colors = [
-            { blade: 0x6a6a6a, shaft: 0x3d2817, core: 0x888888 },     // 0: 철 
-            { blade: 0x7a7a7a, shaft: 0x4a3020, core: 0xaa6622 },     // 1: 열기
-            { blade: 0x8a7060, shaft: 0x553322, core: 0xcc5500 },     // 2: 잔불
-            { blade: 0x8a5540, shaft: 0x442211, core: 0xdd4400 },     // 3: 화염
-            { blade: 0x7a3020, shaft: 0x331100, core: 0xff3300 },     // 4: 맹화
-            { blade: 0x601010, shaft: 0x220000, core: 0xff2200 },     // 5: 지옥불
-        ];
-        const c = colors[Math.min(powerLevel, 5)];
-        
-        const scale = 1 + powerLevel * 0.08;
-        const bladeLen = (45 + powerLevel * 5) * scale;
-        const bladeW = (4 + powerLevel * 1) * scale;
-        
-        // 창날 - 날카롭고 위협적인 형태
-        graphics.poly([
-            { x: bladeLen, y: 0 },
-            { x: bladeLen - 12 * scale, y: -bladeW * 0.6 },
-            { x: bladeLen - 22 * scale, y: -bladeW },
-            { x: bladeLen - 22 * scale, y: bladeW },
-            { x: bladeLen - 12 * scale, y: bladeW * 0.6 }
-        ]);
-        graphics.fill({ color: c.blade });
-        graphics.stroke({ width: 1, color: 0x222222, alpha: 0.8 });
-        
-        // 파워 1 이상: 중심에 빛나는 코어
-        if (powerLevel >= 1) {
-            graphics.moveTo(bladeLen - 5 * scale, 0);
-            graphics.lineTo(bladeLen - 20 * scale, 0);
-            graphics.stroke({ width: 2 + powerLevel * 0.5, color: c.core, alpha: 0.6 + powerLevel * 0.08 });
-        }
-        
-        // 창대 - 어두운 나무/금속
-        graphics.roundRect(-38 * scale, -2.5 * scale, 62 * scale, 5 * scale, 2);
-        graphics.fill({ color: c.shaft });
-        graphics.stroke({ width: 1, color: 0x111111 });
-        
-        // 장식 밴드 - 어두운 금속
-        graphics.rect(10 * scale, -3.5 * scale, 8 * scale, 7 * scale);
-        graphics.fill({ color: 0x4a4a3a });
-        graphics.stroke({ width: 1, color: 0x222211 });
-    },
-    
-    // ★ 창 파워업 연출 (다크소울 풍 - 은은하고 묵직하게)
-    powerUpSpear(container, spearGraphics, glowContainer, powerLevel) {
-        // 창 다시 그리기
-        this.drawSpear(spearGraphics, powerLevel);
-        
-        // 묵직한 펀치 효과
-        gsap.fromTo(container.scale, 
-            { x: 1.15, y: 0.9 },
-            { x: 1, y: 1, duration: 0.12, ease: 'power2.out' }
-        );
-        
-        // 어두운 글로우/오라
-        const glowColors = [null, 0x442200, 0x663300, 0x884400, 0x993300, 0x882200];
-        const coreColors = [null, 0xaa5500, 0xcc5500, 0xdd4400, 0xee3300, 0xff2200];
-        const glowColor = glowColors[Math.min(powerLevel, 5)];
-        const coreColor = coreColors[Math.min(powerLevel, 5)];
-        
-        if (glowColor) {
-            glowContainer.removeChildren();
-            
-            // 외곽 어두운 오라
-            const outerGlow = new PIXI.Graphics();
-            outerGlow.circle(20, 0, 25 + powerLevel * 6);
-            outerGlow.fill({ color: 0x110000, alpha: 0.3 + powerLevel * 0.05 });
-            glowContainer.addChild(outerGlow);
-            
-            // 내부 잔열
-            const innerGlow = new PIXI.Graphics();
-            innerGlow.circle(25, 0, 12 + powerLevel * 3);
-            innerGlow.fill({ color: glowColor, alpha: 0.25 + powerLevel * 0.05 });
-            glowContainer.addChild(innerGlow);
-            
-            // 코어 빛
-            const core = new PIXI.Graphics();
-            core.circle(30, 0, 4 + powerLevel);
-            core.fill({ color: coreColor, alpha: 0.4 });
-            glowContainer.addChild(core);
-            
-            // 은은한 펄스
-            gsap.to(innerGlow, {
-                alpha: 0.1,
-                duration: 0.15,
-                repeat: -1,
-                yoyo: true,
-                ease: 'sine.inOut'
-            });
-        }
-        
-        // 파워업 이펙트
-        this.showPowerUpEffect(container.x, container.y, powerLevel);
-    },
-    
-    // ★ 파워업 이펙트 (다크소울 풍 - 불씨 폭발)
-    showPowerUpEffect(x, y, powerLevel) {
-        if (!this.app) return;
-        
-        // 작은 불씨들 폭발
-        const emberCount = 4 + powerLevel * 2;
-        const emberColors = [0x662200, 0x883300, 0xaa4400, 0xcc5500, 0xdd4400];
-        
-        for (let i = 0; i < emberCount; i++) {
-            const ember = new PIXI.Graphics();
-            const size = 1 + Math.random() * (1.5 + powerLevel * 0.3);
-            ember.circle(0, 0, size);
-            ember.fill({ color: emberColors[Math.min(powerLevel, 4)], alpha: 0.8 });
-            ember.x = x;
-            ember.y = y;
-            ember.zIndex = 650;
-            this.container.addChild(ember);
-            
-            const angle = (Math.PI * 2 / emberCount) * i + Math.random() * 0.5;
-            const dist = 15 + Math.random() * 20;
-            
-            gsap.to(ember, {
-                x: x + Math.cos(angle) * dist,
-                y: y + Math.sin(angle) * dist - 10,
-                alpha: 0,
-                duration: 0.25 + Math.random() * 0.1,
-                ease: 'power2.out',
-                onComplete: () => { if (!ember.destroyed) ember.destroy(); }
-            });
-        }
-        
-        // 검은 연기 퍼프
-        const smoke = new PIXI.Graphics();
-        smoke.circle(0, 0, 8 + powerLevel * 2);
-        smoke.fill({ color: 0x111111, alpha: 0.3 });
-        smoke.x = x;
-        smoke.y = y;
-        smoke.zIndex = 640;
-        this.container.addChild(smoke);
-        
-        gsap.to(smoke.scale, { x: 2, y: 2, duration: 0.2, ease: 'power2.out' });
-        gsap.to(smoke, { 
-            y: y - 15,
-            alpha: 0, 
-            duration: 0.25,
-            onComplete: () => { if (!smoke.destroyed) smoke.destroy(); }
-        });
-    },
-    
-    // ★ 불씨/잔열 파티클 (다크소울 풍)
-    createFlameParticle(x, y, powerLevel) {
-        if (!this.app) return;
-        
-        // 다크소울 스타일 - 어두운 불씨와 연기
-        const isSmoke = Math.random() < 0.3; // 30% 확률로 연기
-        
-        if (isSmoke) {
-            // 검은 연기
-            const smoke = new PIXI.Graphics();
-            const size = 3 + Math.random() * 4;
-            smoke.circle(0, 0, size);
-            smoke.fill({ color: 0x111111, alpha: 0.2 + Math.random() * 0.1 });
-            smoke.x = x + (Math.random() - 0.5) * 20;
-            smoke.y = y + (Math.random() - 0.5) * 10;
-            smoke.zIndex = 593;
-            this.container.addChild(smoke);
-            
-            gsap.to(smoke, {
-                x: smoke.x - 20 - Math.random() * 20,
-                y: smoke.y - 15 - Math.random() * 15,
-                alpha: 0,
-                duration: 0.3 + Math.random() * 0.15,
-                ease: 'power1.out',
-                onComplete: () => { if (!smoke.destroyed) smoke.destroy(); }
-            });
-            gsap.to(smoke.scale, { x: 1.5, y: 1.5, duration: 0.3 });
-        } else {
-            // 어두운 불씨
-            const emberColors = [0x552200, 0x773300, 0x994400, 0xaa4400, 0xbb3300];
-            const color = emberColors[Math.min(powerLevel, 4)];
-            
-            const ember = new PIXI.Graphics();
-            const size = 1 + Math.random() * (1.5 + powerLevel * 0.3);
-            ember.circle(0, 0, size);
-            ember.fill({ color, alpha: 0.7 + Math.random() * 0.3 });
-            ember.x = x + (Math.random() - 0.5) * 15;
-            ember.y = y + (Math.random() - 0.5) * 12;
-            ember.zIndex = 595;
-            this.container.addChild(ember);
-            
-            const vx = -25 - Math.random() * 35;
-            const vy = (Math.random() - 0.5) * 25 - 5; // 약간 위로
-            
-            gsap.to(ember, {
-                x: ember.x + vx,
-                y: ember.y + vy,
-                alpha: 0,
-                duration: 0.2 + Math.random() * 0.15,
-                ease: 'power2.out',
-                onComplete: () => { if (!ember.destroyed) ember.destroy(); }
-            });
-        }
-    },
-    
-    // ★ 창 잔상 효과 (다크소울 풍 - 연기/잔불)
-    createSpearTrail(x, y, rotation, powerLevel = 0) {
-        if (!this.app) return;
-        
-        const trailContainer = new PIXI.Container();
-        trailContainer.x = x;
-        trailContainer.y = y;
-        trailContainer.rotation = rotation;
-        trailContainer.zIndex = 590;
-        this.container.addChild(trailContainer);
-        
-        // 1. 메인 잔상 - 어두운 연기/그림자
-        const mainTrail = new PIXI.Graphics();
-        const length = 30 + powerLevel * 12;
-        const width = 2 + powerLevel * 1.5;
-        
-        // 그라데이션 효과를 위한 여러 레이어
-        for (let i = 0; i < 3; i++) {
-            const layerLen = length * (1 - i * 0.2);
-            const layerW = width * (1 + i * 0.3);
-            const alpha = (0.3 - i * 0.08) * (1 + powerLevel * 0.1);
-            mainTrail.roundRect(-15, -layerW, layerLen, layerW * 2, 2);
-            mainTrail.fill({ color: 0x222222, alpha });
-        }
-        trailContainer.addChild(mainTrail);
-        
-        // 2. 파워 1 이상: 불씨/잔열
-        if (powerLevel >= 1) {
-            const emberColors = [0x662200, 0x883300, 0xaa4400, 0xcc5500, 0xdd4400];
-            const emberColor = emberColors[Math.min(powerLevel - 1, 4)];
-            
-            const ember = new PIXI.Graphics();
-            ember.roundRect(-10, -width * 0.4, length * 0.6, width * 0.8, 1);
-            ember.fill({ color: emberColor, alpha: 0.4 + powerLevel * 0.1 });
-            trailContainer.addChild(ember);
-            
-            // 작은 불씨 파티클들
-            const particleCount = Math.min(powerLevel, 3);
-            for (let i = 0; i < particleCount; i++) {
-                const spark = new PIXI.Graphics();
-                const sparkX = -5 + Math.random() * (length * 0.4);
-                const sparkY = (Math.random() - 0.5) * width * 2;
-                spark.circle(sparkX, sparkY, 1 + Math.random());
-                spark.fill({ color: emberColor, alpha: 0.5 + Math.random() * 0.3 });
-                trailContainer.addChild(spark);
-            }
-        }
-        
-        // 3. 파워 3 이상: 검은 연기 파티클
-        if (powerLevel >= 3) {
-            for (let i = 0; i < 2; i++) {
-                const smoke = new PIXI.Graphics();
-                const smokeX = -20 - Math.random() * 15;
-                const smokeY = (Math.random() - 0.5) * width * 3;
-                smoke.circle(smokeX, smokeY, 3 + Math.random() * 3);
-                smoke.fill({ color: 0x111111, alpha: 0.2 });
-                trailContainer.addChild(smoke);
-            }
-        }
-        
-        // 서서히 사라지며 위로 흩어짐
-        gsap.to(trailContainer, {
-            alpha: 0,
-            y: y - 3,
-            duration: 0.15 + powerLevel * 0.02,
-            ease: 'power1.out',
-            onComplete: () => { if (!trailContainer.destroyed) trailContainer.destroy({ children: true }); }
-        });
-    },
-    
-    // ★ 창 충돌 이펙트 (다크소울 풍 - 묵직한 타격감)
-    spearImpactEffect(x, y, powerLevel = 0) {
-        if (!this.app) return;
-        
-        // 다크소울 색상 - 어두운 불씨와 먼지
-        const emberColors = [0x555555, 0x664422, 0x774433, 0x885544, 0x994433, 0xaa3322];
-        const mainColor = emberColors[Math.min(powerLevel, 5)];
-        
-        // 1. 충격 먼지 구름
-        const dustCloud = new PIXI.Graphics();
-        dustCloud.circle(0, 0, 12 + powerLevel * 4);
-        dustCloud.fill({ color: 0x1a1a1a, alpha: 0.35 + powerLevel * 0.04 });
-        dustCloud.x = x;
-        dustCloud.y = y;
-        dustCloud.zIndex = 605;
-        this.container.addChild(dustCloud);
-        
-        gsap.to(dustCloud.scale, { x: 2 + powerLevel * 0.25, y: 1.4 + powerLevel * 0.15, duration: 0.22, ease: 'power2.out' });
-        gsap.to(dustCloud, { y: y - 8, alpha: 0, duration: 0.32, onComplete: () => { if (!dustCloud.destroyed) dustCloud.destroy(); } });
-        
-        // 2. 금속/돌 파편 (무거운 느낌)
-        const debrisCount = 4 + powerLevel * 2;
-        for (let i = 0; i < debrisCount; i++) {
-            const debris = new PIXI.Graphics();
-            const size = 1.5 + Math.random() * 2;
-            debris.rect(-size/2, -size/2, size, size);
-            debris.fill({ color: 0x333333 + Math.floor(Math.random() * 0x222222) });
-            debris.x = x;
-            debris.y = y;
-            debris.zIndex = 615;
-            this.container.addChild(debris);
-            
-            const angle = (Math.PI * 2 / debrisCount) * i + Math.random() * 0.5;
-            const dist = 18 + Math.random() * 25 + powerLevel * 6;
-            
-            gsap.to(debris, {
-                x: x + Math.cos(angle) * dist,
-                y: y + Math.sin(angle) * dist + 25, // 중력
-                rotation: (Math.random() - 0.5) * Math.PI * 3,
-                alpha: 0,
-                duration: 0.38 + Math.random() * 0.12,
-                ease: 'power1.in',
-                onComplete: () => { if (!debris.destroyed) debris.destroy(); }
-            });
-        }
-        
-        // 3. 불씨 튀김 (작고 어두운)
-        const emberCount = 2 + powerLevel * 2;
-        for (let i = 0; i < emberCount; i++) {
-            const ember = new PIXI.Graphics();
-            const size = 0.8 + Math.random() * (1 + powerLevel * 0.3);
-            ember.circle(0, 0, size);
-            ember.fill({ color: mainColor, alpha: 0.7 });
-            ember.x = x + (Math.random() - 0.5) * 8;
-            ember.y = y + (Math.random() - 0.5) * 8;
-            ember.zIndex = 618;
-            this.container.addChild(ember);
-            
-            const vx = (Math.random() - 0.5) * (35 + powerLevel * 8);
-            const vy = -12 - Math.random() * (15 + powerLevel * 4);
-            
-            gsap.to(ember, {
-                x: ember.x + vx,
-                y: ember.y + vy + 28, // 중력
-                alpha: 0,
-                duration: 0.4 + Math.random() * 0.18,
-                ease: 'power1.in',
-                onComplete: () => { if (!ember.destroyed) ember.destroy(); }
-            });
-        }
-        
-        // 4. 파워 2 이상: 검은 연기 (서서히 올라감)
-        if (powerLevel >= 2) {
-            const smokeCount = 1 + powerLevel;
-            for (let i = 0; i < smokeCount; i++) {
-                setTimeout(() => {
-                    if (!this.app) return;
-                    const smoke = new PIXI.Graphics();
-                    const size = 5 + Math.random() * 6;
-                    smoke.circle(0, 0, size);
-                    smoke.fill({ color: 0x0a0a0a, alpha: 0.22 });
-                    smoke.x = x + (Math.random() - 0.5) * 20;
-                    smoke.y = y + (Math.random() - 0.5) * 12;
-                    smoke.zIndex = 602;
-                    this.container.addChild(smoke);
-                    
-                    gsap.to(smoke, {
-                        y: smoke.y - 25 - Math.random() * 18,
-                        alpha: 0,
-                        duration: 0.45 + Math.random() * 0.2,
-                        ease: 'power1.out',
-                        onComplete: () => { if (!smoke.destroyed) smoke.destroy(); }
-                    });
-                    gsap.to(smoke.scale, { x: 1.6, y: 1.6, duration: 0.45 });
-                }, i * 30);
-            }
-        }
-        
-        // 5. 파워 3 이상: 땅 갈라짐 (가로선)
-        if (powerLevel >= 3) {
-            const crack = new PIXI.Graphics();
-            crack.moveTo(0, 0);
-            crack.lineTo(-12 - powerLevel * 4, 2 + Math.random() * 2);
-            crack.lineTo(12 + powerLevel * 4, -1 - Math.random() * 2);
-            crack.stroke({ width: 1.5, color: 0x2a2a2a, alpha: 0.5 });
-            crack.x = x;
-            crack.y = y + 4;
-            crack.zIndex = 600;
-            this.container.addChild(crack);
-            
-            gsap.to(crack, { alpha: 0, duration: 0.5, delay: 0.15, onComplete: () => { if (!crack.destroyed) crack.destroy(); } });
-        }
-        
-        // 6. 파워 4 이상: 어두운 잔상
-        if (powerLevel >= 4) {
-            const shadow = new PIXI.Graphics();
-            shadow.circle(0, 0, 35 + powerLevel * 8);
-            shadow.fill({ color: 0x110808, alpha: 0.12 + (powerLevel - 4) * 0.04 });
-            shadow.x = x;
-            shadow.y = y;
-            shadow.zIndex = 598;
-            this.container.addChild(shadow);
-            gsap.to(shadow.scale, { x: 1.8, y: 1.8, duration: 0.18, ease: 'power2.out' });
-            gsap.to(shadow, { alpha: 0, duration: 0.25, onComplete: () => { if (!shadow.destroyed) shadow.destroy(); } });
-        }
-        
-        // 7. 파워 5: 지면 충격파
-        if (powerLevel >= 5) {
-            setTimeout(() => {
-                const groundWave = new PIXI.Graphics();
-                groundWave.ellipse(0, 0, 25, 6);
-                groundWave.stroke({ width: 1.5, color: 0x3a2a1a, alpha: 0.35 });
-                groundWave.x = x;
-                groundWave.y = y + 8;
-                groundWave.zIndex = 596;
-                this.container.addChild(groundWave);
-                
-                gsap.to(groundWave.scale, { x: 2.5, y: 1.8, duration: 0.28, ease: 'power2.out' });
-                gsap.to(groundWave, { alpha: 0, duration: 0.28, onComplete: () => { if (!groundWave.destroyed) groundWave.destroy(); } });
-            }, 35);
         }
     }
 };

@@ -1,78 +1,127 @@
 // =====================================================
 // Knockback System - 넉백 시스템
+// @see types.js - Unit 타입 정의
 // =====================================================
 
+/**
+ * 넉백 시스템
+ * @namespace KnockbackSystem
+ */
 const KnockbackSystem = {
+    /** @type {Object} */
     game: null,
     
-    // 넉백 대미지 설정
-    KNOCKBACK_DAMAGE: 2,      // 기본 넉백 대미지
-    WALL_DAMAGE: 5,           // 벽 충돌 대미지
-    COLLISION_DAMAGE: 3,      // 유닛 충돌 대미지 (양쪽)
-    PULL_CRASH_DAMAGE: 2,     // 당기기 충돌 대미지
+    /** @type {number} 기본 넉백 대미지 */
+    KNOCKBACK_DAMAGE: 2,
+    /** @type {number} 벽 충돌 대미지 */
+    WALL_DAMAGE: 5,
+    /** @type {number} 유닛 충돌 대미지 (양쪽) */
+    COLLISION_DAMAGE: 3,
+    /** @type {number} 당기기 충돌 대미지 */
+    PULL_CRASH_DAMAGE: 2,
     
-    // ==========================================
-    // 초기화
-    // ==========================================
+    /**
+     * 초기화
+     * @param {Object} gameRef - Game 객체 참조
+     */
     init(gameRef) {
         this.game = gameRef;
         console.log('[KnockbackSystem] 초기화 완료');
     },
     
-    // ==========================================
-    // 유틸: 위치용 타겟 (container || sprite)
-    // ==========================================
+    /**
+     * 유틸: 위치용 타겟 (container || sprite)
+     * @param {Unit} unit - 유닛
+     * @returns {PIXI.Container|PIXI.Sprite|null}
+     */
     getPositionTarget(unit) {
         return unit?.container || unit?.sprite || null;
     },
     
-    // ==========================================
-    // 넉백 실행
-    // ==========================================
+    /** @type {Set<Unit>} 넉백 중인 유닛 추적 (무한 재귀 방지) */
+    _knockbackInProgress: new Set(),
+    
+    /**
+     * 넉백 실행 (1칸씩 반복 처리)
+     * @param {Unit} unit - 넉백할 유닛
+     * @param {number} [direction=1] - 넉백 방향 (1: 적 기준 뒤로, -1: 앞으로)
+     * @param {number} [cells=1] - 넉백 거리 (칸)
+     * @returns {Promise<boolean>} 넉백 성공 여부
+     */
     async knockback(unit, direction = 1, cells = 1) {
         const posTarget = this.getPositionTarget(unit);
         if (!posTarget || unit.hp <= 0) return false;
         if (!this.game) return false;
         
-        const isEnemy = unit.team === 'enemy';
-        const knockbackDir = isEnemy ? direction : -direction; // Enemies go right (+X), allies go left (-X)
-        
-        // Calculate new position
-        const newGridX = unit.gridX + (knockbackDir * cells);
-        
-        // Check bounds
-        if (newGridX < 0 || newGridX >= this.game.arena.width) {
-            // Hit wall - show wall impact effect + WALL DAMAGE
-            await this.wallImpact(unit);
-            this.dealKnockbackDamage(unit, this.WALL_DAMAGE, 'wall');
+        // ★ 무한 재귀 방지: 이미 넉백 중인 유닛이면 실패
+        if (this._knockbackInProgress.has(unit)) {
+            console.log(`[Knockback] ${unit.type} 이미 넉백 중 - 스킵`);
             return false;
         }
         
-        // Check if destination cell is occupied
-        const allUnits = [...this.game.state.playerUnits, ...this.game.state.enemyUnits];
-        const blockingUnit = allUnits.find(u => 
-            u !== unit && u.hp > 0 && u.gridX === newGridX && u.gridZ === unit.gridZ
-        );
+        this._knockbackInProgress.add(unit);
         
-        if (blockingUnit) {
-            // Chain knockback - push the blocking unit too
-            const chainSuccess = await this.knockback(blockingUnit, direction, 1);
-            if (!chainSuccess) {
-                // Blocking unit couldn't move, collision! Both take damage
-                await this.collisionImpact(unit, blockingUnit);
-                this.dealKnockbackDamage(unit, this.COLLISION_DAMAGE, 'collision');
-                this.dealKnockbackDamage(blockingUnit, this.COLLISION_DAMAGE, 'collision');
-                return false;
+        // ★ direction은 절대 방향으로 사용 (+1: 오른쪽, -1: 왼쪽)
+        const knockbackDir = direction;
+        
+        let movedCells = 0;
+        let hitWall = false;
+        let hitUnit = false;
+        
+        try {
+            // ★ 1칸씩 반복 처리 (2칸 이상 넉백도 제대로 처리)
+            for (let i = 0; i < cells; i++) {
+                if (unit.hp <= 0) break;  // 사망 체크
+                
+                const nextGridX = unit.gridX + knockbackDir;
+                
+                // 벽 체크
+                if (nextGridX < 0 || nextGridX >= this.game.arena.width) {
+                    hitWall = true;
+                    break;
+                }
+                
+                // 유닛 충돌 체크
+                const allUnits = [...this.game.state.playerUnits, ...this.game.state.enemyUnits];
+                const blockingUnit = allUnits.find(u => 
+                    u !== unit && u.hp > 0 && u.gridX === nextGridX && u.gridZ === unit.gridZ
+                );
+                
+                if (blockingUnit) {
+                    // Chain knockback - push the blocking unit 1 cell
+                    const chainSuccess = await this.knockback(blockingUnit, direction, 1);
+                    if (!chainSuccess) {
+                        // Blocking unit couldn't move, collision!
+                        await this.collisionImpact(unit, blockingUnit);
+                        this.dealKnockbackDamage(unit, this.COLLISION_DAMAGE, 'collision');
+                        this.dealKnockbackDamage(blockingUnit, this.COLLISION_DAMAGE, 'collision');
+                        hitUnit = true;
+                        break;
+                    }
+                }
+                
+                // 1칸 이동
+                await this.executeKnockback(unit, nextGridX);
+                movedCells++;
             }
+            
+            // 벽에 충돌
+            if (hitWall) {
+                await this.wallImpact(unit);
+                this.dealKnockbackDamage(unit, this.WALL_DAMAGE, 'wall');
+            }
+            
+            // 이동한 칸만큼 넉백 대미지 (이동 안했으면 0)
+            if (movedCells > 0) {
+                this.dealKnockbackDamage(unit, this.KNOCKBACK_DAMAGE * movedCells, 'knockback');
+            }
+        } finally {
+            // ★ 넉백 완료 후 Set에서 제거
+            this._knockbackInProgress.delete(unit);
         }
         
-        // Execute knockback movement
-        await this.executeKnockback(unit, newGridX);
-        
-        // 넉백 성공 시 기본 대미지
-        this.dealKnockbackDamage(unit, this.KNOCKBACK_DAMAGE, 'knockback');
-        
-        return true;
+        console.log(`[Knockback] ${unit.type}: ${movedCells}/${cells}칸 이동, wall=${hitWall}, unit=${hitUnit}`);
+        return movedCells > 0;
     },
     
     // ==========================================
@@ -191,15 +240,10 @@ const KnockbackSystem = {
     dealKnockbackDamage(unit, damage, type = 'knockback') {
         if (!unit || unit.hp <= 0 || damage <= 0) return;
         
-        // 대미지 적용
-        const isEnemy = unit.team === 'enemy';
-        if (isEnemy) {
-            this.game.dealDamage(unit, damage);
-        } else {
-            this.game.dealDamageToTarget(unit, damage);
-        }
+        // ★ 대미지 적용 (플로터 없이 - 아래서 직접 표시)
+        this.game.applyDamageWithoutFloater(unit, damage);
         
-        // 대미지 숫자 표시
+        // 대미지 숫자 표시 (넉백 타입별 색상)
         const posTarget = this.getPositionTarget(unit);
         if (typeof CombatEffects !== 'undefined' && posTarget) {
             const colors = {
@@ -443,7 +487,7 @@ const KnockbackSystem = {
     },
     
     // ==========================================
-    // 벽 충돌 이펙트
+    // 벽 충돌 이펙트 - 벽에 부딪혀 튕겨나오는 연출
     // ==========================================
     async wallImpact(unit) {
         const posTarget = this.getPositionTarget(unit);
@@ -452,13 +496,11 @@ const KnockbackSystem = {
         
         unit.isAnimating = true;
         const originalX = posTarget.x;
+        const originalY = posTarget.y;
         const baseScale = unit.baseScale || scaleTarget?.baseScale || 1;
         
-        // Screen shake
-        if (typeof CombatEffects !== 'undefined') {
-            CombatEffects.screenShake(8, 150);
-            CombatEffects.screenFlash('#ff6600', 100, 0.2);
-        }
+        // ★ 벽 충돌 VFX 생성
+        this.createWallImpactVFX(originalX + 40, originalY);
         
         return new Promise(resolve => {
             if (!posTarget || posTarget.destroyed) {
@@ -468,33 +510,248 @@ const KnockbackSystem = {
             }
             
             gsap.timeline()
-                // Squash against wall (스케일은 scaleTarget)
-                .call(() => {
-                    if (scaleTarget) gsap.to(scaleTarget.scale, { x: baseScale * 0.6, y: baseScale * 1.4, duration: 0.08 });
-                })
+                // 1. 벽에 꽝! 부딪힘 (벽 쪽으로 밀려감)
                 .to(posTarget, { 
-                    x: originalX + 15, // Slight push toward wall
-                    duration: 0.08 
-                }, '<')
-                // Bounce back
-                .call(() => {
-                    if (scaleTarget) gsap.to(scaleTarget.scale, { x: baseScale * 1.1, y: baseScale * 0.9, duration: 0.1 });
+                    x: originalX + 35,
+                    duration: 0.06,
+                    ease: 'power2.in'
                 })
+                .call(() => {
+                    // 충돌 순간 - 찌그러짐 + 화면 효과
+                    if (scaleTarget && scaleTarget.scale) {
+                        gsap.to(scaleTarget.scale, { 
+                            x: baseScale * 0.5, 
+                            y: baseScale * 1.5, 
+                            duration: 0.05 
+                        });
+                    }
+                    if (typeof CombatEffects !== 'undefined') {
+                        CombatEffects.screenShake(12, 200);
+                        CombatEffects.screenFlash('#ff6600', 120, 0.3);
+                    }
+                })
+                // 잠시 벽에 붙어있음
+                .to({}, { duration: 0.08 })
+                
+                // 2. 벽에서 튕겨나옴! (반대 방향으로 크게)
+                .to(posTarget, { 
+                    x: originalX - 60,
+                    duration: 0.12,
+                    ease: 'power2.out'
+                })
+                .call(() => {
+                    // 튕겨나오며 스케일 복구 시작
+                    if (scaleTarget && scaleTarget.scale) {
+                        gsap.to(scaleTarget.scale, { 
+                            x: baseScale * 1.2, 
+                            y: baseScale * 0.8, 
+                            duration: 0.1 
+                        });
+                    }
+                }, null, '<')
+                
+                // 3. 다시 원래 자리로 돌아옴
                 .to(posTarget, { 
                     x: originalX, 
-                    duration: 0.15,
-                    ease: 'power2.out'
-                }, '<')
-                // Settle
-                .call(() => {
-                    if (scaleTarget) gsap.to(scaleTarget.scale, { x: baseScale, y: baseScale, duration: 0.1 });
+                    duration: 0.2,
+                    ease: 'power2.inOut'
                 })
+                .call(() => {
+                    if (scaleTarget && scaleTarget.scale) {
+                        gsap.to(scaleTarget.scale, { 
+                            x: baseScale, 
+                            y: baseScale, 
+                            duration: 0.15,
+                            ease: 'elastic.out(1, 0.5)'
+                        });
+                    }
+                }, null, '<')
+                
+                // 완료
                 .to({}, { duration: 0.1 })
                 .call(() => {
                     unit.isAnimating = false;
                     resolve();
                 });
         });
+    },
+    
+    // ★ 벽 충돌 VFX (강력한 임팩트! - CombatEffects 연동)
+    createWallImpactVFX(x, y) {
+        // ★ CombatEffects 내장 이펙트 활용 (잘 보임!)
+        if (typeof CombatEffects !== 'undefined') {
+            // 강력한 화면 효과
+            CombatEffects.screenShake(15, 250);
+            CombatEffects.screenFlash('#ffaa00', 150, 0.4);
+            
+            // 메인 충격 이펙트 (3회 연속)
+            CombatEffects.impactEffect(x, y, 0xffaa00, 2.0);
+            setTimeout(() => CombatEffects.impactEffect(x - 20, y - 10, 0xff6600, 1.5), 30);
+            setTimeout(() => CombatEffects.impactEffect(x + 10, y + 15, 0xffcc44, 1.2), 60);
+            
+            // 대량 파티클 버스트 (여러 색상)
+            CombatEffects.burstParticles(x, y, 0xffee88, 20, 200);  // 밝은 불꽃
+            CombatEffects.burstParticles(x, y, 0xff8844, 15, 150);  // 주황 불꽃
+            CombatEffects.burstParticles(x, y, 0xddaa66, 12, 120);  // 파편
+        }
+        
+        // 추가 커스텀 VFX (CombatEffects 없어도 동작)
+        if (typeof CombatEffects === 'undefined' || !CombatEffects.container) return;
+        
+        const container = new PIXI.Container();
+        container.x = x;
+        container.y = y;
+        container.zIndex = 900; // ★ 높은 zIndex
+        CombatEffects.container.addChild(container);
+        
+        // ★ 1. 거대한 중앙 섬광
+        const flash = new PIXI.Graphics();
+        flash.circle(0, 0, 100);
+        flash.fill({ color: 0xffffff, alpha: 1 });
+        container.addChild(flash);
+        
+        gsap.to(flash, {
+            alpha: 0,
+            duration: 0.2,
+            ease: 'power2.out',
+            onComplete: () => { if (!flash.destroyed) flash.destroy(); }
+        });
+        gsap.to(flash.scale, { x: 2, y: 2, duration: 0.2 });
+        
+        // ★ 2. 충격 별 모양 (만화 효과)
+        const star = new PIXI.Graphics();
+        const spikes = 8;
+        const outerRadius = 80;
+        const innerRadius = 30;
+        
+        star.moveTo(outerRadius, 0);
+        for (let i = 0; i < spikes * 2; i++) {
+            const radius = i % 2 === 0 ? outerRadius : innerRadius;
+            const angle = (i * Math.PI) / spikes;
+            star.lineTo(Math.cos(angle) * radius, Math.sin(angle) * radius);
+        }
+        star.closePath();
+        star.fill({ color: 0xffff00, alpha: 0.9 });
+        star.stroke({ width: 4, color: 0xff8800 });
+        container.addChild(star);
+        
+        gsap.to(star, {
+            alpha: 0,
+            rotation: Math.PI / 4,
+            duration: 0.25,
+            ease: 'power2.out',
+            onComplete: () => { if (!star.destroyed) star.destroy(); }
+        });
+        gsap.to(star.scale, { x: 1.8, y: 1.8, duration: 0.25 });
+        
+        // ★ 3. 방사형 충격선 (굵게!)
+        for (let i = 0; i < 16; i++) {
+            const line = new PIXI.Graphics();
+            const angle = (i / 16) * Math.PI * 2;
+            const length = 60 + Math.random() * 80;
+            
+            line.moveTo(20, 0);
+            line.lineTo(length, 0);
+            line.stroke({ width: 5 + Math.random() * 4, color: 0xffee44, alpha: 1 });
+            line.rotation = angle;
+            container.addChild(line);
+            
+            gsap.to(line, {
+                alpha: 0,
+                duration: 0.3,
+                ease: 'power2.out',
+                onComplete: () => { if (!line.destroyed) line.destroy(); }
+            });
+            gsap.to(line.scale, { x: 1.5, y: 1, duration: 0.3 });
+        }
+        
+        // ★ 4. 큰 돌 파편 (3D 느낌)
+        for (let i = 0; i < 12; i++) {
+            const debris = new PIXI.Container();
+            debris.zIndex = 901;
+            container.addChild(debris);
+            
+            // 그림자
+            const shadow = new PIXI.Graphics();
+            shadow.ellipse(0, 8, 10, 4);
+            shadow.fill({ color: 0x000000, alpha: 0.3 });
+            debris.addChild(shadow);
+            
+            // 돌
+            const rock = new PIXI.Graphics();
+            const size = 10 + Math.random() * 20;
+            rock.poly([
+                -size/2, -size/3,
+                size/3, -size/2,
+                size/2, size/4,
+                0, size/2,
+                -size/2, size/3
+            ]);
+            rock.fill({ color: 0xccaa77 });
+            rock.stroke({ width: 2, color: 0x886644 });
+            debris.addChild(rock);
+            
+            // 하이라이트
+            const highlight = new PIXI.Graphics();
+            highlight.circle(-size/4, -size/4, size/4);
+            highlight.fill({ color: 0xeeddbb, alpha: 0.6 });
+            debris.addChild(highlight);
+            
+            const angle = -Math.PI + (Math.random() - 0.2) * Math.PI * 0.8;
+            const speed = 180 + Math.random() * 250;
+            const gravity = 300;
+            const startY = 0;
+            const vx = Math.cos(angle) * speed;
+            const vy = Math.sin(angle) * speed;
+            
+            // 포물선 운동
+            gsap.to(debris, {
+                x: vx * 0.6,
+                duration: 0.6,
+                ease: 'none'
+            });
+            gsap.to(debris, {
+                y: vy * 0.6 + gravity * 0.18,  // 중력
+                duration: 0.6,
+                ease: 'power1.in'
+            });
+            gsap.to(rock, {
+                rotation: (Math.random() - 0.5) * 8,
+                duration: 0.6
+            });
+            gsap.to(debris, {
+                alpha: 0,
+                duration: 0.2,
+                delay: 0.4,
+                onComplete: () => { if (!debris.destroyed) debris.destroy({ children: true }); }
+            });
+        }
+        
+        // ★ 5. 먼지 폭발 (적당한 크기)
+        for (let i = 0; i < 8; i++) {
+            const dust = new PIXI.Graphics();
+            const size = 12 + Math.random() * 18;
+            dust.circle(0, 0, size);
+            dust.fill({ color: 0xddccaa, alpha: 0.6 });
+            dust.x = (Math.random() - 0.5) * 30;
+            dust.y = (Math.random() - 0.5) * 40;
+            container.addChild(dust);
+            
+            gsap.to(dust, {
+                x: dust.x - 60 - Math.random() * 80,
+                y: dust.y + Math.random() * 40,
+                alpha: 0,
+                duration: 0.6 + Math.random() * 0.3,
+                ease: 'power2.out',
+                onComplete: () => { if (!dust.destroyed) dust.destroy(); }
+            });
+            gsap.to(dust.scale, { x: 2, y: 1.5, duration: 0.6 });
+        }
+        
+        // 컨테이너 정리
+        setTimeout(() => {
+            if (!container.destroyed) container.destroy({ children: true });
+        }, 1500);
     },
     
     // ==========================================

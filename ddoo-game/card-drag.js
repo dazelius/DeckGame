@@ -88,6 +88,14 @@ const CardDrag = {
         const cardDef = this.game.getCard(cardId);
         if (!cardDef) return;
         
+        // ★ 탑뷰 모드 활성화 + 그리드 표시
+        if (typeof DDOOBackground !== 'undefined' && DDOOBackground.setTopView) {
+            DDOOBackground.setTopView(true);
+        }
+        if (this.game.containers && this.game.containers.grid) {
+            this.game.containers.grid.visible = true;
+        }
+        
         const isSummon = cardDef.type === 'summon';
         const touch = e.touches ? e.touches[0] : e;
         
@@ -206,6 +214,13 @@ const CardDrag = {
             this.drawTargetingCurvesToEnemies(cursorX, cursorY, targetEnemy, cardDef.frontOnly || false);
         }
         
+        // ★ 근접 카드: 레인 변경 가이드 표시
+        if (cardDef.melee && targetEnemy) {
+            this.drawLaneChangeGuide(targetEnemy);
+        } else {
+            this.clearLaneChangeGuide();
+        }
+        
         if (targetEnemy) {
             // 십자가 패턴 처리
             if (cardDef.aoePattern === 'cross') {
@@ -303,22 +318,33 @@ const CardDrag = {
         const handIndex = this.dragState.handIndex;
         const cardDef = this.game.getCard(cardId);
         
-        let success = false;
-        
-        if (this.dragState.isSummon) {
-            success = this.handleSummonDrop(touch, cardId, handIndex, cardDef);
-        } else if (cardDef && cardDef.type === 'attack') {
-            success = this.handleAttackDrop(touch, cardId, handIndex, cardDef);
-        } else {
-            success = this.handleSkillDrop(touch, cardId, handIndex, cardDef);
+        // ★ 먼저 카메라 원래대로 + 그리드 숨김
+        if (typeof DDOOBackground !== 'undefined' && DDOOBackground.setTopView) {
+            DDOOBackground.setTopView(false);
+        }
+        if (this.game.containers && this.game.containers.grid) {
+            this.game.containers.grid.visible = false;
         }
         
-        // Reset state
+        // Reset drag state first
         this.resetDragState();
         
-        if (success) {
-            this.game.renderHand(false);
-        }
+        // ★ 카메라 전환 후 액션 실행 (짧은 딜레이)
+        setTimeout(() => {
+            let success = false;
+            
+            if (cardDef && cardDef.type === 'summon') {
+                success = this.handleSummonDrop(touch, cardId, handIndex, cardDef);
+            } else if (cardDef && cardDef.type === 'attack') {
+                success = this.handleAttackDrop(touch, cardId, handIndex, cardDef);
+            } else {
+                success = this.handleSkillDrop(touch, cardId, handIndex, cardDef);
+            }
+            
+            if (success) {
+                this.game.renderHand(false);
+            }
+        }, 50);  // 50ms 딜레이 (카메라 복귀 후)
     },
     
     // ==========================================
@@ -404,6 +430,7 @@ const CardDrag = {
         this.clearAllyHighlights();
         this.clearAoeHighlight();
         this.clearTargetingCurve();
+        this.clearLaneChangeGuide();
         this.game.hideSummonZones();
         
         if (this.dragState.cardEl) {
@@ -634,17 +661,18 @@ const CardDrag = {
         const hero = this.game.state.hero;
         if (!hero || !hero.sprite) return;
         
-        const heroPos = hero.sprite.getGlobalPosition();
-        const startX = heroPos.x + 20;  // 손 위치
-        const startY = heroPos.y - 45;
+        // ★ gameWorld 로컬 좌표 사용 (container 또는 sprite의 x, y)
+        const heroContainer = hero.container || hero.sprite;
+        const startX = heroContainer.x + 20;  // 손 위치
+        const startY = heroContainer.y - 45;
         
         let endX, endY;
         const hasTarget = !!target;
         
         if (target) {
-            const targetPos = target.sprite.getGlobalPosition();
-            endX = targetPos.x;
-            endY = targetPos.y - 40;
+            const targetContainer = target.container || target.sprite;
+            endX = targetContainer.x;
+            endY = targetContainer.y - 40;
         } else {
             endX = startX + 350;
             endY = startY;
@@ -784,7 +812,10 @@ const CardDrag = {
         const hero = this.game.state.hero;
         if (!hero || !hero.sprite) return;
         
-        const heroPos = hero.sprite.getGlobalPosition();
+        // ★ gameWorld 로컬 좌표 사용
+        const heroContainer = hero.container || hero.sprite;
+        const heroX = heroContainer.x;
+        const heroY = heroContainer.y;
         const hasTarget = !!target;
         
         // 히어로가 레인 이동해야 하는지 확인
@@ -799,14 +830,14 @@ const CardDrag = {
             startX = movePos.x + 20;
             startY = movePos.y - 45;
         } else {
-            startX = heroPos.x + 20;
-            startY = heroPos.y - 45;
+            startX = heroX + 20;
+            startY = heroY - 45;
         }
         
         if (target) {
-            const targetPos = target.sprite.getGlobalPosition();
-            endX = targetPos.x;
-            endY = targetPos.y - 40;
+            const targetContainer = target.container || target.sprite;
+            endX = targetContainer.x;
+            endY = targetContainer.y - 40;
         } else {
             endX = startX + 350;
             endY = startY;
@@ -820,8 +851,8 @@ const CardDrag = {
         // 0. 레인 이동 화살표 (다른 레인 타겟 시)
         if (needsLaneChange) {
             const arrowColor = 0x60a5fa; // 파란색
-            const moveStartX = heroPos.x;
-            const moveStartY = heroPos.y - 30;
+            const moveStartX = heroX;
+            const moveStartY = heroY - 30;
             const moveEndX = startX - 20;
             const moveEndY = startY + 15;
             
@@ -959,8 +990,8 @@ const CardDrag = {
                 }
             });
             noTargetText.anchor.set(0.5);
-            noTargetText.x = heroPos.x + 120;
-            noTargetText.y = heroPos.y - 70;
+            noTargetText.x = heroX + 120;
+            noTargetText.y = heroY - 70;
             
             this._distanceText = noTargetText;
             this.game.containers.effects.addChild(noTargetText);
@@ -1143,32 +1174,31 @@ const CardDrag = {
         const g = this.targetingCurve;
         g.clear();
         
+        // ★ 마우스 좌표를 gameWorld 로컬 좌표로 변환
+        const localCard = this.game.globalToLocal(cardX, cardY);
+        const localCardX = localCard.x;
+        const localCardY = localCard.y;
+        
         const validTargets = frontOnly ? this.getFrontlineEnemies() : 
                             this.game.state.enemyUnits.filter(e => e.hp > 0);
         
         for (const enemy of this.game.state.enemyUnits) {
             if (enemy.hp <= 0) continue;
             
-            // ★ 새 구조: container에서 위치 (글로벌 좌표 사용!)
+            // ★ gameWorld 로컬 좌표 사용
             const posTarget = enemy.container || enemy.sprite;
             if (!posTarget) continue;
             
-            // ★ 글로벌 좌표로 변환 (부모 컨테이너 위치 포함)
-            let endX, endY;
-            if (posTarget.getGlobalPosition) {
-                const globalPos = posTarget.getGlobalPosition();
-                endX = globalPos.x;
-                endY = globalPos.y - (enemy.sprite?.height || 60) / 2;
-            } else {
-                endX = posTarget.x;
-                endY = posTarget.y - (enemy.sprite?.height || 60) / 2;
-            }
+            // ★ 로컬 좌표 직접 사용
+            const endX = posTarget.x;
+            const endY = posTarget.y - (enemy.sprite?.height || 60) / 2;
             
             const isValidTarget = validTargets.includes(enemy);
             const isHovered = (enemy === hoveredEnemy);
             
-            const midX = (cardX + endX) / 2;
-            const midY = Math.min(cardY, endY) - 60;
+            // ★ 로컬 좌표 사용
+            const midX = (localCardX + endX) / 2;
+            const midY = Math.min(localCardY, endY) - 60;
             
             let color, alpha, lineWidth;
             if (!isValidTarget) {
@@ -1185,12 +1215,12 @@ const CardDrag = {
                 lineWidth = 2;
             }
             
-            g.moveTo(cardX, cardY);
+            g.moveTo(localCardX, localCardY);
             g.quadraticCurveTo(midX, midY, endX, endY);
             g.stroke({ color: color, width: lineWidth, alpha: alpha });
             
             if (isHovered) {
-                g.moveTo(cardX, cardY);
+                g.moveTo(localCardX, localCardY);
                 g.quadraticCurveTo(midX, midY, endX, endY);
                 g.stroke({ color: 0xffffff, width: 2, alpha: 0.4 });
                 
@@ -1232,6 +1262,108 @@ const CardDrag = {
         if (this._spearLabel && !this._spearLabel.destroyed) {
             this._spearLabel.destroy();
             this._spearLabel = null;
+        }
+    },
+    
+    // ==========================================
+    // 레인 변경 가이드 (근접 카드용)
+    // ==========================================
+    drawLaneChangeGuide(targetEnemy) {
+        const hero = this.game.state.hero;
+        if (!hero || !hero.sprite || !targetEnemy) return;
+        
+        // 같은 레인이면 가이드 불필요
+        if (hero.gridZ === targetEnemy.gridZ) {
+            this.clearLaneChangeGuide();
+            return;
+        }
+        
+        // 레인 변경 가이드 그래픽 생성
+        if (!this._laneGuide) {
+            this._laneGuide = new PIXI.Container();
+            this._laneGuide.zIndex = 150;  // 유닛 위에 표시
+            this.game.containers.effects.addChild(this._laneGuide);
+        }
+        
+        // 이전 내용 제거
+        this._laneGuide.removeChildren();
+        
+        // ★ gameWorld 로컬 좌표 사용
+        const heroContainer = hero.container || hero.sprite;
+        const heroX = heroContainer.x;
+        const heroY = heroContainer.y;
+        const targetLanePos = this.game.getCellCenter(hero.gridX, targetEnemy.gridZ);
+        if (!targetLanePos) {
+            this.clearLaneChangeGuide();
+            return;
+        }
+        const targetLaneY = targetLanePos.y;
+        const direction = targetEnemy.gridZ > hero.gridZ ? 1 : -1;  // 아래(+1) 또는 위(-1)
+        
+        // 레인 차이
+        const laneDiff = Math.abs(targetEnemy.gridZ - hero.gridZ);
+        
+        // 경로 그래픽
+        const pathGraphic = new PIXI.Graphics();
+        
+        // 점선 경로 (히어로 → 타겟 레인)
+        const startY = heroY;
+        const endY = targetLaneY;
+        const dashLength = 10;
+        const gapLength = 6;
+        let currentY = startY;
+        
+        // ★ PixiJS v8: 점선을 개별 선분으로 그림
+        while ((direction > 0 && currentY < endY) || (direction < 0 && currentY > endY)) {
+            const nextY = currentY + direction * dashLength;
+            const clampedNextY = direction > 0 ? Math.min(nextY, endY) : Math.max(nextY, endY);
+            
+            pathGraphic.moveTo(heroX, currentY);
+            pathGraphic.lineTo(heroX, clampedNextY);
+            pathGraphic.stroke({ width: 4, color: 0x44aaff, alpha: 0.9 });
+            
+            currentY = clampedNextY + direction * gapLength;
+        }
+        
+        // 화살표 머리 (삼각형)
+        const arrowSize = 14;
+        const arrowY = endY - direction * 8;
+        pathGraphic.poly([
+            { x: heroX, y: endY },
+            { x: heroX - arrowSize, y: arrowY },
+            { x: heroX + arrowSize, y: arrowY }
+        ]);
+        pathGraphic.fill({ color: 0x44aaff, alpha: 0.9 });
+        
+        this._laneGuide.addChild(pathGraphic);
+        
+        // 레인 변경 표시 텍스트
+        const laneText = new PIXI.Text({
+            text: direction > 0 ? `▼ ${laneDiff}레인` : `▲ ${laneDiff}레인`,
+            style: {
+                fontSize: 16,
+                fontWeight: 'bold',
+                fill: '#44aaff',
+                stroke: { color: '#000000', width: 4 }
+            }
+        });
+        laneText.anchor.set(0.5);
+        laneText.x = heroX + 50;
+        laneText.y = (startY + endY) / 2;
+        this._laneGuide.addChild(laneText);
+        
+        // 히어로 이동 위치 원 (도착점)
+        const moveIndicator = new PIXI.Graphics();
+        moveIndicator.circle(heroX, endY, 18);
+        moveIndicator.stroke({ color: 0x44aaff, width: 3, alpha: 0.8 });
+        moveIndicator.circle(heroX, endY, 10);
+        moveIndicator.fill({ color: 0x44aaff, alpha: 0.4 });
+        this._laneGuide.addChild(moveIndicator);
+    },
+    
+    clearLaneChangeGuide() {
+        if (this._laneGuide) {
+            this._laneGuide.removeChildren();
         }
     },
     

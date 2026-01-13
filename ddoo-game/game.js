@@ -156,7 +156,7 @@ const Game = {
         
         // Combat Effects
         if (typeof CombatEffects !== 'undefined') {
-            CombatEffects.init(this.app);
+            CombatEffects.init(this.app, this.containers.gameWorld);
         }
         
         // Shield VFX
@@ -172,6 +172,26 @@ const Game = {
         // Knockback System
         if (typeof KnockbackSystem !== 'undefined') {
             KnockbackSystem.init(this);
+        }
+        
+        // ★ Bleed System (출혈)
+        if (typeof BleedSystem !== 'undefined') {
+            BleedSystem.init(this);
+        }
+        
+        // ★ Status Indicator (상태이상 표시)
+        if (typeof StatusIndicator !== 'undefined') {
+            StatusIndicator.init(this);
+        }
+        
+        // ★ Blood Effect System (피 효과)
+        if (typeof BloodEffect !== 'undefined') {
+            BloodEffect.init(this.app, this.containers.gameWorld);
+        }
+        
+        // ★ Monster Dialogue System (몬스터 대사)
+        if (typeof MonsterDialogue !== 'undefined') {
+            MonsterDialogue.init(this.app);
         }
         
         // Grid AOE System
@@ -304,25 +324,39 @@ const Game = {
         this.renderHand(false);
     },
     
+    // ★ 게임 컨테이너 스케일/오프셋 설정 (전역)
+    gameContainerScale: 1.25,
+    gameContainerOffsetY: 60,
+    
     setupContainers() {
+        // ★ 게임 콘텐츠를 담을 상위 컨테이너 (스케일/오프셋 적용)
+        this.containers.gameWorld = new PIXI.Container();
+        this.containers.gameWorld.scale.set(this.gameContainerScale);
+        this.containers.gameWorld.y = this.gameContainerOffsetY;
+        this.containers.gameWorld.sortableChildren = true;
+        this.app.stage.addChild(this.containers.gameWorld);
+        
+        // 하위 컨테이너들 (gameWorld 안에 추가)
         this.containers.grid = new PIXI.Container();
         this.containers.grid.zIndex = 1;
-        this.app.stage.addChild(this.containers.grid);
+        this.containers.grid.visible = false;  // ★ 기본 숨김 (드래그 시에만 표시)
+        this.containers.gameWorld.addChild(this.containers.grid);
         
         // 바닥 이펙트 (불길 등) - 유닛보다 아래
         this.containers.ground = new PIXI.Container();
         this.containers.ground.zIndex = 5;
-        this.app.stage.addChild(this.containers.ground);
+        this.containers.gameWorld.addChild(this.containers.ground);
         
         this.containers.units = new PIXI.Container();
         this.containers.units.zIndex = 10;
         this.containers.units.sortableChildren = true;
-        this.app.stage.addChild(this.containers.units);
+        this.containers.gameWorld.addChild(this.containers.units);
         
         this.containers.effects = new PIXI.Container();
         this.containers.effects.zIndex = 20;
-        this.app.stage.addChild(this.containers.effects);
+        this.containers.gameWorld.addChild(this.containers.effects);
         
+        // UI 컨테이너는 stage에 직접 추가 (스케일 영향 안 받음)
         this.containers.ui = new PIXI.Container();
         this.containers.ui.zIndex = 100;
         this.app.stage.addChild(this.containers.ui);
@@ -363,8 +397,11 @@ const Game = {
         const topCenter = DDOOBackground.project3DToScreen(centerX, 0, 0);
         const bottomCenter = DDOOBackground.project3DToScreen(centerX, 0, this.arena.depth);
         if (topCenter && bottomCenter) {
-            graphics.moveTo(topCenter.screenX, topCenter.screenY);
-            graphics.lineTo(bottomCenter.screenX, bottomCenter.screenY);
+            // ★ 스케일/오프셋 보정
+            const topLocal = this.globalToLocal(topCenter.screenX, topCenter.screenY);
+            const bottomLocal = this.globalToLocal(bottomCenter.screenX, bottomCenter.screenY);
+            graphics.moveTo(topLocal.x, topLocal.y);
+            graphics.lineTo(bottomLocal.x, bottomLocal.y);
             graphics.stroke({ color: 0xffcc00, width: 3, alpha: 0.8 });
         }
         
@@ -379,12 +416,13 @@ const Game = {
         
         if (!tl || !tr || !br || !bl) return null;
         
-        return [
-            { x: tl.screenX, y: tl.screenY },
-            { x: tr.screenX, y: tr.screenY },
-            { x: br.screenX, y: br.screenY },
-            { x: bl.screenX, y: bl.screenY }
-        ];
+        // ★ gameWorld 컨테이너의 스케일/오프셋 보정 (getCellCenter와 동일)
+        const tlLocal = this.globalToLocal(tl.screenX, tl.screenY);
+        const trLocal = this.globalToLocal(tr.screenX, tr.screenY);
+        const brLocal = this.globalToLocal(br.screenX, br.screenY);
+        const blLocal = this.globalToLocal(bl.screenX, bl.screenY);
+        
+        return [tlLocal, trLocal, brLocal, blLocal];
     },
     
     getCellCenter(gridX, gridZ) {
@@ -392,9 +430,27 @@ const Game = {
         const centerWorld = DDOOBackground.project3DToScreen(gridX + 0.5, 0, gridZ + 0.5);
         if (!centerWorld) return null;
         
+        // ★ gameWorld 컨테이너의 스케일/오프셋 보정 (역변환)
+        return this.globalToLocal(centerWorld.screenX, centerWorld.screenY);
+    },
+    
+    // ★ 글로벌 좌표 → gameWorld 로컬 좌표 변환
+    globalToLocal(globalX, globalY) {
+        const scale = this.gameContainerScale || 1;
+        const offsetY = this.gameContainerOffsetY || 0;
         return {
-            x: centerWorld.screenX,
-            y: centerWorld.screenY
+            x: globalX / scale,
+            y: (globalY - offsetY) / scale
+        };
+    },
+    
+    // ★ gameWorld 로컬 좌표 → 글로벌 좌표 변환
+    localToGlobal(localX, localY) {
+        const scale = this.gameContainerScale || 1;
+        const offsetY = this.gameContainerOffsetY || 0;
+        return {
+            x: localX * scale,
+            y: localY * scale + offsetY
         };
     },
     
@@ -490,8 +546,8 @@ const Game = {
             GridAOE.processTurnStart('enemy');
         }
         
-        // Reset block at start of turn
-        this.state.heroBlock = 0;
+        // ★ 쉴드는 턴 시작 시 리셋하지 않음! (피격으로 소진될 때까지 유지)
+        // 쉴드가 남아있으면 글로우도 유지됨
         
         // Draw 5 cards
         this.drawCards(5);
@@ -547,6 +603,50 @@ const Game = {
                 }
             });
         }, 700);
+    },
+    
+    // ★★★ 슬라임 분열 인텐트 실시간 체크 ★★★
+    checkSplitIntent(unit) {
+        if (!unit || unit.hp <= 0) return;
+        
+        // AI 설정에서 splitOnLowHP 확인
+        const ai = typeof MonsterPatterns !== 'undefined' && MonsterPatterns.loaded 
+            ? MonsterPatterns.getAI(unit.type)
+            : null;
+        
+        if (!ai || !ai.splitOnLowHP) return;
+        
+        // 이미 분열 인텐트면 스킵
+        if (unit.intent?.type === 'split') return;
+        
+        // 이미 분열했으면 스킵
+        if (unit.hasSplit) return;
+        
+        // HP 절반 이하 체크
+        const threshold = ai.splitThreshold || 0.5;
+        const maxHp = unit.maxHp || unit.originalHp || 20;
+        
+        if (unit.hp <= maxHp * threshold) {
+            console.log(`[Split Intent] ${unit.type}의 HP가 ${Math.round(threshold * 100)}% 이하! 분열 인텐트로 변경!`);
+            
+            // MonsterPatterns에서 분열 인텐트 가져오기
+            const pattern = typeof MonsterPatterns !== 'undefined' && MonsterPatterns.loaded
+                ? MonsterPatterns.getPattern(unit.type)
+                : null;
+            
+            if (pattern?.splitIntent) {
+                unit.intent = { ...pattern.splitIntent };
+                
+                // ★ 인텐트 UI 실시간 업데이트
+                this.createEnemyIntent(unit);
+                
+                // ★ 분열 경고 VFX
+                if (typeof CombatEffects !== 'undefined' && unit.sprite) {
+                    const pos = unit.container || unit.sprite;
+                    CombatEffects.showSplitWarning(pos.x, pos.y - 50);
+                }
+            }
+        }
     },
     
     createEnemyIntent(enemy) {
@@ -751,11 +851,11 @@ const Game = {
             spriteTopY = -actualHeight * anchorY;
             
             // 최소 높이 보장 (너무 낮으면 스프라이트와 겹침)
-            spriteTopY = Math.min(spriteTopY, -70);
+            spriteTopY = Math.min(spriteTopY, -60);
         }
         
-        // 인텐트를 스프라이트 머리 바로 위에 배치
-        const margin = 10;
+        // 인텐트를 스프라이트 머리 바로 위에 배치 (더 가깝게!)
+        const margin = 5;
         container.y = spriteTopY - margin;
         
         // ★ 새 구조: enemy.container에 추가
@@ -1684,10 +1784,11 @@ const Game = {
     },
     
     async heroRangedAnimation(hero, target, damage, options = {}) {
-        console.log('[Game] heroRangedAnimation - options:', options, '| createZone:', options.createZone);
+        console.log('[Game] heroRangedAnimation - options:', options, '| createZone:', options.createZone, '| projectileType:', options.projectileType);
         
         if (typeof UnitCombat !== 'undefined') {
             await UnitCombat.rangedAttack(hero, target, damage, {
+                projectileType: options.projectileType || 'default',
                 projectileColor: options.projectileColor || 0xffaa00,
                 createZone: options.createZone || null,
                 isEnemy: false,
@@ -1731,25 +1832,6 @@ const Game = {
             if (typeof KnockbackSystem !== 'undefined') {
                 await KnockbackSystem.hookPull(target, crashDamage);
             }
-        }
-    },
-    
-    // ★ 스피어 투척 애니메이션 (그리드 거리 기반 파워업!)
-    async heroSpearThrowAnimation(hero, target, baseDamage, distanceBonus = 0, options = {}) {
-        // 그리드 거리 계산
-        const gridDistance = Math.abs(target.gridX - hero.gridX);
-        const totalDamage = baseDamage + distanceBonus;
-        console.log(`[Spear Animation] 그리드 거리: ${gridDistance}, 기본: ${baseDamage}, 보너스: ${distanceBonus}, 총: ${totalDamage}`);
-        console.log(`[Spear Animation] 타겟 HP: ${target.hp} → ${target.hp - totalDamage}`);
-        
-        if (typeof CombatEffects !== 'undefined') {
-            await CombatEffects.spearThrowEffect(hero, target, baseDamage, distanceBonus, this, options.onHit);
-        } else {
-            // 폴백: onHit 먼저 실행 후 대미지
-            if (typeof options.onHit === 'function') {
-                options.onHit(target);
-            }
-            this.dealDamage(target, totalDamage);
         }
     },
     
@@ -2307,6 +2389,10 @@ const Game = {
                 if (typeof ShieldVFX !== 'undefined') {
                     ShieldVFX.breakAtUnit(target, block);
                 }
+                // ★ 쉴드 글로우 제거
+                if (typeof CombatEffects !== 'undefined') {
+                    CombatEffects.removeShieldGlow(target);
+                }
             }
             
             if (typeof HPBarSystem !== 'undefined') {
@@ -2359,6 +2445,10 @@ const Game = {
                 if (typeof ShieldVFX !== 'undefined') {
                     ShieldVFX.breakAtUnit(target, block);
                 }
+                // ★ 쉴드 글로우 제거
+                if (typeof CombatEffects !== 'undefined') {
+                    CombatEffects.removeShieldGlow(target);
+                }
             }
             
             // ★ 쉴드 피격 연출
@@ -2378,10 +2468,21 @@ const Game = {
         // 실제 HP 피해가 있을 때만 데미지 표시
         if (remainingDamage > 0) {
             this.showDamage(target, remainingDamage);
+            
+            // ★ 출혈 추가 피해!
+            if (typeof BleedSystem !== 'undefined') {
+                const bleedDamage = BleedSystem.onDamageTaken(target, remainingDamage);
+                if (bleedDamage > 0 && target.hp > 0) {
+                    target.hp -= bleedDamage;
+                }
+            }
         }
         
         // Update HP bar (쉴드 변화도 반영)
         this.updateUnitHPBar(target);
+        
+        // ★★★ 슬라임 분열 인텐트 실시간 체크! ★★★
+        this.checkSplitIntent(target);
         
         // Hit effect (스프라이트 알파만 변경, 위치는 건드리지 않음)
         if (target.sprite && !target.sprite.destroyed) {
@@ -2397,6 +2498,11 @@ const Game = {
                     }
                 }
             });
+            
+            // ★ 피격 대사 (적만)
+            if (!target.isHero && remainingDamage > 0 && typeof MonsterDialogue !== 'undefined') {
+                MonsterDialogue.onHit(target, remainingDamage);
+            }
         }
         
         if (target.hp <= 0) {
@@ -2567,6 +2673,25 @@ const Game = {
                             if (hitNum < hits - 1) await new Promise(r => setTimeout(r, 50));
                         }
                         break;
+                    
+                    case 'rush':
+                        // ★ 돌진: 한 번 대쉬 후 밀어붙이기!
+                        await UnitCombat.rushAttack(hero, targetEnemy, cardDef.damage, { 
+                            hits: cardDef.hits || 3,
+                            knockbackPerHit: cardDef.knockbackPerHit || 1,
+                            isEnemy: false,
+                            cardDef: cardDef
+                        });
+                        break;
+                    
+                    case 'sneakAttack':
+                        // ★ 비열한 습격: 뒤치기 + 출혈!
+                        await UnitCombat.sneakAttack(hero, targetEnemy, cardDef.damage, { 
+                            bleed: cardDef.bleed || 2,
+                            isEnemy: false
+                        });
+                        // 출혈은 sneakAttack 내부에서 처리
+                        break;
                         
                     case 'bash':
                         // 강타: bashAttack
@@ -2612,6 +2737,11 @@ const Game = {
                 KnockbackSystem.knockback(targetEnemy, 1, cardDef.knockback);
             }
             
+            // ★ 출혈 부여 (sneakAttack은 내부에서 처리)
+            if (cardDef.bleed && cardId !== 'sneakAttack' && targetEnemy.hp > 0 && typeof BleedSystem !== 'undefined') {
+                BleedSystem.applyBleed(targetEnemy, cardDef.bleed);
+            }
+            
             console.log(`[Game] 스킬 완료: ${cardId}`);
             
             // Deal damage to all targets in AOE (except primary which was already hit)
@@ -2627,6 +2757,16 @@ const Game = {
         } else {
             // Ranged: Attack from current position
             
+            // ★★★ 번개 공격! (원거리지만 특별 처리) ★★★
+            if (cardId === 'lightning') {
+                console.log(`[Game] ⚡ 번개 공격! damage=${cardDef.damage}`);
+                await UnitCombat.lightningAttack(hero, targetEnemy, cardDef.damage, { 
+                    chainReduction: cardDef.chainDamageReduction || 2,
+                    isEnemy: false
+                });
+                return; // 번개는 여기서 완료!
+            }
+            
             // ★ 스피어 투척 (거리 보너스가 있는 원거리 공격, 다른 레인 타겟 가능!)
             if (cardDef.distanceBonus) {
                 // 다른 레인의 적이면 먼저 레인 이동
@@ -2639,19 +2779,42 @@ const Game = {
                 const distance = Math.abs(targetEnemy.gridX - hero.gridX);
                 const distanceBonus = cardDef.distanceBonus * distance;
                 const baseDamage = cardDef.damage;
+                const totalDamage = baseDamage + distanceBonus;
                 
-                console.log(`[Game] 스피어 투척! 거리: ${distance}, 기본 대미지: ${baseDamage}, 거리 보너스: ${distanceBonus}`);
+                console.log(`[Game] 스피어 투척! 거리: ${distance}, 기본: ${baseDamage}, 보너스: ${distanceBonus}, 총: ${totalDamage}`);
                 
-                // 스피어 발사 애니메이션 (★ 브레이크는 타격 시점에 처리!)
+                // ★ UnitCombat.rangedAttack 사용 (일반 발사체와 동일한 방식)
                 const gameRef = this;
-                await this.heroSpearThrowAnimation(hero, targetEnemy, baseDamage, distanceBonus, {
-                    onHit: (hitTarget) => {
-                        if (typeof BreakSystem !== 'undefined') {
-                            BreakSystem.onAttack(hitTarget, cardDef, 1, 0);
-                            gameRef.createEnemyIntent(hitTarget);
+                if (typeof UnitCombat !== 'undefined') {
+                    await UnitCombat.rangedAttack(hero, targetEnemy, totalDamage, {
+                        projectileType: 'spear',
+                        projectileColor: 0xccaa77,
+                        projectileSize: 12,
+                        gridDistance: distance,  // ★ 그리드 거리 전달 (파워업용)
+                        isEnemy: false,
+                        onHit: (hitTarget) => {
+                            if (typeof BreakSystem !== 'undefined') {
+                                BreakSystem.onAttack(hitTarget, cardDef, 1, 0);
+                                gameRef.createEnemyIntent(hitTarget);
+                            }
                         }
+                    });
+                    
+                    // ★ 거리 보너스 별도 플로터 (있을 경우)
+                    if (distanceBonus > 0 && typeof CombatEffects !== 'undefined') {
+                        const targetPos = targetEnemy.container || targetEnemy.sprite;
+                        setTimeout(() => {
+                            CombatEffects.showDamageNumber(
+                                targetPos.x + 30, 
+                                targetPos.y - 60, 
+                                distanceBonus, 
+                                'distance'
+                            );
+                        }, 100);
                     }
-                });
+                } else {
+                    this.dealDamage(targetEnemy, totalDamage);
+                }
             }
             // ★★★ 갈고리 (Hook) - 적을 앞으로 당김! ★★★
             else if (cardDef.pull) {
@@ -2716,17 +2879,28 @@ const Game = {
                 const targetsInAoe = this.getEnemiesInAoe(targetEnemy.gridX, targetEnemy.gridZ, aoe);
                 const gameRef = this;
                 
+                // ★ 히트 수 확인 (fireArrow 등 다중 히트 원거리)
+                const rangedHits = cardDef.hits || 1;
+                
                 // 원거리 발사 (★ 브레이크는 타격 시점에 처리!)
-                await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage, {
-                    createZone: cardDef.createZone || null,
-                    // ★ 타격 시점에 브레이크 시스템 호출!
-                    onHit: (hitTarget) => {
-                        if (typeof BreakSystem !== 'undefined') {
-                            BreakSystem.onAttack(hitTarget, cardDef, 1, 0);
-                            gameRef.createEnemyIntent(hitTarget);
+                for (let hitNum = 0; hitNum < rangedHits; hitNum++) {
+                    if (targetEnemy.hp <= 0) break;
+                    
+                    await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage, {
+                        projectileType: cardDef.projectileType || 'default',
+                        createZone: cardDef.createZone || null,
+                        // ★ 타격 시점에 브레이크 시스템 호출!
+                        onHit: (hitTarget) => {
+                            if (typeof BreakSystem !== 'undefined') {
+                                BreakSystem.onAttack(hitTarget, cardDef, 1, hitNum);
+                                gameRef.createEnemyIntent(hitTarget);
+                            }
                         }
-                    }
-                });
+                    });
+                    
+                    // 다음 히트 전 짧은 딜레이
+                    if (hitNum < rangedHits - 1) await new Promise(r => setTimeout(r, 80));
+                }
                 
                 // Deal damage to additional targets in AOE
                 for (let i = 0; i < targetsInAoe.length; i++) {
@@ -3008,8 +3182,29 @@ const Game = {
     },
     
     async placeUnit(unitType, gridX, gridZ, team) {
-        const unitDef = this.unitTypes[unitType];
-        if (!unitDef) return;
+        // ★ unitTypes에서 먼저 찾고, 없으면 MonsterPatterns에서 가져오기
+        let unitDef = this.unitTypes[unitType];
+        
+        if (!unitDef && typeof MonsterPatterns !== 'undefined') {
+            const pattern = MonsterPatterns.getPattern(unitType);
+            if (pattern) {
+                unitDef = {
+                    name: pattern.nameKo || pattern.name || unitType,
+                    cost: 0,
+                    hp: pattern.stats?.hp || 20,
+                    damage: pattern.stats?.damage || 5,
+                    range: pattern.stats?.range || 1,
+                    sprite: pattern.stats?.sprite || `${unitType}.png`,
+                    scale: pattern.stats?.scale || 0.35
+                };
+                console.log(`[Game] MonsterPatterns에서 ${unitType} 로드:`, unitDef);
+            }
+        }
+        
+        if (!unitDef) {
+            console.error(`[Game] 유닛 정의를 찾을 수 없음: ${unitType}`);
+            return;
+        }
         
         // Check cost
         if (team === 'player' && this.state.cost < unitDef.cost) {
@@ -3107,28 +3302,115 @@ const Game = {
         this.createUnitHPBar(unit);
         
         console.log(`[Game] Placed ${unitType} at (${gridX}, ${gridZ}) for ${team}`);
+        
+        return unit; // ★ unit 반환 추가
+    },
+    
+    // ==========================================
+    // ★★★ 동적 적 소환 (슬라임 분열 등) ★★★
+    // ==========================================
+    async spawnEnemy(monsterType, gridZ, gridX) {
+        console.log(`[Game] 🔮 적 소환 시작: ${monsterType} at (${gridX}, ${gridZ})`);
+        
+        // 빈 칸 찾기
+        let targetX = gridX;
+        let targetZ = gridZ;
+        
+        // 범위 체크
+        targetZ = Math.max(0, Math.min(this.arena.depth - 1, targetZ));
+        targetX = Math.max(this.arena.playerZoneX, Math.min(this.arena.width - 1, targetX));
+        
+        // 해당 위치가 점유되어 있으면 빈 칸 찾기
+        const isOccupied = (x, z) => {
+            return this.state.enemyUnits.some(u => u.hp > 0 && u.gridX === x && u.gridZ === z) ||
+                   this.state.playerUnits.some(u => u.hp > 0 && u.gridX === x && u.gridZ === z);
+        };
+        
+        if (isOccupied(targetX, targetZ)) {
+            // 주변 8방향에서 빈 칸 찾기
+            const directions = [
+                [0, -1], [0, 1], [-1, 0], [1, 0],
+                [-1, -1], [1, -1], [-1, 1], [1, 1]
+            ];
+            
+            let found = false;
+            for (const [dx, dz] of directions) {
+                const newX = gridX + dx;
+                const newZ = gridZ + dz;
+                
+                if (newX >= this.arena.playerZoneX && newX < this.arena.width &&
+                    newZ >= 0 && newZ < this.arena.depth &&
+                    !isOccupied(newX, newZ)) {
+                    targetX = newX;
+                    targetZ = newZ;
+                    found = true;
+                    break;
+                }
+            }
+            
+            if (!found) {
+                console.warn(`[Game] 소환 실패: 빈 칸 없음`);
+                return null;
+            }
+        }
+        
+        // 적 생성
+        const unit = await this.placeUnit(monsterType, targetX, targetZ, 'enemy');
+        
+        if (unit) {
+            // ★ 인텐트 즉시 설정
+            if (typeof MonsterPatterns !== 'undefined') {
+                const intent = MonsterPatterns.rollIntent(unit);
+                unit.intent = intent;
+                this.createEnemyIntent(unit);
+            }
+            
+            // ★ 등장 대사
+            if (typeof MonsterDialogue !== 'undefined') {
+                MonsterDialogue.onSpawn(unit);
+            }
+            
+            console.log(`[Game] ✅ 적 소환 완료: ${monsterType} at (${targetX}, ${targetZ})`);
+        }
+        
+        return unit;
     },
     
     async generateEnemyUnits() {
         // Generate enemies based on turn
         const turn = this.state.turn;
-        const enemyCount = Math.min(1 + Math.floor(turn / 2), 6);
-        const types = ['goblin', 'goblinArcher'];
+        const enemyCount = Math.max(1, Math.min(1 + Math.floor(turn / 2), 6)); // 최소 1마리
+        const types = ['goblin', 'goblinArcher', 'slime', 'goblinShaman', 'goblinShield'];
         
-        for (let i = 0; i < enemyCount; i++) {
-            const type = types[Math.floor(Math.random() * types.length)];
-            // Spawn on RIGHT side (X: 5-9)
-            const x = this.arena.playerZoneX + Math.floor(Math.random() * this.arena.enemyZoneX);
-            const z = Math.floor(Math.random() * this.arena.depth);
-            
-            // Check if cell is occupied
-            const occupied = this.state.enemyUnits.some(u => u.gridX === x && u.gridZ === z);
-            if (!occupied) {
-                await this.placeUnit(type, x, z, 'enemy');
+        // ★ 사용 가능한 빈 칸 목록 만들기
+        const availableCells = [];
+        for (let x = this.arena.playerZoneX; x < this.arena.width; x++) {
+            for (let z = 0; z < this.arena.depth; z++) {
+                availableCells.push({ x, z });
             }
         }
         
-        console.log(`[Game] Generated ${this.state.enemyUnits.length} enemies`);
+        // 이미 점유된 칸 제외
+        const occupiedCells = new Set(
+            this.state.enemyUnits.map(u => `${u.gridX},${u.gridZ}`)
+        );
+        const freeCells = availableCells.filter(c => !occupiedCells.has(`${c.x},${c.z}`));
+        
+        // 빈 칸 섞기 (랜덤 배치)
+        for (let i = freeCells.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [freeCells[i], freeCells[j]] = [freeCells[j], freeCells[i]];
+        }
+        
+        // 적 생성
+        const spawnCount = Math.min(enemyCount, freeCells.length);
+        for (let i = 0; i < spawnCount; i++) {
+            const type = types[Math.floor(Math.random() * types.length)];
+            const cell = freeCells[i];
+            await this.placeUnit(type, cell.x, cell.z, 'enemy');
+        }
+        
+        console.log(`[Game] Generated ${spawnCount} enemies (requested: ${enemyCount})`);
     },
     
     // ==================== BATTLE PHASE (Turn-Based) ====================
@@ -3467,6 +3749,13 @@ const Game = {
         // ★ 차징 이펙트 정리 (인텐트 실행 시)
         this.clearChargingEffect(enemy);
         
+        // ★★★ 새로 소환된 유닛은 이번 턴에 행동하지 않음! (분열로 생성된 미니슬라임 등)
+        if (enemy.spawnedThisTurn) {
+            console.log(`[Game] ${enemy.name || enemy.type} - 이번 턴에 소환됨, 행동 스킵!`);
+            delete enemy.spawnedThisTurn; // 플래그 제거 (다음 턴에는 행동)
+            return;
+        }
+        
         // 브레이크 상태면 행동 불가
         if (typeof BreakSystem !== 'undefined' && !BreakSystem.canAct(enemy)) {
             console.log(`[Game] ${enemy.name || enemy.type} is BROKEN - skipping action`);
@@ -3476,6 +3765,11 @@ const Game = {
         // Find target using targeting rules
         const target = this.findEnemyTarget(enemy);
         if (!target) return;
+        
+        // ★ 행동 대사
+        if (typeof MonsterDialogue !== 'undefined') {
+            MonsterDialogue.onAction(enemy, intent);
+        }
         
         // MonsterPatterns가 있으면 위임
         if (typeof MonsterPatterns !== 'undefined') {
@@ -3539,7 +3833,7 @@ const Game = {
         }
     },
     
-    async enemyRangedAttack(enemy, target, intentDamage) {
+    async enemyRangedAttack(enemy, target, intentDamage, intent = {}) {
         // ★ AI 설정에 따른 후퇴 처리
         const ai = this.getEnemyAI(enemy);
         if (ai.retreatBeforeAttack) {
@@ -3547,12 +3841,33 @@ const Game = {
         }
         
         if (typeof UnitCombat !== 'undefined') {
-            // 궁수 타입이면 화살 VFX 사용
-            const isArcher = ai.attackType === 'ranged';
+            // ★★★ intent에 projectile 정보가 있으면 사용! ★★★
+            let projectileType = 'arrow';
+            let projectileColor = 0xff6600;
+            let createZone = null;
+            
+            if (intent.projectile === 'fireball') {
+                projectileType = 'fireball';
+                projectileColor = 0xff4400;
+                createZone = intent.createZone ? 'fire' : null;
+            } else if (intent.element === 'fire') {
+                projectileType = 'fireball';
+                projectileColor = 0xff4400;
+            } else if (intent.element === 'ice') {
+                projectileType = 'icebolt';
+                projectileColor = 0x44aaff;
+            } else if (intent.element === 'lightning') {
+                projectileType = 'lightning';
+                projectileColor = 0x88ccff;
+            }
+            
+            console.log(`[Game] 적 원거리 공격 - projectile: ${projectileType}, createZone: ${createZone}`);
+            
             await UnitCombat.rangedAttack(enemy, target, intentDamage, {
-                projectileType: isArcher ? 'arrow' : 'default',
-                projectileColor: 0xff6600,
+                projectileType: projectileType,
+                projectileColor: projectileColor,
                 projectileSize: 10,
+                createZone: createZone,
                 isEnemy: true
             });
         } else {
@@ -3582,44 +3897,105 @@ const Game = {
         const maxX = this.arena.width - 1;
         
         // 맵 범위 체크 & 해당 위치에 다른 유닛이 없는지 체크
-        const isOccupied = this.state.enemyUnits.some(e => 
-            e !== enemy && e.hp > 0 && e.gridX === newX && e.gridZ === enemy.gridZ
+        const allUnits = [...this.state.playerUnits, ...this.state.enemyUnits];
+        const isOccupied = (x, z) => allUnits.some(u => 
+            u !== enemy && u.hp > 0 && u.gridX === x && u.gridZ === z
         );
         
-        if (newX <= maxX && !isOccupied) {
-            const oldX = enemy.gridX;
-            enemy.gridX = newX;
+        // ★ 목표 위치 결정 (뒤로 이동 또는 레인 변경)
+        let targetX = enemy.gridX;
+        let targetZ = enemy.gridZ;
+        let moved = false;
+        
+        if (newX <= maxX && !isOccupied(newX, enemy.gridZ)) {
+            // 1순위: 뒤로 이동 가능
+            targetX = newX;
+            moved = true;
+            console.log(`[AI] ${enemy.type} 후퇴 선택: 뒤로 이동 (${enemy.gridX} → ${targetX})`);
+        } else {
+            // 2순위: 뒤로 못가면 레인 변경 시도
+            const laneOptions = [];
             
-            const newPos = this.getCellCenter(newX, enemy.gridZ);
-            const posTarget = enemy.container || enemy.sprite;
+            // 위 레인 체크
+            if (enemy.gridZ > 0 && !isOccupied(enemy.gridX, enemy.gridZ - 1)) {
+                laneOptions.push({ z: enemy.gridZ - 1, priority: 1 });
+            }
+            // 아래 레인 체크
+            if (enemy.gridZ < this.arena.depth - 1 && !isOccupied(enemy.gridX, enemy.gridZ + 1)) {
+                laneOptions.push({ z: enemy.gridZ + 1, priority: 1 });
+            }
+            // 대각선 뒤쪽도 체크 (더 좋은 포지션)
+            if (newX <= maxX) {
+                if (enemy.gridZ > 0 && !isOccupied(newX, enemy.gridZ - 1)) {
+                    laneOptions.push({ x: newX, z: enemy.gridZ - 1, priority: 2 });
+                }
+                if (enemy.gridZ < this.arena.depth - 1 && !isOccupied(newX, enemy.gridZ + 1)) {
+                    laneOptions.push({ x: newX, z: enemy.gridZ + 1, priority: 2 });
+                }
+            }
+            
+            if (laneOptions.length > 0) {
+                // 대각선 이동 우선, 그다음 레인 변경
+                laneOptions.sort((a, b) => b.priority - a.priority);
+                const choice = laneOptions[0];
+                targetX = choice.x !== undefined ? choice.x : enemy.gridX;
+                targetZ = choice.z;
+                moved = true;
+                console.log(`[AI] ${enemy.type} 후퇴 선택: 레인 변경 (${enemy.gridZ} → ${targetZ}), X: ${enemy.gridX} → ${targetX}`);
+            } else {
+                console.log(`[AI] ${enemy.type} 후퇴 불가: 갈 곳이 없음!`);
+            }
+        }
+        
+        if (moved) {
+            const oldX = enemy.gridX;
+            const oldZ = enemy.gridZ;
+            
+            const newPos = this.getCellCenter(targetX, targetZ);
+            // ★ UnitCombat 헬퍼 사용
+            const posTarget = typeof UnitCombat !== 'undefined' 
+                ? UnitCombat.getPositionTarget(enemy) 
+                : (enemy.container || enemy.sprite);
             const scaleTarget = enemy.sprite;
-            const baseScale = enemy.baseScale || scaleTarget.scale.x;
-            const startY = posTarget.y;
+            const baseScale = enemy.baseScale || scaleTarget?.scale?.x || 1;
+            const startY = posTarget?.y || 0;
+            
+            console.log(`[AI] ${enemy.type} 후퇴 애니메이션: (${posTarget?.x}, ${startY}) → (${newPos?.x}, ${newPos?.y})`);
+            
+            // ★★★ 중요: 애니메이션 중 위치 덮어쓰기 방지!
+            enemy.isAnimating = true;
+            
+            // ★ scaleTarget과 scale이 유효한지 체크
+            const hasScale = scaleTarget && scaleTarget.scale && !scaleTarget.destroyed;
             
             await new Promise(resolve => {
                 const tl = gsap.timeline({ onComplete: resolve });
                 
                 // 1. 준비 자세 (살짝 움츠림)
-                tl.to(scaleTarget.scale, {
-                    x: baseScale * 0.9,
-                    y: baseScale * 1.1,
-                    duration: 0.08,
-                    ease: 'power1.in'
-                });
+                if (hasScale) {
+                    tl.to(scaleTarget.scale, {
+                        x: baseScale * 0.9,
+                        y: baseScale * 1.1,
+                        duration: 0.08,
+                        ease: 'power1.in'
+                    });
+                }
                 
-                // 2. 점프하면서 뒤로 이동
+                // 2. 점프하면서 이동
                 tl.to(posTarget, {
                     x: newPos.x,
-                    y: startY - 40,  // 위로 점프
-                    duration: 0.15,
+                    y: startY - 50,  // 위로 점프 (레인 변경 시 더 높이)
+                    duration: 0.18,
                     ease: 'power2.out'
-                }, '<0.05');
+                }, hasScale ? '<0.05' : 0);
                 
-                tl.to(scaleTarget.scale, {
-                    x: baseScale * 1.05,
-                    y: baseScale * 0.95,
-                    duration: 0.15
-                }, '<');
+                if (hasScale) {
+                    tl.to(scaleTarget.scale, {
+                        x: baseScale * 1.05,
+                        y: baseScale * 0.95,
+                        duration: 0.15
+                    }, '<');
+                }
                 
                 // 3. 착지
                 tl.to(posTarget, {
@@ -3628,12 +4004,14 @@ const Game = {
                     ease: 'bounce.out'
                 });
                 
-                tl.to(scaleTarget.scale, {
-                    x: baseScale,
-                    y: baseScale,
-                    duration: 0.1,
-                    ease: 'power2.out'
-                }, '<0.05');
+                if (hasScale) {
+                    tl.to(scaleTarget.scale, {
+                        x: baseScale,
+                        y: baseScale,
+                        duration: 0.1,
+                        ease: 'power2.out'
+                    }, '<0.05');
+                }
                 
                 // 4. 먼지 이펙트 (착지 시)
                 tl.call(() => {
@@ -3641,7 +4019,13 @@ const Game = {
                 }, null, '-=0.05');
             });
             
-            console.log(`[AI] ${enemy.type} 백스텝: ${oldX} -> ${newX}`);
+            // ★ 그리드 위치 업데이트 후 애니메이션 플래그 해제
+            enemy.gridX = targetX;
+            enemy.gridZ = targetZ;
+            enemy.z = targetZ + 0.5;
+            enemy.isAnimating = false;
+            
+            console.log(`[AI] ${enemy.type} 회피 완료: (${oldX},${oldZ}) → (${targetX},${targetZ})`);
         }
     },
     
@@ -3700,8 +4084,14 @@ const Game = {
             damage -= blocked;
             
             // ★ 유닛 실드 완전 파괴 연출
-            if (prevBlock > 0 && target.block === 0 && typeof ShieldVFX !== 'undefined') {
-                ShieldVFX.breakAtUnit(target, prevBlock);
+            if (prevBlock > 0 && target.block === 0) {
+                if (typeof ShieldVFX !== 'undefined') {
+                    ShieldVFX.breakAtUnit(target, prevBlock);
+                }
+                // ★ 쉴드 글로우 제거
+                if (typeof CombatEffects !== 'undefined') {
+                    CombatEffects.removeShieldGlow(target);
+                }
             }
         }
         
@@ -3810,10 +4200,19 @@ const Game = {
     killUnit(unit) {
         console.log(`[Game] ${unit.type} died!`);
         
-        // ★★★ 해당 유닛 위치의 플로터(데미지 숫자) 정리 ★★★
+        // ★ 사망 대사 (적만)
+        if (!unit.isHero && typeof MonsterDialogue !== 'undefined') {
+            MonsterDialogue.onDeath(unit);
+        }
+        
+        // ★ 플로터는 딜레이 후 정리 (사망 대미지 표시 시간 확보)
         const unitPos = this.getUnitPosition(unit);
         if (unitPos && typeof CombatEffects !== 'undefined') {
-            CombatEffects.cleanupFloatersInArea(unitPos.x, unitPos.y, 150);
+            setTimeout(() => {
+                if (typeof CombatEffects !== 'undefined') {
+                    CombatEffects.cleanupFloatersInArea(unitPos.x, unitPos.y, 150);
+                }
+            }, 800);  // 0.8초 후 정리 (플로터 애니메이션 끝난 후)
         }
         
         // ★★★ 모든 gsap 애니메이션 먼저 정리 ★★★
@@ -3841,6 +4240,11 @@ const Game = {
         // ★ 브레이크 시스템 정리 (통합 정리 함수 사용)
         if (typeof BreakSystem !== 'undefined' && typeof BreakSystem.cleanupUnit === 'function') {
             BreakSystem.cleanupUnit(unit);
+        }
+        
+        // ★ 상태 인디케이터 정리
+        if (typeof StatusIndicator !== 'undefined') {
+            StatusIndicator.cleanupUnit(unit);
         }
         
         // ★ HP 바 삭제 연출 (페이드아웃 + 축소)
@@ -4228,6 +4632,11 @@ const Game = {
             this.state.enemyUnits.forEach(enemy => {
                 BreakSystem.onTurnEnd(enemy);
             });
+        }
+        
+        // ★ 턴 종료 시 출혈 감소
+        if (typeof BleedSystem !== 'undefined') {
+            BleedSystem.onTurnEnd(this.state.enemyUnits);
         }
         
         // Check victory - all enemies dead (handled by checkVictory)

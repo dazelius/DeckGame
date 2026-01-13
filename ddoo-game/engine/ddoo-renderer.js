@@ -982,6 +982,105 @@ const DDOORenderer = {
     },
     
     /**
+     * 아웃라인 글로우 효과 (쉴드용) - 글로우 + 스트로크 방식
+     * @param {PIXI.Container} container - DDOORenderer 컨테이너
+     * @param {boolean} enabled - 글로우 활성화 여부
+     * @param {number} color - 글로우 색상 (기본: 시안)
+     */
+    setOutlineGlow(container, enabled, color = 0x44ddff) {
+        if (!container) {
+            console.warn('[ShieldGlow] container가 없음!');
+            return;
+        }
+        
+        console.log(`[ShieldGlow] setOutlineGlow: enabled=${enabled}, hasGlow=${!!container._glowSprite}, hasStroke=${!!container._strokeSprite}`);
+        
+        // 기존 글로우 정리
+        if (container._glowTween) {
+            container._glowTween.kill();
+            container._glowTween = null;
+        }
+        if (container._glowSprite) {
+            if (!container._glowSprite.destroyed) {
+                container._glowSprite.destroy();
+            }
+            container._glowSprite = null;
+            console.log('[ShieldGlow] 글로우 스프라이트 제거됨');
+        }
+        if (container._strokeSprite) {
+            if (!container._strokeSprite.destroyed) {
+                container._strokeSprite.destroy();
+            }
+            container._strokeSprite = null;
+            console.log('[ShieldGlow] 스트로크 스프라이트 제거됨');
+        }
+        
+        // 메인 스프라이트 찾기
+        const mainSprite = container.children.find(c => c.label === 'main');
+        if (!mainSprite || !mainSprite.texture) return;
+        
+        if (enabled) {
+            const anchorX = mainSprite.anchor.x;
+            const anchorY = mainSprite.anchor.y;
+            const scaleX = mainSprite.scale.x;
+            const scaleY = mainSprite.scale.y;
+            
+            // ★ 1. 외곽 글로우 (blur 강하게, 넓게 퍼짐) - 더 강하게!
+            const glowSprite = new PIXI.Sprite(mainSprite.texture);
+            glowSprite.anchor.set(anchorX, anchorY);
+            glowSprite.scale.set(scaleX * 1.15, scaleY * 1.15);
+            glowSprite.tint = color;
+            glowSprite.alpha = 1;
+            glowSprite.zIndex = mainSprite.zIndex - 2;
+            glowSprite.label = 'glow';
+            
+            const blurFilter = new PIXI.BlurFilter();
+            blurFilter.blur = 16;
+            blurFilter.quality = 4;
+            glowSprite.filters = [blurFilter];
+            
+            container.addChild(glowSprite);
+            container._glowSprite = glowSprite;
+            container._glowBlur = blurFilter;
+            
+            // ★ 2. 선명한 스트로크 (blur 없이, 약간 크게) - 더 선명하게!
+            const strokeSprite = new PIXI.Sprite(mainSprite.texture);
+            strokeSprite.anchor.set(anchorX, anchorY);
+            strokeSprite.scale.set(scaleX * 1.04, scaleY * 1.04);
+            strokeSprite.tint = 0xaaffff;  // 밝은 시안
+            strokeSprite.alpha = 1;
+            strokeSprite.zIndex = mainSprite.zIndex - 1;
+            strokeSprite.label = 'stroke';
+            
+            container.addChild(strokeSprite);
+            container._strokeSprite = strokeSprite;
+            
+            // 펄스 애니메이션 - 더 강하게!
+            container._glowTween = gsap.to({ val: 0 }, {
+                val: Math.PI * 2,
+                duration: 1.5,
+                repeat: -1,
+                ease: 'none',
+                onUpdate: function() {
+                    if (!glowSprite || glowSprite.destroyed) {
+                        this.kill();
+                        return;
+                    }
+                    const v = this.targets()[0].val;
+                    // 글로우 펄스 (강하게)
+                    glowSprite.alpha = 0.7 + Math.sin(v) * 0.3;  // 0.4 ~ 1.0
+                    blurFilter.blur = 12 + Math.sin(v) * 6;  // 6 ~ 18
+                    // 스트로크 펄스
+                    if (strokeSprite && !strokeSprite.destroyed) {
+                        strokeSprite.alpha = 0.8 + Math.sin(v * 1.5) * 0.2;  // 0.6 ~ 1.0
+                    }
+                }
+            });
+        }
+        // enabled = false면 위에서 이미 정리됨
+    },
+    
+    /**
      * 아웃라인 표시/숨김
      */
     setOutlineVisible(container, visible) {

@@ -68,7 +68,7 @@ const UnitSprite = {
         // 2. 스프라이트 생성 (스케일 적용될 부분)
         const sprite = await DDOORenderer.createSprite(imagePath, {
             scale: 1,                           // 내부 스프라이트 = 1:1
-            outline: { enabled: false },
+            outline: { enabled: true, color: 0x000000, thickness: 3 },  // ★ 아웃라인 활성화
             shadow: { enabled: false },
             breathing: { enabled: false }       // 수동으로 시작
         });

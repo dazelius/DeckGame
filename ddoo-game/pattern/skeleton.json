@@ -37,7 +37,8 @@
             "buffType": "strength",
             "buffValue": 1,
             "weight": 25,
-            "breakRecipe": 2
+            "breakRecipe": 2,
+            "cooldown": 2
         },
         { 
             "id": "bone_shield",

@@ -1,0 +1,121 @@
+{
+    "id": "goblinShield",
+    "name": "Goblin Shield",
+    "nameKo": "고블린 방패병",
+    
+    "stats": {
+        "hp": 30,
+        "damage": 6,
+        "range": 1,
+        "sprite": "goblinshield.png",
+        "scale": 0.32,
+        "breakSprite": "goblinshield_break.png"
+    },
+    
+    "ai": {
+        "attackType": "melee",
+        "preferredDistance": 1,
+        "retreatBeforeAttack": false,
+        "aggressive": false,
+        "defensive": true
+    },
+    
+    "weaknesses": ["fire", "lightning"],
+    
+    "intents": [
+        { 
+            "id": "bash",
+            "name": "방패 타격",
+            "nameEn": "Shield Bash",
+            "type": "attack", 
+            "damage": 5,
+            "weight": 35
+        },
+        { 
+            "id": "charge",
+            "name": "돌진",
+            "nameEn": "Charge",
+            "type": "attack", 
+            "damage": 0,
+            "hits": 3,
+            "knockbackPerHit": 1,
+            "weight": 30,
+            "breakRecipe": 2,
+            "cooldown": 3
+        },
+        { 
+            "id": "defend",
+            "name": "전진 방어",
+            "nameEn": "Advance Guard",
+            "type": "defend", 
+            "block": 8,
+            "moveForward": 1,
+            "weight": 35
+        }
+    ],
+    
+    "dialogues": {
+        "spawn": [
+            "막아라!",
+            "방어 태세!",
+            "뚫을 수 없다!",
+            "끼익, 준비!"
+        ],
+        "intent": [
+            "막아주지...",
+            "끄윽... 버텨야해",
+            "방패가 있다!"
+        ],
+        "attack": [
+            "돌격!",
+            "밀어버려!",
+            "끼야앗!",
+            "방패로!"
+        ],
+        "defend": [
+            "막는다!",
+            "튼튼해!",
+            "뚫지 못해!",
+            "철벽!"
+        ],
+        "buff": [
+            "이쪽이다!",
+            "나를 봐라!",
+            "덤벼!"
+        ],
+        "hit": [
+            "끄윽!",
+            "방패가...!",
+            "아직이다!",
+            "으윽!",
+            "버틴다!"
+        ],
+        "death": [
+            "방패가... 뚫렸다...",
+            "지켜내지... 못했다...",
+            "끼익..."
+        ],
+        "break": [
+            "방패가?!",
+            "안돼!",
+            "뚫리다니!"
+        ],
+        "intents": {
+            "bash": [
+                "받아라!",
+                "끼익!",
+                "덤벼!"
+            ],
+            "charge": [
+                "돌진이다!!",
+                "밀어버려!",
+                "꺼져라아!"
+            ],
+            "defend": [
+                "전진! 막는다!",
+                "앞으로!",
+                "버텨!"
+            ]
+        }
+    }
+}
