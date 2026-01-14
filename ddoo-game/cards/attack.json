@@ -7,13 +7,18 @@
         "target": "enemy",
         "melee": true,
         "frontOnly": true,
-        "aoe": { "width": 2, "depth": 1 },
+        "aoe": { "width": 1, "depth": 1 },
         "element": "physical",
         "anim": {
             "type": "slash",
-            "dash": 0.3,
-            "attack": 0.1,
-            "ease": "power2.inOut"
+            "dash": 0.38,
+            "attack": 0.15,
+            "ease": "power2.inOut",
+            "dashOffset": 0,
+            "vfx": {
+                "angle": -45,
+                "scale": 1.5
+            }
         }
     },
     "bash": {
@@ -30,10 +35,15 @@
         "element": "physical",
         "anim": {
             "type": "bash",
-            "windup": 0.2,
-            "dash": 0.28,
-            "impact": 0.15,
-            "ease": "power2.inOut"
+            "windup": 0.28,
+            "dash": 0.38,
+            "impact": 0.2,
+            "ease": "power2.inOut",
+            "dashOffset": 5,
+            "vfx": {
+                "angle": -30,
+                "scale": 1.8
+            }
         }
     },
     "cleave": {
@@ -48,9 +58,14 @@
         "element": "physical",
         "anim": {
             "type": "cleave",
-            "windup": 0.15,
-            "swing": 0.2,
-            "ease": "power2.out"
+            "windup": 0.22,
+            "swing": 0.28,
+            "ease": "power2.out",
+            "dashOffset": 0,
+            "vfx": {
+                "angle": -60,
+                "scale": 2.0
+            }
         }
     },
     "ironWave": {
@@ -66,13 +81,14 @@
         "element": "physical",
         "anim": {
             "type": "bash",
-            "windup": 0.15,
-            "dash": 0.25,
-            "ease": "power2.out"
+            "windup": 0.22,
+            "dash": 0.32,
+            "ease": "power2.out",
+            "dashOffset": 0
         }
     },
     "flurry": {
-        "name": "Flurry",
+        "name": "베기",
         "cost": 1,
         "type": "attack",
         "damage": 2,
@@ -84,10 +100,12 @@
         "element": "physical",
         "anim": {
             "type": "flurry",
-            "dash": 0.28,
-            "stab": 0.08,
-            "interval": 0.06,
-            "ease": "power2.inOut"
+            "dash": 0.4,
+            "stab": 0.15,
+            "interval": 0.2,
+            "ease": "power2.inOut",
+            "vfx": "stab",
+            "dashOffset": 10
         }
     },
     "fireBolt": {
@@ -103,7 +121,8 @@
         "element": "fire",
         "anim": {
             "type": "projectile",
-            "projectileType": "fireBolt"
+            "projectileType": "fireBolt",
+            "speedMult": 1.0
         }
     },
     "fireBall": {
@@ -119,7 +138,8 @@
         "element": "fire",
         "anim": {
             "type": "projectile",
-            "projectileType": "fireBall"
+            "projectileType": "fireBall",
+            "speedMult": 0.8
         }
     },
     "spearThrow": {
@@ -149,8 +169,8 @@
         "element": "physical",
         "anim": {
             "type": "hook",
-            "throw": 0.2,
-            "pull": 0.35,
+            "throw": 0.28,
+            "pull": 0.45,
             "ease": "power2.out"
         }
     },
@@ -166,7 +186,8 @@
         "aoe": { "width": 1, "depth": 1 },
         "element": "physical",
         "anim": {
-            "type": "slash"
+            "type": "slash",
+            "dashOffset": -5
         }
     },
     "rush": {
@@ -183,9 +204,10 @@
         "element": "physical",
         "anim": {
             "type": "rush",
-            "charge": 0.15,
-            "hitInterval": 0.1,
-            "ease": "power2.in"
+            "charge": 0.22,
+            "hitInterval": 0.15,
+            "ease": "power2.in",
+            "dashOffset": 35
         }
     },
     "sneakAttack": {
@@ -200,7 +222,8 @@
         "aoe": { "width": 1, "depth": 1 },
         "element": "physical",
         "anim": {
-            "type": "sneak"
+            "type": "sneak",
+            "dashOffset": 10
         }
     },
     "spark": {
@@ -217,7 +240,9 @@
         "element": "lightning",
         "desc": "전기 스파크. 1칸 인접 적에게 연쇄. 물 위 추가 데미지.",
         "anim": {
-            "type": "spark"
+            "type": "spark",
+            "chainDelay": 300,
+            "hitDelay": 100
         }
     },
     "lightning": {
@@ -232,7 +257,8 @@
         "aoe": { "width": 1, "depth": 1 },
         "element": "lightning",
         "anim": {
-            "type": "lightning"
+            "type": "lightning",
+            "chainDelay": 350
         }
     },
     "fireArrow": {
@@ -249,7 +275,10 @@
         "element": "fire",
         "anim": {
             "type": "projectile",
-            "projectileType": "fireArrow"
+            "projectileType": "fireArrow",
+            "interval": 0.12,
+            "spreadY": 15,
+            "speedMult": 1.2
         }
     },
     "waterWave": {
@@ -268,9 +297,10 @@
         "desc": "3칸을 쭉 타격하고 넉백. 물 영역을 남긴다.",
         "anim": {
             "type": "wave",
-            "windup": 0.15,
-            "sweep": 0.3,
-            "ease": "power2.out"
+            "windup": 0.22,
+            "sweep": 0.38,
+            "ease": "power2.out",
+            "dashOffset": 0
         }
     },
     "tidalCrash": {
@@ -289,9 +319,10 @@
         "desc": "강력한 해일! 넓은 범위 타격 + 2칸 넉백. 물 영역 생성.",
         "anim": {
             "type": "wave",
-            "windup": 0.25,
-            "sweep": 0.4,
-            "ease": "power3.out"
+            "windup": 0.32,
+            "sweep": 0.48,
+            "ease": "power3.out",
+            "dashOffset": 5
         }
     }
 }

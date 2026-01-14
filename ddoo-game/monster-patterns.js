@@ -577,6 +577,11 @@ const MonsterPatterns = {
                                 // ★ scaleTarget과 scale이 유효한 경우에만 스케일 애니메이션
                                 const hasScale = scaleTarget && scaleTarget.scale && !scaleTarget.destroyed;
                                 
+                                // ★ 출발 먼지!
+                                if (typeof DustVFX !== 'undefined') {
+                                    DustVFX.jump(posTarget.x, posTarget.y, 1.2);
+                                }
+                                
                                 // 1. 준비 자세 (방패 들기)
                                 if (hasScale) {
                                     tl.to(scaleTarget.scale, {
@@ -610,6 +615,13 @@ const MonsterPatterns = {
                                         ease: 'power2.out'
                                     });
                                 }
+                                
+                                // ★ 착지 먼지!
+                                tl.call(() => {
+                                    if (typeof DustVFX !== 'undefined') {
+                                        DustVFX.land(newPos.x, newPos.y, 1.5);
+                                    }
+                                });
                             });
                             
                             // ★ 그리드 위치 업데이트 후 애니메이션 플래그 해제

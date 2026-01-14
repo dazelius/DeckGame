@@ -537,7 +537,7 @@ const SkillActions = {
         if (!this.isValid(target)) return;
         
         if (typeof CombatEffects !== 'undefined') {
-            CombatEffects.hitEffect(target.sprite);
+            CombatEffects.hitEffect(target);
             CombatEffects.screenShake(3 * intensity, 50);
         }
     },

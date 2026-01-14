@@ -241,7 +241,7 @@ const SkillSystem = {
             if (typeof CombatEffects !== 'undefined') {
                 CombatEffects.flurryStab(targetX - 90, targetCenter, i);
                 if (target.sprite && !target.sprite.destroyed) {
-                    CombatEffects.hitEffect(target.sprite);
+                    CombatEffects.hitEffect(target);
                 }
                 CombatEffects.screenShake(4 + i * 2, 80);
             }

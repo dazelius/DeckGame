@@ -30,6 +30,7 @@ const CombatEffects = {
             console.log('[CombatEffects] 초기화 완료 (stage)');
         }
         
+        
         // ★ 플로터 컨테이너는 항상 stage에 직접 추가 (최상위)
         pixiApp.stage.addChild(this.floaterContainer);
         pixiApp.stage.sortableChildren = true;
@@ -197,11 +198,92 @@ const CombatEffects = {
     },
     
     // ==========================================
-    // 슬래시 이펙트 (근접 공격)
+    // 슬래시 이펙트 (근접 공격) - 이미지 시퀀스 애니메이션
     // ==========================================
+    slashTextures: null,  // 캐시된 텍스처들
+    slashTexturesLoaded: false,
+    
+    // 슬래시 텍스처 로드 (비동기)
+    async loadSlashTextures() {
+        if (this.slashTexturesLoaded) return this.slashTextures;
+        
+        this.slashTextures = [];
+        try {
+            const paths = [];
+            for (let i = 1; i <= 9; i++) {
+                // 공백이 있는 경로를 인코딩
+                const path = `vfx/VFX%202/Frames/warrior_skill2_frame${i}.png`;
+                paths.push(path);
+            }
+            
+            // PIXI.Assets로 비동기 로드
+            console.log('[CombatEffects] Loading slash textures...');
+            const textures = await Promise.all(
+                paths.map(path => PIXI.Assets.load(path))
+            );
+            this.slashTextures = textures;
+            this.slashTexturesLoaded = true;
+            console.log('[CombatEffects] Slash textures loaded:', this.slashTextures.length);
+        } catch (e) {
+            console.error('[CombatEffects] Texture load error:', e);
+            this.slashTexturesLoaded = false;
+        }
+        return this.slashTextures;
+    },
+    
     slashEffect(x, y, angle = -45, color = 0xffffff, scale = 1) {
         if (!this.app) return;
         
+        // 이미 로드된 텍스처 사용 (async loadSlashTextures가 완료되었으면)
+        const textures = this.slashTextures;
+        
+        // 텍스처가 유효한지 확인
+        if (!this.slashTexturesLoaded || !textures || textures.length === 0 || !textures[0]) {
+            // 폴백: 기존 Graphics 방식
+            console.warn('[CombatEffects] Slash textures not ready, using fallback');
+            this.slashEffectFallback(x, y, angle, color, scale);
+            return;
+        }
+        
+        // AnimatedSprite 생성
+        const slash = new PIXI.AnimatedSprite(textures);
+        slash.x = x;
+        slash.y = y;
+        slash.anchor.set(0.5, 0.5);
+        
+        // 플립 처리: angle이 음수면 좌우 반전 (오른쪽 베기)
+        const flipX = angle < 0 ? -1 : 1;
+        slash.scale.set(flipX * scale * 1.5, scale * 1.5);
+        
+        // 회전은 각도 그대로 적용
+        slash.rotation = 0;  // 이미지 자체가 방향성 있으므로 회전 없음
+        
+        slash.zIndex = 100;
+        slash.animationSpeed = 0.5;  // 프레임 속도 (0.5 = 30fps 기준)
+        slash.loop = false;
+        
+        // 색상 틴트 적용 (0xffffff가 아니면)
+        if (color !== 0xffffff) {
+            slash.tint = color;
+        }
+        
+        this.container.addChild(slash);
+        
+        // 애니메이션 재생
+        slash.play();
+        
+        // 완료 시 제거
+        slash.onComplete = () => {
+            gsap.to(slash, {
+                alpha: 0,
+                duration: 0.05,
+                onComplete: () => slash.destroy()
+            });
+        };
+    },
+    
+    // 폴백: Graphics 기반 슬래시
+    slashEffectFallback(x, y, angle = -45, color = 0xffffff, scale = 1) {
         const slash = new PIXI.Graphics();
         slash.x = x;
         slash.y = y;
@@ -209,11 +291,9 @@ const CombatEffects = {
         slash.alpha = 0;
         slash.zIndex = 100;
         
-        // 슬래시 모양 그리기
         const width = 120 * scale;
         const height = 15 * scale;
         
-        // 메인 슬래시
         slash.moveTo(-width/2, 0);
         slash.lineTo(0, -height/2);
         slash.lineTo(width/2, 0);
@@ -221,7 +301,6 @@ const CombatEffects = {
         slash.closePath();
         slash.fill({ color: color, alpha: 0.9 });
         
-        // 글로우 효과
         slash.moveTo(-width/2 * 0.8, 0);
         slash.lineTo(0, -height/2 * 0.6);
         slash.lineTo(width/2 * 0.8, 0);
@@ -231,11 +310,317 @@ const CombatEffects = {
         
         this.container.addChild(slash);
         
-        // 애니메이션
         gsap.timeline()
             .to(slash, { alpha: 1, duration: 0.05 })
             .to(slash.scale, { x: 1.5, y: 0.5, duration: 0.15, ease: 'power2.out' }, 0)
             .to(slash, { alpha: 0, duration: 0.1, delay: 0.1, onComplete: () => slash.destroy() });
+    },
+    
+    // ==========================================
+    // ★ 찌르기 이펙트 (Stab) - 연속 찌르기용
+    // 깊숙히 찌르는 날카로운 관통감
+    // ==========================================
+    // ★ 픽셀 아트 스타일 찌르기 색상 팔레트
+    STAB_COLORS: [
+        'rgba(255, 255, 255, 0.95)',  // 흰색 코어
+        'rgba(200, 230, 255, 0.85)',  // 연한 하늘
+        'rgba(136, 204, 255, 0.7)',   // 하늘색
+        'rgba(100, 150, 255, 0.5)',   // 파랑
+        'rgba(150, 100, 255, 0.3)',   // 보라색 잔상
+    ],
+    
+    stabEffect(x, y, direction = 1, color = 0x88ccff, intensity = 1) {
+        if (!this.app) return;
+        
+        const container = new PIXI.Container();
+        container.x = x;
+        container.y = y;
+        container.zIndex = 150;
+        this.container.addChild(container);
+        
+        // ★★★ 픽셀 아트 스타일 찌르기 이펙트 (대폭 UP!) ★★★
+        const length = 300 * intensity;  // ★ 180 → 300 더 크게!
+        const maxLife = 1.0;
+        let life = maxLife;
+        
+        // 다중 레이어 그래픽스
+        const layers = [];
+        const layerColors = [0xffffff, 0xcceeFF, 0x88ccff, 0x6688ff, 0x9966ff];
+        
+        for (let i = 0; i < layerColors.length; i++) {
+            const layer = new PIXI.Graphics();
+            layer.zIndex = 150 - i;
+            container.addChild(layer);
+            layers.push(layer);
+        }
+        
+        // ★ 애니메이션 함수 (픽셀 잔상 스타일)
+        const drawStab = () => {
+            layers.forEach((layer, i) => {
+                layer.clear();
+                
+                // 레이어별 시간차로 잔상 효과
+                const l = life - (i * 0.1);
+                if (l <= 0) return;
+                
+                const fullWidth = length * l * 1.3;      // 전체 길이
+                const thickness = (35 - i * 6) * l * intensity;  // ★ 22 → 35 더 두껍게!
+                
+                // ★ 테이퍼링! 뾰족한 다이아몬드 형태
+                // 시작점(얇음) → 20%지점(두꺼움) → 끝점(뾰족)
+                const tipX = fullWidth * direction;
+                const flareX = fullWidth * 0.2 * direction;
+                
+                layer.moveTo(0, 0);  // 시작점 (얇음)
+                layer.lineTo(flareX, -thickness / 2);  // 위로 벌어짐
+                layer.lineTo(tipX, 0);  // 끝점 (뾰족!)
+                layer.lineTo(flareX, thickness / 2);  // 아래로 벌어짐
+                layer.closePath();
+                layer.fill({ color: layerColors[i], alpha: 0.95 - i * 0.12 });
+            });
+        };
+        
+        // 초기 그리기
+        drawStab();
+        
+        // 애니메이션
+        gsap.to({ life: maxLife }, {
+            life: 0,
+            duration: 0.15,
+            ease: 'power2.out',
+            onUpdate: function() {
+                life = this.targets()[0].life;
+                drawStab();
+            },
+            onComplete: () => {
+                if (!container.destroyed) container.destroy({ children: true });
+            }
+        });
+        
+        // ★ 관통 스파크 (뒤로 튀는 파편)
+        for (let i = 0; i < 6 * intensity; i++) {
+            const spark = new PIXI.Graphics();
+            const sparkLen = 15 + Math.random() * 25;
+            const angle = Math.PI + (Math.random() - 0.5) * 1.2; // 뒤쪽으로
+            if (direction < 0) {
+                spark.rotation = Math.PI;
+            }
+            
+            spark.moveTo(0, 0);
+            spark.lineTo(Math.cos(angle) * sparkLen, Math.sin(angle) * sparkLen);
+            spark.stroke({ width: 2 + Math.random() * 2, color: 0xffffff, alpha: 0.9 });
+            
+            spark.x = length * 0.6 * direction;
+            spark.y = (Math.random() - 0.5) * 20;
+            container.addChild(spark);
+            
+            // 스파크 날아감
+            gsap.to(spark, {
+                x: spark.x + Math.cos(angle) * (40 + Math.random() * 30) * direction,
+                y: spark.y + Math.sin(angle) * (30 + Math.random() * 20),
+                alpha: 0,
+                duration: 0.15 + Math.random() * 0.1,
+                ease: 'power2.out'
+            });
+        }
+        
+        // ★ 3. 관통 임팩트 링 (찌르는 지점)
+        const impactRing = new PIXI.Graphics();
+        impactRing.circle(length * 0.8 * direction, 0, 8);
+        impactRing.stroke({ width: 3, color: 0xffffff, alpha: 0.9 });
+        container.addChild(impactRing);
+        
+        gsap.to(impactRing.scale, { x: 2.5, y: 2.5, duration: 0.12, ease: 'power2.out' });
+        gsap.to(impactRing, { alpha: 0, duration: 0.12 });
+        
+        // ★ 4. 깊이감 - 관통 라인 (뒤로 지나가는 흔적)
+        const throughLine = new PIXI.Graphics();
+        throughLine.moveTo(-length * 0.5 * direction, 0);
+        throughLine.lineTo(length * 1.2 * direction, 0);
+        throughLine.stroke({ width: 4, color: color, alpha: 0.6 });
+        throughLine.x = 0;
+        container.addChild(throughLine);
+        
+        // 관통 라인 확장
+        gsap.to(throughLine.scale, { x: 1.5, duration: 0.1, ease: 'power2.out' });
+        gsap.to(throughLine, { alpha: 0, duration: 0.15 });
+        
+        // ★★★ 5. 끝점 임팩트 파티클 (더 크고 많이!) ★★★
+        const tipX = length * direction;
+        for (let i = 0; i < 18 * intensity; i++) {  // ★ 10 → 18
+            const p = new PIXI.Graphics();
+            const size = 4 + Math.random() * 7;  // ★ 더 큰 픽셀!
+            p.rect(-size/2, -size/2, size, size);
+            p.fill({ color: i < 8 ? 0xffffff : 0x88ccff, alpha: 1 });
+            p.x = tipX;
+            p.y = 0;
+            container.addChild(p);
+            
+            // ★ 방향 수정! 찌르는 방향으로 날아감
+            const baseAngle = direction > 0 ? 0 : Math.PI;
+            const angle = baseAngle + (Math.random() - 0.5) * 0.6;
+            const speed = 15 + Math.random() * 25;  // ★ 더 빠르게!
+            
+            gsap.to(p, {
+                x: p.x + Math.cos(angle) * speed * 5,
+                y: p.y + Math.sin(angle) * speed * 5,
+                alpha: 0,
+                duration: 0.25 + Math.random() * 0.2,
+                ease: 'power2.out',
+                onComplete: () => { if (!p.destroyed) p.destroy(); }
+            });
+        }
+    },
+    
+    // ==========================================
+    // ★ 연속 찌르기 콤보 이펙트
+    // ==========================================
+    flurryStabEffect(x, y, direction = 1, hitIndex = 0, color = 0x88ccff) {
+        if (!this.app) return;
+        
+        // 히트별 약간씩 위치/각도 변화 (더 다양하게!)
+        const offsetPatterns = [
+            { y: -12, angle: -0.1 },   // 위쪽 찌르기
+            { y: 4, angle: 0.05 },     // 중앙 약간 아래
+            { y: -4, angle: -0.02 },   // 마지막 정타!
+        ];
+        const pattern = offsetPatterns[hitIndex % 3];
+        const intensity = 0.9 + hitIndex * 0.2; // 점점 더 강해짐!
+        
+        // ★ 찌르기 이펙트 (각도 적용)
+        const container = new PIXI.Container();
+        container.x = x;
+        container.y = y + pattern.y;
+        container.rotation = pattern.angle * direction;
+        container.zIndex = 160 + hitIndex;
+        this.container.addChild(container);
+        
+        // ★★★ 픽셀 스타일 찌르기 (사이즈 대폭 UP!) ★★★
+        const length = 350 * intensity;  // ★ 200 → 350 더 크게!
+        const layerColors = [0xffffff, 0xddeeff, 0x88ccff, 0x5588ff, 0x8855ff];
+        let life = 1.0;
+        
+        const layers = [];
+        for (let i = 0; i < layerColors.length; i++) {
+            const layer = new PIXI.Graphics();
+            container.addChild(layer);
+            layers.push(layer);
+        }
+        
+        const drawStab = () => {
+            layers.forEach((layer, i) => {
+                layer.clear();
+                const l = life - (i * 0.1);
+                if (l <= 0) return;
+                
+                const fullWidth = length * l * 1.3;
+                const thickness = (40 - i * 7) * l * intensity;  // ★ 26 → 40 더 두껍게!
+                
+                // ★ 테이퍼링! 뾰족한 칼날 형태
+                const tipX = fullWidth * direction;
+                const flareX = fullWidth * 0.15 * direction;  // 더 앞쪽에서 벌어짐
+                const backX = -fullWidth * 0.05 * direction;  // 약간 뒤로 시작
+                
+                layer.moveTo(backX, 0);  // 시작점 (살짝 뒤)
+                layer.lineTo(flareX, -thickness / 2);  // 위로 벌어짐
+                layer.lineTo(tipX, 0);  // 끝점 (뾰족!)
+                layer.lineTo(flareX, thickness / 2);  // 아래로 벌어짐
+                layer.closePath();
+                layer.fill({ color: layerColors[i], alpha: 0.95 - i * 0.1 });
+            });
+        };
+        
+        drawStab();
+        
+        gsap.to({ life: 1.0 }, {
+            life: 0,
+            duration: 0.12 + hitIndex * 0.02,  // 히트마다 약간 길어짐
+            ease: 'power2.out',
+            onUpdate: function() {
+                life = this.targets()[0].life;
+                drawStab();
+            },
+            onComplete: () => {
+                if (!container.destroyed) container.destroy({ children: true });
+            }
+        });
+        
+        // ★ 히트 스파크 (점점 많아짐) - 방향 수정!
+        const sparkCount = 5 + hitIndex * 3;  // ★ 파티클 더 많이!
+        for (let i = 0; i < sparkCount; i++) {
+            const spark = new PIXI.Graphics();
+            const size = 4 + Math.random() * 6;  // ★ 더 큰 픽셀!
+            spark.rect(-size/2, -size/2, size, size);
+            spark.fill({ color: 0xffffff, alpha: 1 });
+            spark.x = x + direction * (50 + Math.random() * 100);  // ★ 더 멀리서 시작
+            spark.y = y + pattern.y + (Math.random() - 0.5) * 40;
+            spark.zIndex = 170;
+            this.container.addChild(spark);
+            
+            // ★ 방향 수정! 찌르는 방향(direction)으로 날아감
+            const baseAngle = direction > 0 ? 0 : Math.PI;  // 오른쪽 or 왼쪽
+            const angle = baseAngle + (Math.random() - 0.5) * 1.0;  // ±0.5 범위로 퍼짐
+            const speed = 80 + Math.random() * 100;  // ★ 더 빠르게!
+            
+            gsap.to(spark, {
+                x: spark.x + Math.cos(angle) * speed,
+                y: spark.y + Math.sin(angle) * speed,
+                alpha: 0,
+                duration: 0.25 + Math.random() * 0.15,
+                ease: 'power2.out',
+                onComplete: () => { if (!spark.destroyed) spark.destroy(); }
+            });
+        }
+        
+        // ★★★ 마지막 히트는 더 강력하게! ★★★
+        if (hitIndex >= 2) {
+            this.screenShake(15, 180);  // ★ 더 강한 흔들림
+            this.screenFlash('#88ccff', 100, 0.45);
+            
+            // ★★★ 긴 관통선! (훨씬 더 크게!) ★★★
+            const pierceLine = new PIXI.Graphics();
+            const lineStartX = direction > 0 ? x - 60 : x + 60;
+            const lineWidth = 450 * direction;  // ★ 280 → 450
+            const lineHeight = 28;              // ★ 16 → 28
+            
+            pierceLine.rect(lineStartX, y - lineHeight/2, lineWidth, lineHeight);
+            pierceLine.fill({ color: 0xffffff, alpha: 0.98 });
+            pierceLine.zIndex = 155;
+            this.container.addChild(pierceLine);
+            
+            gsap.to(pierceLine, {
+                alpha: 0,
+                duration: 0.2,
+                onComplete: () => { if (!pierceLine.destroyed) pierceLine.destroy(); }
+            });
+            gsap.to(pierceLine.scale, { x: 1.6, y: 0.2, duration: 0.2 });
+            
+            // ★★★ 추가 임팩트 파티클! (더 많이, 더 크게, 방향 수정!) ★★★
+            for (let i = 0; i < 25; i++) {
+                const p = new PIXI.Graphics();
+                const size = 5 + Math.random() * 8;  // ★ 더 큰 픽셀!
+                p.rect(-size/2, -size/2, size, size);
+                p.fill({ color: i < 10 ? 0xffffff : 0x88ccff, alpha: 1 });  // 색상 혼합
+                p.x = x + direction * (150 + Math.random() * 120);
+                p.y = y + (Math.random() - 0.5) * 50;
+                p.zIndex = 160;
+                this.container.addChild(p);
+                
+                // ★ 방향 수정! 찌르는 방향으로 날아감
+                const baseAngle = direction > 0 ? 0 : Math.PI;
+                const angle = baseAngle + (Math.random() - 0.5) * 0.8;
+                const speed = 100 + Math.random() * 120;  // ★ 더 빠르게!
+                
+                gsap.to(p, {
+                    x: p.x + Math.cos(angle) * speed,
+                    y: p.y + Math.sin(angle) * speed,
+                    alpha: 0,
+                    duration: 0.3 + Math.random() * 0.2,
+                    ease: 'power2.out',
+                    onComplete: () => { if (!p.destroyed) p.destroy(); }
+                });
+            }
+        }
     },
     
     // ==========================================
@@ -2429,8 +2814,13 @@ const CombatEffects = {
     
     // ==========================================
     // 피격 이펙트 (유닛에 적용)
+    // target: 유닛 객체 또는 sprite (하위 호환)
     // ==========================================
-    hitEffect(sprite, color = 0xff0000) {
+    hitEffect(target, color = 0xff0000) {
+        // ★ target이 유닛 객체인지 sprite인지 판별
+        const sprite = target?.sprite || target;
+        const unit = target?.sprite ? target : null;
+        
         if (!sprite || sprite.destroyed) return;
         
         // 기존 애니메이션 중단
@@ -2468,6 +2858,120 @@ const CombatEffects = {
                 .to(sprite, { x: originalX + 5, duration: 0.05 })
                 .to(sprite, { x: originalX, duration: 0.1 });
         }
+        
+        // ★ 피격 임팩트 파티클 VFX 추가 (타겟 중앙에 정확히)
+        // 글로벌 좌표를 container의 로컬 좌표로 변환해야 함!
+        
+        // 1. 먼저 글로벌 좌표 계산
+        let globalX, globalY;
+        
+        if (unit && typeof VFXAnchor !== 'undefined') {
+            const pos = VFXAnchor.getCenter(unit);
+            globalX = pos.x;
+            globalY = pos.y;
+        } else {
+            const bounds = sprite.getBounds();
+            globalX = bounds.x + bounds.width / 2;
+            globalY = bounds.y + bounds.height / 2;
+        }
+        
+        // 2. 글로벌 좌표를 container의 로컬 좌표로 변환
+        let hitX, hitY;
+        if (this.container && this.container.toLocal) {
+            const localPos = this.container.toLocal({ x: globalX, y: globalY });
+            hitX = localPos.x;
+            hitY = localPos.y;
+        } else {
+            hitX = globalX;
+            hitY = globalY;
+        }
+        
+        console.log(`[HitEffect] 글로벌: (${globalX?.toFixed(0)}, ${globalY?.toFixed(0)}) → 로컬: (${hitX?.toFixed(0)}, ${hitY?.toFixed(0)})`);
+        
+        this.hitImpactVFX(hitX, hitY, color);
+    },
+    
+    // ==========================================
+    // ★ 피격 임팩트 VFX (타격감 집중 - 심플 버전)
+    // ==========================================
+    hitImpactVFX(x, y, color = 0xff0000) {
+        if (!this.app || !this.container) return;
+        
+        const container = new PIXI.Container();
+        container.x = x;
+        container.y = y;
+        container.zIndex = 500;
+        this.container.addChild(container);
+        
+        const maxLife = 20;  // 짧고 빠르게
+        let life = 0;
+        
+        // ========================================
+        // 1. 임팩트 플래시 (작고 빠르게)
+        // ========================================
+        const flash = new PIXI.Graphics();
+        flash.circle(0, 0, 25);
+        flash.fill({ color: 0xffffff, alpha: 0.9 });
+        container.addChild(flash);
+        
+        gsap.to(flash, { alpha: 0, duration: 0.08 });
+        gsap.to(flash.scale, { x: 1.8, y: 1.8, duration: 0.08, ease: 'power2.out' });
+        
+        // ========================================
+        // 2. 충격파 링 (1개만)
+        // ========================================
+        const ring = new PIXI.Graphics();
+        ring.circle(0, 0, 15);
+        ring.stroke({ width: 3, color: 0xffffff, alpha: 0.8 });
+        container.addChild(ring);
+        
+        gsap.to(ring.scale, { x: 3, y: 3, duration: 0.15, ease: 'power2.out' });
+        gsap.to(ring, { alpha: 0, duration: 0.15 });
+        
+        // ========================================
+        // 3. 스파크 (적게, 빠르게)
+        // ========================================
+        const sparks = [];
+        for (let i = 0; i < 6; i++) {
+            const spark = new PIXI.Graphics();
+            const angle = (Math.PI * 2 / 6) * i + Math.random() * 0.5;
+            const speed = 6 + Math.random() * 4;
+            const len = 5 + Math.random() * 5;
+            
+            spark.moveTo(0, 0);
+            spark.lineTo(Math.cos(angle) * len, Math.sin(angle) * len);
+            spark.stroke({ width: 2, color: 0xffffff, alpha: 1 });
+            
+            spark.vx = Math.cos(angle) * speed;
+            spark.vy = Math.sin(angle) * speed;
+            container.addChild(spark);
+            sparks.push(spark);
+        }
+        
+        // ========================================
+        // 애니메이션 루프
+        // ========================================
+        const ticker = () => {
+            life++;
+            const progress = life / maxLife;
+            
+            // 스파크 업데이트
+            sparks.forEach(s => {
+                s.x += s.vx;
+                s.y += s.vy;
+                s.vx *= 0.85;
+                s.vy *= 0.85;
+                s.alpha = Math.max(0, 1 - progress * 1.5);
+            });
+            
+            // 종료
+            if (life >= maxLife) {
+                this.app.ticker.remove(ticker);
+                container.destroy({ children: true });
+            }
+        };
+        
+        this.app.ticker.add(ticker);
     },
     
     // ==========================================
@@ -3142,7 +3646,7 @@ const CombatEffects = {
                 }, null, 0)
                 .add(() => {
                     this.slashEffect(endX, endY, -45 + Math.random() * 30, 0xff4444, 1.2);
-                    this.hitEffect(target.sprite);
+                    this.hitEffect(target);
                     this.showDamageNumber(endX, endY - 20, damage);
                     this.screenShake(8, 150);
                     this.screenFlash('#ff0000', 80, 0.2);
@@ -3183,7 +3687,7 @@ const CombatEffects = {
         await this.projectileEffect(startX, startY, endX, endY, 0xff6600, 10);
         
         // 피격
-        this.hitEffect(target.sprite);
+        this.hitEffect(target);
         this.showDamageNumber(endX, endY - 20, damage);
     },
     
@@ -3226,7 +3730,7 @@ const CombatEffects = {
         }
         
         // 피격
-        this.hitEffect(target.sprite);
+        this.hitEffect(target);
         this.showDamageNumber(endX, endY - 20, damage);
         
         // 복귀 (await 없이 - 넉백과 동시에 실행되도록)
@@ -3270,7 +3774,7 @@ const CombatEffects = {
         await this.projectileEffect(startX, startY, endX, endY, 0x66aaff, 14);
         
         // 피격
-        this.hitEffect(target.sprite);
+        this.hitEffect(target);
         this.showDamageNumber(endX, endY - 20, damage);
     },
     
@@ -3312,7 +3816,7 @@ const CombatEffects = {
             if (!targetPos) return;
             
             setTimeout(() => {
-                this.hitEffect(target.sprite);
+                this.hitEffect(target);
                 this.showDamageNumber(
                     targetPos.x,
                     targetPos.y - (target.sprite?.height || 60) / 2 - 20,

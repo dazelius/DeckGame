@@ -1,0 +1,30 @@
+{
+    "rain": {
+        "name": "비",
+        "cost": 2,
+        "type": "environment",
+        "target": "none",
+        "duration": 3,
+        "element": "water",
+        "blocksElement": "fire",
+        "globalEffect": "water",
+        "desc": "3턴간 비가 내린다. 모든 그리드에 물 효과가 적용되고, 불 생성이 차단된다.",
+        "anim": {
+            "type": "rain"
+        }
+    },
+    "drought": {
+        "name": "가뭄",
+        "cost": 2,
+        "type": "environment",
+        "target": "none",
+        "duration": 3,
+        "element": "fire",
+        "blocksElement": "water",
+        "globalEffect": "fire",
+        "desc": "3턴간 가뭄이 온다. 불 데미지가 강화되고, 물 생성이 차단된다.",
+        "anim": {
+            "type": "drought"
+        }
+    }
+}
