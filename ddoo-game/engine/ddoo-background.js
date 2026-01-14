@@ -159,8 +159,8 @@ const DDOOBackground = {
     // Scene 설정 (어두운 던전 - 붉은빛)
     setupScene() {
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x020101);  // ★ 더 어두운 배경
-        this.scene.fog = new THREE.FogExp2(0x050303, 0.055);  // ★ 더 짙은 포그 (0.028 → 0.055)
+        this.scene.background = new THREE.Color(0x010101);  // ★ 거의 검은색
+        this.scene.fog = new THREE.FogExp2(0x030202, 0.085);  // ★ 매우 짙은 포그
     },
     
     // Camera 설정
@@ -243,8 +243,8 @@ const DDOOBackground = {
     
     // 조명 설정
     setupLighting() {
-        // 환경광 - 매우 어둡게 (붉은 톤)
-        const ambient = new THREE.AmbientLight(0x180808, 0.2);
+        // 환경광 - 극도로 어둡게
+        const ambient = new THREE.AmbientLight(0x100505, 0.1);  // ★ 0.2 → 0.1
         this.scene.add(ambient);
         
         // 붉은빛 글로벌 라이트
@@ -253,8 +253,8 @@ const DDOOBackground = {
         this.scene.add(redAmbient);
         this.redAmbientLight = redAmbient;
         
-        // 바닥에서 올라오는 붉은 광원
-        const floorGlow = new THREE.PointLight(0x661100, 0.5, 60);
+        // 바닥에서 올라오는 붉은 광원 (어둡게!)
+        const floorGlow = new THREE.PointLight(0x440800, 0.25, 40);  // ★ 0.5 → 0.25
         floorGlow.position.set(0, -2, 0);
         this.scene.add(floorGlow);
         this.floorGlowLight = floorGlow;
@@ -617,14 +617,14 @@ const DDOOBackground = {
             }
         });
         
-        // 글로벌 라이트 깜빡임
+        // 글로벌 라이트 깜빡임 (어둡게!)
         if (this.redAmbientLight) {
-            const redFlicker = Math.sin(t * 2) * 0.15 + Math.sin(t * 3.7) * 0.1;
-            this.redAmbientLight.intensity = 0.8 + redFlicker;
+            const redFlicker = Math.sin(t * 2) * 0.1 + Math.sin(t * 3.7) * 0.05;
+            this.redAmbientLight.intensity = 0.4 + redFlicker;  // ★ 0.8 → 0.4
         }
         if (this.floorGlowLight) {
-            const floorFlicker = Math.sin(t * 1.5 + 1) * 0.1;
-            this.floorGlowLight.intensity = 0.5 + floorFlicker;
+            const floorFlicker = Math.sin(t * 1.5 + 1) * 0.05;
+            this.floorGlowLight.intensity = 0.25 + floorFlicker;  // ★ 0.5 → 0.25
         }
         
         // 렌더링
