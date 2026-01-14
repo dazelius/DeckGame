@@ -379,6 +379,107 @@ const Game = {
         return (typeof GC !== 'undefined') ? GC.GAME_CONTAINER.OFFSET_Y : 60; 
     },
     
+    // ==========================================
+    // ★ 어두운 포그 오버레이 생성
+    // ==========================================
+    createDarknessOverlay() {
+        // 화면 전체를 덮는 어두운 반투명 오버레이
+        const darkness = new PIXI.Graphics();
+        darkness.rect(-500, -200, 3000, 1500);  // 충분히 큰 영역
+        darkness.fill({ color: 0x000000, alpha: 0.2 });  // ★ 20% 어둡게
+        darkness.zIndex = 0;  // 가장 아래
+        
+        this.containers.gameWorld.addChild(darkness);
+        this.darknessOverlay = darkness;
+        
+        // ★ 스캔라인 효과 추가
+        this.createScanlines();
+        
+        console.log('[Game] 어두운 포그 오버레이 생성');
+    },
+    
+    // ==========================================
+    // ★ 레트로 스캔라인 효과
+    // ==========================================
+    createScanlines() {
+        // CSS로 스캔라인 오버레이 생성 (성능 좋음)
+        let scanlineOverlay = document.getElementById('scanline-overlay');
+        if (!scanlineOverlay) {
+            scanlineOverlay = document.createElement('div');
+            scanlineOverlay.id = 'scanline-overlay';
+            scanlineOverlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+                z-index: 9998;
+                background: repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(0, 0, 0, 0.08) 2px,
+                    rgba(0, 0, 0, 0.08) 4px
+                );
+                mix-blend-mode: multiply;
+            `;
+            document.body.appendChild(scanlineOverlay);
+        }
+        this.scanlineOverlay = scanlineOverlay;
+        console.log('[Game] 스캔라인 효과 생성');
+    },
+    
+    // 스캔라인 켜기/끄기
+    toggleScanlines(enabled = true) {
+        if (this.scanlineOverlay) {
+            this.scanlineOverlay.style.display = enabled ? 'block' : 'none';
+        }
+    },
+    
+    // 스캔라인 강도 조절
+    setScanlineIntensity(intensity = 0.08) {
+        if (this.scanlineOverlay) {
+            this.scanlineOverlay.style.background = `repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0, 0, 0, ${intensity}) 2px,
+                rgba(0, 0, 0, ${intensity}) 4px
+            )`;
+        }
+    },
+    
+    // 어둠 강도 조절
+    setDarkness(alpha) {
+        if (this.darknessOverlay) {
+            this.darknessOverlay.clear();
+            this.darknessOverlay.rect(-500, -200, 3000, 1500);
+            this.darknessOverlay.fill({ color: 0x000000, alpha: alpha });
+        }
+    },
+    
+    // ★ 유닛에 환경광 효과 (밝기만 조절)
+    applyAmbientLightToUnits() {
+        if (!this.containers.units) return;
+        
+        // 밝기만 살짝 낮추기
+        const ambientFilter = new PIXI.ColorMatrixFilter();
+        ambientFilter.brightness(0.9, false);  // 10% 어둡게
+        
+        this.containers.units.filters = [ambientFilter];
+        this.unitAmbientFilter = ambientFilter;
+        
+        console.log('[Game] 유닛 환경광 필터 적용');
+    },
+    
+    // 환경광 강도 조절
+    setUnitAmbientLight(brightness = 0.9) {
+        if (this.unitAmbientFilter) {
+            this.unitAmbientFilter.brightness(brightness, false);
+        }
+    },
+    
     setupContainers() {
         // ★ 게임 콘텐츠를 담을 상위 컨테이너 (스케일/오프셋 적용)
         this.containers.gameWorld = new PIXI.Container();
@@ -386,6 +487,9 @@ const Game = {
         this.containers.gameWorld.y = this.gameContainerOffsetY;
         this.containers.gameWorld.sortableChildren = true;
         this.app.stage.addChild(this.containers.gameWorld);
+        
+        // ★ 어두운 포그 오버레이 (배경 위, 모든 것 아래)
+        this.createDarknessOverlay();
         
         // 하위 컨테이너들 (gameWorld 안에 추가)
         this.containers.grid = new PIXI.Container();
@@ -402,6 +506,9 @@ const Game = {
         this.containers.units.zIndex = 10;
         this.containers.units.sortableChildren = true;
         this.containers.gameWorld.addChild(this.containers.units);
+        
+        // ★ 유닛에 환경광 효과 적용 (던전 분위기)
+        this.applyAmbientLightToUnits();
         
         this.containers.effects = new PIXI.Container();
         this.containers.effects.zIndex = 20;
