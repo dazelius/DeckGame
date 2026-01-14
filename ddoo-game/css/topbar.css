@@ -92,6 +92,14 @@
     margin-top: 2px;
 }
 
+/* ==================== TOP RIGHT GROUP (턴 + 환경) ==================== */
+.top-right-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
 /* ==================== TURN & PHASE DISPLAY ==================== */
 .turn-box {
     display: flex;

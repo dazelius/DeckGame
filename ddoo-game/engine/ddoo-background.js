@@ -159,8 +159,8 @@ const DDOOBackground = {
     // Scene 설정 (어두운 던전 - 붉은빛)
     setupScene() {
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x030202);
-        this.scene.fog = new THREE.FogExp2(0x080404, 0.028);
+        this.scene.background = new THREE.Color(0x020101);  // ★ 더 어두운 배경
+        this.scene.fog = new THREE.FogExp2(0x050303, 0.055);  // ★ 더 짙은 포그 (0.028 → 0.055)
     },
     
     // Camera 설정
@@ -868,6 +868,26 @@ const DDOOBackground = {
         });
         
         console.log('[DDOOBackground] 테마 변경:', name);
+    },
+    
+    // ==========================================
+    // ★ 포그 밀도 조절
+    // ==========================================
+    setFogDensity(density = 0.055) {
+        if (this.scene && this.scene.fog) {
+            this.scene.fog.density = density;
+            console.log(`[DDOOBackground] 포그 밀도: ${density}`);
+        }
+    },
+    
+    // ★ 배경 밝기 조절 (0~1, 0이 가장 어두움)
+    setBrightness(brightness = 0.1) {
+        if (this.scene) {
+            const val = Math.floor(brightness * 16);
+            const color = (val << 16) | (val << 8) | val;
+            this.scene.background.setHex(color);
+            console.log(`[DDOOBackground] 배경 밝기: ${brightness}`);
+        }
     },
     
     // 정리

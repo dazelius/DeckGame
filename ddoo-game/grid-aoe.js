@@ -152,6 +152,12 @@ const GridAOE = {
             return null;
         }
         
+        // ★ 환경 시스템에 의해 차단되는지 체크
+        if (typeof EnvironmentSystem !== 'undefined' && EnvironmentSystem.isElementBlocked(type)) {
+            console.log(`[GridAOE] ${type} 영역이 환경(${EnvironmentSystem.activeEnvironment})에 의해 차단됨`);
+            return null;
+        }
+        
         // Merge with custom options
         const options = { ...zoneDef, ...customOptions };
         
@@ -2208,6 +2214,15 @@ const GridAOE = {
     // 번개 콤보 체크 - 물 영역에서 번개 추가 데미지
     // ==========================================
     checkLightningCombo(gridX, gridZ) {
+        // ★ 비 환경이면 글로벌 물 효과 적용
+        if (typeof EnvironmentSystem !== 'undefined' && EnvironmentSystem.hasGlobalWaterEffect()) {
+            const bonus = 5; // 비 환경 번개 보너스
+            console.log(`[GridAOE] 🌧️⚡ 비 환경 번개 콤보! +${bonus} 데미지`);
+            this.showLightningSparkEffect(gridX, gridZ);
+            return bonus;
+        }
+        
+        // 물 영역 체크
         const waterZone = this.zones.find(z => 
             z.gridX === gridX && z.gridZ === gridZ && z.type === 'water'
         );

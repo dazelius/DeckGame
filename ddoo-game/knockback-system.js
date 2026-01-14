@@ -210,6 +210,11 @@ const KnockbackSystem = {
         unit.isAnimating = true;
         
         // ★ 당겨지는 애니메이션 (빠르게 끌려옴)
+        // 출발 먼지!
+        if (typeof DustVFX !== 'undefined') {
+            DustVFX.dash(startX, startY, -1, 1.2);  // 끌려가니까 -1 방향
+        }
+        
         await new Promise(resolve => {
             gsap.timeline({ onComplete: resolve })
                 // 끌려오면서 기울어짐
@@ -228,6 +233,12 @@ const KnockbackSystem = {
                     rotation: 0,
                     duration: 0.15,
                     ease: 'elastic.out(1, 0.5)'
+                })
+                .call(() => {
+                    // ★ 착지 먼지!
+                    if (typeof DustVFX !== 'undefined') {
+                        DustVFX.land(newPos.x, newPos.y, 1.5);
+                    }
                 });
         });
         
@@ -330,6 +341,11 @@ const KnockbackSystem = {
                     // Impact particles at start
                     if (typeof CombatEffects !== 'undefined') {
                         CombatEffects.impactEffect(startX, startY - 30, 0xff8800, 1.2);
+                    }
+                    // ★ DustVFX 사용!
+                    if (typeof DustVFX !== 'undefined') {
+                        DustVFX.jump(startX, startY, 1.5);  // 강하게 튀어오름
+                    } else {
                         this.createDustCloud(startX, startY);
                     }
                 })
@@ -360,8 +376,12 @@ const KnockbackSystem = {
                     if (scaleTarget) gsap.to(scaleTarget.scale, { x: baseScale * 1.3, y: baseScale * 0.7, duration: 0.05 });
                 })
                 .call(() => {
-                    // Landing dust
-                    this.createDustCloud(newPos.x, newPos.y);
+                    // ★ Landing dust - DustVFX 사용!
+                    if (typeof DustVFX !== 'undefined') {
+                        DustVFX.land(newPos.x, newPos.y, 1.8);  // 강하게 착지
+                    } else {
+                        this.createDustCloud(newPos.x, newPos.y);
+                    }
                     if (typeof CombatEffects !== 'undefined') {
                         CombatEffects.screenShake(6, 100);
                     }
@@ -890,6 +910,14 @@ const KnockbackSystem = {
         if (!newPos) return false;
         
         // Pull animation (different from knockback - more dragging feel)
+        const startX = posTarget.x;
+        const startY = posTarget.y;
+        
+        // ★ 출발 먼지!
+        if (typeof DustVFX !== 'undefined') {
+            DustVFX.dash(startX, startY, dx, 1.0);
+        }
+        
         return new Promise(resolve => {
             if (!posTarget || posTarget.destroyed) {
                 resolve(false);
@@ -908,6 +936,10 @@ const KnockbackSystem = {
                 }, '<')
                 .call(() => {
                     if (scaleTarget) gsap.to(scaleTarget.scale, { x: baseScale * 0.9, y: baseScale * 1.1, duration: 0.1 });
+                    // ★ 착지 먼지!
+                    if (typeof DustVFX !== 'undefined') {
+                        DustVFX.land(newPos.x, newPos.y, 1.2);
+                    }
                 })
                 .to({}, { duration: 0.1 })
                 .call(() => {

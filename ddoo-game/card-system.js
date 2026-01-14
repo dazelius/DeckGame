@@ -8,7 +8,7 @@ const CardSystem = {
     loaded: false,
     
     // JSON 파일 목록
-    cardFiles: ['attack', 'skill', 'summon'],
+    cardFiles: ['attack', 'skill', 'summon', 'environment'],
     
     // ==========================================
     // 기본 덱 구성
@@ -23,13 +23,16 @@ const CardSystem = {
         ironWave: 2,
         fireBolt: 1,
         fireBall: 1,
+        fireArrow: 1,
         spearThrow: 1,
         hook: 1,       // ★ 갈고리 추가
         kick: 1,       // ★ 킥 추가
         rush: 1,       // ★ 돌진 추가
         sneakAttack: 1, // ★ 비열한 습격 추가
         lightning: 1,   // ★ 번개 추가
+        spark: 1,       // ★ 스파크 추가
         waterWave: 2,   // ★ 워터웨이브 추가
+        rain: 1,        // ★ 비 (환경 카드) 추가
         summonKnight: 2,
         summonArcher: 2,
         heal: 1

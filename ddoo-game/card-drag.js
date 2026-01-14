@@ -107,6 +107,11 @@ const CardDrag = {
         this.dragState.startY = touch.clientY;
         this.dragState.cardEl = cardEl;
         
+        // ★ 마우스 트레일 숨김 (드래그와 겹치지 않게)
+        if (typeof MouseTrail !== 'undefined') {
+            MouseTrail.startDrag();
+        }
+        
         // Create ghost with enhanced shadow
         const ghost = this.dragState.ghost;
         const typeClass = cardDef.type || '';
@@ -161,6 +166,8 @@ const CardDrag = {
             this.handleAttackDrag(touch, ghost, cardDef);
         } else if (cardDef && cardDef.type === 'skill') {
             this.handleSkillDrag(touch, ghost, cardDef);
+        } else if (cardDef && cardDef.type === 'environment') {
+            this.handleEnvironmentDrag(touch, ghost, cardDef);
         } else {
             this.handleDefaultDrag(touch, ghost);
         }
@@ -287,6 +294,27 @@ const CardDrag = {
     },
     
     // ==========================================
+    // 환경 카드 드래그 처리
+    // ==========================================
+    handleEnvironmentDrag(touch, ghost, cardDef) {
+        const dragDist = this.dragState.startY - touch.clientY;
+        this.clearEnemyHighlights();
+        this.clearAllyHighlights();
+        this.clearTargetingCurve();
+        this.clearAoeHighlight();
+        
+        // 위로 드래그하면 활성화 표시
+        if (dragDist > GC.CARD_DRAG.ACTIVATE_THRESHOLD) {
+            // 환경 카드 색상 (물은 파랑, 불은 빨강)
+            const borderColor = cardDef.element === 'water' ? '#4488ff' : 
+                               cardDef.element === 'fire' ? '#ff4444' : '#88ff88';
+            GC.applyGhostStyle(ghost, touch.clientX, touch.clientY, 'READY', borderColor);
+        } else {
+            GC.applyGhostStyle(ghost, touch.clientX, touch.clientY, 'NORMAL', GC.CARD_BORDER.DEFAULT);
+        }
+    },
+    
+    // ==========================================
     // 기본 드래그 처리
     // ==========================================
     handleDefaultDrag(touch, ghost) {
@@ -334,6 +362,8 @@ const CardDrag = {
                 success = this.handleSummonDrop(touch, cardId, handIndex, cardDef);
             } else if (cardDef && cardDef.type === 'attack') {
                 success = this.handleAttackDrop(touch, cardId, handIndex, cardDef);
+            } else if (cardDef && cardDef.type === 'environment') {
+                success = this.handleEnvironmentDrop(touch, cardId, handIndex, cardDef);
             } else {
                 success = this.handleSkillDrop(touch, cardId, handIndex, cardDef);
             }
@@ -388,21 +418,63 @@ const CardDrag = {
         
         const dragDist = this.dragState.startY - touch.clientY;
         
-        if (this.game.state.cost >= cardDef.cost) {
-            if (targetEnemy) {
-                this.game.executeCardOnTarget(cardId, handIndex, targetEnemy);
-                return true;
-            } else if (dragDist > 100) {
-                // ★ frontOnly 카드는 각 라인의 선두 적만 타겟 가능 (뒤에 숨은 적 공격 불가)
-                if (cardDef.frontOnly) {
-                    console.log(`[CardDrag] ${cardId}: 근접 공격은 라인의 최전선 적을 지정해야 합니다`);
-                    return false;
-                }
-                this.game.executeCard(cardId, handIndex);
-                return true;
+        // ★ 타겟이 여전히 없고 위로 드래그했으면 → 기본 타겟 자동 선택
+        if (!targetEnemy && dragDist > 100) {
+            targetEnemy = this.getDefaultTarget(cardDef);
+        }
+        
+        if (this.game.state.cost >= cardDef.cost && targetEnemy) {
+            this.game.executeCardOnTarget(cardId, handIndex, targetEnemy);
+            return true;
+        }
+        
+        return false;
+    },
+    
+    // ==========================================
+    // 기본 타겟 자동 선택 (가장 가까운 적)
+    // ==========================================
+    getDefaultTarget(cardDef) {
+        const hero = this.game.state.hero;
+        const enemies = this.game.state.enemyUnits.filter(e => e.hp > 0);
+        
+        if (enemies.length === 0) return null;
+        
+        // frontOnly 카드면 각 라인의 선두만 후보
+        if (cardDef.frontOnly) {
+            const frontEnemies = this.getFrontEnemiesPerLane();
+            if (frontEnemies.length === 0) return null;
+            
+            // 영웅과 같은 라인 우선, 없으면 가장 가까운 라인
+            const sameLane = frontEnemies.find(e => e.gridZ === hero.gridZ);
+            if (sameLane) return sameLane;
+            
+            // 가장 가까운 라인의 선두
+            return frontEnemies.sort((a, b) => 
+                Math.abs(a.gridZ - hero.gridZ) - Math.abs(b.gridZ - hero.gridZ)
+            )[0];
+        }
+        
+        // 일반 카드: 가장 가까운 적
+        return enemies.sort((a, b) => {
+            const distA = Math.abs(a.gridX - hero.gridX) + Math.abs(a.gridZ - hero.gridZ);
+            const distB = Math.abs(b.gridX - hero.gridX) + Math.abs(b.gridZ - hero.gridZ);
+            return distA - distB;
+        })[0];
+    },
+    
+    // 각 라인의 선두 적 목록
+    getFrontEnemiesPerLane() {
+        const enemies = this.game.state.enemyUnits.filter(e => e.hp > 0);
+        const lanes = {};
+        
+        for (const enemy of enemies) {
+            if (!lanes[enemy.gridZ] || enemy.gridX < lanes[enemy.gridZ].gridX) {
+                lanes[enemy.gridZ] = enemy;
             }
         }
-        return false;
+        
+        return Object.values(lanes);
     },
     
     // ==========================================
@@ -419,6 +491,41 @@ const CardDrag = {
     },
     
     // ==========================================
+    // 환경 카드 드롭 처리
+    // ==========================================
+    handleEnvironmentDrop(touch, cardId, handIndex, cardDef) {
+        const dragDist = this.dragState.startY - touch.clientY;
+        
+        // 위로 드래그해서 사용
+        if (dragDist > GC.CARD_DRAG.ACTIVATE_THRESHOLD && this.game.state.cost >= cardDef.cost) {
+            // 비용 차감
+            this.game.state.cost -= cardDef.cost;
+            this.game.state.hand.splice(handIndex, 1);
+            
+            // Exhaust 카드면 소멸
+            if (cardDef.exhaust) {
+                this.game.state.exhaust.push(cardId);
+                this.game.showExhaustEffect?.(cardId, cardDef);
+            } else {
+                this.game.state.discard.push(cardId);
+            }
+            
+            this.game.updateCostUI();
+            
+            // 환경 효과 실행 (AnimSystem 사용)
+            const animType = cardDef.anim?.type || cardDef.globalEffect;
+            if (animType && typeof AnimSystem !== 'undefined') {
+                const hero = this.game.state.playerUnits.find(u => u.type === 'hero');
+                AnimSystem.play(animType, hero, null, cardDef, {});
+            }
+            
+            if (typeof Game !== 'undefined') Game.vibrate([50, 100, 50]);
+            return true;
+        }
+        return false;
+    },
+    
+    // ==========================================
     // 드래그 상태 초기화
     // ==========================================
     resetDragState() {
@@ -426,6 +533,11 @@ const CardDrag = {
         this.dragState.ghost.style.opacity = '0';
         this.dragState.targetEnemy = null;
         this.dragState.targetAlly = null;
+        
+        // ★ 마우스 트레일 다시 표시
+        if (typeof MouseTrail !== 'undefined') {
+            MouseTrail.endDrag();
+        }
         
         this.clearHighlight();
         this.clearEnemyHighlights();

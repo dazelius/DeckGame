@@ -14,7 +14,7 @@ const CheatSystem = {
         this.game = gameRef;
         this.createModal();
         this.setupKeyBindings();
-        console.log('[CheatSystem] 초기화 완료 - F4/Ctrl+D: 메뉴, Ctrl+Z/F1: 코스트, F2: 체력, F3: 적 처치');
+        console.log('[CheatSystem] 초기화 완료 - F4: 메뉴, F1: 코스트, F2: 체력, F3: 적 처치, F5: 마우스 트레일');
     },
     
     // ==========================================
@@ -56,6 +56,12 @@ const CheatSystem = {
             if (e.key === 'F4') {
                 e.preventDefault();
                 this.toggleModal();
+            }
+            
+            // F5: 마우스 트레일 토글
+            if (e.key === 'F5') {
+                e.preventDefault();
+                this.toggleMouseTrail();
             }
             
             // ESC: 모달 닫기
@@ -121,6 +127,14 @@ const CheatSystem = {
                                 <span>모든 카드 1장씩</span>
                             </button>
                         </div>
+                        <div class="cheat-lang-section">
+                            <div class="cheat-section-title">🌐 언어 설정</div>
+                            <div class="cheat-lang-buttons">
+                                <button class="cheat-lang-btn" data-lang="ko">한국어</button>
+                                <button class="cheat-lang-btn" data-lang="en">English</button>
+                                <button class="cheat-lang-btn" data-lang="ja">日本語</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -141,6 +155,14 @@ const CheatSystem = {
         modal.querySelectorAll('.cheat-btn').forEach(btn => {
             btn.onclick = () => this.executeQuickCheat(btn.dataset.action);
         });
+        
+        // 언어 선택 버튼
+        modal.querySelectorAll('.cheat-lang-btn').forEach(btn => {
+            btn.onclick = () => this.changeLanguage(btn.dataset.lang);
+        });
+        
+        // 현재 언어 활성화 표시
+        this.updateLangButtons();
         
         // 스타일 추가
         this.addStyles();
@@ -380,6 +402,47 @@ const CheatSystem = {
                 from { opacity: 0; transform: translate(-50%, 20px); }
                 to { opacity: 1; transform: translate(-50%, 0); }
             }
+            
+            .cheat-lang-section {
+                margin-top: 20px;
+                padding-top: 16px;
+                border-top: 1px solid rgba(255,255,255,0.1);
+            }
+            
+            .cheat-section-title {
+                font-size: 0.85rem;
+                color: #888;
+                margin-bottom: 12px;
+            }
+            
+            .cheat-lang-buttons {
+                display: flex;
+                gap: 10px;
+            }
+            
+            .cheat-lang-btn {
+                flex: 1;
+                padding: 10px 16px;
+                background: rgba(255,255,255,0.05);
+                border: 1px solid rgba(255,255,255,0.15);
+                border-radius: 6px;
+                color: #aaa;
+                font-size: 0.85rem;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            
+            .cheat-lang-btn:hover {
+                background: rgba(100, 150, 200, 0.2);
+                border-color: #6699cc;
+                color: #fff;
+            }
+            
+            .cheat-lang-btn.active {
+                background: rgba(100, 150, 200, 0.3);
+                border-color: #6699cc;
+                color: #fff;
+            }
         `;
         document.head.appendChild(style);
     },
@@ -593,6 +656,13 @@ const CheatSystem = {
         }
     },
     
+    toggleMouseTrail() {
+        if (typeof MouseTrail !== 'undefined') {
+            MouseTrail.toggle();
+            this.showToast(MouseTrail.enabled ? '마우스 트레일 ON' : '마우스 트레일 OFF');
+        }
+    },
+    
     killAllEnemies() {
         this.game.state.enemyUnits.forEach(e => {
             if (e.hp > 0) this.game.killUnit(e);
@@ -667,6 +737,38 @@ const CheatSystem = {
         document.body.appendChild(toast);
         
         setTimeout(() => toast.remove(), 2000);
+    },
+    
+    // ==========================================
+    // 언어 설정
+    // ==========================================
+    changeLanguage(lang) {
+        if (typeof Localization !== 'undefined') {
+            Localization.setLanguage(lang);
+            this.updateLangButtons();
+            
+            // UI 갱신
+            if (typeof Localization.updateAllUI === 'function') {
+                Localization.updateAllUI();
+            }
+            
+            const langNames = { ko: '한국어', en: 'English', ja: '日本語' };
+            this.showToast(`언어: ${langNames[lang] || lang}`);
+        } else {
+            console.warn('[Cheat] Localization 시스템 없음!');
+        }
+    },
+    
+    updateLangButtons() {
+        if (!this.modal) return;
+        
+        const currentLang = typeof Localization !== 'undefined' 
+            ? Localization.currentLanguage || 'ko' 
+            : 'ko';
+            
+        this.modal.querySelectorAll('.cheat-lang-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.lang === currentLang);
+        });
     }
 };
 

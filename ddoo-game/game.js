@@ -157,6 +157,8 @@ const Game = {
         // Combat Effects
         if (typeof CombatEffects !== 'undefined') {
             CombatEffects.init(this.app, this.containers.gameWorld);
+            // 슬래시 텍스처 미리 로드 (await)
+            await CombatEffects.loadSlashTextures();
         }
         
         // Shield VFX
@@ -182,6 +184,11 @@ const Game = {
         // ★ AnimSystem 초기화 (범용 카드 연출)
         if (typeof AnimSystem !== 'undefined') {
             AnimSystem.init(this);
+        }
+        
+        // 환경 시스템 초기화
+        if (typeof EnvironmentSystem !== 'undefined') {
+            EnvironmentSystem.init(this);
         }
         
         // Knockback System
@@ -222,6 +229,31 @@ const Game = {
         // Unit Combat System
         if (typeof UnitCombat !== 'undefined') {
             UnitCombat.init(this, this.app);
+        }
+        
+        // Mouse Trail System (마우스 위치 추적용)
+        if (typeof MouseTrail !== 'undefined') {
+            MouseTrail.init(this.app);
+        }
+        
+        // VFX Anchor System (VFX 위치 규격화)
+        if (typeof VFXAnchor !== 'undefined') {
+            VFXAnchor.init(this, this.app);
+        }
+        
+        // Dust VFX System (대시 먼지 이펙트)
+        if (typeof DustVFX !== 'undefined') {
+            DustVFX.init(this.app, this.containers.gameWorld);
+        }
+        
+        // VFX Library (독립 VFX 컴포넌트)
+        if (typeof VFXLibrary !== 'undefined') {
+            VFXLibrary.init(this.app, this.containers.gameWorld);
+        }
+        
+        // Rush VFX System (소닉 스타일 돌진 이펙트)
+        if (typeof RushVFX !== 'undefined') {
+            RushVFX.init(this, this.app);
         }
         
         // Card Drag System
@@ -1789,31 +1821,18 @@ const Game = {
         
         if (targets.length === 0) return;
         
-        const isMelee = cardDef.melee === true;
-        
-        // For single target attacks
+        // ★ 단일 타겟 공격은 playAttackCardOnTarget으로 위임 (AnimSystem 사용)
         if (cardDef.target === 'enemy' && targets[0]) {
-            const target = targets[0];
-            
-            if (isMelee) {
-                // Melee: Move hero to same Z line as target, then dash attack
-                if (hero.gridZ !== target.gridZ) {
-                    await this.moveHeroToLine(target.gridZ);
-                }
-                await this.heroAttackAnimation(hero, target, cardDef.damage);
-            } else {
-                // Ranged: Attack from current position (with createZone for fire, etc.)
-                await this.heroRangedAnimation(hero, target, cardDef.damage, {
-                    createZone: cardDef.createZone || null
-                });
-            }
+            const cardId = Object.keys(CardSystem?.cards || {}).find(
+                id => CardSystem.cards[id] === cardDef
+            ) || 'unknown';
+            await this.playAttackCardOnTarget(cardId, cardDef, targets[0]);
         } else if (cardDef.target === 'all') {
-            // Cleave - melee AoE
+            // Cleave - 전체 공격
+            const isMelee = cardDef.melee === true;
             if (isMelee) {
-                // Dash to center and attack all
                 await this.heroAoeAnimation(hero, targets, cardDef.damage);
             } else {
-                // Ranged AoE
                 for (const target of targets) {
                     await this.dealDamage(target, cardDef.damage);
                 }
@@ -1864,357 +1883,594 @@ const Game = {
     },
     
     // ==========================================
-    // 워터웨이브 실행
-    // ==========================================
-    async executeWaterWave(hero, targetEnemy, cardDef, isTidal = false) {
-        const gridZ = targetEnemy.gridZ;
-        const targetX = targetEnemy.gridX;
-        const knockbackDir = 1; // 오른쪽으로 밀어냄
-        const lineLength = cardDef.aoe?.width || 3;
-        
-        // 1. 영웅 전진 애니메이션
-        const heroPos = hero.container || hero.sprite;
-        if (heroPos) {
-            const originalX = heroPos.x;
-            const dashDist = isTidal ? 100 : 80;
-            await gsap.to(heroPos, {
-                x: originalX + dashDist,
-                duration: isTidal ? 0.2 : 0.15,
-                ease: 'power2.in'
-            });
-            
-            // 복귀 (비동기)
-            gsap.to(heroPos, {
-                x: originalX,
-                duration: 0.3,
-                ease: 'power2.out',
-                delay: isTidal ? 0.3 : 0.2
-            });
-        }
-        
-        // 2. VFX (타겟 위치 기준)
-        this.showWaterWaveVFX(targetX, gridZ, knockbackDir, lineLength, isTidal);
-        
-        if (isTidal) {
-            // 타이달크래시: 중심에 추가 이펙트
-            setTimeout(() => {
-                this.showTidalCrashVFX(targetX, gridZ, cardDef.aoe?.depth || 3);
-            }, 150);
-        }
-        
-        // 3. 라인 범위 내 적들 타격 + 넉백 (타겟 위치부터 lineLength 칸)
-        const affectedEnemies = [];
-        
-        // 타겟 위치부터 시작해서 lineLength 칸 범위
-        for (let dx = 0; dx < lineLength; dx++) {
-            const checkX = targetX + dx;
-            if (checkX >= 10) continue;
-            
-            // 해당 셀의 적 찾기
-            for (const enemy of this.state.enemyUnits) {
-                if (enemy.hp > 0 && enemy.gridX === checkX && enemy.gridZ === gridZ) {
-                    affectedEnemies.push({ enemy, delay: dx * 60 }); // 순차적 타격
-                }
-            }
-        }
-        
-        // 4. 순차적 타격 실행
-        for (const { enemy, delay } of affectedEnemies) {
-            await new Promise(r => setTimeout(r, delay > 0 ? delay : 50));
-            
-            // 데미지 적용
-            this.dealDamage(enemy, cardDef.damage, null, cardDef);
-            
-            // 넉백
-            if (cardDef.knockback && enemy.hp > 0 && typeof KnockbackSystem !== 'undefined') {
-                KnockbackSystem.knockback(enemy, knockbackDir, cardDef.knockback);
-            }
-            
-            // 브레이크 시스템
-            if (typeof BreakSystem !== 'undefined') {
-                BreakSystem.onAttack(enemy, cardDef, 1, 0);
-            }
-        }
-        
-        // 5. 물 영역 생성 (타겟 위치부터)
-        if (cardDef.createZone && typeof GridAOE !== 'undefined') {
-            const zoneLength = cardDef.createZoneLength || 3;
-            GridAOE.createWaterWaveLine(targetX, gridZ, knockbackDir, zoneLength);
-        }
-        
-        // 대기
-        await new Promise(r => setTimeout(r, 300));
-    },
-    
-    // ==========================================
-    // 워터웨이브 VFX
+    // 워터웨이브 VFX - 물보라가 치는 역동적인 파도
     // ==========================================
     showWaterWaveVFX(startX, gridZ, direction, length, isTidal = false) {
         if (!this.app) return;
         
-        const startPos = this.getCellCenter(startX, gridZ);
-        if (!startPos) return;
+        const localPos = this.getCellCenter(startX, gridZ);
+        if (!localPos) return;
         
-        const intensity = isTidal ? 1.5 : 1.0;
-        const targetX = startPos.x + direction * length * 100;
+        const startPos = this.localToGlobal(localPos.x, localPos.y);
+        const scale = this.gameContainerScale || 1;
+        const intensity = isTidal ? 1.8 : 1.0;
+        const waveSpeed = isTidal ? 0.5 : 0.35;
+        const cellWidth = 100 * scale;
         
         // ========================================
-        // 1. 메인 웨이브 컨테이너
+        // 1. 파도 본체 (커브 형태)
         // ========================================
         const waveContainer = new PIXI.Container();
         waveContainer.x = startPos.x;
         waveContainer.y = startPos.y;
+        waveContainer.zIndex = 500;
         this.app.stage.addChild(waveContainer);
         
-        // ========================================
-        // 2. 다층 물결 (3D 깊이감)
-        // ========================================
-        for (let layer = 4; layer >= 0; layer--) {
-            const wave = new PIXI.Graphics();
-            const layerScale = 0.6 + layer * 0.15;
-            const colors = [0x1a3366, 0x2855aa, 0x4488cc, 0x66aaee, 0xaaddff];
-            const alphas = [0.4, 0.5, 0.55, 0.5, 0.4];
+        // 파도 커브 그리기 (베지어 커브로 자연스러운 파도 형태)
+        const waveBody = new PIXI.Graphics();
+        const waveWidth = 80 * intensity;
+        const waveHeight = 50 * intensity;
+        
+        // 5개 레이어로 깊이감
+        const waveColors = [
+            { color: 0x0a1a33, alpha: 0.9 },  // 가장 깊은 부분
+            { color: 0x1a4466, alpha: 0.85 },
+            { color: 0x2266aa, alpha: 0.8 },
+            { color: 0x44aadd, alpha: 0.75 },
+            { color: 0x88ddff, alpha: 0.7 },  // 표면
+        ];
+        
+        for (let i = 0; i < waveColors.length; i++) {
+            const layerOffset = i * 4;
+            const layerWidth = waveWidth - i * 8;
+            const layerHeight = waveHeight - i * 6;
             
-            wave.beginFill(colors[layer], alphas[layer] * intensity);
-            wave.drawEllipse(0, layer * 3, 40 * layerScale * intensity, 18 * layerScale);
-            wave.endFill();
-            
-            // 백파 (물결 위에 하얀 거품)
-            if (layer === 4) {
-                wave.beginFill(0xffffff, 0.6);
-                wave.drawEllipse(0, -5, 25 * intensity, 8);
-                wave.endFill();
-            }
-            
-            waveContainer.addChild(wave);
+            waveBody.beginFill(waveColors[i].color, waveColors[i].alpha);
+            waveBody.moveTo(-layerWidth/2, 10 + layerOffset);
+            waveBody.bezierCurveTo(
+                -layerWidth/4, -layerHeight + layerOffset,  // 제어점1
+                layerWidth/4, -layerHeight + layerOffset,    // 제어점2
+                layerWidth/2, 10 + layerOffset               // 끝점
+            );
+            waveBody.lineTo(layerWidth/2, 15 + layerOffset);
+            waveBody.lineTo(-layerWidth/2, 15 + layerOffset);
+            waveBody.closePath();
+            waveBody.endFill();
         }
         
-        // ========================================
-        // 3. 물보라 파티클
-        // ========================================
-        const splashCount = isTidal ? 40 : 25;
-        for (let i = 0; i < splashCount; i++) {
-            const splash = new PIXI.Graphics();
-            const size = (2 + Math.random() * 5) * intensity;
-            
-            // 글로우
-            splash.beginFill(0x66aaee, 0.3);
-            splash.drawCircle(0, 0, size * 2);
-            splash.endFill();
-            // 코어
-            splash.beginFill(0x88ccff, 0.8);
-            splash.drawCircle(0, 0, size);
-            splash.endFill();
-            // 하이라이트
-            splash.beginFill(0xffffff, 0.6);
-            splash.drawCircle(-size * 0.3, -size * 0.3, size * 0.3);
-            splash.endFill();
-            
-            splash.x = (Math.random() - 0.5) * 50 * intensity;
-            splash.y = (Math.random() - 0.5) * 25;
-            this.app.stage.addChild(splash);
-            
-            // 포물선 운동
-            const baseX = startPos.x + splash.x;
-            const angle = Math.PI * 0.3 + Math.random() * Math.PI * 0.4; // 위쪽으로
-            const speed = (80 + Math.random() * 60) * intensity;
-            const vx = direction * Math.cos(angle) * speed * 0.01 + direction * 100;
-            const vy = -Math.sin(angle) * speed * 0.8;
-            
-            gsap.to(splash, {
-                x: baseX + vx + direction * length * (30 + Math.random() * 50),
-                y: startPos.y + splash.y + vy + 20,
-                alpha: 0,
-                duration: 0.4 + Math.random() * 0.3,
-                ease: 'power2.out',
-                onComplete: () => {
-                    this.app.stage.removeChild(splash);
-                    splash.destroy();
-                }
-            });
+        // 파도 꼭대기 백파 (흰 거품)
+        waveBody.beginFill(0xffffff, 0.9);
+        waveBody.moveTo(-waveWidth/3, -waveHeight + 15);
+        waveBody.bezierCurveTo(
+            -waveWidth/6, -waveHeight - 5,
+            waveWidth/6, -waveHeight - 5,
+            waveWidth/3, -waveHeight + 15
+        );
+        waveBody.bezierCurveTo(
+            waveWidth/6, -waveHeight + 10,
+            -waveWidth/6, -waveHeight + 10,
+            -waveWidth/3, -waveHeight + 15
+        );
+        waveBody.endFill();
+        
+        // 거품 디테일
+        for (let i = 0; i < 8; i++) {
+            const foamX = (Math.random() - 0.5) * waveWidth * 0.6;
+            const foamY = -waveHeight + 10 + Math.random() * 15;
+            const foamSize = 3 + Math.random() * 5;
+            waveBody.beginFill(0xffffff, 0.6 + Math.random() * 0.3);
+            waveBody.drawCircle(foamX, foamY, foamSize);
+            waveBody.endFill();
         }
         
+        waveContainer.addChild(waveBody);
+        
         // ========================================
-        // 4. 물기둥 (타이달만)
+        // 2. 물보라 파티클 시스템
         // ========================================
-        if (isTidal) {
-            for (let i = 0; i < 3; i++) {
-                const pillar = new PIXI.Graphics();
-                const pillarX = startPos.x + direction * (50 + i * 80);
+        const spawnSplash = (delay, posX, posY, velocityMult = 1) => {
+            setTimeout(() => {
+                if (!this.app) return;
                 
-                // 기둥 베이스
-                pillar.beginFill(0x4488cc, 0.6);
-                pillar.drawRect(-15, -100, 30, 100);
-                pillar.endFill();
-                pillar.beginFill(0x66aaee, 0.5);
-                pillar.drawRect(-10, -100, 20, 100);
-                pillar.endFill();
-                pillar.beginFill(0xaaddff, 0.4);
-                pillar.drawRect(-5, -100, 10, 100);
-                pillar.endFill();
-                
-                pillar.x = pillarX;
-                pillar.y = startPos.y;
-                pillar.scale.y = 0;
-                this.app.stage.addChild(pillar);
-                
-                gsap.timeline()
-                    .to(pillar.scale, { y: 1, duration: 0.15, delay: i * 0.08, ease: 'power2.out' })
-                    .to(pillar, { alpha: 0, duration: 0.3 })
-                    .call(() => {
-                        this.app.stage.removeChild(pillar);
-                        pillar.destroy();
+                // 큰 물방울
+                const dropCount = isTidal ? 12 : 8;
+                for (let i = 0; i < dropCount; i++) {
+                    const drop = new PIXI.Graphics();
+                    const size = (3 + Math.random() * 6) * intensity;
+                    
+                    // 물방울 형태 (타원 + 꼬리)
+                    drop.beginFill(0x66ccff, 0.8);
+                    drop.drawEllipse(0, 0, size * 0.6, size);
+                    drop.endFill();
+                    drop.beginFill(0xaaeeff, 0.9);
+                    drop.drawEllipse(0, -size * 0.2, size * 0.4, size * 0.6);
+                    drop.endFill();
+                    drop.beginFill(0xffffff, 0.8);
+                    drop.drawCircle(-size * 0.2, -size * 0.3, size * 0.2);
+                    drop.endFill();
+                    
+                    drop.x = posX;
+                    drop.y = posY;
+                    this.app.stage.addChild(drop);
+                    
+                    // 포물선 운동
+                    const angle = Math.PI * 0.2 + Math.random() * Math.PI * 0.6;
+                    const speed = (100 + Math.random() * 80) * velocityMult * intensity;
+                    const vx = direction * Math.cos(angle) * speed * 0.015;
+                    const vy = -Math.sin(angle) * speed;
+                    const gravity = 600;
+                    const duration = 0.4 + Math.random() * 0.4;
+                    
+                    // 중력 포물선
+                    gsap.to(drop, {
+                        x: posX + vx * duration * 60,
+                        duration: duration,
+                        ease: 'none'
                     });
-            }
-        }
+                    gsap.to(drop, {
+                        y: posY + vy * 0.3 + gravity * duration * duration * 0.5,
+                        duration: duration,
+                        ease: 'power1.in'
+                    });
+                    gsap.to(drop, {
+                        alpha: 0,
+                        duration: duration * 0.5,
+                        delay: duration * 0.5,
+                        onComplete: () => {
+                            if (this.app?.stage) this.app.stage.removeChild(drop);
+                            drop.destroy();
+                        }
+                    });
+                    // 회전
+                    gsap.to(drop, {
+                        rotation: Math.random() * Math.PI * 2,
+                        duration: duration,
+                        ease: 'none'
+                    });
+                }
+                
+                // 작은 물보라 (미스트)
+                const mistCount = isTidal ? 20 : 12;
+                for (let i = 0; i < mistCount; i++) {
+                    const mist = new PIXI.Graphics();
+                    const size = (1 + Math.random() * 3) * intensity;
+                    mist.beginFill(0xaaddff, 0.5 + Math.random() * 0.3);
+                    mist.drawCircle(0, 0, size);
+                    mist.endFill();
+                    
+                    mist.x = posX + (Math.random() - 0.5) * 30;
+                    mist.y = posY;
+                    this.app.stage.addChild(mist);
+                    
+                    gsap.to(mist, {
+                        x: mist.x + direction * (30 + Math.random() * 50),
+                        y: mist.y - 30 - Math.random() * 40,
+                        alpha: 0,
+                        duration: 0.3 + Math.random() * 0.3,
+                        ease: 'power2.out',
+                        onComplete: () => {
+                            if (this.app?.stage) this.app.stage.removeChild(mist);
+                            mist.destroy();
+                        }
+                    });
+                }
+            }, delay);
+        };
         
         // ========================================
-        // 5. 웨이브 전진 애니메이션
+        // 3. 파도 전진 + 물보라 생성
         // ========================================
+        const totalDist = length * cellWidth;
+        
+        // 파도 전진
         gsap.to(waveContainer, {
-            x: targetX,
-            duration: 0.35 + length * 0.05,
-            ease: 'power2.out'
+            x: startPos.x + direction * totalDist,
+            duration: waveSpeed,
+            ease: 'power2.out',
+            onUpdate: () => {
+                // 파도가 이동하면서 약간 흔들림
+                waveContainer.y = startPos.y + Math.sin(Date.now() * 0.02) * 3;
+            }
         });
-        gsap.to(waveContainer.scale, {
-            x: 2.5 * intensity,
-            y: 1.2,
-            duration: 0.4,
-            ease: 'power2.out'
-        });
+        
+        // 파도 스케일 변화 (밀려오면서 커졌다가)
+        gsap.timeline()
+            .to(waveContainer.scale, { x: 1.3, y: 1.2, duration: waveSpeed * 0.3, ease: 'power2.out' })
+            .to(waveContainer.scale, { x: 1.8 * intensity, y: 0.9, duration: waveSpeed * 0.5 })
+            .to(waveContainer.scale, { x: 2.5, y: 0.5, duration: waveSpeed * 0.2 });
+        
+        // 파도 페이드아웃
         gsap.to(waveContainer, {
             alpha: 0,
-            duration: 0.5,
-            delay: 0.15,
+            duration: 0.3,
+            delay: waveSpeed - 0.1,
             onComplete: () => {
-                this.app.stage.removeChild(waveContainer);
+                if (this.app?.stage) this.app.stage.removeChild(waveContainer);
                 waveContainer.destroy({ children: true });
             }
         });
         
+        // 각 그리드 셀마다 물보라 생성
+        for (let i = 0; i < length; i++) {
+            const cellX = startPos.x + direction * i * cellWidth;
+            const delay = (i / length) * waveSpeed * 1000;
+            spawnSplash(delay, cellX, startPos.y, 1 + i * 0.1);
+        }
+        
         // ========================================
-        // 6. 바닥 물결 확산 (시작점부터)
+        // 4. 충격 물기둥 (타이달크래시만)
+        // ========================================
+        if (isTidal) {
+            for (let i = 0; i < 4; i++) {
+                setTimeout(() => {
+                    if (!this.app) return;
+                    
+                    const pillarX = startPos.x + direction * (i + 1) * cellWidth * 0.8;
+                    const pillarContainer = new PIXI.Container();
+                    pillarContainer.x = pillarX;
+                    pillarContainer.y = startPos.y;
+                    this.app.stage.addChild(pillarContainer);
+                    
+                    // 물기둥 (여러 레이어)
+                    const pillar = new PIXI.Graphics();
+                    const pillarHeight = 120 + Math.random() * 40;
+                    
+                    // 외곽 글로우
+                    pillar.beginFill(0x2266aa, 0.3);
+                    pillar.drawEllipse(0, -pillarHeight/2, 35, pillarHeight/2);
+                    pillar.endFill();
+                    // 본체
+                    pillar.beginFill(0x44aadd, 0.6);
+                    pillar.drawEllipse(0, -pillarHeight/2, 25, pillarHeight/2);
+                    pillar.endFill();
+                    // 코어
+                    pillar.beginFill(0x88ddff, 0.7);
+                    pillar.drawEllipse(0, -pillarHeight/2, 15, pillarHeight/2);
+                    pillar.endFill();
+                    // 하이라이트
+                    pillar.beginFill(0xffffff, 0.5);
+                    pillar.drawEllipse(-5, -pillarHeight/2, 5, pillarHeight/3);
+                    pillar.endFill();
+                    
+                    pillarContainer.addChild(pillar);
+                    pillarContainer.scale.y = 0;
+                    pillarContainer.scale.x = 0.5;
+                    
+                    // 물기둥 솟구침
+                    gsap.timeline()
+                        .to(pillarContainer.scale, { y: 1, x: 1, duration: 0.15, ease: 'power2.out' })
+                        .to(pillarContainer.scale, { y: 0.8, x: 1.2, duration: 0.1 })
+                        .to(pillarContainer, { alpha: 0, y: startPos.y - 20, duration: 0.25 })
+                        .call(() => {
+                            if (this.app?.stage) this.app.stage.removeChild(pillarContainer);
+                            pillarContainer.destroy({ children: true });
+                        });
+                    
+                    // 물기둥 주변 물보라
+                    spawnSplash(0, pillarX, startPos.y - 30, 1.5);
+                    
+                }, i * 100);
+            }
+        }
+        
+        // ========================================
+        // 5. 바닥 물결 확산
         // ========================================
         for (let i = 0; i < length; i++) {
             setTimeout(() => {
-                const ripple = new PIXI.Graphics();
-                ripple.lineStyle(3, 0x88ccff, 0.6);
-                ripple.drawEllipse(0, 0, 20, 12);
-                ripple.x = startPos.x + direction * i * 100;
-                ripple.y = startPos.y + 5;
-                this.app.stage.addChild(ripple);
+                if (!this.app) return;
                 
-                gsap.to(ripple.scale, { x: 3, y: 2, duration: 0.4, ease: 'power2.out' });
-                gsap.to(ripple, {
-                    alpha: 0,
-                    duration: 0.4,
-                    onComplete: () => {
-                        this.app.stage.removeChild(ripple);
-                        ripple.destroy();
-                    }
-                });
+                const rippleX = startPos.x + direction * i * cellWidth;
+                
+                // 중첩 물결
+                for (let r = 0; r < 3; r++) {
+                    setTimeout(() => {
+                        if (!this.app) return;
+                        
+                        const ripple = new PIXI.Graphics();
+                        const rippleSize = 25 - r * 5;
+                        
+                        ripple.lineStyle(3 - r, 0x88ccff, 0.6 - r * 0.15);
+                        ripple.drawEllipse(0, 0, rippleSize, rippleSize * 0.5);
+                        ripple.x = rippleX;
+                        ripple.y = startPos.y + 10;
+                        this.app.stage.addChild(ripple);
+                        
+                        gsap.to(ripple.scale, { x: 3 + r, y: 2 + r * 0.5, duration: 0.5, ease: 'power2.out' });
+                        gsap.to(ripple, {
+                            alpha: 0,
+                            duration: 0.5,
+                            onComplete: () => {
+                                if (this.app?.stage) this.app.stage.removeChild(ripple);
+                                ripple.destroy();
+                            }
+                        });
+                    }, r * 50);
+                }
             }, i * 80);
         }
         
         // ========================================
-        // 7. 화면 효과
+        // 6. 화면 효과
         // ========================================
         if (typeof CombatEffects !== 'undefined') {
-            CombatEffects.screenShake(isTidal ? 15 : 10, isTidal ? 300 : 200);
-            CombatEffects.screenFlash('#4488ff', 200, isTidal ? 0.4 : 0.25);
+            CombatEffects.screenShake(isTidal ? 18 : 12, isTidal ? 350 : 250);
+            CombatEffects.screenFlash('#44aaff', 150, isTidal ? 0.5 : 0.3);
+            
+            if (isTidal) {
+                setTimeout(() => CombatEffects.screenFlash('#88ddff', 100, 0.25), 150);
+            }
         }
         
         // 사운드
         if (typeof SoundSystem !== 'undefined') {
-            SoundSystem.play('water', isTidal ? 0.7 : 0.5);
+            SoundSystem.play('water', isTidal ? 0.8 : 0.5);
         }
     },
     
     // ==========================================
-    // 타이달크래시 VFX (별도 호출용)
+    // 타이달크래시 VFX - 거대한 해일 충격
     // ==========================================
     showTidalCrashVFX(centerX, centerZ, radius) {
         if (!this.app) return;
         
-        const centerPos = this.getCellCenter(centerX, centerZ);
-        if (!centerPos) return;
+        const localPos = this.getCellCenter(centerX, centerZ);
+        if (!localPos) return;
         
-        // 거대 물기둥
-        const pillar = new PIXI.Graphics();
-        for (let i = 4; i >= 0; i--) {
-            const colors = [0x1a3366, 0x2855aa, 0x4488cc, 0x66aaee, 0xaaddff];
-            pillar.beginFill(colors[i], 0.5 - i * 0.05);
-            pillar.drawRect(-50 + i * 8, -200, 100 - i * 16, 200);
-            pillar.endFill();
+        const centerPos = this.localToGlobal(localPos.x, localPos.y);
+        const scale = this.gameContainerScale || 1;
+        
+        // ========================================
+        // 1. 거대 해일 (다층 파도)
+        // ========================================
+        const tsunamiContainer = new PIXI.Container();
+        tsunamiContainer.x = centerPos.x;
+        tsunamiContainer.y = centerPos.y;
+        tsunamiContainer.zIndex = 600;
+        this.app.stage.addChild(tsunamiContainer);
+        
+        // 해일 본체 - 거대한 파도 형태
+        const tsunami = new PIXI.Graphics();
+        const waveWidth = 180;
+        const waveHeight = 150;
+        
+        // 깊은 물 (5개 레이어)
+        const tsunamiColors = [
+            { color: 0x051525, alpha: 0.95 },
+            { color: 0x0a2a44, alpha: 0.9 },
+            { color: 0x1a4466, alpha: 0.85 },
+            { color: 0x2a6688, alpha: 0.8 },
+            { color: 0x4488aa, alpha: 0.75 },
+        ];
+        
+        for (let i = 0; i < tsunamiColors.length; i++) {
+            const layerOffset = i * 6;
+            const layerWidth = waveWidth - i * 15;
+            const layerHeight = waveHeight - i * 15;
+            
+            tsunami.beginFill(tsunamiColors[i].color, tsunamiColors[i].alpha);
+            // 파도 커브
+            tsunami.moveTo(-layerWidth/2, 20 + layerOffset);
+            tsunami.bezierCurveTo(
+                -layerWidth/3, -layerHeight * 0.7 + layerOffset,
+                layerWidth/3, -layerHeight + layerOffset,
+                layerWidth/2, -layerHeight * 0.3 + layerOffset
+            );
+            tsunami.lineTo(layerWidth/2, 25 + layerOffset);
+            tsunami.lineTo(-layerWidth/2, 25 + layerOffset);
+            tsunami.closePath();
+            tsunami.endFill();
         }
-        pillar.x = centerPos.x;
-        pillar.y = centerPos.y;
-        pillar.scale.y = 0;
-        this.app.stage.addChild(pillar);
         
+        // 파도 끝 말림 (백파)
+        tsunami.beginFill(0xffffff, 0.9);
+        tsunami.moveTo(waveWidth/3, -waveHeight * 0.3);
+        tsunami.bezierCurveTo(
+            waveWidth/2.5, -waveHeight * 0.5,
+            waveWidth/2, -waveHeight * 0.6,
+            waveWidth/2.2, -waveHeight * 0.2
+        );
+        tsunami.bezierCurveTo(
+            waveWidth/2.5, -waveHeight * 0.35,
+            waveWidth/3, -waveHeight * 0.25,
+            waveWidth/3, -waveHeight * 0.3
+        );
+        tsunami.endFill();
+        
+        // 거품
+        for (let i = 0; i < 15; i++) {
+            const foamX = (Math.random() - 0.3) * waveWidth * 0.7;
+            const foamY = -waveHeight * (0.2 + Math.random() * 0.5);
+            const foamSize = 4 + Math.random() * 8;
+            tsunami.beginFill(0xffffff, 0.5 + Math.random() * 0.4);
+            tsunami.drawCircle(foamX, foamY, foamSize);
+            tsunami.endFill();
+        }
+        
+        tsunamiContainer.addChild(tsunami);
+        tsunamiContainer.scale.set(0.3, 0.3);
+        tsunamiContainer.alpha = 0;
+        
+        // 해일 등장 애니메이션
         gsap.timeline()
-            .to(pillar.scale, { y: 1.5, duration: 0.2, ease: 'power2.out' })
-            .to(pillar.scale, { y: 0.3, x: 2, duration: 0.3 })
-            .to(pillar, { alpha: 0, duration: 0.2 })
+            .to(tsunamiContainer, { alpha: 1, duration: 0.1 })
+            .to(tsunamiContainer.scale, { x: 1.5, y: 1.5, duration: 0.25, ease: 'power2.out' }, 0)
+            .to(tsunamiContainer.scale, { x: 2.5, y: 1, duration: 0.2 }, 0.25)
+            .to(tsunamiContainer, { y: centerPos.y + 30, alpha: 0, duration: 0.3 }, 0.35)
             .call(() => {
-                this.app.stage.removeChild(pillar);
-                pillar.destroy();
+                if (this.app?.stage) this.app.stage.removeChild(tsunamiContainer);
+                tsunamiContainer.destroy({ children: true });
             });
         
-        // 충격파
-        const shockwave = new PIXI.Graphics();
-        shockwave.lineStyle(4, 0x88ccff, 0.8);
-        shockwave.drawEllipse(0, 0, 30, 18);
-        shockwave.x = centerPos.x;
-        shockwave.y = centerPos.y;
-        this.app.stage.addChild(shockwave);
+        // ========================================
+        // 2. 중앙 물기둥 폭발
+        // ========================================
+        const pillarContainer = new PIXI.Container();
+        pillarContainer.x = centerPos.x;
+        pillarContainer.y = centerPos.y;
+        this.app.stage.addChild(pillarContainer);
         
-        gsap.to(shockwave.scale, { x: 6, y: 4, duration: 0.4, ease: 'power2.out' });
-        gsap.to(shockwave, {
-            alpha: 0,
-            duration: 0.4,
-            onComplete: () => {
-                this.app.stage.removeChild(shockwave);
-                shockwave.destroy();
-            }
-        });
+        const centralPillar = new PIXI.Graphics();
+        const pillarHeight = 200;
         
-        // 대량 물보라
-        for (let i = 0; i < 60; i++) {
-            const drop = new PIXI.Graphics();
-            const size = 3 + Math.random() * 6;
+        // 다층 물기둥
+        for (let i = 5; i >= 0; i--) {
+            const layerWidth = 70 - i * 8;
+            const colors = [0x0a1a33, 0x1a3366, 0x2a5588, 0x4488bb, 0x66aadd, 0x88ddff];
             
-            drop.beginFill(0x88ccff, 0.8);
-            drop.drawCircle(0, 0, size);
+            centralPillar.beginFill(colors[i], 0.8 - i * 0.08);
+            centralPillar.drawEllipse(0, -pillarHeight/2, layerWidth, pillarHeight/2);
+            centralPillar.endFill();
+        }
+        
+        // 물기둥 하이라이트
+        centralPillar.beginFill(0xffffff, 0.4);
+        centralPillar.drawEllipse(-20, -pillarHeight/2, 10, pillarHeight/3);
+        centralPillar.endFill();
+        
+        pillarContainer.addChild(centralPillar);
+        pillarContainer.scale.set(0.2, 0);
+        
+        gsap.timeline()
+            .to(pillarContainer.scale, { x: 1, y: 1.2, duration: 0.2, ease: 'power3.out' })
+            .to(pillarContainer.scale, { x: 1.5, y: 0.6, duration: 0.15 })
+            .to(pillarContainer.scale, { x: 2, y: 0.2, duration: 0.15 })
+            .to(pillarContainer, { alpha: 0, duration: 0.2 })
+            .call(() => {
+                if (this.app?.stage) this.app.stage.removeChild(pillarContainer);
+                pillarContainer.destroy({ children: true });
+            });
+        
+        // ========================================
+        // 3. 방사형 물보라 폭발
+        // ========================================
+        // 큰 물방울 (외곽)
+        for (let i = 0; i < 40; i++) {
+            const drop = new PIXI.Graphics();
+            const size = 5 + Math.random() * 10;
+            
+            // 물방울 형태
+            drop.beginFill(0x44aadd, 0.85);
+            drop.drawEllipse(0, 0, size * 0.5, size);
             drop.endFill();
-            drop.beginFill(0xffffff, 0.5);
-            drop.drawCircle(-size * 0.2, -size * 0.2, size * 0.3);
+            drop.beginFill(0x88ddff, 0.9);
+            drop.drawEllipse(0, -size * 0.15, size * 0.35, size * 0.7);
+            drop.endFill();
+            drop.beginFill(0xffffff, 0.8);
+            drop.drawCircle(-size * 0.15, -size * 0.25, size * 0.2);
             drop.endFill();
             
             drop.x = centerPos.x;
             drop.y = centerPos.y;
             this.app.stage.addChild(drop);
             
-            const angle = (Math.PI * 2 * i) / 60 + Math.random() * 0.3;
-            const distance = 100 + Math.random() * 150;
+            const angle = (Math.PI * 2 * i) / 40 + (Math.random() - 0.5) * 0.3;
+            const distance = 120 + Math.random() * 180;
+            const height = 100 + Math.random() * 120;
+            const duration = 0.5 + Math.random() * 0.4;
             
+            // 포물선 운동
             gsap.to(drop, {
                 x: centerPos.x + Math.cos(angle) * distance,
-                y: centerPos.y + Math.sin(angle) * distance * 0.5 - 80 - Math.random() * 60,
+                duration: duration,
+                ease: 'power2.out'
+            });
+            gsap.to(drop, {
+                y: centerPos.y - height,
+                duration: duration * 0.4,
+                ease: 'power2.out'
+            });
+            gsap.to(drop, {
+                y: centerPos.y + 20 + Math.sin(angle) * distance * 0.3,
+                duration: duration * 0.6,
+                delay: duration * 0.4,
+                ease: 'power2.in'
+            });
+            gsap.to(drop, {
                 alpha: 0,
-                duration: 0.6 + Math.random() * 0.4,
-                ease: 'power2.out',
+                rotation: Math.random() * Math.PI * 3,
+                duration: duration,
                 onComplete: () => {
-                    this.app.stage.removeChild(drop);
+                    if (this.app?.stage) this.app.stage.removeChild(drop);
                     drop.destroy();
                 }
             });
         }
         
-        // 화면 효과
+        // 작은 물방울 미스트
+        for (let i = 0; i < 60; i++) {
+            setTimeout(() => {
+                if (!this.app) return;
+                
+                const mist = new PIXI.Graphics();
+                const size = 2 + Math.random() * 4;
+                mist.beginFill(0xaaddff, 0.6);
+                mist.drawCircle(0, 0, size);
+                mist.endFill();
+                
+                const offsetX = (Math.random() - 0.5) * 60;
+                const offsetY = (Math.random() - 0.5) * 30;
+                mist.x = centerPos.x + offsetX;
+                mist.y = centerPos.y + offsetY;
+                this.app.stage.addChild(mist);
+                
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 40 + Math.random() * 80;
+                
+                gsap.to(mist, {
+                    x: mist.x + Math.cos(angle) * dist,
+                    y: mist.y - 50 - Math.random() * 60,
+                    alpha: 0,
+                    duration: 0.4 + Math.random() * 0.3,
+                    ease: 'power2.out',
+                    onComplete: () => {
+                        if (this.app?.stage) this.app.stage.removeChild(mist);
+                        mist.destroy();
+                    }
+                });
+            }, i * 5);
+        }
+        
+        // ========================================
+        // 4. 충격파 확산 (3중)
+        // ========================================
+        for (let w = 0; w < 3; w++) {
+            setTimeout(() => {
+                if (!this.app) return;
+                
+                const wave = new PIXI.Graphics();
+                wave.lineStyle(5 - w, w === 0 ? 0xffffff : 0x88ccff, 0.8 - w * 0.2);
+                wave.drawEllipse(0, 0, 40, 25);
+                wave.x = centerPos.x;
+                wave.y = centerPos.y;
+                this.app.stage.addChild(wave);
+                
+                gsap.to(wave.scale, { x: 8 - w, y: 5 - w * 0.5, duration: 0.5, ease: 'power2.out' });
+                gsap.to(wave, {
+                    alpha: 0,
+                    duration: 0.5,
+                    onComplete: () => {
+                        if (this.app?.stage) this.app.stage.removeChild(wave);
+                        wave.destroy();
+                    }
+                });
+            }, w * 80);
+        }
+        
+        // ========================================
+        // 5. 화면 효과
+        // ========================================
         if (typeof CombatEffects !== 'undefined') {
-            CombatEffects.screenShake(20, 400);
-            CombatEffects.screenFlash('#4488ff', 250, 0.5);
+            CombatEffects.screenFlash('#ffffff', 80, 0.6);
+            setTimeout(() => {
+                CombatEffects.screenShake(25, 500);
+                CombatEffects.screenFlash('#44aaff', 300, 0.45);
+            }, 50);
+        }
+        
+        // 사운드
+        if (typeof SoundSystem !== 'undefined') {
+            SoundSystem.play('water', 1.0);
         }
     },
     
@@ -2372,7 +2628,7 @@ const Game = {
                 
                 // 히트 이펙트
                 if (typeof CombatEffects !== 'undefined' && target.sprite && !target.sprite.destroyed) {
-                    CombatEffects.hitEffect(target.sprite);  // sprite 전달!
+                    CombatEffects.hitEffect(target);  // sprite 전달!
                     CombatEffects.screenShake(3 + hitNum * 2, 50);
                 }
                 
@@ -2555,6 +2811,10 @@ const Game = {
             // 2. 대시! (산데비스탄 트레일!) - ★ 더 강하게!
             let trailTimer = null;
             tl.call(() => {
+                // ★ 도약 먼지!
+                if (typeof DustVFX !== 'undefined') {
+                    DustVFX.jump(posTarget.x, posTarget.y, 1.0);
+                }
                 if (typeof SkillSystem !== 'undefined') {
                     trailTimer = SkillSystem.startSandevistanTrail(hero, 6, SkillSystem.GHOST_COLORS.BLUE, 18);
                 }
@@ -2573,6 +2833,10 @@ const Game = {
             tl.call(() => {
                 if (trailTimer && typeof SkillSystem !== 'undefined') {
                     SkillSystem.stopSandevistanTrail(trailTimer);
+                }
+                // ★ 착지 먼지!
+                if (typeof DustVFX !== 'undefined') {
+                    DustVFX.land(newPos.x, newPos.y, 1.2);
                 }
             });
             
@@ -2669,6 +2933,10 @@ const Game = {
             // 2. 백점프! (산데비스탄 트레일!) - ★ 더 강하게!
             let trailTimer = null;
             tl.call(() => {
+                // ★ 도약 먼지!
+                if (typeof DustVFX !== 'undefined') {
+                    DustVFX.jump(posTarget.x, startY, 1.2);
+                }
                 if (typeof SkillSystem !== 'undefined') {
                     trailTimer = SkillSystem.startSandevistanTrail(hero, 7, SkillSystem.GHOST_COLORS.BLUE, 20);
                 }
@@ -2704,7 +2972,13 @@ const Game = {
             tl.to(posTarget, {
                 y: targetY,
                 duration: 0.15,
-                ease: 'bounce.out'
+                ease: 'bounce.out',
+                onComplete: () => {
+                    // ★ 착지 먼지!
+                    if (typeof DustVFX !== 'undefined') {
+                        DustVFX.land(targetX, targetY, 1.5);
+                    }
+                }
             });
             tl.to(scaleTarget.scale, {
                 x: baseScale * 1.05,
@@ -3149,160 +3423,6 @@ const Game = {
         console.log(`[Game] ★ 카드 실행 완료: ${cardId}`);
     },
     
-    // ==========================================
-    // 레거시: 스피어 투척 처리 (distanceBonus)
-    // TODO: AnimSystem.spear로 이동 완료 시 제거
-    // ==========================================
-    async playSpearAttack(hero, targetEnemy, cardDef) {
-        // 다른 레인의 적이면 먼저 레인 이동
-        if (targetEnemy.gridZ !== hero.gridZ) {
-            console.log(`[Game] 스피어 - 레인 이동: Z ${hero.gridZ} → ${targetEnemy.gridZ}`);
-            await this.heroLaneShift(hero, targetEnemy.gridZ);
-        }
-        
-        // 거리 계산 (X축 거리 기반)
-        const distance = Math.abs(targetEnemy.gridX - hero.gridX);
-        const distanceBonus = cardDef.distanceBonus * distance;
-        const baseDamage = cardDef.damage;
-        const totalDamage = baseDamage + distanceBonus;
-        
-        console.log(`[Game] 스피어 투척! 거리: ${distance}, 기본: ${baseDamage}, 보너스: ${distanceBonus}, 총: ${totalDamage}`);
-        
-        const gameRef = this;
-        if (typeof UnitCombat !== 'undefined') {
-            await UnitCombat.rangedAttack(hero, targetEnemy, totalDamage, {
-                projectileType: 'spear',
-                projectileColor: 0xccaa77,
-                projectileSize: 12,
-                gridDistance: distance,
-                isEnemy: false,
-                onHit: (hitTarget) => {
-                    if (typeof BreakSystem !== 'undefined') {
-                        BreakSystem.onAttack(hitTarget, cardDef, 1, 0);
-                        gameRef.createEnemyIntent(hitTarget);
-                    }
-                }
-            });
-            
-            if (distanceBonus > 0 && typeof CombatEffects !== 'undefined') {
-                const targetPos = targetEnemy.container || targetEnemy.sprite;
-                setTimeout(() => {
-                    CombatEffects.showDamageNumber(
-                        targetPos.x + 30,
-                        targetPos.y - 60,
-                        distanceBonus,
-                        'distance'
-                    );
-                }, 100);
-            }
-        }
-    },
-    
-    // ==========================================
-    // 레거시: 원거리 공격 처리 (일부 특수 카드용)
-    // TODO: 모두 AnimSystem으로 이전 후 제거
-    // ==========================================
-    async playRangedAttackLegacy(hero, targetEnemy, cardId, cardDef) {
-        const aoe = cardDef.aoe || { width: 1, depth: 1 };
-        const gameRef = this;
-        
-        // distanceBonus (스피어)
-        if (cardDef.distanceBonus) {
-            await this.playSpearAttack(hero, targetEnemy, cardDef);
-            return;
-        }
-        
-        // 갈고리 (Hook)
-        if (cardDef.pull) {
-            console.log(`[Game] 갈고리! 대상: ${targetEnemy.type}`);
-            if (targetEnemy.gridZ !== hero.gridZ) {
-                await this.heroLaneShift(hero, targetEnemy.gridZ);
-            }
-            await this.heroHookAnimation(hero, targetEnemy, cardDef.damage, cardDef.crashDamage || 2, {
-                onHit: (hitTarget) => {
-                    if (typeof BreakSystem !== 'undefined') {
-                        BreakSystem.onAttack(hitTarget, cardDef, 1, 0);
-                        gameRef.createEnemyIntent(hitTarget);
-                    }
-                }
-            });
-            return;
-        }
-        
-        // 십자가 패턴 (Fireball 등)
-        if (cardDef.aoePattern === 'cross') {
-            const crossTargets = this.getEnemiesInCrossAoe(targetEnemy.gridX, targetEnemy.gridZ, 1);
-            await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage, {
-                createZone: cardDef.createZone || null,
-                onHit: (hitTarget) => {
-                    if (typeof BreakSystem !== 'undefined') {
-                        BreakSystem.onAttack(hitTarget, cardDef, 1, 0);
-                    }
-                }
-            });
-            
-            for (let i = 0; i < crossTargets.length; i++) {
-                const target = crossTargets[i];
-                if (target !== targetEnemy && target.hp > 0) {
-                    this.dealDamage(target, cardDef.damage);
-                }
-            }
-            
-            if (cardDef.createZone && typeof GridAOE !== 'undefined') {
-                const cells = this.getCrossAoeCells(targetEnemy.gridX, targetEnemy.gridZ, 1);
-                for (const cell of cells) {
-                    GridAOE.createZone(cardDef.createZone, cell.x, cell.z);
-                }
-            }
-            return;
-        }
-        
-        // 화염 화살 (다중 히트)
-        const rangedHits = cardDef.hits || 1;
-        if (cardDef.projectileType === 'fireArrow' && rangedHits > 1) {
-            const arrowPromises = [];
-            for (let hitNum = 0; hitNum < rangedHits; hitNum++) {
-                const delay = hitNum * 80;
-                arrowPromises.push(new Promise(async (resolve) => {
-                    await new Promise(r => setTimeout(r, delay));
-                    if (targetEnemy.hp <= 0) { resolve(); return; }
-                    await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage, {
-                        projectileType: 'fireArrow',
-                        createZone: cardDef.createZone || null,
-                        onHit: (hitTarget) => {
-                            if (typeof BreakSystem !== 'undefined') {
-                                BreakSystem.onAttack(hitTarget, cardDef, 1, hitNum);
-                            }
-                        }
-                    });
-                    resolve();
-                }));
-            }
-            await Promise.all(arrowPromises);
-            return;
-        }
-        
-        // 일반 원거리 발사
-        for (let hitNum = 0; hitNum < rangedHits; hitNum++) {
-            if (targetEnemy.hp <= 0) break;
-            await this.heroRangedAnimation(hero, targetEnemy, cardDef.damage, {
-                projectileType: cardDef.projectileType || 'default',
-                createZone: cardDef.createZone || null,
-                onHit: (hitTarget) => {
-                    if (typeof BreakSystem !== 'undefined') {
-                        BreakSystem.onAttack(hitTarget, cardDef, 1, hitNum);
-                    }
-                }
-            });
-            if (hitNum < rangedHits - 1) await new Promise(r => setTimeout(r, 45));
-        }
-        
-        // 영역 생성
-        if (cardDef.createZone && typeof GridAOE !== 'undefined') {
-            GridAOE.createZone(cardDef.createZone, targetEnemy.gridX, targetEnemy.gridZ);
-        }
-    },
-
     // Get enemies within AOE pattern from a center point
     // width = X direction (toward enemy side), depth = Z direction
     getEnemiesInAoe(centerX, centerZ, aoe) {
@@ -3979,6 +4099,11 @@ const Game = {
         const targetX = actualMove && newPos ? newPos.x : startX - 50;
         const targetY = actualMove && newPos ? newPos.y : startY;
         
+        // ★ 이동 시작 먼지!
+        if (typeof DustVFX !== 'undefined' && actualMove) {
+            DustVFX.dash(startX, startY, -1, 0.8);  // 뒤로 이동하니까 -1
+        }
+        
         return new Promise(resolve => {
             // 부드럽게 뒤로 이동
             gsap.to(posTarget, {
@@ -3986,7 +4111,13 @@ const Game = {
                 y: targetY,
                 duration: 0.25,
                 ease: 'power2.out',
-                onComplete: resolve
+                onComplete: () => {
+                    // ★ 착지 먼지!
+                    if (typeof DustVFX !== 'undefined' && actualMove) {
+                        DustVFX.land(targetX, targetY, 0.8);
+                    }
+                    resolve();
+                }
             });
         });
     },
@@ -4367,6 +4498,11 @@ const Game = {
             await new Promise(resolve => {
                 const tl = gsap.timeline({ onComplete: resolve });
                 
+                // ★ 도약 먼지!
+                if (typeof DustVFX !== 'undefined' && posTarget) {
+                    DustVFX.jump(posTarget.x, startY, 1.0);
+                }
+                
                 // 1. 준비 자세 (살짝 움츠림)
                 if (hasScale) {
                     tl.to(scaleTarget.scale, {
@@ -4409,9 +4545,13 @@ const Game = {
                     }, '<0.05');
                 }
                 
-                // 4. 먼지 이펙트 (착지 시)
+                // 4. 먼지 이펙트 (착지 시) - DustVFX 사용!
                 tl.call(() => {
-                    this.createLandingDust(newPos.x, newPos.y);
+                    if (typeof DustVFX !== 'undefined') {
+                        DustVFX.land(newPos.x, newPos.y, 1.2);
+                    } else {
+                        this.createLandingDust(newPos.x, newPos.y);
+                    }
                 }, null, '-=0.05');
             });
             
@@ -5017,6 +5157,11 @@ const Game = {
         // ★ 턴 종료 시 출혈 감소
         if (typeof BleedSystem !== 'undefined') {
             BleedSystem.onTurnEnd(this.state.enemyUnits);
+        }
+        
+        // ★ 환경 효과 턴 감소
+        if (typeof EnvironmentSystem !== 'undefined') {
+            EnvironmentSystem.onTurnEnd();
         }
         
         // Check victory - all enemies dead (handled by checkVictory)
