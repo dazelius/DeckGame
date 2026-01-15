@@ -35,8 +35,8 @@ const DDOOBackground = {
     // ★ 탑뷰 모드 (카드 드래그용)
     topViewMode: {
         active: false,
-        posY: 3.0,      // ★ 더 높이 올림
-        lookAtY: -0.2,  // ★ 더 아래로 내려다봄 (거의 수직)
+        posY: 4.0,      // ★ 적당히 높이 (스프라이트와 밸런스)
+        lookAtY: -0.5,  // ★ 살짝 내려다봄
     },
     
     // Auto zoom settings
@@ -707,6 +707,81 @@ const DDOOBackground = {
         // ★ 그리드 표시/숨김
         if (typeof game !== 'undefined' && game.containers && game.containers.grid) {
             game.containers.grid.visible = enabled;
+        }
+        
+        // ★ 개별 유닛 스프라이트만 축소 (원거리 뷰 느낌)
+        const gameRef = (typeof Game !== 'undefined') ? Game : (typeof game !== 'undefined') ? game : null;
+        
+        console.log('[Camera] 스케일 변경 시도:', { enabled, gameRef: !!gameRef, gsap: typeof gsap });
+        
+        if (gameRef && typeof gsap !== 'undefined') {
+            const allUnits = [
+                ...(gameRef.state?.playerUnits || []),
+                ...(gameRef.state?.enemyUnits || []),
+                gameRef.hero
+            ].filter(u => u && (u.sprite || u.container));
+            
+            console.log('[Camera] 대상 유닛 수:', allUnits.length);
+            
+            allUnits.forEach(unit => {
+                // ★ 스프라이트 찾기 (여러 구조 지원)
+                let target = null;
+                if (unit.container && unit.container.scale) {
+                    target = unit.container;
+                } else if (unit.sprite && unit.sprite.scale) {
+                    target = unit.sprite;
+                }
+                
+                if (!target) {
+                    console.warn('[Camera] 스케일 대상 없음:', unit.type);
+                    return;
+                }
+                
+                // ★ 원본 스케일 저장 (최초 1회)
+                if (unit._originalScale === undefined) {
+                    unit._originalScale = target.scale.x;
+                    console.log(`[Camera] ${unit.type} 원본 스케일 저장: ${unit._originalScale}`);
+                }
+                
+                // 탑뷰: 75% 축소, 일반: 원본 복원
+                const targetScale = enabled 
+                    ? unit._originalScale * 0.75 
+                    : unit._originalScale;
+                
+                console.log(`[Camera] ${unit.type} 스케일: ${target.scale.x.toFixed(2)} → ${targetScale.toFixed(2)}`);
+                
+                gsap.to(target.scale, {
+                    x: targetScale,
+                    y: targetScale,
+                    duration: 0.2,
+                    ease: 'power2.out'
+                });
+            });
+            
+            // ★ 탑뷰 해제 시 위치 재동기화 (떠있는 버그 수정)
+            if (!enabled) {
+                setTimeout(() => {
+                    allUnits.forEach(unit => {
+                        if (!unit || !gameRef.getCellCenter) return;
+                        
+                        const target = unit.container || unit.sprite;
+                        if (!target || target.destroyed) return;
+                        
+                        // 현재 그리드 위치에서 화면 좌표 다시 계산
+                        const cellCenter = gameRef.getCellCenter(unit.gridX, unit.gridZ);
+                        if (cellCenter) {
+                            gsap.to(target, {
+                                y: cellCenter.y,
+                                duration: 0.15,
+                                ease: 'power2.out'
+                            });
+                        }
+                    });
+                    console.log('[Camera] 유닛 위치 재동기화');
+                }, 200);  // 카메라 전환 후 딜레이
+            }
+        } else {
+            console.warn('[Camera] 스케일 변경 실패');
         }
         
         console.log(`[Camera] 탑뷰 모드: ${enabled ? 'ON' : 'OFF'}`);
