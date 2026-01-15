@@ -430,6 +430,47 @@ const AnimSystem = {
         },
         
         // ========================================
+        // 관통 발사체 (piercing) - 차크람 등 (가로로 관통!)
+        // ========================================
+        async piercing(attacker, target, cardDef, options) {
+            const game = AnimSystem.game;
+            if (!game) return;
+            
+            const anim = cardDef.anim || {};
+            const damage = cardDef.damage || 4;
+            
+            // ★ 디버그: target 정보 확인
+            console.log(`[Piercing] ★ target 정보:`, {
+                type: target?.type,
+                gridX: target?.gridX,
+                gridZ: target?.gridZ,
+                attackerGridX: attacker?.gridX,
+                attackerGridZ: attacker?.gridZ
+            });
+            
+            const targetZ = target.gridZ;  // ★ 타겟 Z 라인 저장
+            
+            // ★ 가로 일직선 상의 모든 적 찾기
+            const targets = AnimSystem.findPiercingTargets(attacker, target, game);
+            
+            console.log(`[Piercing] ${targets.length}개 타겟 발견, targetZ=${targetZ}`);
+            
+            if (typeof UnitCombat !== 'undefined') {
+                await UnitCombat.piercingAttack(attacker, targets, damage, {
+                    projectileType: anim.projectileType || 'chakram',
+                    projectileColor: parseInt(anim.projectileColor) || 0xccddff,
+                    speed: anim.speed || 0.4,
+                    spin: anim.spin !== false,
+                    isEnemy: options.isEnemy || false,
+                    onHit: options.onHit,
+                    targetZ: targetZ  // ★ 타겟 Z 라인 전달!
+                });
+            }
+            
+            return { skipDamage: true, skipBreak: true };
+        },
+        
+        // ========================================
         // 갈고리 (hook)
         // ========================================
         async hook(attacker, target, cardDef, options) {
@@ -479,6 +520,33 @@ const AnimSystem = {
             
             return { skipDamage: true, skipTarget: true };
         }
+    },
+    
+    // ==========================================
+    // 가로 일직선 상의 모든 적 찾기 (차크람용) - 같은 Z 행만!
+    // ==========================================
+    findPiercingTargets(attacker, clickedTarget, game) {
+        const targets = [];
+        const attackerX = attacker.gridX;
+        const targetZ = clickedTarget.gridZ;  // ★ 클릭한 타겟의 Z 행!
+        
+        const enemies = game.enemies || game.state?.enemyUnits || [];
+        
+        for (const enemy of enemies) {
+            if (!enemy || enemy.hp <= 0 || !enemy.sprite) continue;
+            
+            // ★ 같은 Z 행 + 오른쪽에 있는 적만!
+            if (enemy.gridZ === targetZ && enemy.gridX > attackerX) {
+                targets.push(enemy);
+            }
+        }
+        
+        // X 좌표 순서대로 정렬 (가까운 적부터)
+        targets.sort((a, b) => a.gridX - b.gridX);
+        
+        console.log(`[Piercing] Z=${targetZ} 행 타겟들:`, targets.map(t => `(${t.gridX},${t.gridZ})`).join(', '));
+        
+        return targets;
     },
     
     // ==========================================
