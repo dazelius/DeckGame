@@ -2030,6 +2030,210 @@ const UnitCombat = {
     },
     
     // ==========================================
+    // ★ 관통 공격 (차크람 등) - 일직선 모든 적 타격
+    // ==========================================
+    async piercingAttack(attacker, targets, damage, options = {}) {
+        const {
+            projectileColor = 0xccddff,
+            projectileType = 'chakram',
+            speed = 0.4,
+            spin = true,
+            isEnemy = false,
+            onHit = null,
+            targetZ = null  // ★ 타겟 Z 라인
+        } = options;
+        
+        console.log(`[Piercing] 관통 공격! targets=${targets.length}, damage=${damage}, targetZ=${targetZ}`);
+        
+        if (!attacker || !attacker.sprite) {
+            if (attacker) attacker.isAnimating = false;
+            return;
+        }
+        
+        attacker.isAnimating = true;
+        
+        // ★ 1. 타겟 Z 라인으로 이동 (다른 라인이면)
+        if (targetZ !== null && attacker.gridZ !== targetZ) {
+            console.log(`[Piercing] 레인 변경: ${attacker.gridZ} → ${targetZ}`);
+            await this.moveToLine(attacker, targetZ, { checkBlocking: false });
+        }
+        
+        const posTarget = this.getPositionTarget(attacker);
+        const scaleTarget = this.getScaleTarget(attacker);
+        const baseScale = attacker.baseScale || scaleTarget?.baseScale || 1;
+        
+        if (!posTarget) {
+            attacker.isAnimating = false;
+            return;
+        }
+        
+        const startX = posTarget.x;
+        const startY = posTarget.y - 40;
+        
+        // ★ 화면 오른쪽 끝까지 날아감! (화면 너비 + 여유)
+        const screenWidth = this.game?.app?.screen?.width || 1920;
+        const endX = screenWidth + 100;  // 화면 밖까지!
+        const endY = startY;
+        
+        console.log(`[Chakram] 비행 경로: ${startX} → ${endX} (거리: ${endX - startX}px)`);
+        
+        // 2. 던지기 모션
+        await new Promise(resolve => {
+            gsap.timeline({ onComplete: resolve })
+                .to(scaleTarget?.scale || {}, { x: baseScale * 1.1, y: baseScale * 0.9, duration: 0.1 })
+                .to(scaleTarget?.scale || {}, { x: baseScale, y: baseScale, duration: 0.1 });
+        });
+        
+        // 3. 차크람 발사체 생성 - 이미지 사용!
+        let chakram;
+        
+        // ★ 이미지 로드 (비동기)
+        try {
+            const texture = await PIXI.Assets.load('image/chakramthrow.png');
+            chakram = new PIXI.Sprite(texture);
+            chakram.anchor.set(0.5);
+            chakram.scale.set(0.25);  // 1/2 크기로 축소
+            console.log('[Chakram] ✓ 이미지 로드 성공!');
+        } catch (e) {
+            console.warn('[Chakram] 이미지 로드 실패, 폴백 사용:', e);
+            
+            // ★ 폴백: 그래픽으로 그리기
+            chakram = new PIXI.Graphics();
+            const size = 30;
+            
+            // 외곽 원
+            chakram.circle(0, 0, size);
+            chakram.stroke({ width: 5, color: 0xaabbcc });
+            
+            // 톱니 (8개)
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                const innerR = size * 0.7;
+                const outerR = size * 1.2;
+                chakram.moveTo(Math.cos(angle) * innerR, Math.sin(angle) * innerR);
+                chakram.lineTo(Math.cos(angle) * outerR, Math.sin(angle) * outerR);
+                chakram.stroke({ width: 4, color: 0xccddee });
+            }
+            
+            // 내부 원
+            chakram.circle(0, 0, size * 0.5);
+            chakram.stroke({ width: 3, color: 0xffffff });
+            
+            // 중앙
+            chakram.circle(0, 0, 6);
+            chakram.fill({ color: 0xffffff });
+        }
+        
+        chakram.zIndex = 500;
+        chakram.x = startX;
+        chakram.y = startY;
+        
+        // ★ 컨테이너에 추가
+        let container = null;
+        if (typeof CombatEffects !== 'undefined' && CombatEffects.container) {
+            container = CombatEffects.container;
+        } else if (this.game?.app?.stage) {
+            container = this.game.app.stage;
+        }
+        
+        if (container) {
+            container.addChild(chakram);
+            console.log(`[Chakram] 발사체 생성 완료! 위치: (${startX}, ${startY})`);
+        } else {
+            console.error('[Chakram] 컨테이너를 찾을 수 없음!');
+        }
+        
+        // 4. 차크람 비행 + 회전 + 타겟별 히트 처리
+        const totalDistance = endX - startX;
+        const duration = Math.max(0.8, speed * (totalDistance / 600));  // 최소 0.8초, 빠르게!
+        console.log(`[Chakram] 비행 시간: ${duration.toFixed(2)}초`);
+        
+        // 각 타겟의 X 위치에서 히트 처리
+        const hitPositions = targets.map(t => {
+            const pos = this.getPositionTarget(t);
+            return pos ? pos.x : startX;
+        });
+        
+        let hitIndex = 0;
+        let lastDustX = startX;  // ★ 더스트 트레일용
+        let lastTrailX = startX; // ★ 산데비스탄 잔상용
+        
+        await new Promise(resolve => {
+            gsap.to(chakram, {
+                x: endX,
+                duration: duration,
+                ease: 'linear',
+                onUpdate: () => {
+                    // 회전
+                    if (spin) {
+                        chakram.rotation += 0.4;
+                    }
+                    
+                    // ★ 산데비스탄 잔상 (30px마다)
+                    if (chakram.x - lastTrailX > 30 && container) {
+                        this.createChakramAfterimage(chakram, container);
+                        lastTrailX = chakram.x;
+                    }
+                    
+                    // ★ 차크람 더스트 트레일 (60px마다)
+                    if (typeof DustVFX !== 'undefined' && chakram.x - lastDustX > 60) {
+                        DustVFX.createPuff(chakram.x, chakram.y, 2, 'dash', 0.3);
+                        lastDustX = chakram.x;
+                    }
+                    
+                    // 타겟 히트 체크
+                    while (hitIndex < targets.length && chakram.x >= hitPositions[hitIndex] - 20) {
+                        const target = targets[hitIndex];
+                        
+                        // 히트 이펙트
+                        if (typeof CombatEffects !== 'undefined') {
+                            const targetPos = this.getPositionTarget(target);
+                            if (targetPos) {
+                                CombatEffects.slashEffect(targetPos.x, targetPos.y - 40, 0, projectileColor, 0.8);
+                                CombatEffects.hitEffect(target);
+                                CombatEffects.screenShake(4, 50);
+                            }
+                        }
+                        
+                        // ★ 히트 시 더스트 폭발
+                        if (typeof DustVFX !== 'undefined') {
+                            DustVFX.createPuff(chakram.x, chakram.y, 8, 'land', 0.8);
+                        }
+                        
+                        // 데미지
+                        if (isEnemy) {
+                            this.game.dealDamageToTarget(target, damage);
+                        } else {
+                            this.game.dealDamage(target, damage);
+                        }
+                        
+                        // 브레이크 시스템
+                        if (typeof BreakSystem !== 'undefined' && options.cardDef) {
+                            BreakSystem.onAttack(target, options.cardDef, 1, hitIndex);
+                        }
+                        
+                        if (onHit) onHit(target);
+                        
+                        hitIndex++;
+                    }
+                },
+                onComplete: resolve
+            });
+        });
+        
+        // 4. 차크람 제거 (페이드아웃)
+        gsap.to(chakram, {
+            alpha: 0,
+            duration: 0.15,
+            onComplete: () => {
+                if (!chakram.destroyed) chakram.destroy();
+            }
+        });
+        
+        attacker.isAnimating = false;
+    },
+    
+    // ==========================================
     // 공격 이펙트 재생
     // vfx: JSON에서 설정한 VFX 옵션 { angle, color, scale }
     // ==========================================
@@ -2076,6 +2280,57 @@ const UnitCombat = {
                 CombatEffects.slashEffect(x, y, -45, customColor || 0xffffff, 1.3);
                 CombatEffects.screenShake(6, 100);
                 break;
+        }
+    },
+    
+    // ==========================================
+    // 차크람 산데비스탄 잔상 생성
+    // ==========================================
+    createChakramAfterimage(chakram, container) {
+        if (!chakram || chakram.destroyed || !container) return;
+        
+        try {
+            // 잔상 스프라이트 생성
+            let ghost;
+            
+            if (chakram.texture && chakram.texture.valid) {
+                // 이미지 차크람인 경우
+                ghost = new PIXI.Sprite(chakram.texture);
+                ghost.anchor.set(0.5);
+                ghost.scale.set(chakram.scale.x * 1.1);  // 살짝 크게
+            } else {
+                // 그래픽 차크람인 경우 - 원으로 대체
+                ghost = new PIXI.Graphics();
+                ghost.circle(0, 0, 25);
+                ghost.fill({ color: 0x88ccff, alpha: 0.5 });
+            }
+            
+            ghost.x = chakram.x;
+            ghost.y = chakram.y;
+            ghost.rotation = chakram.rotation;
+            ghost.alpha = 0.6;
+            ghost.tint = 0x88ddff;  // 시안 틴트
+            ghost.zIndex = chakram.zIndex - 1;
+            
+            container.addChild(ghost);
+            
+            // 페이드아웃 + 확대
+            gsap.to(ghost, {
+                alpha: 0,
+                duration: 0.25,
+                ease: 'power2.out',
+                onUpdate: () => {
+                    if (ghost.scale) {
+                        ghost.scale.x *= 1.02;
+                        ghost.scale.y *= 1.02;
+                    }
+                },
+                onComplete: () => {
+                    if (!ghost.destroyed) ghost.destroy();
+                }
+            });
+        } catch (e) {
+            // 조용히 실패
         }
     },
     

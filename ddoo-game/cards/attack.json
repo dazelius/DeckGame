@@ -324,5 +324,26 @@
             "ease": "power3.out",
             "dashOffset": 5
         }
+    },
+    "chakram": {
+        "name": "Chakram",
+        "cost": 1,
+        "type": "attack",
+        "damage": 4,
+        "target": "enemy",
+        "melee": false,
+        "frontOnly": false,
+        "piercing": true,
+        "aoe": { "width": 99, "depth": 1 },
+        "element": "physical",
+        "desc": "회전하는 차크람이 가로로 모든 적을 관통!",
+        "anim": {
+            "type": "piercing",
+            "speed": 0.5,
+            "ease": "linear",
+            "projectileType": "chakram",
+            "projectileColor": "0xccddff",
+            "spin": true
+        }
     }
 }
